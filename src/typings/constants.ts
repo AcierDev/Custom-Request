@@ -1,7 +1,7 @@
 import { ItemSizes } from "./types";
 
 export const SIZE_STRING = {
-  [ItemSizes.Fourteen_By_Seven]: `18" x 3'`,
+  [ItemSizes.Fourteen_By_Seven]: `18" x 3 Feet`,
   [ItemSizes.Sixteen_By_Six]: `18" x 4 Feet`,
   [ItemSizes.Sixteen_By_Ten]: `30" x 4 Feet`,
   [ItemSizes.Twenty_By_Ten]: `30" x 5 Feet`,

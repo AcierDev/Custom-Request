@@ -19,7 +19,6 @@ const geistMono = localFont({
 
 // Create a client component for the content
 function LayoutContent({ children }: { children: React.ReactNode }) {
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (

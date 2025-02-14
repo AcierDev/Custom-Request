@@ -241,7 +241,7 @@ export function Navbar({
               className="text-xl font-bold mr-auto cursor-pointer text-foreground hover:text-primary transition-colors"
               onClick={() => router.push("/dashboard")}
             >
-              Tuesday
+              Everwood
             </span>
 
             <SheetContent
