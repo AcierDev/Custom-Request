@@ -1,6 +1,7 @@
 {
   "name": "my-app",
   "version": "0.1.0",
+  "bin": "server.js",
   "private": true,
   "scripts": {
     "dev": "next dev",

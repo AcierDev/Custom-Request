@@ -3,15 +3,25 @@ import { ItemSizes } from "@/typings/types";
 import { calculatePrice, PriceBreakdown } from "@/lib/pricing";
 
 export type ShippingSpeed = "standard" | "expedited" | "rushed";
+export type ColorPattern = "striped" | "gradient" | "checkerboard" | "random";
 
-interface CustomStore {
+type Orientation = "horizontal" | "vertical";
+
+interface CustomState {
   selectedSize: ItemSizes | null;
   selectedDesign: number;
   shippingSpeed: ShippingSpeed;
   pricing: PriceBreakdown;
+  colorPattern: ColorPattern;
+  orientation: Orientation;
+}
+
+interface CustomStore extends CustomState {
   setSelectedSize: (size: ItemSizes | null) => void;
   setSelectedDesign: (designIndex: number) => void;
   setShippingSpeed: (speed: ShippingSpeed) => void;
+  setColorPattern: (pattern: ColorPattern) => void;
+  setOrientation: (orientation: Orientation) => void;
 }
 
 export const useCustomStore = create<CustomStore>((set) => ({
@@ -19,6 +29,8 @@ export const useCustomStore = create<CustomStore>((set) => ({
   selectedDesign: 0,
   shippingSpeed: "standard",
   pricing: calculatePrice(null, "standard"),
+  colorPattern: "striped",
+  orientation: "horizontal",
   setSelectedSize: (size) =>
     set((state) => ({
       selectedSize: size,
@@ -30,4 +42,6 @@ export const useCustomStore = create<CustomStore>((set) => ({
       shippingSpeed: speed,
       pricing: calculatePrice(state.selectedSize, speed),
     })),
+  setColorPattern: (pattern) => set({ colorPattern: pattern }),
+  setOrientation: (orientation) => set({ orientation }),
 }));
