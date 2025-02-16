@@ -22,7 +22,7 @@ export default function Custom() {
         {/* Middle column */}
         <div className="flex flex-col gap-4 w-2/5 h-full">
           <DesignDetailsCard />
-          <PreviewCard />
+          <PreviewCard className="h-full" />
         </div>
 
         {/* Right column */}

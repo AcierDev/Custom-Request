@@ -400,6 +400,7 @@ const Scene = ({ isExpanded }: { isExpanded: boolean }) => {
           camera={{
             position: cameraPosition,
             fov: cameraFov,
+            zoom: 2,
           }}
         >
           <ambientLight intensity={0.5} />
