@@ -1,12 +1,12 @@
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
-import { DesignCard } from "@/app/custom/components/DesignCard";
-import { SizeCard } from "@/app/custom/components/SizeCard";
-import { PriceCard } from "@/app/custom/components/PriceCard";
-import { ShippingCard } from "@/app/custom/components/ShippingCard";
-import { DimensionsCard } from "@/app/custom/components/DimensionsCard";
-import { ShippingDurationCard } from "@/app/custom/components/ShippingDurationCard";
-import { PreviewCard } from "@/app/custom/components/PreviewCard";
-import { DesignDetailsCard } from "@/app/custom/components/DesignDetailsCard";
+import { DesignCard } from "@/app/order/components/DesignCard";
+import { SizeCard } from "@/app/order/components/SizeCard";
+import { PriceCard } from "@/app/order/components/PriceCard";
+import { ShippingCard } from "@/app/order/components/ShippingCard";
+import { DimensionsCard } from "@/app/order/components/DimensionsCard";
+import { ShippingDurationCard } from "@/app/order/components/ShippingDurationCard";
+import { PreviewCard } from "@/app/order/components/PreviewCard";
+import { DesignDetailsCard } from "@/app/order/components/DesignDetailsCard";
 
 export default function Custom() {
   return (

@@ -8,6 +8,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Menu,
+  ShoppingCart,
+  Palette,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
@@ -34,8 +36,8 @@ type DividerItem = NavItemBase & {
 type NavItem = NavLinkItem | DividerItem;
 
 const mainNavItems: NavItem[] = [
-  // { href: "/shipping", icon: Truck, label: "Shipping", hotkey: "2" },
-  { type: "divider" },
+  { href: "/order", icon: ShoppingCart, label: "Order", hotkey: "1" },
+  { href: "/colors", icon: Palette, label: "Design", hotkey: "2" },
 ];
 
 interface NavbarProps {

@@ -3,7 +3,13 @@ import { ItemSizes } from "@/typings/types";
 import { calculatePrice, PriceBreakdown } from "@/lib/pricing";
 
 export type ShippingSpeed = "standard" | "expedited" | "rushed";
-export type ColorPattern = "striped" | "gradient" | "checkerboard" | "random";
+export type ColorPattern =
+  | "striped"
+  | "gradient"
+  | "checkerboard"
+  | "random"
+  | "fade"
+  | "center-fade";
 
 type Orientation = "horizontal" | "vertical";
 
@@ -22,15 +28,18 @@ interface CustomStore extends CustomState {
   setShippingSpeed: (speed: ShippingSpeed) => void;
   setColorPattern: (pattern: ColorPattern) => void;
   setOrientation: (orientation: Orientation) => void;
+  isReversed: boolean;
+  setIsReversed: (value: boolean) => void;
 }
 
 export const useCustomStore = create<CustomStore>((set) => ({
-  selectedSize: null,
+  selectedSize: ItemSizes.TwentyFour_By_Twelve,
   selectedDesign: 0,
   shippingSpeed: "standard",
-  pricing: calculatePrice(null, "standard"),
-  colorPattern: "striped",
+  pricing: calculatePrice(ItemSizes.TwentyFour_By_Twelve, "standard"),
+  colorPattern: "fade",
   orientation: "horizontal",
+  isReversed: false,
   setSelectedSize: (size) =>
     set((state) => ({
       selectedSize: size,
@@ -44,4 +53,5 @@ export const useCustomStore = create<CustomStore>((set) => ({
     })),
   setColorPattern: (pattern) => set({ colorPattern: pattern }),
   setOrientation: (orientation) => set({ orientation }),
+  setIsReversed: (value) => set({ isReversed: value }),
 }));
