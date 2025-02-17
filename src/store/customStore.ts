@@ -37,6 +37,7 @@ interface CustomState {
   currentColors: ColorMap | null;
   customPalette: CustomColor[];
   selectedColors: string[];
+  isRotated: boolean;
 }
 
 interface CustomStore extends CustomState {
@@ -53,6 +54,9 @@ interface CustomStore extends CustomState {
   toggleColorSelection: (hex: string) => void;
   clearSelectedColors: () => void;
   addBlendedColors: (count: number) => void;
+  moveColorLeft: (index: number) => void;
+  moveColorRight: (index: number) => void;
+  setIsRotated: (value: boolean) => void;
 }
 
 const getDesignColors = (designName: string): ColorMap | null => {
@@ -111,15 +115,16 @@ const createColorMap = (colors: CustomColor[]): ColorMap => {
 
 export const useCustomStore = create<CustomStore>((set) => ({
   selectedSize: ItemSizes.TwentyFour_By_Twelve,
-  selectedDesign: 1,
+  selectedDesign: 0,
   shippingSpeed: "standard",
   pricing: calculatePrice(ItemSizes.TwentyFour_By_Twelve, "standard"),
   colorPattern: "fade",
   orientation: "horizontal",
   isReversed: false,
-  currentColors: getDesignColors("abyss"),
+  currentColors: getDesignColors("custom"),
   customPalette: [],
   selectedColors: [],
+  isRotated: false,
   setSelectedSize: (size) =>
     set((state) => ({
       selectedSize: size,
@@ -214,4 +219,33 @@ export const useCustomStore = create<CustomStore>((set) => ({
         currentColors: createColorMap(newPalette),
       };
     }),
+  moveColorLeft: (index) =>
+    set((state) => {
+      if (index <= 0 || index >= state.customPalette.length) return state;
+
+      const newPalette = [...state.customPalette];
+      const temp = newPalette[index];
+      newPalette[index] = newPalette[index - 1];
+      newPalette[index - 1] = temp;
+
+      return {
+        customPalette: newPalette,
+        currentColors: createColorMap(newPalette),
+      };
+    }),
+  moveColorRight: (index) =>
+    set((state) => {
+      if (index < 0 || index >= state.customPalette.length - 1) return state;
+
+      const newPalette = [...state.customPalette];
+      const temp = newPalette[index];
+      newPalette[index] = newPalette[index + 1];
+      newPalette[index + 1] = temp;
+
+      return {
+        customPalette: newPalette,
+        currentColors: createColorMap(newPalette),
+      };
+    }),
+  setIsRotated: (value) => set({ isRotated: value }),
 }));

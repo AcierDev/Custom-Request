@@ -19,6 +19,7 @@ const getDesignColors = (designName: string) => {
 export function DesignDetailsCard() {
   const { selectedDesign, currentColors } = useCustomStore();
   const designs = [
+    "custom",
     "abyss",
     "aloe",
     "amber",

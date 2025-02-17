@@ -5,7 +5,7 @@ import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { useCustomStore, ColorPattern } from "@/store/customStore";
 import { getDimensionsDetails } from "@/typings/constants";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import * as ColorMaps from "@/typings/color-maps";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -20,10 +20,15 @@ import {
   Maximize2,
   Minimize2,
   ArrowLeftRight,
+  RotateCcw,
+  ArrowRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLoader } from "@react-three/fiber";
 import { TextureLoader } from "three";
+import { DesignCard } from "./DesignCard";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 const getDesignColors = (designName: string) => {
   const normalizedName = designName
@@ -50,7 +55,16 @@ const PatternControls = () => {
     setOrientation,
     isReversed,
     setIsReversed,
+    isRotated,
+    setIsRotated,
+    selectedDesign,
+    customPalette,
   } = useCustomStore();
+
+  // Hide controls if custom is selected with no colors
+  const showControls = !(selectedDesign === 0 && customPalette.length === 0);
+
+  if (!showControls) return null;
 
   const patterns: {
     value: ColorPattern;
@@ -67,7 +81,12 @@ const PatternControls = () => {
   ];
 
   return (
-    <div className="absolute top-4 right-4 bg-white dark:bg-gray-800 rounded-lg p-3 shadow-lg border border-gray-200 dark:border-gray-700">
+    <motion.div
+      initial={{ opacity: 0, y: 5 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 5 }}
+      className="absolute top-[88px] right-4 w-[280px] bg-white dark:bg-gray-800 rounded-lg p-3 shadow-lg border border-gray-200 dark:border-gray-700"
+    >
       <div className="space-y-4">
         <div>
           <Label className="text-sm text-gray-700 dark:text-gray-300 mb-2 block">
@@ -132,8 +151,80 @@ const PatternControls = () => {
             </button>
           </div>
         )}
+
+        <div>
+          <Label className="text-sm text-gray-700 dark:text-gray-300 mb-2 block">
+            Rotation
+          </Label>
+          <button
+            onClick={() => setIsRotated(!isRotated)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm ${
+              isRotated
+                ? "bg-primary text-primary-foreground"
+                : "bg-secondary hover:bg-secondary/80"
+            }`}
+          >
+            <RotateCcw className="w-4 h-4" />
+            {isRotated ? "Rotated" : "Normal"}
+          </button>
+        </div>
       </div>
-    </div>
+    </motion.div>
+  );
+};
+
+const CompactPatternControls = ({
+  setIsExpanded,
+  isExpanded,
+}: {
+  setIsExpanded: (value: boolean) => void;
+  isExpanded: boolean;
+}) => {
+  const { selectedDesign, customPalette } = useCustomStore();
+
+  // Hide controls if custom is selected with no colors
+  const showControls = !(selectedDesign === 0 && customPalette.length === 0);
+
+  if (!showControls) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 5 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 5 }}
+      className="absolute top-4 right-4 w-[280px]"
+    >
+      <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200 dark:border-gray-700 shadow-lg">
+        <CardContent className="p-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-gray-100 dark:bg-gray-700 rounded-full">
+              <Paintbrush className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+            </div>
+            <span className="text-sm text-gray-600 dark:text-gray-300">
+              Pattern Options
+            </span>
+          </div>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
+            onClick={() => setIsExpanded(!isExpanded)}
+          >
+            {isExpanded ? (
+              <>
+                <Minimize2 className="w-4 h-4 mr-1" />
+                Collapse
+              </>
+            ) : (
+              <>
+                <Maximize2 className="w-4 h-4 mr-1" />
+                Expand
+              </>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 };
 
@@ -152,33 +243,71 @@ const Block = ({ position, size, height, color }: BlockProps) => {
 const PlywoodBase = ({ width, height }: { width: number; height: number }) => {
   const baseThickness = 0.2;
   const texture = useLoader(TextureLoader, "/textures/plywood.jpg");
-  const { selectedDesign } = useCustomStore();
-  const designs = [
-    "abyss",
-    "aloe",
-    "amber",
-    "autumn",
-    "coastal",
-    "elemental",
-    "forest",
-    "ft5",
-    "mirage",
-    "sapphire",
-    "spectrum",
-    "striped-coastal",
-    "striped-ft5",
-    "striped-timberline",
-    "tidal",
-    "tiled-coastal",
-    "tiled-ft5",
-    "tiled-timberline",
-    "timberline",
-    "winter",
-  ];
-  const colorMap = getDesignColors(designs[selectedDesign]);
-  const colorEntries = colorMap ? Object.entries(colorMap) : [];
-  const firstColor = colorEntries[0]?.[1].hex || "#8B5E3B";
-  const lastColor = colorEntries[colorEntries.length - 1]?.[1].hex || "#8B5E3B";
+  const { selectedDesign, customPalette, isReversed, colorPattern } =
+    useCustomStore();
+
+  // Get the appropriate color map
+  let colorEntries: [string, { hex: string; name?: string }][] = [];
+  if (selectedDesign === 0 && customPalette.length > 0) {
+    // For custom palette
+    colorEntries = customPalette.map((color, i) => [
+      i.toString(),
+      { hex: color.hex, name: `Color ${i + 1}` },
+    ]);
+  } else {
+    // For preset designs
+    const designs = [
+      "custom",
+      "abyss",
+      "aloe",
+      "amber",
+      "autumn",
+      "coastal",
+      "elemental",
+      "forest",
+      "ft5",
+      "mirage",
+      "sapphire",
+      "spectrum",
+      "striped-coastal",
+      "striped-ft5",
+      "striped-timberline",
+      "tidal",
+      "tiled-coastal",
+      "tiled-ft5",
+      "tiled-timberline",
+      "timberline",
+      "winter",
+    ];
+    const colorMap = getDesignColors(designs[selectedDesign]);
+    if (colorMap) {
+      colorEntries = Object.entries(colorMap);
+    }
+  }
+
+  // Determine the colors based on pattern and reverse settings
+  let leftColor = "#8B5E3B";
+  let rightColor = "#8B5E3B";
+
+  if (colorEntries.length > 0) {
+    if (colorPattern === "center-fade") {
+      // For center fade, both sides should be the same color
+      const endColor = isReversed
+        ? colorEntries[colorEntries.length - 1][1].hex
+        : colorEntries[0][1].hex;
+      leftColor = endColor;
+      rightColor = endColor;
+    } else {
+      // For other patterns, respect the reverse setting
+      if (isReversed) {
+        leftColor = colorEntries[colorEntries.length - 1][1].hex;
+        rightColor = colorEntries[0][1].hex;
+      } else {
+        leftColor = colorEntries[0][1].hex;
+        rightColor = colorEntries[colorEntries.length - 1][1].hex;
+      }
+    }
+  }
 
   return (
     <>
@@ -195,7 +324,7 @@ const PlywoodBase = ({ width, height }: { width: number; height: number }) => {
       >
         <boxGeometry args={[baseThickness * 2, height, 0.01]} />
         <meshStandardMaterial
-          color={firstColor}
+          color={leftColor}
           roughness={0.7}
           metalness={0.1}
         />
@@ -208,7 +337,7 @@ const PlywoodBase = ({ width, height }: { width: number; height: number }) => {
       >
         <boxGeometry args={[baseThickness * 2, height, 0.01]} />
         <meshStandardMaterial
-          color={lastColor}
+          color={rightColor}
           roughness={0.7}
           metalness={0.1}
         />
@@ -225,35 +354,22 @@ const getColorIndex = (
   totalColors: number,
   orientation: "horizontal" | "vertical",
   colorPattern: ColorPattern,
-  isReversed: boolean
+  isReversed: boolean,
+  isRotated: boolean
 ): number => {
   let index = 0;
 
+  // If rotated, swap x and y coordinates
+  if (isRotated) {
+    [x, y] = [y, width - 1 - x];
+  }
+
   switch (colorPattern) {
     case "fade": {
-      // Normalize the position to 0-1 range
       const progress =
-        orientation === "horizontal"
-          ? (x + 0.5) / width // Add 0.5 to center the sampling point
-          : (y + 0.5) / height;
-
-      // Adjust the progress based on reverse setting
+        orientation === "horizontal" ? (x + 0.5) / width : (y + 0.5) / height;
       const adjustedProgress = isReversed ? 1 - progress : progress;
-
-      // Calculate index ensuring we reach the last color
       index = Math.round(adjustedProgress * (totalColors - 1));
-
-      // Debug progress values
-      if (x === 0 || x === width - 1 || y === 0 || y === height - 1) {
-        console.log("Fade progress:", {
-          x,
-          y,
-          progress,
-          adjustedProgress,
-          calculatedIndex: index,
-          totalColors,
-        });
-      }
       break;
     }
     case "center-fade": {
@@ -269,9 +385,7 @@ const getColorIndex = (
       break;
   }
 
-  // Ensure index is within bounds
   index = Math.max(0, Math.min(index, totalColors - 1));
-
   return index;
 };
 
@@ -282,6 +396,7 @@ const WoodPattern = () => {
     colorPattern,
     orientation,
     isReversed,
+    isRotated,
     customPalette,
   } = useCustomStore();
   const details = getDimensionsDetails(selectedSize);
@@ -313,7 +428,6 @@ const WoodPattern = () => {
   const currentDesign = designs[selectedDesign];
   let colorMap = getDesignColors(currentDesign);
 
-  // Use custom palette if custom design is selected and palette exists
   if (selectedDesign === 0 && customPalette.length > 0) {
     colorMap = Object.fromEntries(
       customPalette.map((color, i) => [
@@ -323,25 +437,7 @@ const WoodPattern = () => {
     );
   }
 
-  // Debug color mapping
-  useEffect(() => {
-    console.log("Color mapping debug:", {
-      selectedDesign,
-      currentDesign,
-      colorMapExists: !!colorMap,
-      totalColors: colorMap ? Object.keys(colorMap).length : 0,
-      firstColor: colorMap ? Object.values(colorMap)[0]?.hex : null,
-      lastColor: colorMap
-        ? Object.values(colorMap)[Object.keys(colorMap).length - 1]?.hex
-        : null,
-    });
-  }, [selectedDesign, currentDesign, colorMap]);
-
   if (!details || !colorMap) {
-    console.warn("Missing required data:", {
-      hasDetails: !!details,
-      hasColorMap: !!colorMap,
-    });
     return null;
   }
 
@@ -350,28 +446,14 @@ const WoodPattern = () => {
   const heightVariation = 0.2;
   const { width: modelWidth, height: modelHeight } = details.blocks;
 
-  // Calculate dimensions
   const totalWidth = modelWidth * blockSize;
   const totalHeight = modelHeight * blockSize;
-
-  // Calculate the offset to center the model
   const offsetX = -totalWidth / 2;
   const offsetY = -totalHeight / 2;
 
-  // Create blocks with positions relative to model center
   const blocks = [];
   const colorEntries = Object.entries(colorMap);
   const totalColors = colorEntries.length;
-
-  // Debug total setup
-  console.log("Pattern setup:", {
-    modelWidth,
-    modelHeight,
-    totalColors,
-    pattern: colorPattern,
-    orientation,
-    isReversed,
-  });
 
   for (let x = 0; x < modelWidth; x++) {
     for (let y = 0; y < modelHeight; y++) {
@@ -384,22 +466,11 @@ const WoodPattern = () => {
         totalColors,
         orientation,
         colorPattern,
-        isReversed
+        isReversed,
+        isRotated
       );
 
       const color = colorEntries[colorIndex]?.[1].hex;
-
-      // Debug any missing or invalid colors
-      if (!color) {
-        console.error("Invalid color at position:", {
-          x,
-          y,
-          colorIndex,
-          totalColors,
-          availableColors: colorEntries.map((entry) => entry[1].hex),
-        });
-      }
-
       const xPos = x * blockSize + offsetX;
       const yPos = y * blockSize + offsetY;
 
@@ -409,13 +480,12 @@ const WoodPattern = () => {
           position={[xPos, yPos, 0]}
           size={blockSize}
           height={randomHeight}
-          color={color || "#8B5E3B"} // Fallback color
+          color={color || "#8B5E3B"}
         />
       );
     }
   }
 
-  // Calculate base dimensions
   const baseWidth = totalWidth;
   const baseHeight = totalHeight;
 
@@ -429,34 +499,52 @@ const WoodPattern = () => {
   );
 };
 
-const ExpandButton = ({
-  isExpanded,
-  onToggle,
-}: {
-  isExpanded: boolean;
-  onToggle: () => void;
-}) => {
+const EmptyCustomPaletteInfo = () => {
   return (
-    <Button
-      variant="ghost"
-      size="icon"
-      className="absolute top-4 left-4 z-10 hover:bg-white/10 backdrop-blur-sm"
-      onClick={onToggle}
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="absolute inset-0 flex items-center justify-center p-8"
     >
-      {isExpanded ? (
-        <Minimize2 className="h-4 w-4" />
-      ) : (
-        <Maximize2 className="h-4 w-4" />
-      )}
-    </Button>
+      <Card className="max-w-md w-full bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200 dark:border-gray-700 shadow-xl">
+        <CardContent className="pt-6 px-6 pb-8">
+          <div className="flex flex-col items-center text-center space-y-4">
+            <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-full">
+              <Paintbrush className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                Create Your Custom Design
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm">
+                Visit the Design page to create your custom color palette. Add
+                colors, create gradients, and design your perfect combination.
+              </p>
+            </div>
+            <Button
+              asChild
+              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+            >
+              <Link href="/design">
+                Go to Designer
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 };
 
-// Update the Scene component
 const Scene = ({ isExpanded }: { isExpanded: boolean }) => {
   const [shouldRerender, setShouldRerender] = useState(false);
+  const { selectedDesign, customPalette } = useCustomStore();
   const cameraPosition = isExpanded ? [20, 20, 20] : [15, 15, 15];
   const cameraFov = isExpanded ? 40 : 45;
+
+  const showEmptyCustomInfo =
+    selectedDesign === 0 && customPalette.length === 0;
 
   // Force re-render when expanded state changes
   useEffect(() => {
@@ -473,37 +561,58 @@ const Scene = ({ isExpanded }: { isExpanded: boolean }) => {
   return (
     <div className="relative w-full h-full">
       {!shouldRerender && (
-        <Canvas
-          shadows
-          className="w-full h-full"
-          camera={{
-            position: cameraPosition,
-            fov: cameraFov,
-            zoom: 1.4,
-          }}
-        >
-          <ambientLight intensity={0.5} />
-          <directionalLight
-            position={[5, 5, 5]}
-            castShadow
-            intensity={1.5}
-            shadow-mapSize-width={1024}
-            shadow-mapSize-height={1024}
-          />
-          <WoodPattern />
-          <OrbitControls
-            enablePan={false}
-            minDistance={isExpanded ? 12 : 8}
-            maxDistance={isExpanded ? 35 : 25}
-            target={[0, 0, 0]}
-            makeDefault
-          />
-        </Canvas>
+        <>
+          <Canvas
+            shadows
+            className={cn("w-full h-full", showEmptyCustomInfo && "opacity-25")}
+            camera={{
+              position: [
+                cameraPosition[0],
+                cameraPosition[1],
+                cameraPosition[2],
+              ],
+              fov: cameraFov,
+              zoom: 1.4,
+            }}
+          >
+            <ambientLight intensity={0.5} />
+            <directionalLight
+              position={[5, 5, 5]}
+              castShadow
+              intensity={1.5}
+              shadow-mapSize-width={1024}
+              shadow-mapSize-height={1024}
+            />
+            <WoodPattern />
+            <OrbitControls
+              enablePan={false}
+              minDistance={isExpanded ? 12 : 8}
+              maxDistance={isExpanded ? 35 : 25}
+              target={[0, 0, 0]}
+              makeDefault
+            />
+          </Canvas>
+          {showEmptyCustomInfo && <EmptyCustomPaletteInfo />}
+        </>
       )}
     </div>
   );
 };
 
+// Update the MiniDesignCard component
+const MiniDesignCard = () => {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="absolute top-4 right-4 z-20 w-[280px]"
+    >
+      <DesignCard compact />
+    </motion.div>
+  );
+};
+
+// Update the PreviewCard component
 export function PreviewCard() {
   const { selectedSize } = useCustomStore();
   const [mounted, setMounted] = useState(false);
@@ -514,7 +623,6 @@ export function PreviewCard() {
     setMounted(true);
   }, []);
 
-  // Handle transition state
   useEffect(() => {
     if (isTransitioning) {
       const timer = setTimeout(() => {
@@ -566,6 +674,10 @@ export function PreviewCard() {
             <CardTitle className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
               3D Preview
             </CardTitle>
+            <CompactPatternControls
+              setIsExpanded={setIsExpanded}
+              isExpanded={isExpanded}
+            />
           </CardHeader>
           <CardContent className="relative h-[calc(100%-4rem)]">
             {selectedSize ? (
@@ -575,11 +687,14 @@ export function PreviewCard() {
                 className="w-full h-full"
               >
                 <Scene isExpanded={isExpanded} />
-                <PatternControls />
-                <ExpandButton
-                  isExpanded={isExpanded}
-                  onToggle={() => setIsExpanded(!isExpanded)}
-                />
+                <div className="absolute top-4 right-0">
+                  <AnimatePresence>
+                    {isExpanded && <MiniDesignCard />}
+                  </AnimatePresence>
+                  <AnimatePresence>
+                    {isExpanded && <PatternControls />}
+                  </AnimatePresence>
+                </div>
               </motion.div>
             ) : (
               <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
