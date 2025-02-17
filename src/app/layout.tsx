@@ -5,6 +5,7 @@ import "./globals.css";
 import { Navbar } from "@/components/navbar";
 import { ThemeProvider } from "@/components/theme-provider";
 import { useState } from "react";
+import { MobileWarning } from "@/components/mobile-warning";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -19,10 +20,11 @@ const geistMono = localFont({
 
 // Create a client component for the content
 function LayoutContent({ children }: { children: React.ReactNode }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-300 dark:bg-gray-900">
+      <MobileWarning />
       <Navbar
         onOpenSettings={() => {}}
         sidebarOpen={sidebarOpen}

@@ -154,7 +154,7 @@ export function Navbar({
         <div className="h-16 flex items-center justify-between px-4 bg-gray-950">
           {sidebarOpen && (
             <span className="text-lg font-bold cursor-pointer text-foreground hover:text-primary transition-colors text-white">
-              Tuesday
+              Everwood
             </span>
           )}
           <Button

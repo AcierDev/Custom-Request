@@ -8,6 +8,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useCustomStore } from "@/store/customStore";
 
 const designs = [
+  "/images/designs/custom.png",
   "/images/designs/abyss.webp",
   "/images/designs/aloe.webp",
   "/images/designs/amber.webp",
@@ -31,7 +32,7 @@ const designs = [
 ];
 
 export function DesignCard() {
-  const { selectedDesign, setSelectedDesign } = useCustomStore();
+  const { selectedDesign, setSelectedDesign, customPalette } = useCustomStore();
 
   const nextDesign = () => {
     setSelectedDesign((selectedDesign + 1) % designs.length);
@@ -41,8 +42,10 @@ export function DesignCard() {
     setSelectedDesign((selectedDesign - 1 + designs.length) % designs.length);
   };
 
-  // Extract design name from path for the alt text
   const getDesignName = (path: string) => {
+    if (path.includes("custom")) {
+      return customPalette.length > 0 ? "Custom" : "Custom (Empty)";
+    }
     const fileName = path.split("/").pop()?.split(".")[0] || "";
     return fileName
       .split("-")
@@ -70,13 +73,25 @@ export function DesignCard() {
             className="relative w-full h-full"
           >
             <div className="relative w-full h-full rounded-lg overflow-hidden">
-              <Image
-                src={designs[selectedDesign]}
-                alt={getDesignName(designs[selectedDesign])}
-                fill
-                className="object-cover"
-                priority
-              />
+              {selectedDesign === 0 && customPalette.length > 0 ? (
+                <div className="w-full h-full grid grid-cols-6 gap-1 p-2 bg-gray-100 dark:bg-gray-800">
+                  {customPalette.map((color, index) => (
+                    <div
+                      key={index}
+                      className="aspect-square rounded-md"
+                      style={{ backgroundColor: color.hex }}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <Image
+                  src={designs[selectedDesign]}
+                  alt={getDesignName(designs[selectedDesign])}
+                  fill
+                  className="object-cover"
+                  priority
+                />
+              )}
             </div>
           </motion.div>
         </AnimatePresence>

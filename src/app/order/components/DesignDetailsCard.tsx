@@ -17,7 +17,7 @@ const getDesignColors = (designName: string) => {
 };
 
 export function DesignDetailsCard() {
-  const { selectedDesign } = useCustomStore();
+  const { selectedDesign, currentColors } = useCustomStore();
   const designs = [
     "abyss",
     "aloe",
@@ -42,7 +42,6 @@ export function DesignDetailsCard() {
   ];
 
   const currentDesign = designs[selectedDesign];
-  const colorMap = getDesignColors(currentDesign);
 
   return (
     <Card className="h-1/2 dark:bg-gray-800/50 backdrop-blur-sm border-2 border-gray-200 dark:border-gray-700">
@@ -57,13 +56,13 @@ export function DesignDetailsCard() {
             <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Color Palette
             </h3>
-            {colorMap ? (
+            {currentColors ? (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 className="grid grid-cols-2 gap-2 h-[calc(100%-2rem)] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-purple-500/50 scrollbar-track-transparent"
               >
-                {Object.entries(colorMap).map(([key, { hex, name }]) => (
+                {Object.entries(currentColors).map(([key, { hex, name }]) => (
                   <motion.div
                     key={key}
                     initial={{ y: 10, opacity: 0 }}

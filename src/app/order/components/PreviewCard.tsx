@@ -227,26 +227,52 @@ const getColorIndex = (
   colorPattern: ColorPattern,
   isReversed: boolean
 ): number => {
+  let index = 0;
+
   switch (colorPattern) {
     case "fade": {
-      const progress = orientation === "horizontal" ? x / width : y / height;
+      // Normalize the position to 0-1 range
+      const progress =
+        orientation === "horizontal"
+          ? (x + 0.5) / width // Add 0.5 to center the sampling point
+          : (y + 0.5) / height;
+
+      // Adjust the progress based on reverse setting
       const adjustedProgress = isReversed ? 1 - progress : progress;
-      return Math.floor(adjustedProgress * (totalColors - 1));
+
+      // Calculate index ensuring we reach the last color
+      index = Math.round(adjustedProgress * (totalColors - 1));
+
+      // Debug progress values
+      if (x === 0 || x === width - 1 || y === 0 || y === height - 1) {
+        console.log("Fade progress:", {
+          x,
+          y,
+          progress,
+          adjustedProgress,
+          calculatedIndex: index,
+          totalColors,
+        });
+      }
+      break;
     }
     case "center-fade": {
       const progress = orientation === "horizontal" ? x / width : y / height;
       const centerProgress =
-        progress <= 0.5
-          ? progress * 2 // 0 to 1 in first half
-          : (1 - progress) * 2; // 1 to 0 in second half
+        progress <= 0.5 ? progress * 2 : (1 - progress) * 2;
       const adjustedProgress = isReversed ? 1 - centerProgress : centerProgress;
-      return Math.floor(adjustedProgress * (totalColors - 1));
+      index = Math.floor(adjustedProgress * (totalColors - 1));
+      break;
     }
     case "random":
-      return Math.floor(Math.random() * totalColors);
-    default:
-      return 0;
+      index = Math.floor(Math.random() * totalColors);
+      break;
   }
+
+  // Ensure index is within bounds
+  index = Math.max(0, Math.min(index, totalColors - 1));
+
+  return index;
 };
 
 const WoodPattern = () => {
@@ -256,10 +282,12 @@ const WoodPattern = () => {
     colorPattern,
     orientation,
     isReversed,
+    customPalette,
   } = useCustomStore();
   const details = getDimensionsDetails(selectedSize);
 
   const designs = [
+    "custom",
     "abyss",
     "aloe",
     "amber",
@@ -283,9 +311,39 @@ const WoodPattern = () => {
   ];
 
   const currentDesign = designs[selectedDesign];
-  const colorMap = getDesignColors(currentDesign);
+  let colorMap = getDesignColors(currentDesign);
 
-  if (!details || !colorMap) return null;
+  // Use custom palette if custom design is selected and palette exists
+  if (selectedDesign === 0 && customPalette.length > 0) {
+    colorMap = Object.fromEntries(
+      customPalette.map((color, i) => [
+        i.toString(),
+        { hex: color.hex, name: `Color ${i + 1}` },
+      ])
+    );
+  }
+
+  // Debug color mapping
+  useEffect(() => {
+    console.log("Color mapping debug:", {
+      selectedDesign,
+      currentDesign,
+      colorMapExists: !!colorMap,
+      totalColors: colorMap ? Object.keys(colorMap).length : 0,
+      firstColor: colorMap ? Object.values(colorMap)[0]?.hex : null,
+      lastColor: colorMap
+        ? Object.values(colorMap)[Object.keys(colorMap).length - 1]?.hex
+        : null,
+    });
+  }, [selectedDesign, currentDesign, colorMap]);
+
+  if (!details || !colorMap) {
+    console.warn("Missing required data:", {
+      hasDetails: !!details,
+      hasColorMap: !!colorMap,
+    });
+    return null;
+  }
 
   const blockSize = 0.5;
   const blockHeight = 0.3;
@@ -305,6 +363,16 @@ const WoodPattern = () => {
   const colorEntries = Object.entries(colorMap);
   const totalColors = colorEntries.length;
 
+  // Debug total setup
+  console.log("Pattern setup:", {
+    modelWidth,
+    modelHeight,
+    totalColors,
+    pattern: colorPattern,
+    orientation,
+    isReversed,
+  });
+
   for (let x = 0; x < modelWidth; x++) {
     for (let y = 0; y < modelHeight; y++) {
       const randomHeight = blockHeight + Math.random() * heightVariation;
@@ -318,9 +386,20 @@ const WoodPattern = () => {
         colorPattern,
         isReversed
       );
-      const color = colorEntries[colorIndex]?.[1].hex || "#8B5E3B";
 
-      // Calculate position relative to center
+      const color = colorEntries[colorIndex]?.[1].hex;
+
+      // Debug any missing or invalid colors
+      if (!color) {
+        console.error("Invalid color at position:", {
+          x,
+          y,
+          colorIndex,
+          totalColors,
+          availableColors: colorEntries.map((entry) => entry[1].hex),
+        });
+      }
+
       const xPos = x * blockSize + offsetX;
       const yPos = y * blockSize + offsetY;
 
@@ -330,7 +409,7 @@ const WoodPattern = () => {
           position={[xPos, yPos, 0]}
           size={blockSize}
           height={randomHeight}
-          color={color}
+          color={color || "#8B5E3B"} // Fallback color
         />
       );
     }
@@ -400,7 +479,7 @@ const Scene = ({ isExpanded }: { isExpanded: boolean }) => {
           camera={{
             position: cameraPosition,
             fov: cameraFov,
-            zoom: 2,
+            zoom: 1.4,
           }}
         >
           <ambientLight intensity={0.5} />
@@ -452,7 +531,7 @@ export function PreviewCard() {
   return (
     <motion.div
       layout
-      className={`${isExpanded ? "fixed inset-4 z-50" : "relative h-1/2"}`}
+      className={`${isExpanded ? "fixed inset-4 z-50" : "h-full"}`}
       onLayoutAnimationStart={() => {
         if (isExpanded) {
           setIsTransitioning(true);
@@ -464,6 +543,10 @@ export function PreviewCard() {
           window.dispatchEvent(event);
         }
       }}
+      transition={{
+        duration: 0.15,
+        ease: "easeInOut",
+      }}
     >
       <motion.div
         layout
@@ -474,9 +557,8 @@ export function PreviewCard() {
           opacity: 1,
         }}
         transition={{
-          type: "spring",
-          stiffness: 300,
-          damping: 30,
+          duration: 0.15,
+          ease: "easeInOut",
         }}
       >
         <Card className="h-full dark:bg-gray-800/50 backdrop-blur-sm border-2 border-gray-200 dark:border-gray-700">
