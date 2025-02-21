@@ -27,6 +27,8 @@ export type CustomColor = {
   name?: string;
 };
 
+export type PatternType = "tiled" | "geometric";
+
 interface CustomState {
   dimensions: Dimensions;
   selectedDesign: ItemDesigns;
@@ -38,6 +40,7 @@ interface CustomState {
   customPalette: CustomColor[];
   selectedColors: string[];
   isRotated: boolean;
+  patternType: PatternType;
 }
 
 interface CustomStore extends CustomState {
@@ -57,6 +60,7 @@ interface CustomStore extends CustomState {
   moveColorLeft: (index: number) => void;
   moveColorRight: (index: number) => void;
   setIsRotated: (value: boolean) => void;
+  setPatternType: (type: PatternType) => void;
 }
 
 // Helper function to create a ColorMap from CustomColor array
@@ -81,6 +85,7 @@ export const useCustomStore = create<CustomStore>((set) => ({
   customPalette: [],
   selectedColors: [],
   isRotated: false,
+  patternType: "tiled",
   setDimensions: (dimensions) => set({ dimensions }),
   setSelectedDesign: (design: ItemDesigns) => {
     const designName = design;
@@ -200,4 +205,5 @@ export const useCustomStore = create<CustomStore>((set) => ({
       };
     }),
   setIsRotated: (value) => set({ isRotated: value }),
+  setPatternType: (type) => set({ patternType: type }),
 }));

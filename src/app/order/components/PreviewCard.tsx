@@ -10,8 +10,6 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import {
   Paintbrush,
-  Rows,
-  Grid,
   Shuffle,
   MoveHorizontal,
   MoveVertical,
@@ -20,23 +18,16 @@ import {
   ArrowLeftRight,
   RotateCcw,
   ArrowRight,
+  Info,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useLoader } from "@react-three/fiber";
-import { TextureLoader } from "three";
 import { DesignCard } from "./DesignCard";
 import Link from "next/link";
 import { cn, getDimensionsDetails } from "@/lib/utils";
 import { ItemDesigns } from "@/typings/types";
-import { DESIGN_COLORS } from "@/typings/color-maps";
-import { GridHelper, AxesHelper } from "three";
-
-type BlockProps = {
-  position: [number, number, number];
-  size: number;
-  height: number;
-  color: string;
-};
+import { GeometricPattern } from "./preview/GeometricPattern";
+import { Input } from "@/components/ui/input";
 
 const PatternControls = () => {
   const {
@@ -78,7 +69,7 @@ const PatternControls = () => {
       initial={{ opacity: 0, y: 5 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 5 }}
-      className="absolute top-[88px] right-4 w-[280px] bg-white dark:bg-gray-800 rounded-lg p-3 shadow-lg border border-gray-200 dark:border-gray-700"
+      className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg p-3 shadow-lg border border-gray-200 dark:border-gray-700"
     >
       <div className="space-y-4">
         <div>
@@ -133,34 +124,30 @@ const PatternControls = () => {
         {(colorPattern === "fade" || colorPattern === "center-fade") && (
           <div>
             <Label className="text-sm text-gray-700 dark:text-gray-300 mb-2 block">
-              Direction
+              Adjustments
             </Label>
-            <button
-              onClick={() => setIsReversed(!isReversed)}
-              className="flex items-center gap-2 px-3 py-2 rounded-md text-sm bg-secondary hover:bg-secondary/80"
-            >
-              <ArrowLeftRight className="w-4 h-4" />
-              {isReversed ? "Reverse" : "Normal"}
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setIsReversed(!isReversed)}
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm bg-secondary hover:bg-secondary/80"
+              >
+                <ArrowLeftRight className="w-4 h-4" />
+                {isReversed ? "Reverse" : "Normal"}
+              </button>
+              <button
+                onClick={() => setIsRotated(!isRotated)}
+                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm ${
+                  isRotated
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary hover:bg-secondary/80"
+                }`}
+              >
+                <RotateCcw className="w-4 h-4" />
+                {isRotated ? "Rotated" : "Normal"}
+              </button>
+            </div>
           </div>
         )}
-
-        <div>
-          <Label className="text-sm text-gray-700 dark:text-gray-300 mb-2 block">
-            Rotation
-          </Label>
-          <button
-            onClick={() => setIsRotated(!isRotated)}
-            className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm ${
-              isRotated
-                ? "bg-primary text-primary-foreground"
-                : "bg-secondary hover:bg-secondary/80"
-            }`}
-          >
-            <RotateCcw className="w-4 h-4" />
-            {isRotated ? "Rotated" : "Normal"}
-          </button>
-        </div>
       </div>
     </motion.div>
   );
@@ -187,7 +174,6 @@ const CompactPatternControls = ({
       initial={{ opacity: 0, y: 5 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 5 }}
-      className="absolute top-4 right-4 w-[280px]"
     >
       <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200 dark:border-gray-700 shadow-lg">
         <CardContent className="p-3 flex items-center justify-between">
@@ -220,18 +206,6 @@ const CompactPatternControls = ({
         </CardContent>
       </Card>
     </motion.div>
-  );
-};
-
-const Block = ({ position, size, height, color }: BlockProps) => {
-  const [x, y, z] = position;
-  const adjustedPosition: [number, number, number] = [x, y, z + height / 2];
-
-  return (
-    <mesh position={adjustedPosition} castShadow receiveShadow>
-      <boxGeometry args={[size, size, height]} />
-      <meshStandardMaterial color={color} roughness={0.7} metalness={0.1} />
-    </mesh>
   );
 };
 
@@ -285,221 +259,6 @@ const FrenchCleat = ({ width, height }: { width: number; height: number }) => {
         </mesh>
       </group>
     </group>
-  );
-};
-
-const PlywoodBase = ({ width, height }: { width: number; height: number }) => {
-  const baseThickness = 0.2;
-  const texture = useLoader(TextureLoader, "/textures/plywood.jpg");
-  const { selectedDesign, customPalette, isReversed, colorPattern } =
-    useCustomStore();
-
-  // Get the appropriate color map
-  let colorEntries: [string, { hex: string; name?: string }][] = [];
-  if (selectedDesign === ItemDesigns.Custom && customPalette.length > 0) {
-    // For custom palette
-    colorEntries = customPalette.map((color, i) => [
-      i.toString(),
-      { hex: color.hex, name: `Color ${i + 1}` },
-    ]);
-  } else {
-    const colorMap = DESIGN_COLORS[selectedDesign];
-    if (colorMap) {
-      colorEntries = Object.entries(colorMap);
-    }
-  }
-
-  // Determine the colors based on pattern and reverse settings
-  let leftColor = "#8B5E3B";
-  let rightColor = "#8B5E3B";
-
-  if (colorEntries.length > 0) {
-    if (colorPattern === "center-fade") {
-      // For center fade, both sides should be the same color
-      const endColor = isReversed
-        ? colorEntries[colorEntries.length - 1][1].hex
-        : colorEntries[0][1].hex;
-      leftColor = endColor;
-      rightColor = endColor;
-    } else {
-      // For other patterns, respect the reverse setting
-      if (isReversed) {
-        leftColor = colorEntries[colorEntries.length - 1][1].hex;
-        rightColor = colorEntries[0][1].hex;
-      } else {
-        leftColor = colorEntries[0][1].hex;
-        rightColor = colorEntries[colorEntries.length - 1][1].hex;
-      }
-    }
-  }
-
-  return (
-    <>
-      {/* Main plywood base */}
-      <mesh position={[-0.25, -0.25, -baseThickness / 2]} receiveShadow>
-        <boxGeometry args={[width, height, baseThickness]} />
-        <meshStandardMaterial map={texture} roughness={0.8} metalness={0.1} />
-      </mesh>
-
-      {/* Left side */}
-      <mesh
-        position={[-0.25 - width / 2, -0.25, 0]}
-        rotation={[0, Math.PI / 2, 0]}
-      >
-        <boxGeometry args={[baseThickness * 2, height, 0.01]} />
-        <meshStandardMaterial
-          color={leftColor}
-          roughness={0.7}
-          metalness={0.1}
-        />
-      </mesh>
-
-      {/* Right side */}
-      <mesh
-        position={[-0.25 + width / 2, -0.25, 0]}
-        rotation={[0, Math.PI / 2, 0]}
-      >
-        <boxGeometry args={[baseThickness * 2, height, 0.01]} />
-        <meshStandardMaterial
-          color={rightColor}
-          roughness={0.7}
-          metalness={0.1}
-        />
-      </mesh>
-
-      {/* Add the french cleat */}
-      {/* <FrenchCleat width={width} height={height} /> */}
-    </>
-  );
-};
-
-const getColorIndex = (
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  totalColors: number,
-  orientation: "horizontal" | "vertical",
-  colorPattern: ColorPattern,
-  isReversed: boolean,
-  isRotated: boolean
-): number => {
-  let index = 0;
-
-  // If rotated, swap x and y coordinates
-  if (isRotated) {
-    [x, y] = [y, width - 1 - x];
-  }
-
-  switch (colorPattern) {
-    case "fade": {
-      const progress =
-        orientation === "horizontal" ? (x + 0.5) / width : (y + 0.5) / height;
-      const adjustedProgress = isReversed ? 1 - progress : progress;
-      index = Math.round(adjustedProgress * (totalColors - 1));
-      break;
-    }
-    case "center-fade": {
-      const progress = orientation === "horizontal" ? x / width : y / height;
-      const centerProgress =
-        progress <= 0.5 ? progress * 2 : (1 - progress) * 2;
-      const adjustedProgress = isReversed ? 1 - centerProgress : centerProgress;
-      index = Math.floor(adjustedProgress * (totalColors - 1));
-      break;
-    }
-    case "random":
-      index = Math.floor(Math.random() * totalColors);
-      break;
-  }
-
-  index = Math.max(0, Math.min(index, totalColors - 1));
-  return index;
-};
-
-const WoodPattern = () => {
-  const {
-    dimensions,
-    selectedDesign,
-    colorPattern,
-    orientation,
-    isReversed,
-    isRotated,
-    customPalette,
-  } = useCustomStore();
-  const details = getDimensionsDetails(dimensions);
-
-  let colorMap = DESIGN_COLORS[selectedDesign];
-
-  if (selectedDesign === ItemDesigns.Custom && customPalette.length > 0) {
-    colorMap = Object.fromEntries(
-      customPalette.map((color, i) => [
-        i.toString(),
-        { hex: color.hex, name: `Color ${i + 1}` },
-      ])
-    );
-  }
-
-  if (!details || !colorMap) {
-    return null;
-  }
-
-  const blockSize = 0.5;
-  const blockHeight = 0.3;
-  const heightVariation = 0.2;
-  const { width: modelWidth, height: modelHeight } = details.blocks;
-
-  const totalWidth = modelWidth * blockSize;
-  const totalHeight = modelHeight * blockSize;
-  const offsetX = -totalWidth / 2;
-  const offsetY = -totalHeight / 2;
-
-  const blocks = [];
-  const colorEntries = Object.entries(colorMap);
-  const totalColors = colorEntries.length;
-
-  for (let x = 0; x < modelWidth; x++) {
-    for (let y = 0; y < modelHeight; y++) {
-      const randomHeight = blockHeight + Math.random() * heightVariation;
-      const colorIndex = getColorIndex(
-        x,
-        y,
-        modelWidth,
-        modelHeight,
-        totalColors,
-        orientation,
-        colorPattern,
-        isReversed,
-        isRotated
-      );
-
-      const color = colorEntries[colorIndex]?.[1].hex;
-      const xPos = x * blockSize + offsetX;
-      const yPos = y * blockSize + offsetY;
-
-      blocks.push(
-        <Block
-          key={`${x}-${y}`}
-          position={[xPos, yPos, 0]}
-          size={blockSize}
-          height={randomHeight}
-          color={color || "#8B5E3B"}
-        />
-      );
-    }
-  }
-
-  const baseWidth = totalWidth;
-  const baseHeight = totalHeight;
-
-  return (
-    (selectedDesign === ItemDesigns.Custom ? totalColors > 0 : true) && (
-      <group
-        rotation={orientation === "vertical" ? [0, 0, Math.PI / 2] : [0, 0, 0]}
-      >
-        <PlywoodBase width={baseWidth} height={baseHeight} />
-        {blocks}
-      </group>
-    )
   );
 };
 
@@ -585,9 +344,266 @@ const LightingHelpers = () => {
   );
 };
 
-const Scene = ({ isExpanded }: { isExpanded: boolean }) => {
+const PreviewInfo = () => {
+  const [isVisible, setIsVisible] = useState(true);
+
+  if (!isVisible) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 10 }}
+      transition={{ delay: 0.5 }}
+      className="absolute bottom-6 left-6 max-w-md"
+    >
+      <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200 dark:border-gray-700 shadow-lg">
+        <CardContent className="p-4">
+          <div className="flex gap-3">
+            <div className="shrink-0">
+              <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-full">
+                <Info className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+              </div>
+            </div>
+            <div className="space-y-1 flex-1">
+              <div className="flex justify-between items-start">
+                <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  3D Preview Visualization
+                </h4>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full -mr-2 -mt-1"
+                  onClick={() => setIsVisible(false)}
+                >
+                  <X className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                </Button>
+              </div>
+              <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+                This preview demonstrates how your art piece will appear from
+                different angles with fixed lighting. In your space, natural
+                light variations throughout the day will create dynamic shadows
+                and highlight the unique grain patterns in each geometric
+                element.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+};
+
+const MiniSizeSelector = () => {
+  const { dimensions, setDimensions } = useCustomStore();
+  const [width, setWidth] = useState(dimensions.width.toString());
+  const [height, setHeight] = useState(dimensions.height.toString());
+
+  useEffect(() => {
+    setWidth(dimensions.width.toString());
+    setHeight(dimensions.height.toString());
+  }, [dimensions]);
+
+  const handleChange = (value: string, dimension: "width" | "height") => {
+    const numValue = parseInt(value);
+    if (!isNaN(numValue) && numValue > 0) {
+      if (dimension === "width") {
+        setWidth(value);
+        setDimensions({ ...dimensions, width: numValue });
+      } else {
+        setHeight(value);
+        setDimensions({ ...dimensions, height: numValue });
+      }
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 5 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg p-3 shadow-lg border border-gray-200 dark:border-gray-700"
+    >
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            Dimensions
+          </Label>
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            blocks
+          </span>
+        </div>
+        <div className="flex gap-2">
+          <div className="flex-1 relative group">
+            <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                W
+              </span>
+            </div>
+            <Input
+              id="width"
+              type="number"
+              min="1"
+              value={width}
+              onChange={(e) => handleChange(e.target.value, "width")}
+              className="pl-7 h-9 bg-gray-50/50 dark:bg-gray-900/50 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-purple-500/20 transition-shadow"
+            />
+          </div>
+          <div className="flex-1 relative group">
+            <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                H
+              </span>
+            </div>
+            <Input
+              id="height"
+              type="number"
+              min="1"
+              value={height}
+              onChange={(e) => handleChange(e.target.value, "height")}
+              className="pl-7 h-9 bg-gray-50/50 dark:bg-gray-900/50 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-purple-500/20 transition-shadow"
+            />
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+const MiniDesignCard = () => {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+    >
+      <DesignCard compact />
+    </motion.div>
+  );
+};
+
+const MiniInfoCard = () => {
+  const { dimensions } = useCustomStore();
+  const details = getDimensionsDetails(dimensions);
+
+  if (!details) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 5 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg p-3 shadow-lg border border-gray-200 dark:border-gray-700"
+    >
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            Quick Info
+          </Label>
+        </div>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+          <div className="text-xs text-gray-500 dark:text-gray-400">Size</div>
+          <div className="text-xs text-gray-700 dark:text-gray-200 text-right">
+            {details.feet.width.toFixed(1)}' × {details.feet.height.toFixed(1)}'
+          </div>
+          <div className="text-xs text-gray-500 dark:text-gray-400">Weight</div>
+          <div className="text-xs text-gray-700 dark:text-gray-200 text-right">
+            {details.weight.pounds.toFixed(1)} lbs
+          </div>
+          <div className="text-xs text-gray-500 dark:text-gray-400">Area</div>
+          <div className="text-xs text-gray-700 dark:text-gray-200 text-right">
+            {details.area.squareFeet.toFixed(1)} sq ft
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+const MiniPriceCard = () => {
+  const { pricing } = useCustomStore();
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 5 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg p-3 shadow-lg border border-gray-200 dark:border-gray-700"
+    >
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            Price
+          </Label>
+          <motion.div
+            key={pricing.total}
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="text-sm font-bold text-purple-600 dark:text-purple-400"
+          >
+            ${pricing.total.toFixed(2)}
+          </motion.div>
+        </div>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+          <div className="text-xs text-gray-500 dark:text-gray-400">Base</div>
+          <div className="text-xs text-gray-700 dark:text-gray-200 text-right">
+            ${pricing.basePrice.toFixed(2)}
+          </div>
+          <div className="text-xs text-gray-500 dark:text-gray-400">
+            Shipping
+          </div>
+          <div className="text-xs text-gray-700 dark:text-gray-200 text-right">
+            ${pricing.shipping.total.toFixed(2)}
+          </div>
+          <div className="text-xs text-gray-500 dark:text-gray-400">Tax</div>
+          <div className="text-xs text-gray-700 dark:text-gray-200 text-right">
+            ${pricing.tax.toFixed(2)}
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+const ControlsStack = ({
+  isExpanded,
+  setIsExpanded,
+}: {
+  isExpanded: boolean;
+  setIsExpanded: (value: boolean) => void;
+}) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="absolute top-4 right-4 w-[280px] flex flex-col gap-3"
+    >
+      <CompactPatternControls
+        setIsExpanded={setIsExpanded}
+        isExpanded={isExpanded}
+      />
+
+      <AnimatePresence>
+        {isExpanded && (
+          <>
+            <MiniDesignCard />
+            <MiniSizeSelector />
+            <PatternControls />
+            <MiniInfoCard />
+            <MiniPriceCard />
+          </>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+};
+
+const Scene = ({
+  isExpanded,
+  setIsExpanded,
+}: {
+  isExpanded: boolean;
+  setIsExpanded: (value: boolean) => void;
+}) => {
   const [shouldRerender, setShouldRerender] = useState(false);
-  const { selectedDesign, customPalette } = useCustomStore();
+  const { selectedDesign, customPalette, patternType } = useCustomStore();
   const cameraPosition = isExpanded ? [20, 20, 20] : [15, 15, 15];
   const cameraFov = isExpanded ? 40 : 45;
 
@@ -625,7 +641,7 @@ const Scene = ({ isExpanded }: { isExpanded: boolean }) => {
           >
             <ambientLight intensity={0.5} />
             <LightingHelpers />
-            <WoodPattern />
+            <GeometricPattern />
             <OrbitControls
               enablePan={true}
               minDistance={isExpanded ? 12 : 8}
@@ -635,22 +651,14 @@ const Scene = ({ isExpanded }: { isExpanded: boolean }) => {
             />
           </Canvas>
           {showEmptyCustomInfo && <EmptyCustomPaletteInfo />}
+          {isExpanded && <PreviewInfo />}
+          <ControlsStack
+            isExpanded={isExpanded}
+            setIsExpanded={setIsExpanded}
+          />
         </>
       )}
     </div>
-  );
-};
-
-// Update the MiniDesignCard component
-const MiniDesignCard = () => {
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className="absolute top-4 right-4 z-20 w-[280px]"
-    >
-      <DesignCard compact />
-    </motion.div>
   );
 };
 
@@ -715,10 +723,6 @@ export function PreviewCard() {
             <CardTitle className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
               3D Preview
             </CardTitle>
-            <CompactPatternControls
-              setIsExpanded={setIsExpanded}
-              isExpanded={isExpanded}
-            />
           </CardHeader>
           <CardContent className="relative h-[calc(100%-4rem)]">
             <motion.div
@@ -726,15 +730,7 @@ export function PreviewCard() {
               animate={{ opacity: 1 }}
               className="w-full h-full"
             >
-              <Scene isExpanded={isExpanded} />
-              <div className="absolute top-4 right-0">
-                <AnimatePresence>
-                  {isExpanded && <MiniDesignCard />}
-                </AnimatePresence>
-                <AnimatePresence>
-                  {isExpanded && <PatternControls />}
-                </AnimatePresence>
-              </div>
+              <Scene isExpanded={isExpanded} setIsExpanded={setIsExpanded} />
             </motion.div>
           </CardContent>
         </Card>
