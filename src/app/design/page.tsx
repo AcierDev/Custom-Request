@@ -1,13 +1,19 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { PreviewCard } from "../order/components/PreviewCard";
 import { useCustomStore } from "@/store/customStore";
 import { ColorStrip } from "@/app/design/components/ColorStrip";
 import { PaletteDesigner } from "@/app/design/components/PaletteDesigner";
 
 export default function Colors() {
-  const { currentColors, colorPattern, customPalette } = useCustomStore();
+  const { currentColors, customPalette } = useCustomStore();
 
   return (
     <div className="w-full h-screen">

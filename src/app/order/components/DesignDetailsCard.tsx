@@ -4,6 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { useCustomStore } from "@/store/customStore";
 import * as ColorMaps from "@/typings/color-maps";
+import { DESIGN_IMAGES } from "@/typings/color-maps";
 import { cn } from "@/lib/utils";
 
 const getDesignColors = (designName: string) => {
@@ -18,31 +19,8 @@ const getDesignColors = (designName: string) => {
 
 export function DesignDetailsCard() {
   const { selectedDesign, currentColors } = useCustomStore();
-  const designs = [
-    "custom",
-    "abyss",
-    "aloe",
-    "amber",
-    "autumn",
-    "coastal",
-    "elemental",
-    "forest",
-    "ft5",
-    "mirage",
-    "sapphire",
-    "spectrum",
-    "striped-coastal",
-    "striped-ft5",
-    "striped-timberline",
-    "tidal",
-    "tiled-coastal",
-    "tiled-ft5",
-    "tiled-timberline",
-    "timberline",
-    "winter",
-  ];
 
-  const currentDesign = designs[selectedDesign];
+  const currentDesign = DESIGN_IMAGES[selectedDesign];
 
   return (
     <Card className="h-1/2 dark:bg-gray-800/50 backdrop-blur-sm border-2 border-gray-200 dark:border-gray-700">

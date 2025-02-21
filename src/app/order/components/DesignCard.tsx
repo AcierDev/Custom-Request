@@ -12,30 +12,8 @@ import {
 } from "lucide-react";
 import { useCustomStore } from "@/store/customStore";
 import Link from "next/link";
-
-const designs = [
-  "/images/designs/custom.png",
-  "/images/designs/abyss.webp",
-  "/images/designs/aloe.webp",
-  "/images/designs/amber.webp",
-  "/images/designs/autumn.webp",
-  "/images/designs/coastal.webp",
-  "/images/designs/elemental.webp",
-  "/images/designs/forest.webp",
-  "/images/designs/ft5.webp",
-  "/images/designs/mirage.webp",
-  "/images/designs/sapphire.webp",
-  "/images/designs/spectrum.webp",
-  "/images/designs/striped-coastal.webp",
-  "/images/designs/striped-ft5.webp",
-  "/images/designs/striped-timberline.webp",
-  "/images/designs/tidal.webp",
-  "/images/designs/tiled-coastal.webp",
-  "/images/designs/tiled-ft5.webp",
-  "/images/designs/tiled-timberline.webp",
-  "/images/designs/timberline.webp",
-  "/images/designs/winter.webp",
-];
+import { DESIGN_IMAGES } from "@/typings/color-maps";
+import { ItemDesigns } from "@/typings/types";
 
 interface DesignCardProps {
   className?: string;
@@ -79,11 +57,20 @@ export function DesignCard({
   const { selectedDesign, setSelectedDesign, customPalette } = useCustomStore();
 
   const nextDesign = () => {
-    setSelectedDesign((selectedDesign + 1) % designs.length);
+    // Get array of design keys for cycling
+    const designKeys = Object.values(ItemDesigns);
+    const currentIndex = designKeys.indexOf(selectedDesign);
+    const nextIndex = (currentIndex + 1) % designKeys.length;
+    setSelectedDesign(designKeys[nextIndex]);
   };
 
   const previousDesign = () => {
-    setSelectedDesign((selectedDesign - 1 + designs.length) % designs.length);
+    // Get array of design keys for cycling
+    const designKeys = Object.values(ItemDesigns);
+    const currentIndex = designKeys.indexOf(selectedDesign);
+    const prevIndex =
+      (currentIndex - 1 + designKeys.length) % designKeys.length;
+    setSelectedDesign(designKeys[prevIndex]);
   };
 
   const getDesignName = (path: string) => {
@@ -108,7 +95,7 @@ export function DesignCard({
               Design
             </span>
             <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 truncate">
-              {getDesignName(designs[selectedDesign])}
+              {selectedDesign}
             </span>
           </div>
           <div className="flex gap-1 shrink-0">
@@ -136,13 +123,13 @@ export function DesignCard({
 
   return (
     <Card
-      className={`h-full dark:bg-gray-800/50 backdrop-blur-sm border-2 border-gray-200 dark:border-gray-700 relative group ${className}`}
+      className={`h-1/3 dark:bg-gray-800/50 backdrop-blur-sm border-2 border-gray-200 dark:border-gray-700 relative group ${className}`}
     >
       <CardHeader className="pb-2">
         <CardTitle className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent flex justify-between items-center">
           <span>Design</span>
           <span className="text-sm text-gray-500 dark:text-gray-400 font-normal">
-            {getDesignName(designs[selectedDesign])}
+            {getDesignName(selectedDesign)}
           </span>
         </CardTitle>
       </CardHeader>
@@ -156,7 +143,7 @@ export function DesignCard({
             className="relative w-full h-full"
           >
             <div className="absolute inset-0 rounded-lg overflow-hidden">
-              {selectedDesign === 0 ? (
+              {selectedDesign === ItemDesigns.Custom ? (
                 customPalette.length > 0 ? (
                   <div className="w-full h-full grid grid-cols-6 gap-1 p-2 bg-gray-100 dark:bg-gray-800">
                     {customPalette.map((color, index) => (
@@ -172,8 +159,8 @@ export function DesignCard({
                 )
               ) : (
                 <Image
-                  src={designs[selectedDesign]}
-                  alt={getDesignName(designs[selectedDesign])}
+                  src={DESIGN_IMAGES[selectedDesign]}
+                  alt={selectedDesign}
                   fill
                   className="object-cover"
                   priority

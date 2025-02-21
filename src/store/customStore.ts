@@ -1,8 +1,8 @@
 import { create } from "zustand";
-import { ItemSizes } from "@/typings/types";
+import { ItemSizes, ItemDesigns, Dimensions } from "@/typings/types";
 import { calculatePrice, PriceBreakdown } from "@/lib/pricing";
-import * as ColorMaps from "@/typings/color-maps";
 import { mixPaintColors } from "@/lib/colorUtils";
+import { DESIGN_COLORS } from "@/typings/color-maps";
 
 export type ShippingSpeed = "standard" | "expedited" | "rushed";
 export type ColorPattern =
@@ -28,8 +28,8 @@ export type CustomColor = {
 };
 
 interface CustomState {
-  selectedSize: ItemSizes | null;
-  selectedDesign: number;
+  dimensions: Dimensions;
+  selectedDesign: ItemDesigns;
   shippingSpeed: ShippingSpeed;
   pricing: PriceBreakdown;
   colorPattern: ColorPattern;
@@ -41,14 +41,14 @@ interface CustomState {
 }
 
 interface CustomStore extends CustomState {
-  setSelectedSize: (size: ItemSizes | null) => void;
-  setSelectedDesign: (designIndex: number) => void;
+  setDimensions: (dimensions: Dimensions) => void;
+  setSelectedDesign: (design: ItemDesigns) => void;
   setShippingSpeed: (speed: ShippingSpeed) => void;
   setColorPattern: (pattern: ColorPattern) => void;
   setOrientation: (orientation: Orientation) => void;
   isReversed: boolean;
   setIsReversed: (value: boolean) => void;
-  updateCurrentColors: (designName: string) => void;
+  updateCurrentColors: (design: ItemDesigns) => void;
   addCustomColor: (hex: string) => void;
   removeCustomColor: (index: number) => void;
   toggleColorSelection: (hex: string) => void;
@@ -58,50 +58,6 @@ interface CustomStore extends CustomState {
   moveColorRight: (index: number) => void;
   setIsRotated: (value: boolean) => void;
 }
-
-const getDesignColors = (designName: string): ColorMap | null => {
-  const normalizedName = designName
-    .replace(/-/g, "_")
-    .replace("striped_", "")
-    .replace("tiled_", "")
-    .toUpperCase();
-  const colorMapKey = `${normalizedName}_COLORS` as keyof typeof ColorMaps;
-  const colors = ColorMaps[colorMapKey] || null;
-
-  // Add debugging
-  console.log("Getting colors for design:", {
-    designName,
-    normalizedName,
-    colorMapKey,
-    colorsFound: colors ? Object.keys(colors).length : 0,
-  });
-
-  return colors;
-};
-
-const designs = [
-  "custom",
-  "abyss",
-  "aloe",
-  "amber",
-  "autumn",
-  "coastal",
-  "elemental",
-  "forest",
-  "ft5",
-  "mirage",
-  "sapphire",
-  "spectrum",
-  "striped-coastal",
-  "striped-ft5",
-  "striped-timberline",
-  "tidal",
-  "tiled-coastal",
-  "tiled-ft5",
-  "tiled-timberline",
-  "timberline",
-  "winter",
-];
 
 // Helper function to create a ColorMap from CustomColor array
 const createColorMap = (colors: CustomColor[]): ColorMap => {
@@ -114,49 +70,45 @@ const createColorMap = (colors: CustomColor[]): ColorMap => {
 };
 
 export const useCustomStore = create<CustomStore>((set) => ({
-  selectedSize: ItemSizes.TwentyFour_By_Twelve,
-  selectedDesign: 0,
+  dimensions: { width: 16, height: 10 },
+  selectedDesign: ItemDesigns.Custom,
   shippingSpeed: "standard",
-  pricing: calculatePrice(ItemSizes.TwentyFour_By_Twelve, "standard"),
+  pricing: calculatePrice({ width: 16, height: 10 }, "standard"),
   colorPattern: "fade",
   orientation: "horizontal",
   isReversed: false,
-  currentColors: getDesignColors("custom"),
+  currentColors: DESIGN_COLORS[ItemDesigns.Custom],
   customPalette: [],
   selectedColors: [],
   isRotated: false,
-  setSelectedSize: (size) =>
+  setDimensions: (dimensions) => set({ dimensions }),
+  setSelectedDesign: (design: ItemDesigns) => {
+    const designName = design;
     set((state) => ({
-      selectedSize: size,
-      pricing: calculatePrice(size, state.shippingSpeed),
-    })),
-  setSelectedDesign: (designIndex) => {
-    const designName = designs[designIndex];
-    set((state) => ({
-      selectedDesign: designIndex,
+      selectedDesign: design,
       currentColors:
-        designIndex === 0 && state.customPalette.length > 0
+        design === ItemDesigns.Custom && state.customPalette.length > 0
           ? createColorMap(state.customPalette)
-          : getDesignColors(designName),
+          : DESIGN_COLORS[design],
     }));
   },
   setShippingSpeed: (speed) =>
     set((state) => ({
       shippingSpeed: speed,
-      pricing: calculatePrice(state.selectedSize, speed),
+      pricing: calculatePrice(state.dimensions, speed),
     })),
   setColorPattern: (pattern) => set({ colorPattern: pattern }),
   setOrientation: (orientation) => set({ orientation }),
   setIsReversed: (value) => set({ isReversed: value }),
-  updateCurrentColors: (designName) => {
-    set({ currentColors: getDesignColors(designName) });
+  updateCurrentColors: (design: ItemDesigns) => {
+    set({ currentColors: DESIGN_COLORS[design] });
   },
   addCustomColor: (hex) =>
     set((state) => {
       const newPalette = [...state.customPalette, { hex }];
       return {
         customPalette: newPalette,
-        selectedDesign: 0,
+        selectedDesign: ItemDesigns.Custom,
         currentColors: createColorMap(newPalette),
       };
     }),
@@ -171,8 +123,8 @@ export const useCustomStore = create<CustomStore>((set) => ({
         currentColors:
           newPalette.length > 0
             ? createColorMap(newPalette)
-            : getDesignColors("abyss"),
-        selectedDesign: newPalette.length > 0 ? 0 : 1,
+            : DESIGN_COLORS[ItemDesigns.Custom],
+        selectedDesign: ItemDesigns.Custom,
       };
     }),
   toggleColorSelection: (hex) =>

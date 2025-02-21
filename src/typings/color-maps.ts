@@ -1,3 +1,5 @@
+import { ItemDesigns } from "./types";
+
 export const COASTAL_COLORS: Record<number, { hex: string; name: string }> = {
   1: { hex: "#B0744A", name: "Santa Fe" },
   2: { hex: "#C18F6A", name: "Antique Brass" },
@@ -215,4 +217,55 @@ export const ALOE_COLORS: Record<number, { hex: string; name: string }> = {
   5: { hex: "#61826C", name: "Viridian Green" },
   6: { hex: "#4F6A56", name: "Finlandia" },
   7: { hex: "#3D5541", name: "Tom Thumb" },
+};
+
+export const DESIGN_COLORS: Record<
+  ItemDesigns,
+  Record<number, { hex: string; name: string }>
+> = {
+  [ItemDesigns.Custom]: {},
+  [ItemDesigns.Coastal]: COASTAL_COLORS,
+  [ItemDesigns.Striped_Coastal]: COASTAL_COLORS,
+  [ItemDesigns.Tiled_Coastal]: COASTAL_COLORS,
+  [ItemDesigns.Tidal]: LAWYER_COLORS,
+  [ItemDesigns.Amber]: AMBER_COLORS,
+  [ItemDesigns.Elemental]: ELEMENTAL_COLORS,
+  [ItemDesigns.Sapphire]: SAPHIRE_COLORS,
+  [ItemDesigns.Timberline]: TIMBERLINE_COLORS,
+  [ItemDesigns.Striped_Timberline]: TIMBERLINE_COLORS,
+  [ItemDesigns.Tiled_Timberline]: TIMBERLINE_COLORS,
+  [ItemDesigns.Aloe]: ALOE_COLORS,
+  [ItemDesigns.Oceanic_Harmony]: FADE_TO_FIVE_COLORS,
+  [ItemDesigns.Striped_Oceanic_Harmony]: FADE_TO_FIVE_COLORS,
+  [ItemDesigns.Tiled_Oceanic_Harmony]: FADE_TO_FIVE_COLORS,
+  [ItemDesigns.Winter]: WINTER_COLORS,
+  [ItemDesigns.Forest]: FOREST_COLORS,
+  [ItemDesigns.Autumn]: AUTUMN_COLORS,
+  [ItemDesigns.Mirage]: MIRAGE_COLORS,
+  [ItemDesigns.Spectrum]: SPECTRUM_COLORS,
+  [ItemDesigns.Abyss]: ABYSS_COLORS,
+};
+
+export const DESIGN_IMAGES: Record<ItemDesigns, string> = {
+  [ItemDesigns.Custom]: "/images/designs/custom.png",
+  [ItemDesigns.Abyss]: "/images/designs/abyss.webp",
+  [ItemDesigns.Aloe]: "/images/designs/aloe.webp",
+  [ItemDesigns.Amber]: "/images/designs/amber.webp",
+  [ItemDesigns.Autumn]: "/images/designs/autumn.webp",
+  [ItemDesigns.Coastal]: "/images/designs/coastal.webp",
+  [ItemDesigns.Elemental]: "/images/designs/elemental.webp",
+  [ItemDesigns.Forest]: "/images/designs/forest.webp",
+  [ItemDesigns.Oceanic_Harmony]: "/images/designs/ft5.webp",
+  [ItemDesigns.Mirage]: "/images/designs/mirage.webp",
+  [ItemDesigns.Sapphire]: "/images/designs/sapphire.webp",
+  [ItemDesigns.Spectrum]: "/images/designs/spectrum.webp",
+  [ItemDesigns.Striped_Coastal]: "/images/designs/striped-coastal.webp",
+  [ItemDesigns.Striped_Oceanic_Harmony]: "/images/designs/striped-ft5.webp",
+  [ItemDesigns.Striped_Timberline]: "/images/designs/striped-timberline.webp",
+  [ItemDesigns.Tidal]: "/images/designs/tidal.webp",
+  [ItemDesigns.Tiled_Coastal]: "/images/designs/tiled-coastal.webp",
+  [ItemDesigns.Tiled_Oceanic_Harmony]: "/images/designs/tiled-ft5.webp",
+  [ItemDesigns.Tiled_Timberline]: "/images/designs/tiled-timberline.webp",
+  [ItemDesigns.Timberline]: "/images/designs/timberline.webp",
+  [ItemDesigns.Winter]: "/images/designs/winter.webp",
 };

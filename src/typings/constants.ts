@@ -13,38 +13,3 @@ export const SIZE_STRING = {
   [ItemSizes.ThirtyTwo_By_Sixteen]: `48" x 8 Feet`,
   [ItemSizes.ThirtySix_By_Sixteen]: `48" x 9 Feet`,
 };
-
-export const BLOCK_SIZE = 3; // inches
-
-export const getDimensionsDetails = (size: ItemSizes | null) => {
-  if (!size) return null;
-
-  const [width, height] = size.split(" x ").map(Number);
-
-  const dimensions = {
-    inches: {
-      width: width * BLOCK_SIZE,
-      height: height * BLOCK_SIZE,
-    },
-    feet: {
-      width: (width * BLOCK_SIZE) / 12,
-      height: (height * BLOCK_SIZE) / 12,
-    },
-    blocks: {
-      width,
-      height,
-      total: width * height,
-    },
-    area: {
-      squareInches: width * BLOCK_SIZE * (height * BLOCK_SIZE),
-      squareFeet: (width * BLOCK_SIZE * (height * BLOCK_SIZE)) / 144,
-    },
-    weight: {
-      // Assuming 1 lb per square inch
-      pounds: width * BLOCK_SIZE * (height * BLOCK_SIZE),
-      kilograms: width * BLOCK_SIZE * (height * BLOCK_SIZE) * 0.453592, // Convert to kg
-    },
-  };
-
-  return dimensions;
-};

@@ -35,6 +35,27 @@ const AddColorButton = ({
   isEmpty: boolean;
 }) => {
   const [currentColor, setCurrentColor] = useState("#FFFFFF");
+  const [hexInput, setHexInput] = useState("#");
+  const [open, setOpen] = useState(false);
+
+  const handleHexSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (/^#[0-9A-Fa-f]{6}$/.test(hexInput)) {
+      onColorSelect(hexInput);
+      setHexInput("#");
+      setOpen(false);
+    }
+  };
+
+  const handleHexChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value.toUpperCase();
+    if (value.length > 7) return;
+    if (!value.startsWith("#")) value = "#" + value;
+    setHexInput(value);
+    if (/^#[0-9A-Fa-f]{6}$/.test(value)) {
+      setCurrentColor(value);
+    }
+  };
 
   return (
     <motion.div
@@ -44,7 +65,7 @@ const AddColorButton = ({
         isEmpty ? "sm:col-span-3 md:col-span-4 lg:col-span-6" : ""
       }`}
     >
-      <Popover>
+      <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <motion.div
             className="relative w-full h-24 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-purple-500 dark:hover:border-purple-400 transition-colors cursor-pointer flex items-center justify-center bg-gray-50 dark:bg-gray-800/50 group-hover:bg-gray-100 dark:group-hover:bg-gray-800 overflow-hidden"
@@ -97,12 +118,30 @@ const AddColorButton = ({
         </PopoverTrigger>
         <PopoverContent className="w-auto p-3">
           <div className="space-y-3">
-            <HexColorPicker color={currentColor} onChange={setCurrentColor} />
+            <HexColorPicker
+              color={currentColor}
+              onChange={(color) => {
+                setCurrentColor(color);
+                setHexInput(color.toUpperCase());
+              }}
+            />
+            <form onSubmit={handleHexSubmit} className="flex gap-2">
+              <input
+                type="text"
+                value={hexInput}
+                onChange={handleHexChange}
+                placeholder="#FFFFFF"
+                className="flex-1 px-3 py-1.5 text-sm rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500"
+              />
+            </form>
             <Button
-              onClick={() => onColorSelect(currentColor)}
+              onClick={() => {
+                onColorSelect(currentColor);
+                setOpen(false);
+              }}
               className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white"
             >
-              Add to Palette
+              Add Selected Color
             </Button>
           </div>
         </PopoverContent>

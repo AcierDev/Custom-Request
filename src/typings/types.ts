@@ -11,3 +11,32 @@ export enum ItemSizes {
   ThirtyTwo_By_Sixteen = "32 x 16",
   ThirtySix_By_Sixteen = "36 x 16",
 }
+
+export enum ItemDesigns {
+  Custom = "Custom",
+  Coastal = "Coastal Dream",
+  Striped_Coastal = "Striped Coastal Dream",
+  Tiled_Coastal = "Tiled Coastal Dream",
+  Tidal = "Tidal",
+  Oceanic_Harmony = "Oceanic Harmony",
+  Striped_Oceanic_Harmony = "Striped Oceanic Harmony",
+  Tiled_Oceanic_Harmony = "Tiled Oceanic Harmony",
+  Timberline = "Timberline",
+  Striped_Timberline = "Striped Timberline",
+  Tiled_Timberline = "Tiled Timberline",
+  Amber = "Amber",
+  Sapphire = "Sapphire",
+  Winter = "Winter",
+  Forest = "Forest",
+  Autumn = "Autumn",
+  Elemental = "Elemental",
+  Abyss = "Abyss",
+  Spectrum = "Spectrum",
+  Aloe = "Aloe",
+  Mirage = "Mirage",
+}
+
+export type Dimensions = {
+  width: number;
+  height: number;
+};

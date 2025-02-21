@@ -3,12 +3,12 @@
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { useCustomStore } from "@/store/customStore";
-import { getDimensionsDetails } from "@/typings/constants";
 import { Ruler, Grid, Scale } from "lucide-react";
+import { getDimensionsDetails } from "@/lib/utils";
 
 export function DimensionsCard() {
-  const { selectedSize } = useCustomStore();
-  const details = getDimensionsDetails(selectedSize);
+  const { dimensions } = useCustomStore();
+  const details = getDimensionsDetails(dimensions);
 
   const DetailRow = ({
     label,
@@ -45,7 +45,7 @@ export function DimensionsCard() {
       <CardContent className="space-y-2">
         {details ? (
           <motion.div
-            key={selectedSize}
+            key={dimensions.width}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="space-y-2"

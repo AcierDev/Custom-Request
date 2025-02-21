@@ -4,10 +4,8 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { useCustomStore, ColorPattern } from "@/store/customStore";
-import { getDimensionsDetails } from "@/typings/constants";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
-import * as ColorMaps from "@/typings/color-maps";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import {
@@ -28,17 +26,9 @@ import { useLoader } from "@react-three/fiber";
 import { TextureLoader } from "three";
 import { DesignCard } from "./DesignCard";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
-
-const getDesignColors = (designName: string) => {
-  const normalizedName = designName
-    .replace(/-/g, "_")
-    .replace("striped_", "")
-    .replace("tiled_", "")
-    .toUpperCase();
-  const colorMapKey = `${normalizedName}_COLORS` as keyof typeof ColorMaps;
-  return ColorMaps[colorMapKey] || null;
-};
+import { cn, getDimensionsDetails } from "@/lib/utils";
+import { ItemDesigns } from "@/typings/types";
+import { DESIGN_COLORS } from "@/typings/color-maps";
 
 type BlockProps = {
   position: [number, number, number];
@@ -62,7 +52,9 @@ const PatternControls = () => {
   } = useCustomStore();
 
   // Hide controls if custom is selected with no colors
-  const showControls = !(selectedDesign === 0 && customPalette.length === 0);
+  const showControls = !(
+    selectedDesign === ItemDesigns.Custom && customPalette.length === 0
+  );
 
   if (!showControls) return null;
 
@@ -183,7 +175,9 @@ const CompactPatternControls = ({
   const { selectedDesign, customPalette } = useCustomStore();
 
   // Hide controls if custom is selected with no colors
-  const showControls = !(selectedDesign === 0 && customPalette.length === 0);
+  const showControls = !(
+    selectedDesign === ItemDesigns.Custom && customPalette.length === 0
+  );
 
   if (!showControls) return null;
 
@@ -240,6 +234,59 @@ const Block = ({ position, size, height, color }: BlockProps) => {
   );
 };
 
+const FrenchCleat = ({ width, height }: { width: number; height: number }) => {
+  const hangerThickness = 0.1;
+  const hangerHeight = 0.8;
+  const hangerDepth = 0.4;
+  const angle = Math.PI / 4; // 45 degrees
+
+  // Load aluminum texture and normal map
+
+  // Create shared material for consistent appearance
+  const aluminumMaterial = (shade: "light" | "dark") => (
+    <meshPhysicalMaterial
+      color={shade === "light" ? "#E8E8E8" : "#D4D4D4"}
+      metalness={0.9}
+      roughness={0.3}
+      envMapIntensity={1}
+      clearcoat={0.1}
+      clearcoatRoughness={0.4}
+    />
+  );
+
+  return (
+    <group position={[-0.25, -0.25, -0.2]}>
+      {/* Wall piece */}
+      <mesh castShadow receiveShadow position={[0, 0, -hangerDepth]}>
+        <boxGeometry args={[width * 0.8, hangerHeight, hangerThickness]} />
+        {aluminumMaterial("dark")}
+      </mesh>
+
+      {/* Wall angled piece */}
+      <group position={[0, hangerHeight / 4, -hangerDepth + hangerDepth / 2]}>
+        <mesh castShadow receiveShadow rotation={[-angle, 0, 0]}>
+          <boxGeometry args={[width * 0.8, hangerDepth, hangerThickness]} />
+          {aluminumMaterial("dark")}
+        </mesh>
+      </group>
+
+      {/* Board piece */}
+      <mesh castShadow receiveShadow>
+        <boxGeometry args={[width * 0.8, hangerHeight, hangerThickness]} />
+        {aluminumMaterial("light")}
+      </mesh>
+
+      {/* Board angled piece */}
+      <group position={[0, -hangerHeight / 4, hangerDepth / 2]}>
+        <mesh castShadow receiveShadow rotation={[angle, 0, 0]}>
+          <boxGeometry args={[width * 0.8, hangerDepth, hangerThickness]} />
+          {aluminumMaterial("light")}
+        </mesh>
+      </group>
+    </group>
+  );
+};
+
 const PlywoodBase = ({ width, height }: { width: number; height: number }) => {
   const baseThickness = 0.2;
   const texture = useLoader(TextureLoader, "/textures/plywood.jpg");
@@ -248,38 +295,14 @@ const PlywoodBase = ({ width, height }: { width: number; height: number }) => {
 
   // Get the appropriate color map
   let colorEntries: [string, { hex: string; name?: string }][] = [];
-  if (selectedDesign === 0 && customPalette.length > 0) {
+  if (selectedDesign === ItemDesigns.Custom && customPalette.length > 0) {
     // For custom palette
     colorEntries = customPalette.map((color, i) => [
       i.toString(),
       { hex: color.hex, name: `Color ${i + 1}` },
     ]);
   } else {
-    // For preset designs
-    const designs = [
-      "custom",
-      "abyss",
-      "aloe",
-      "amber",
-      "autumn",
-      "coastal",
-      "elemental",
-      "forest",
-      "ft5",
-      "mirage",
-      "sapphire",
-      "spectrum",
-      "striped-coastal",
-      "striped-ft5",
-      "striped-timberline",
-      "tidal",
-      "tiled-coastal",
-      "tiled-ft5",
-      "tiled-timberline",
-      "timberline",
-      "winter",
-    ];
-    const colorMap = getDesignColors(designs[selectedDesign]);
+    const colorMap = DESIGN_COLORS[selectedDesign];
     if (colorMap) {
       colorEntries = Object.entries(colorMap);
     }
@@ -342,6 +365,9 @@ const PlywoodBase = ({ width, height }: { width: number; height: number }) => {
           metalness={0.1}
         />
       </mesh>
+
+      {/* Add the french cleat */}
+      <FrenchCleat width={width} height={height} />
     </>
   );
 };
@@ -391,7 +417,7 @@ const getColorIndex = (
 
 const WoodPattern = () => {
   const {
-    selectedSize,
+    dimensions,
     selectedDesign,
     colorPattern,
     orientation,
@@ -399,36 +425,11 @@ const WoodPattern = () => {
     isRotated,
     customPalette,
   } = useCustomStore();
-  const details = getDimensionsDetails(selectedSize);
+  const details = getDimensionsDetails(dimensions);
 
-  const designs = [
-    "custom",
-    "abyss",
-    "aloe",
-    "amber",
-    "autumn",
-    "coastal",
-    "elemental",
-    "forest",
-    "ft5",
-    "mirage",
-    "sapphire",
-    "spectrum",
-    "striped-coastal",
-    "striped-ft5",
-    "striped-timberline",
-    "tidal",
-    "tiled-coastal",
-    "tiled-ft5",
-    "tiled-timberline",
-    "timberline",
-    "winter",
-  ];
+  let colorMap = DESIGN_COLORS[selectedDesign];
 
-  const currentDesign = designs[selectedDesign];
-  let colorMap = getDesignColors(currentDesign);
-
-  if (selectedDesign === 0 && customPalette.length > 0) {
+  if (selectedDesign === ItemDesigns.Custom && customPalette.length > 0) {
     colorMap = Object.fromEntries(
       customPalette.map((color, i) => [
         i.toString(),
@@ -490,12 +491,14 @@ const WoodPattern = () => {
   const baseHeight = totalHeight;
 
   return (
-    <group
-      rotation={orientation === "vertical" ? [0, 0, Math.PI / 2] : [0, 0, 0]}
-    >
-      <PlywoodBase width={baseWidth} height={baseHeight} />
-      {blocks}
-    </group>
+    (selectedDesign === ItemDesigns.Custom ? totalColors > 0 : true) && (
+      <group
+        rotation={orientation === "vertical" ? [0, 0, Math.PI / 2] : [0, 0, 0]}
+      >
+        <PlywoodBase width={baseWidth} height={baseHeight} />
+        {blocks}
+      </group>
+    )
   );
 };
 
@@ -544,7 +547,7 @@ const Scene = ({ isExpanded }: { isExpanded: boolean }) => {
   const cameraFov = isExpanded ? 40 : 45;
 
   const showEmptyCustomInfo =
-    selectedDesign === 0 && customPalette.length === 0;
+    selectedDesign === ItemDesigns.Custom && customPalette.length === 0;
 
   // Force re-render when expanded state changes
   useEffect(() => {
@@ -614,7 +617,6 @@ const MiniDesignCard = () => {
 
 // Update the PreviewCard component
 export function PreviewCard() {
-  const { selectedSize } = useCustomStore();
   const [mounted, setMounted] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -680,27 +682,21 @@ export function PreviewCard() {
             />
           </CardHeader>
           <CardContent className="relative h-[calc(100%-4rem)]">
-            {selectedSize ? (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="w-full h-full"
-              >
-                <Scene isExpanded={isExpanded} />
-                <div className="absolute top-4 right-0">
-                  <AnimatePresence>
-                    {isExpanded && <MiniDesignCard />}
-                  </AnimatePresence>
-                  <AnimatePresence>
-                    {isExpanded && <PatternControls />}
-                  </AnimatePresence>
-                </div>
-              </motion.div>
-            ) : (
-              <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
-                Select a size to view 3D preview
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="w-full h-full"
+            >
+              <Scene isExpanded={isExpanded} />
+              <div className="absolute top-4 right-0">
+                <AnimatePresence>
+                  {isExpanded && <MiniDesignCard />}
+                </AnimatePresence>
+                <AnimatePresence>
+                  {isExpanded && <PatternControls />}
+                </AnimatePresence>
               </div>
-            )}
+            </motion.div>
           </CardContent>
         </Card>
 

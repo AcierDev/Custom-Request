@@ -58,10 +58,10 @@ export interface PriceBreakdown {
 }
 
 export function calculatePrice(
-  size: ItemSizes | null,
+  dimensions: { height: number; width: number },
   shippingSpeed: ShippingSpeed = "standard"
 ): PriceBreakdown {
-  if (!size) {
+  if (!dimensions) {
     return {
       basePrice: 0,
       shipping: { base: 0, additionalHeight: 0, expedited: 0, total: 0 },
@@ -76,11 +76,9 @@ export function calculatePrice(
   }
 
   // Parse dimensions from size string (e.g., "14 x 7")
-  const [width, height] = size
-    .split(" x ")
-    .map(Number)
-    .map((num) => num * BLOCK_SIZE);
+  const { width, height } = dimensions;
 
+  // Convert dimensions to blocks (3 inches per block)
   // Convert dimensions to blocks (3 inches per block)
   const heightInBlocks = Math.round(height / BLOCK_SIZE);
   const widthInBlocks = Math.round(width / BLOCK_SIZE);
