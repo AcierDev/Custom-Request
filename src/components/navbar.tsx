@@ -149,11 +149,11 @@ export function Navbar({
       <aside
         className={`${
           sidebarOpen ? "w-64" : "w-16"
-        } fixed h-screen transition-all duration-300 ease-in-out border-r bg-gradient-to-b from-gray-800 to-gray-600 hidden lg:block z-30`}
+        } fixed h-screen transition-all duration-300 ease-in-out border-r dark:border-gray-800 border-gray-200 bg-white dark:bg-gradient-to-b dark:from-gray-800 dark:to-gray-600 hidden lg:block z-30`}
       >
-        <div className="h-16 flex items-center justify-between px-4 bg-gray-950">
+        <div className="h-16 flex items-center justify-between px-4 bg-gray-50 dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800">
           {sidebarOpen && (
-            <span className="text-lg font-bold cursor-pointer text-foreground hover:text-primary transition-colors text-white">
+            <span className="text-lg font-bold cursor-pointer text-gray-900 dark:text-white hover:text-primary transition-colors">
               Everwood
             </span>
           )}
@@ -161,7 +161,9 @@ export function Navbar({
             variant="ghost"
             size="icon"
             onClick={toggleSidebar}
-            className={sidebarOpen ? "" : "mx-auto"}
+            className={`${
+              sidebarOpen ? "" : "mx-auto"
+            } hover:bg-gray-200 dark:hover:bg-gray-800`}
           >
             {sidebarOpen ? (
               <ChevronLeft className="h-4 w-4" />
@@ -171,14 +173,14 @@ export function Navbar({
             <span className="sr-only">Toggle sidebar</span>
           </Button>
         </div>
-        <div className="h-[calc(100vh-4rem)] flex flex-col bg-gradient-to-b from-gray-950/90 to-gray-950/70">
+        <div className="h-[calc(100vh-4rem)] flex flex-col bg-gray-50/50 dark:bg-gradient-to-b dark:from-gray-950/90 dark:to-gray-950/70">
           <div className="flex-1 overflow-y-auto no-scrollbar px-3">
             <div className="flex flex-col space-y-1 py-2">
               {mainNavItems.map((item, index) =>
                 item.type === "divider" ? (
                   <Separator
                     key={index}
-                    className="my-2 dark:bg-gray-600"
+                    className="my-2 bg-gray-200 dark:bg-gray-600"
                     decorative
                   />
                 ) : (
@@ -192,7 +194,7 @@ export function Navbar({
               )}
             </div>
           </div>
-          <div className="p-3 border-t dark:border-gray-600">
+          <div className="p-3 border-t border-gray-200 dark:border-gray-600 bg-gray-50/80 dark:bg-gray-900/50">
             <div
               className={`${
                 sidebarOpen ? "flex gap-2" : "flex flex-col gap-2"
@@ -202,7 +204,7 @@ export function Navbar({
                 variant="ghost"
                 size="icon"
                 onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                className="flex-shrink-0"
+                className="flex-shrink-0 hover:bg-gray-200 dark:hover:bg-gray-800"
               >
                 {theme === "dark" ? (
                   <Sun className="h-5 w-5" />
@@ -230,17 +232,21 @@ export function Navbar({
       </aside>
 
       {/* Mobile Navbar */}
-      <nav className="lg:hidden fixed top-0 left-0 right-0 z-40 border-b bg-gray-950 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <nav className="lg:hidden fixed top-0 left-0 right-0 z-40 border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-950/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="w-full flex h-14 items-center px-4">
           <Sheet>
             <SheetTrigger asChild>
-              <Button size="icon" variant="ghost">
+              <Button
+                size="icon"
+                variant="ghost"
+                className="hover:bg-gray-200 dark:hover:bg-gray-800"
+              >
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Toggle menu</span>
               </Button>
             </SheetTrigger>
             <span
-              className="text-xl font-bold mr-auto cursor-pointer text-foreground hover:text-primary transition-colors"
+              className="text-xl font-bold mr-auto cursor-pointer text-gray-900 dark:text-white hover:text-primary transition-colors"
               onClick={() => router.push("/dashboard")}
             >
               Everwood
@@ -248,13 +254,16 @@ export function Navbar({
 
             <SheetContent
               side="left"
-              className="w-64 p-0 bg-gradient-to-b from-gray-800 to-gray-600"
+              className="w-64 p-0 bg-white dark:bg-gradient-to-b dark:from-gray-800 dark:to-gray-600"
             >
-              <div className="flex flex-col h-[100dvh] bg-gradient-to-b from-gray-950/90 to-gray-950/70">
+              <div className="flex flex-col h-[100dvh] bg-gray-50/50 dark:bg-gradient-to-b dark:from-gray-950/90 dark:to-gray-950/70">
                 <div className="flex-1 flex flex-col space-y-1 py-2 overflow-y-auto no-scrollbar">
                   {mainNavItems.map((item, index) =>
                     item.type === "divider" ? (
-                      <Separator key={index} className="my-2" />
+                      <Separator
+                        key={index}
+                        className="my-2 bg-gray-200 dark:bg-gray-600"
+                      />
                     ) : (
                       <NavLink
                         key={"href" in item ? item.href : index}
@@ -265,7 +274,7 @@ export function Navbar({
                     )
                   )}
                 </div>
-                <div className="p-4 border-t">
+                <div className="p-4 border-t border-gray-200 dark:border-gray-600 bg-gray-50/80 dark:bg-gray-900/50">
                   <div className="flex gap-2">
                     <Button
                       className="flex-1 flex items-center justify-center bg-primary text-primary-foreground hover:bg-primary/90"
@@ -280,7 +289,7 @@ export function Navbar({
                       onClick={() => {
                         setTheme(theme === "dark" ? "light" : "dark");
                       }}
-                      className="flex-shrink-0"
+                      className="flex-shrink-0 hover:bg-gray-200 dark:hover:bg-gray-800"
                     >
                       {theme === "dark" ? (
                         <Sun className="h-5 w-5" />

@@ -19,12 +19,15 @@ import { useState, useEffect } from "react";
 
 const sizeOptions = [...Object.values(ItemSizes), "custom"];
 
+type Unit = "blocks" | "inches" | "feet";
+
 export function SizeCard() {
   const { dimensions, setDimensions } = useCustomStore();
   const [customWidth, setCustomWidth] = useState(dimensions.width.toString());
   const [customHeight, setCustomHeight] = useState(
     dimensions.height.toString()
   );
+  const [unit, setUnit] = useState<Unit>("blocks");
 
   // Find the current size based on dimensions
   const currentSize =
@@ -37,30 +40,68 @@ export function SizeCard() {
       );
     }) || "custom";
 
-  useEffect(() => {
-    if (currentSize !== "custom") {
-      const sizeDims = sizeToDimensions(currentSize as ItemSizes);
-      setCustomWidth(sizeDims.width.toString());
-      setCustomHeight(sizeDims.height.toString());
+  // Convert blocks to the selected unit
+  const convertFromBlocks = (blocks: number, unit: Unit) => {
+    switch (unit) {
+      case "inches":
+        return (blocks * 3).toString();
+      case "feet":
+        return ((blocks * 3) / 12).toFixed(1);
+      default:
+        return blocks.toString();
     }
-  }, [currentSize]);
+  };
+
+  // Convert from the selected unit to blocks
+  const convertToBlocks = (value: string, unit: Unit) => {
+    const numValue = parseFloat(value);
+    switch (unit) {
+      case "inches":
+        return Math.round(numValue / 3);
+      case "feet":
+        return Math.round((numValue * 12) / 3);
+      default:
+        return numValue;
+    }
+  };
+
+  // Update displayed values when unit changes
+  useEffect(() => {
+    setCustomWidth(convertFromBlocks(dimensions.width, unit));
+    setCustomHeight(convertFromBlocks(dimensions.height, unit));
+  }, [unit, dimensions.width, dimensions.height]);
 
   const handleCustomDimensionChange = (
     value: string,
     setter: (value: string) => void,
     dimension: "width" | "height"
   ) => {
-    // Only allow numbers and limit to 3 digits
-    const sanitizedValue = value.replace(/[^0-9]/g, "").slice(0, 3);
-    setter(sanitizedValue);
+    // Convert the input value to a number in the current unit
+    let numValue = parseFloat(value);
 
-    // Update dimensions if both values are valid
-    const width = dimension === "width" ? sanitizedValue : customWidth;
-    const height = dimension === "height" ? sanitizedValue : customHeight;
+    // If the value is not a number, don't update
+    if (isNaN(numValue)) return;
+
+    // Ensure the value is positive
+    if (numValue < 0) numValue = 0;
+
+    // For non-feet units, ensure whole numbers
+    if (unit !== "feet") {
+      numValue = Math.round(numValue);
+    }
+
+    // Format and set the value
+    const formattedValue =
+      unit === "feet" ? numValue.toFixed(1) : numValue.toString();
+    setter(formattedValue);
+
+    // Calculate blocks
+    const width = dimension === "width" ? formattedValue : customWidth;
+    const height = dimension === "height" ? formattedValue : customHeight;
 
     if (width && height) {
-      const numWidth = parseInt(width);
-      const numHeight = parseInt(height);
+      const numWidth = convertToBlocks(width, unit);
+      const numHeight = convertToBlocks(height, unit);
       if (numWidth > 0 && numHeight > 0) {
         setDimensions({ width: numWidth, height: numHeight });
       }
@@ -105,53 +146,89 @@ export function SizeCard() {
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: "auto" }}
           exit={{ opacity: 0, height: 0 }}
-          className="grid grid-cols-2 gap-4"
+          className="space-y-4"
         >
-          <div className="space-y-2">
-            <Label
-              htmlFor="width"
-              className="text-sm text-gray-600 dark:text-gray-400"
-            >
-              Width (Blocks)
-            </Label>
-            <Input
-              id="width"
-              type="number"
-              min="1"
-              max="999"
-              value={customWidth}
-              onChange={(e) =>
-                handleCustomDimensionChange(
-                  e.target.value,
-                  setCustomWidth,
-                  "width"
-                )
-              }
-              className="bg-white dark:bg-gray-800"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label
-              htmlFor="height"
-              className="text-sm text-gray-600 dark:text-gray-400"
-            >
-              Height (Blocks)
-            </Label>
-            <Input
-              id="height"
-              type="number"
-              min="1"
-              max="999"
-              value={customHeight}
-              onChange={(e) =>
-                handleCustomDimensionChange(
-                  e.target.value,
-                  setCustomHeight,
-                  "height"
-                )
-              }
-              className="bg-white dark:bg-gray-800"
-            />
+          <Select
+            value={unit}
+            onValueChange={(value) => setUnit(value as Unit)}
+          >
+            <SelectTrigger className="w-full bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+              <SelectValue placeholder="Select unit" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="blocks">Blocks</SelectItem>
+              <SelectItem value="inches">Inches</SelectItem>
+              <SelectItem value="feet">Feet</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label
+                htmlFor="width"
+                className="text-sm text-gray-600 dark:text-gray-400"
+              >
+                Width ({unit})
+              </Label>
+              <Input
+                id="width"
+                type="number"
+                step={unit === "feet" ? 0.1 : 1}
+                min={unit === "feet" ? 0.1 : 1}
+                value={customWidth}
+                onChange={(e) =>
+                  handleCustomDimensionChange(
+                    e.target.value,
+                    setCustomWidth,
+                    "width"
+                  )
+                }
+                onBlur={(e) => {
+                  const numValue = parseFloat(e.target.value);
+                  if (!isNaN(numValue)) {
+                    const formattedValue =
+                      unit === "feet"
+                        ? Math.max(0.1, numValue).toFixed(1)
+                        : Math.max(1, Math.round(numValue)).toString();
+                    setCustomWidth(formattedValue);
+                  }
+                }}
+                className="bg-white dark:bg-gray-800"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label
+                htmlFor="height"
+                className="text-sm text-gray-600 dark:text-gray-400"
+              >
+                Height ({unit})
+              </Label>
+              <Input
+                id="height"
+                type="number"
+                step={unit === "feet" ? 0.1 : 1}
+                min={unit === "feet" ? 0.1 : 1}
+                value={customHeight}
+                onChange={(e) =>
+                  handleCustomDimensionChange(
+                    e.target.value,
+                    setCustomHeight,
+                    "height"
+                  )
+                }
+                onBlur={(e) => {
+                  const numValue = parseFloat(e.target.value);
+                  if (!isNaN(numValue)) {
+                    const formattedValue =
+                      unit === "feet"
+                        ? Math.max(0.1, numValue).toFixed(1)
+                        : Math.max(1, Math.round(numValue)).toString();
+                    setCustomHeight(formattedValue);
+                  }
+                }}
+                className="bg-white dark:bg-gray-800"
+              />
+            </div>
           </div>
         </motion.div>
       </CardContent>

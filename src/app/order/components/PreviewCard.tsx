@@ -29,6 +29,7 @@ import Link from "next/link";
 import { cn, getDimensionsDetails } from "@/lib/utils";
 import { ItemDesigns } from "@/typings/types";
 import { DESIGN_COLORS } from "@/typings/color-maps";
+import { GridHelper, AxesHelper } from "three";
 
 type BlockProps = {
   position: [number, number, number];
@@ -367,7 +368,7 @@ const PlywoodBase = ({ width, height }: { width: number; height: number }) => {
       </mesh>
 
       {/* Add the french cleat */}
-      <FrenchCleat width={width} height={height} />
+      {/* <FrenchCleat width={width} height={height} /> */}
     </>
   );
 };
@@ -540,6 +541,50 @@ const EmptyCustomPaletteInfo = () => {
   );
 };
 
+const LightingHelpers = () => {
+  return (
+    <>
+      {/* Grid helper */}
+
+      {/* Axes helper - Red is X, Green is Y, Blue is Z */}
+
+      {/* Primary light source (top-right-front) */}
+      <directionalLight
+        position={[15, 5, 5]}
+        castShadow
+        intensity={1}
+        shadow-mapSize-width={1024}
+        shadow-mapSize-height={1024}
+      ></directionalLight>
+
+      <directionalLight
+        position={[15, -5, 5]}
+        castShadow
+        intensity={1}
+        shadow-mapSize-width={1024}
+        shadow-mapSize-height={1024}
+      ></directionalLight>
+
+      {/* Secondary light source (bottom-left-back) */}
+      <directionalLight
+        position={[-5, -5, 10]}
+        castShadow
+        intensity={0.8}
+        shadow-mapSize-width={1024}
+        shadow-mapSize-height={1024}
+      ></directionalLight>
+
+      <directionalLight
+        position={[-15, -2, 5]}
+        castShadow
+        intensity={0.3}
+        shadow-mapSize-width={1024}
+        shadow-mapSize-height={1024}
+      ></directionalLight>
+    </>
+  );
+};
+
 const Scene = ({ isExpanded }: { isExpanded: boolean }) => {
   const [shouldRerender, setShouldRerender] = useState(false);
   const { selectedDesign, customPalette } = useCustomStore();
@@ -579,16 +624,10 @@ const Scene = ({ isExpanded }: { isExpanded: boolean }) => {
             }}
           >
             <ambientLight intensity={0.5} />
-            <directionalLight
-              position={[5, 5, 5]}
-              castShadow
-              intensity={1.5}
-              shadow-mapSize-width={1024}
-              shadow-mapSize-height={1024}
-            />
+            <LightingHelpers />
             <WoodPattern />
             <OrbitControls
-              enablePan={false}
+              enablePan={true}
               minDistance={isExpanded ? 12 : 8}
               maxDistance={isExpanded ? 35 : 25}
               target={[0, 0, 0]}
