@@ -3,6 +3,7 @@ import { ItemSizes, ItemDesigns, Dimensions } from "@/typings/types";
 import { calculatePrice, PriceBreakdown } from "@/lib/pricing";
 import { mixPaintColors } from "@/lib/colorUtils";
 import { DESIGN_COLORS } from "@/typings/color-maps";
+import { createStore } from "zustand/vanilla";
 
 export type ShippingSpeed = "standard" | "expedited" | "rushed";
 export type ColorPattern =
@@ -30,6 +31,13 @@ export type CustomColor = {
 export type PatternType = "tiled" | "geometric";
 
 export type StyleType = "geometric" | "tiled" | "striped";
+
+// Add new types for hover state
+export interface HoverInfo {
+  position: [number, number];
+  color: string;
+  colorName?: string;
+}
 
 interface CustomState {
   dimensions: Dimensions;
@@ -66,6 +74,21 @@ interface CustomStore extends CustomState {
   setPatternType: (type: PatternType) => void;
   setStyle: (style: StyleType) => void;
 }
+
+interface HoverState {
+  hoverInfo: HoverInfo | null;
+  pinnedInfo: HoverInfo | null;
+  setHoverInfo: (info: HoverInfo | null) => void;
+  setPinnedInfo: (info: HoverInfo | null) => void;
+}
+
+// Create a separate vanilla store for hover state
+export const hoverStore = createStore<HoverState>((set) => ({
+  hoverInfo: null,
+  pinnedInfo: null,
+  setHoverInfo: (info) => set({ hoverInfo: info }),
+  setPinnedInfo: (info) => set({ pinnedInfo: info }),
+}));
 
 // Helper function to create a ColorMap from CustomColor array
 const createColorMap = (colors: CustomColor[]): ColorMap => {

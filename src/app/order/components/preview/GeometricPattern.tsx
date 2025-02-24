@@ -6,9 +6,12 @@ import { DESIGN_COLORS } from "@/typings/color-maps";
 import { ItemDesigns } from "@/typings/types";
 import { PlywoodBase } from "./PlywoodBase";
 import { getDimensionsDetails } from "@/lib/utils";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import * as THREE from "three";
 import type { BufferGeometry } from "three";
+import { Html } from "@react-three/drei";
+import { hoverStore } from "@/store/customStore";
+import { useStore } from "zustand";
 
 const getColorIndex = (
   x: number,
@@ -67,6 +70,28 @@ export function GeometricPattern() {
   const details = getDimensionsDetails(dimensions);
   const [geometry, setGeometry] = useState<BufferGeometry | null>(null);
 
+  // Use the hover store
+  const { hoverInfo, setHoverInfo, pinnedInfo, setPinnedInfo } =
+    useStore(hoverStore);
+
+  // Create refs for rotation seeds
+  const rotationSeedsRef = useRef<boolean[][]>();
+
+  // Initialize rotation seeds if not already done
+  if (
+    !rotationSeedsRef.current ||
+    rotationSeedsRef.current.length !== details?.blocks.width ||
+    rotationSeedsRef.current[0]?.length !== details?.blocks.height
+  ) {
+    rotationSeedsRef.current = Array(details?.blocks.width || 0)
+      .fill(0)
+      .map(() =>
+        Array(details?.blocks.height || 0)
+          .fill(0)
+          .map(() => Math.random() < 0.5)
+      );
+  }
+
   // Load the STL file
   useEffect(() => {
     const loader = new STLLoader();
@@ -87,8 +112,12 @@ export function GeometricPattern() {
         setGeometry(loadedGeometry);
       },
       undefined,
-      (error: Error) => {
-        console.error("Error loading model:", error);
+      (error: unknown) => {
+        if (error instanceof Error) {
+          console.error("Error loading model:", error.message);
+        } else {
+          console.error("Error loading model:", String(error));
+        }
       }
     );
   }, []);
@@ -118,17 +147,14 @@ export function GeometricPattern() {
 
   const geometricBlocks = [];
 
-  // Create a deterministic random rotation for each position
+  // Update the getRotation function to use the memoized seeds
   const getRotation = (x: number, y: number, isHorizontal: boolean): number => {
-    // Use position to create a deterministic "random" value
-    const seed = Math.random() < 0.5 ? 1 : 0;
+    const seed = rotationSeedsRef.current![x][y];
 
     if (isHorizontal) {
-      // For horizontal orientation: alternate between 90 and -90 degrees
-      return seed === 0 ? Math.PI / 2 : -Math.PI / 2;
+      return seed ? Math.PI / 2 : -Math.PI / 2;
     } else {
-      // For vertical orientation: alternate between 0 and 180 degrees
-      return seed === 0 ? 0 : Math.PI;
+      return seed ? 0 : Math.PI;
     }
   };
 
@@ -151,7 +177,9 @@ export function GeometricPattern() {
         isRotated
       );
 
-      const color = colorEntries[colorIndex]?.[1].hex || "#8B5E3B";
+      const colorEntry = colorEntries[colorIndex];
+      const color = colorEntry?.[1].hex || "#8B5E3B";
+      const colorName = colorEntry?.[1].name;
       const xPos = x * blockSize + offsetX + blockSize / 2;
       const yPos = y * blockSize + offsetY + blockSize / 2;
       const zPos = blockSize / 2 - 0.138;
@@ -164,10 +192,42 @@ export function GeometricPattern() {
           key={`${x}-${y}`}
           geometry={geometry}
           position={[xPos, yPos, zPos]}
-          rotation={[0, 0, rotation]} // Apply the rotation around Z axis
+          rotation={[0, 0, rotation]}
           scale={[blockSize, blockSize, blockSize]}
+          onPointerEnter={(e) => {
+            e.stopPropagation();
+            setHoverInfo({ position: [x, y], color, colorName });
+          }}
+          onPointerLeave={() => setHoverInfo(null)}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (
+              pinnedInfo?.position[0] === x &&
+              pinnedInfo?.position[1] === y
+            ) {
+              setPinnedInfo(null);
+            } else {
+              setPinnedInfo({ position: [x, y], color, colorName });
+            }
+          }}
         >
-          <meshStandardMaterial color={color} roughness={0.7} metalness={0.1} />
+          <meshStandardMaterial
+            color={color}
+            roughness={0.7}
+            metalness={0.1}
+            emissive={
+              (hoverInfo?.position[0] === x && hoverInfo?.position[1] === y) ||
+              (pinnedInfo?.position[0] === x && pinnedInfo?.position[1] === y)
+                ? color
+                : "#000000"
+            }
+            emissiveIntensity={
+              (hoverInfo?.position[0] === x && hoverInfo?.position[1] === y) ||
+              (pinnedInfo?.position[0] === x && pinnedInfo?.position[1] === y)
+                ? 0.5
+                : 0
+            }
+          />
         </mesh>
       );
     }
@@ -175,8 +235,62 @@ export function GeometricPattern() {
 
   return (
     <>
-      <PlywoodBase width={totalWidth} height={totalHeight} />
-      <group scale={[1, 1, 1]}>{geometricBlocks}</group>
+      <mesh
+        position={[0, 0, -1]}
+        onClick={() => setPinnedInfo(null)}
+        receiveShadow
+      >
+        <planeGeometry args={[100, 100]} />
+        <meshStandardMaterial transparent opacity={0} />
+      </mesh>
+      <group
+        scale={[1, 1, 1]}
+        onClick={(e) => {
+          // Clear pinned info when clicking outside blocks
+          if (e.object.type === "Group") {
+            setPinnedInfo(null);
+          }
+        }}
+      >
+        <PlywoodBase width={totalWidth} height={totalHeight} />
+        {geometricBlocks}
+      </group>
+      {(hoverInfo || pinnedInfo) && (
+        <Html position={[0, 0, 1]}>
+          <div className="min-w-[120px] px-3 py-2 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-6 h-6 rounded-md shadow-sm border border-gray-200 dark:border-gray-700"
+                  style={{
+                    backgroundColor:
+                      pinnedInfo?.color || hoverInfo?.color || "#8B5E3B",
+                  }}
+                />
+                <span className="font-medium text-sm text-gray-900 dark:text-gray-100">
+                  {pinnedInfo?.colorName ||
+                    hoverInfo?.colorName ||
+                    "Custom Color"}
+                </span>
+              </div>
+              <div className="grid grid-cols-[auto,1fr] items-center gap-x-3 gap-y-1 text-xs">
+                <span className="text-gray-500 dark:text-gray-400">
+                  Position:
+                </span>
+                <span className="font-mono text-gray-700 dark:text-gray-300">
+                  [{pinnedInfo?.position[0] || hoverInfo?.position[0]},{" "}
+                  {pinnedInfo?.position[1] || hoverInfo?.position[1]}]
+                </span>
+                <span className="text-gray-500 dark:text-gray-400">Hex:</span>
+                <span className="font-mono text-purple-600 dark:text-purple-400">
+                  {(pinnedInfo?.color || hoverInfo?.color)?.toUpperCase() ||
+                    "Custom Color"}
+                </span>
+              </div>
+            </div>
+          </div>
+        </Html>
+      )}
     </>
   );
 }

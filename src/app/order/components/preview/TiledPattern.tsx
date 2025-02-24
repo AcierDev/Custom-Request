@@ -6,6 +6,10 @@ import { DESIGN_COLORS } from "@/typings/color-maps";
 import { ItemDesigns } from "@/typings/types";
 import { Block } from "./Block";
 import { PlywoodBase } from "./PlywoodBase";
+import { useState, useRef } from "react";
+import { Html } from "@react-three/drei";
+import { hoverStore } from "@/store/customStore";
+import { useStore } from "zustand";
 
 const getColorIndex = (
   x: number,
@@ -50,6 +54,12 @@ const getColorIndex = (
   return index;
 };
 
+interface HoverInfo {
+  position: [number, number];
+  color: string;
+  colorName?: string;
+}
+
 export function TiledPattern() {
   const {
     dimensions,
@@ -61,6 +71,10 @@ export function TiledPattern() {
     customPalette,
   } = useCustomStore();
   const details = getDimensionsDetails(dimensions);
+
+  // Use the hover store
+  const { hoverInfo, setHoverInfo, pinnedInfo, setPinnedInfo } =
+    useStore(hoverStore);
 
   let colorMap = DESIGN_COLORS[selectedDesign];
 
@@ -78,7 +92,7 @@ export function TiledPattern() {
   }
 
   const blockSize = 0.5;
-  const blockHeight = 0.3;
+  const blockHeight = 0.1;
   const heightVariation = 0.2;
   const { width: modelWidth, height: modelHeight } = details.blocks;
 
@@ -87,13 +101,31 @@ export function TiledPattern() {
   const offsetX = -totalWidth / 2;
   const offsetY = -totalHeight / 2;
 
+  // Create a ref to store the random heights
+  const heightsRef = useRef<number[][]>();
+
+  // Initialize heights if not already done
+  if (
+    !heightsRef.current ||
+    heightsRef.current.length !== modelWidth ||
+    heightsRef.current[0]?.length !== modelHeight
+  ) {
+    heightsRef.current = Array(modelWidth)
+      .fill(0)
+      .map(() =>
+        Array(modelHeight)
+          .fill(0)
+          .map(() => blockHeight + Math.random() * heightVariation)
+      );
+  }
+
   const blocks = [];
   const colorEntries = Object.entries(colorMap);
   const totalColors = colorEntries.length;
 
   for (let x = 0; x < modelWidth; x++) {
     for (let y = 0; y < modelHeight; y++) {
-      const randomHeight = blockHeight + Math.random() * heightVariation;
+      const randomHeight = heightsRef.current[x][y];
       const colorIndex = getColorIndex(
         x,
         y,
@@ -105,8 +137,9 @@ export function TiledPattern() {
         isReversed,
         isRotated
       );
-
-      const color = colorEntries[colorIndex]?.[1].hex;
+      const colorEntry = colorEntries[colorIndex];
+      const color = colorEntry?.[1].hex || "#8B5E3B";
+      const colorName = colorEntry?.[1].name;
       const xPos = x * blockSize + offsetX;
       const yPos = y * blockSize + offsetY;
 
@@ -116,7 +149,28 @@ export function TiledPattern() {
           position={[xPos, yPos, 0]}
           size={blockSize}
           height={randomHeight}
-          color={color || "#8B5E3B"}
+          color={color}
+          isHovered={
+            (hoverInfo?.position[0] === x && hoverInfo?.position[1] === y) ||
+            (pinnedInfo?.position[0] === x && pinnedInfo?.position[1] === y)
+          }
+          onHover={(isHovering) => {
+            if (isHovering) {
+              setHoverInfo({ position: [x, y], color, colorName });
+            } else {
+              setHoverInfo(null);
+            }
+          }}
+          onClick={() => {
+            if (
+              pinnedInfo?.position[0] === x &&
+              pinnedInfo?.position[1] === y
+            ) {
+              setPinnedInfo(null);
+            } else {
+              setPinnedInfo({ position: [x, y], color, colorName });
+            }
+          }}
         />
       );
     }
@@ -127,12 +181,68 @@ export function TiledPattern() {
 
   return (
     (selectedDesign === ItemDesigns.Custom ? totalColors > 0 : true) && (
-      <group
-        rotation={orientation === "vertical" ? [0, 0, Math.PI / 2] : [0, 0, 0]}
-      >
-        <PlywoodBase width={baseWidth} height={baseHeight} />
-        {blocks}
-      </group>
+      <>
+        <mesh
+          position={[0, 0, -1]}
+          onClick={() => setPinnedInfo(null)}
+          receiveShadow
+        >
+          <planeGeometry args={[100, 100]} />
+          <meshStandardMaterial transparent opacity={0} />
+        </mesh>
+        <group
+          rotation={
+            orientation === "vertical" ? [0, 0, Math.PI / 2] : [0, 0, 0]
+          }
+          onClick={(e) => {
+            // Clear pinned info when clicking outside blocks
+            if (e.object.type === "Group") {
+              setPinnedInfo(null);
+            }
+          }}
+        >
+          <PlywoodBase width={baseWidth} height={baseHeight} />
+          {blocks}
+          {(hoverInfo || pinnedInfo) && (
+            <Html position={[0, 0, 1]}>
+              <div className="min-w-[120px] px-3 py-2 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-6 h-6 rounded-md shadow-sm border border-gray-200 dark:border-gray-700"
+                      style={{
+                        backgroundColor:
+                          pinnedInfo?.color || hoverInfo?.color || "#8B5E3B",
+                      }}
+                    />
+                    <span className="font-medium text-sm text-gray-900 dark:text-gray-100">
+                      {pinnedInfo?.colorName ||
+                        hoverInfo?.colorName ||
+                        "Custom Color"}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-[auto,1fr] items-center gap-x-3 gap-y-1 text-xs">
+                    <span className="text-gray-500 dark:text-gray-400">
+                      Position:
+                    </span>
+                    <span className="font-mono text-gray-700 dark:text-gray-300">
+                      [{pinnedInfo?.position[0] || hoverInfo?.position[0]},{" "}
+                      {pinnedInfo?.position[1] || hoverInfo?.position[1]}]
+                    </span>
+                    <span className="text-gray-500 dark:text-gray-400">
+                      Hex:
+                    </span>
+                    <span className="font-mono text-purple-600 dark:text-purple-400">
+                      {(pinnedInfo?.color || hoverInfo?.color)?.toUpperCase() ||
+                        "Custom Color"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </Html>
+          )}
+        </group>
+      </>
     )
   );
 }
