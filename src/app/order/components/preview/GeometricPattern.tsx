@@ -1,6 +1,6 @@
 "use client";
 
-import { STLLoader } from "three/examples/jsm/loaders/STLLoader";
+import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import { useCustomStore, ColorPattern } from "@/store/customStore";
 import { DESIGN_COLORS } from "@/typings/color-maps";
 import { ItemDesigns } from "@/typings/types";
@@ -8,6 +8,7 @@ import { PlywoodBase } from "./PlywoodBase";
 import { getDimensionsDetails } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import * as THREE from "three";
+import type { BufferGeometry } from "three";
 
 const getColorIndex = (
   x: number,
@@ -64,14 +65,14 @@ export function GeometricPattern() {
   } = useCustomStore();
 
   const details = getDimensionsDetails(dimensions);
-  const [geometry, setGeometry] = useState<THREE.BufferGeometry | null>(null);
+  const [geometry, setGeometry] = useState<BufferGeometry | null>(null);
 
   // Load the STL file
   useEffect(() => {
     const loader = new STLLoader();
     loader.load(
       "/models/Geometric.stl",
-      (loadedGeometry) => {
+      (loadedGeometry: BufferGeometry) => {
         // Center and normalize the geometry
         loadedGeometry.center();
         loadedGeometry.computeBoundingBox();
@@ -86,13 +87,13 @@ export function GeometricPattern() {
         setGeometry(loadedGeometry);
       },
       undefined,
-      (error) => {
+      (error: Error) => {
         console.error("Error loading model:", error);
       }
     );
   }, []);
 
-  if (!details) return null;
+  if (!details || !geometry) return null;
 
   // Get the appropriate color map
   let colorEntries: [string, { hex: string; name?: string }][] = [];
@@ -158,41 +159,17 @@ export function GeometricPattern() {
       const isHorizontal = shouldBeHorizontal(x, y);
       const rotation = getRotation(x, y, isHorizontal);
 
-      // If geometry is loaded, use it, otherwise use a simple box
-      if (geometry) {
-        geometricBlocks.push(
-          <mesh
-            key={`${x}-${y}`}
-            geometry={geometry}
-            position={[xPos, yPos, zPos]}
-            rotation={[0, 0, rotation]} // Apply the rotation around Z axis
-            scale={[blockSize, blockSize, blockSize]}
-          >
-            <meshStandardMaterial
-              color={color}
-              roughness={0.7}
-              metalness={0.1}
-            />
-          </mesh>
-        );
-      } else {
-        // Fallback to a simple geometric shape if model isn't loaded
-        geometricBlocks.push(
-          <mesh
-            key={`${x}-${y}`}
-            position={[xPos, yPos, zPos]}
-            rotation={[0, 0, rotation]} // Apply the same rotation to fallback
-            scale={[blockSize * 0.8, blockSize * 0.8, blockSize * 0.8]}
-          >
-            <octahedronGeometry args={[0.5]} />
-            <meshStandardMaterial
-              color={color}
-              roughness={0.7}
-              metalness={0.1}
-            />
-          </mesh>
-        );
-      }
+      geometricBlocks.push(
+        <mesh
+          key={`${x}-${y}`}
+          geometry={geometry}
+          position={[xPos, yPos, zPos]}
+          rotation={[0, 0, rotation]} // Apply the rotation around Z axis
+          scale={[blockSize, blockSize, blockSize]}
+        >
+          <meshStandardMaterial color={color} roughness={0.7} metalness={0.1} />
+        </mesh>
+      );
     }
   }
 

@@ -29,7 +29,9 @@ import { cn, getDimensionsDetails } from "@/lib/utils";
 import { ItemDesigns } from "@/typings/types";
 import { GeometricPattern } from "./preview/GeometricPattern";
 import { Input } from "@/components/ui/input";
-
+import { Html } from "@react-three/drei";
+import { TiledPattern } from "./preview/TiledPattern";
+import { StyleCard } from "./StyleCard";
 const PatternControls = () => {
   const {
     colorPattern,
@@ -172,37 +174,26 @@ const CompactPatternControls = ({
       initial={{ opacity: 0, y: 5 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 5 }}
+      className="flex items-center gap-2"
     >
-      <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200 dark:border-gray-700 shadow-lg">
-        <CardContent className="p-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-gray-100 dark:bg-gray-700 rounded-full">
-              <Paintbrush className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-            </div>
-            <span className="text-sm text-gray-600 dark:text-gray-300">
-              Pattern Options
-            </span>
-          </div>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300"
-            onClick={() => setIsExpanded(!isExpanded)}
-          >
-            {isExpanded ? (
-              <>
-                <Minimize2 className="w-4 h-4 mr-1" />
-                Collapse
-              </>
-            ) : (
-              <>
-                <Maximize2 className="w-4 h-4 mr-1" />
-                Expand
-              </>
-            )}
-          </Button>
-        </CardContent>
-      </Card>
+      <Button
+        size="sm"
+        variant="ghost"
+        className="text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        {isExpanded ? (
+          <>
+            <Minimize2 className="w-4 h-4 mr-1" />
+            <span className="text-sm">Collapse</span>
+          </>
+        ) : (
+          <>
+            <Maximize2 className="w-4 h-4 mr-1" />
+            <span className="text-sm">Expand</span>
+          </>
+        )}
+      </Button>
     </motion.div>
   );
 };
@@ -568,17 +559,13 @@ const ControlsStack = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="absolute top-20 right-4 w-[280px] flex flex-col gap-3"
+      className="absolute top-12 right-4 w-[280px] flex flex-col gap-3"
     >
-      <CompactPatternControls
-        setIsExpanded={setIsExpanded}
-        isExpanded={isExpanded}
-      />
-
       <AnimatePresence>
         {isExpanded && (
           <>
             <MiniDesignCard />
+            <StyleCard compact />
             <MiniSizeSelector />
             <PatternControls />
             <MiniInfoCard />
@@ -590,58 +577,84 @@ const ControlsStack = ({
   );
 };
 
-const RulerOverlay = ({
-  visible,
-  dimensions,
-}: {
-  visible: boolean;
-  dimensions: { width: number; height: number };
-}) => {
-  const details = getDimensionsDetails(dimensions);
-  if (!details) return null;
+const Ruler3D = ({ width, height }: { width: number; height: number }) => {
+  const rulerThickness = 0.02;
+  const rulerWidth = 0.05;
+  const inchesPerUnit = 12;
+
+  // Calculate the actual dimensions in inches
+  const actualWidthInches = width * 6;
+  const actualHeightInches = height * 6;
+
+  // Calculate dynamic offsets based on dimensions
+  const horizontalOffset = width / 2; // Center the horizontal measurements
+  const verticalOffset = height / 2; // Center the vertical measurements
+
+  // Calculate how many full 12" increments fit
+  const fullWidthIncrements = Math.floor(actualWidthInches / inchesPerUnit);
+  const fullHeightIncrements = Math.floor(actualHeightInches / inchesPerUnit);
+
+  // Create measurement arrays including the final actual measurement if it doesn't fall on a 12" increment
+  const horizontalMeasurements = [...Array(fullWidthIncrements + 1).keys()]
+    .map((i) => i * inchesPerUnit)
+    .filter((measure) => measure <= actualWidthInches);
+  if (actualWidthInches % inchesPerUnit !== 0) {
+    horizontalMeasurements.push(actualWidthInches);
+  }
+
+  const verticalMeasurements = [...Array(fullHeightIncrements + 1).keys()]
+    .map((i) => i * inchesPerUnit)
+    .filter((measure) => measure <= actualHeightInches);
+  if (actualHeightInches % inchesPerUnit !== 0) {
+    verticalMeasurements.push(actualHeightInches);
+  }
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: visible ? 1 : 0 }}
-      className="absolute inset-0 pointer-events-none"
-    >
+    <group position={[-0.25, -2.25, 0]}>
       {/* Horizontal ruler */}
-      <motion.div
-        className="absolute top-[45%] left-8 right-8 flex items-center"
-        initial={{ width: 0 }}
-        animate={{ width: "calc(100% - 64px)" }}
-        transition={{ delay: 0.2 }}
-      >
-        <div className="h-px w-full bg-purple-500/50 dark:bg-purple-400/50" />
-        <div className="absolute -top-7 left-0 right-0 flex justify-between">
-          <div className="text-xs font-medium text-purple-600 dark:text-purple-400 bg-white/90 dark:bg-gray-800/90 px-2 py-1 rounded-md shadow-sm border border-purple-200 dark:border-purple-800">
-            0"
-          </div>
-          <div className="text-xs font-medium text-purple-600 dark:text-purple-400 bg-white/90 dark:bg-gray-800/90 px-2 py-1 rounded-md shadow-sm border border-purple-200 dark:border-purple-800">
-            {(details.blocks.width * 3).toFixed(1)}"
-          </div>
-        </div>
-      </motion.div>
+      <group position={[0, height * 0.5 + 2.5 + rulerWidth, 0]}>
+        <mesh>
+          <boxGeometry args={[width, rulerWidth, rulerThickness]} />
+          <meshStandardMaterial color="#9333EA" transparent opacity={0.5} />
+        </mesh>
+
+        {horizontalMeasurements.map((measurement, i) => (
+          <Html
+            key={`h-text-${i}`}
+            position={[measurement / 6 - horizontalOffset, rulerWidth, 0]}
+            center
+          >
+            <div className="text-xs text-purple-600 dark:text-purple-400 bg-white/90 dark:bg-gray-800/90 px-1 rounded-sm">
+              {measurement.toFixed(0)}"
+            </div>
+          </Html>
+        ))}
+      </group>
 
       {/* Vertical ruler */}
-      <motion.div
-        className="absolute left-[45%] top-8 bottom-8 flex flex-col items-center"
-        initial={{ height: 0 }}
-        animate={{ height: "calc(100% - 64px)" }}
-        transition={{ delay: 0.2 }}
-      >
-        <div className="w-px h-full bg-purple-500/50 dark:bg-purple-400/50" />
-        <div className="absolute -left-7 top-0 bottom-0 flex flex-col justify-between items-end">
-          <div className="text-xs font-medium text-purple-600 dark:text-purple-400 bg-white/90 dark:bg-gray-800/90 px-2 py-1 rounded-md shadow-sm border border-purple-200 dark:border-purple-800">
-            {(details.blocks.height * 3).toFixed(1)}"
-          </div>
-          <div className="text-xs font-medium text-purple-600 dark:text-purple-400 bg-white/90 dark:bg-gray-800/90 px-2 py-1 rounded-md shadow-sm border border-purple-200 dark:border-purple-800">
-            0"
-          </div>
-        </div>
-      </motion.div>
-    </motion.div>
+      <group position={[-width * 0.5 - 0.6 + rulerWidth, 2, 0]}>
+        <mesh>
+          <boxGeometry args={[rulerWidth, height, rulerThickness]} />
+          <meshStandardMaterial color="#9333EA" transparent opacity={0.5} />
+        </mesh>
+
+        {verticalMeasurements.map((measurement, i) => (
+          <Html
+            key={`v-text-${i}`}
+            position={[
+              -rulerWidth,
+              height - measurement / 6 - verticalOffset,
+              0,
+            ]}
+            center
+          >
+            <div className="text-xs text-purple-600 dark:text-purple-400 bg-white/90 dark:bg-gray-800/90 px-1 rounded-sm">
+              {measurement.toFixed(0)}"
+            </div>
+          </Html>
+        ))}
+      </group>
+    </group>
   );
 };
 
@@ -684,7 +697,7 @@ const Scene = ({
 }) => {
   const [shouldRerender, setShouldRerender] = useState(false);
   const [showRuler, setShowRuler] = useState(false);
-  const { selectedDesign, customPalette, dimensions } = useCustomStore();
+  const { selectedDesign, customPalette, dimensions, style } = useCustomStore();
   const cameraPosition = isExpanded ? [20, 20, 20] : [15, 15, 15];
   const cameraFov = isExpanded ? 40 : 45;
 
@@ -725,7 +738,18 @@ const Scene = ({
           >
             <ambientLight intensity={0.5} />
             <LightingHelpers />
-            <GeometricPattern />
+            {style === "geometric" && <GeometricPattern />}
+            {style === "tiled" && <TiledPattern />}
+            {/* TODO: Add StripedPattern when available */}
+            {style === "striped" && <TiledPattern />} {/* Temporary fallback */}
+            {showRuler && isExpanded && (
+              <>
+                <Ruler3D
+                  width={dimensions.width * 0.5}
+                  height={dimensions.height * 0.5}
+                />
+              </>
+            )}
             <OrbitControls
               enablePan={true}
               minDistance={isExpanded ? 12 : 8}
@@ -734,9 +758,6 @@ const Scene = ({
               makeDefault
             />
           </Canvas>
-          {showRuler && isExpanded && (
-            <RulerOverlay visible={showRuler} dimensions={dimensions} />
-          )}
           {showEmptyCustomInfo && <EmptyCustomPaletteInfo />}
           {isExpanded && <PreviewInfo />}
           <ControlsStack
@@ -807,9 +828,15 @@ export function PreviewCard() {
       >
         <Card className="h-full dark:bg-gray-800/50 backdrop-blur-sm border-2 border-gray-200 dark:border-gray-700">
           <CardHeader className="pb-2">
-            <CardTitle className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-              3D Preview
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                3D Preview
+              </CardTitle>
+              <CompactPatternControls
+                setIsExpanded={setIsExpanded}
+                isExpanded={isExpanded}
+              />
+            </div>
           </CardHeader>
           <CardContent className="relative h-[calc(100%-4rem)]">
             <motion.div

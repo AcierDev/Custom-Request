@@ -6,7 +6,7 @@ import { ShippingCard } from "@/app/order/components/ShippingCard";
 import { DimensionsCard } from "@/app/order/components/DimensionsCard";
 import { ShippingDurationCard } from "@/app/order/components/ShippingDurationCard";
 import { PreviewCard } from "@/app/order/components/PreviewCard";
-import { DesignDetailsCard } from "@/app/order/components/DesignDetailsCard";
+import { StyleCard } from "@/app/order/components/StyleCard";
 
 export default function Custom() {
   return (
@@ -21,7 +21,7 @@ export default function Custom() {
 
         {/* Middle column */}
         <div className="flex flex-col gap-4 w-2/5 h-full">
-          <DesignDetailsCard />
+          <StyleCard />
           <PreviewCard />
         </div>
 
