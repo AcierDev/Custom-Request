@@ -1,6 +1,5 @@
 "use client";
 
-import { useLoader } from "@react-three/fiber";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader";
 import { useCustomStore, ColorPattern } from "@/store/customStore";
 import { DESIGN_COLORS } from "@/typings/color-maps";
@@ -154,7 +153,7 @@ export function GeometricPattern() {
       const color = colorEntries[colorIndex]?.[1].hex || "#8B5E3B";
       const xPos = x * blockSize + offsetX + blockSize / 2;
       const yPos = y * blockSize + offsetY + blockSize / 2;
-      const zPos = blockSize / 2;
+      const zPos = blockSize / 2 - 0.138;
 
       const isHorizontal = shouldBeHorizontal(x, y);
       const rotation = getRotation(x, y, isHorizontal);

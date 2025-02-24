@@ -80,9 +80,7 @@ export function calculatePrice(
 
   // Convert dimensions to blocks (3 inches per block)
   // Convert dimensions to blocks (3 inches per block)
-  const heightInBlocks = Math.round(height / BLOCK_SIZE);
-  const widthInBlocks = Math.round(width / BLOCK_SIZE);
-  const totalBlocks = heightInBlocks * widthInBlocks;
+  const totalBlocks = height * width;
 
   // Calculate base price using interpolation
   const basePrice = interpolatePrice(totalBlocks);
@@ -130,8 +128,8 @@ export function calculatePrice(
     debug: {
       dimensions: { height, width },
       blocks: {
-        height: heightInBlocks,
-        width: widthInBlocks,
+        height: height,
+        width: width,
         total: totalBlocks,
       },
     },

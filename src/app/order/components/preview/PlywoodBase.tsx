@@ -66,10 +66,10 @@ export function PlywoodBase({ width, height }: PlywoodBaseProps) {
 
       {/* Left side */}
       <mesh
-        position={[-0.25 - width / 2, -0.25, 0]}
+        position={[-0.248 - width / 2, -0.25, -0.1]}
         rotation={[0, Math.PI / 2, 0]}
       >
-        <boxGeometry args={[baseThickness * 2, height, 0.01]} />
+        <boxGeometry args={[baseThickness + 0.001, height + 0.001, 0.005]} />
         <meshStandardMaterial
           color={leftColor}
           roughness={0.7}
@@ -79,10 +79,10 @@ export function PlywoodBase({ width, height }: PlywoodBaseProps) {
 
       {/* Right side */}
       <mesh
-        position={[-0.25 + width / 2, -0.25, 0]}
+        position={[-0.248 + width / 2, -0.25, -0.1]}
         rotation={[0, Math.PI / 2, 0]}
       >
-        <boxGeometry args={[baseThickness * 2, height, 0.01]} />
+        <boxGeometry args={[baseThickness + 0.001, height + 0.001, 0.005]} />
         <meshStandardMaterial
           color={rightColor}
           roughness={0.7}

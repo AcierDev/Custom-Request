@@ -20,6 +20,7 @@ import {
   ArrowRight,
   Info,
   X,
+  Ruler,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DesignCard } from "./DesignCard";
@@ -65,91 +66,88 @@ const PatternControls = () => {
   ];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 5 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 5 }}
-      className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg p-3 shadow-lg border border-gray-200 dark:border-gray-700"
-    >
-      <div className="space-y-4">
-        <div>
-          <Label className="text-sm text-gray-700 dark:text-gray-300 mb-2 block">
-            Orientation
-          </Label>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setOrientation("horizontal")}
-              className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm ${
-                orientation === "horizontal"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-secondary hover:bg-secondary/80"
-              }`}
-            >
-              <MoveHorizontal className="w-4 h-4" />
-              Horizontal
-            </button>
-            <button
-              onClick={() => setOrientation("vertical")}
-              className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm ${
-                orientation === "vertical"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-secondary hover:bg-secondary/80"
-              }`}
-            >
-              <MoveVertical className="w-4 h-4" />
-              Vertical
-            </button>
-          </div>
-        </div>
-
-        <RadioGroup
-          value={colorPattern}
-          onValueChange={(value: ColorPattern) => setColorPattern(value)}
-          className="flex flex-col gap-2"
-        >
-          {patterns.map(({ value, label, icon }) => (
-            <div key={value} className="flex items-center space-x-2">
-              <RadioGroupItem value={value} id={value} />
-              <Label
-                htmlFor={value}
-                className="flex items-center gap-2 cursor-pointer text-sm text-gray-700 dark:text-gray-300"
-              >
-                {icon}
-                {label}
-              </Label>
-            </div>
-          ))}
-        </RadioGroup>
-
-        {(colorPattern === "fade" || colorPattern === "center-fade") && (
+    <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200 dark:border-gray-700 shadow-lg">
+      <CardContent className="p-3">
+        <div className="space-y-4">
           <div>
             <Label className="text-sm text-gray-700 dark:text-gray-300 mb-2 block">
-              Adjustments
+              Orientation
             </Label>
             <div className="flex gap-2">
               <button
-                onClick={() => setIsReversed(!isReversed)}
-                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm bg-secondary hover:bg-secondary/80"
-              >
-                <ArrowLeftRight className="w-4 h-4" />
-                {isReversed ? "Reverse" : "Normal"}
-              </button>
-              <button
-                onClick={() => setIsRotated(!isRotated)}
-                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm ${
-                  isRotated
+                onClick={() => setOrientation("horizontal")}
+                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm ${
+                  orientation === "horizontal"
                     ? "bg-primary text-primary-foreground"
                     : "bg-secondary hover:bg-secondary/80"
                 }`}
               >
-                <RotateCcw className="w-4 h-4" />
-                {isRotated ? "Rotated" : "Normal"}
+                <MoveHorizontal className="w-4 h-4" />
+                Horizontal
+              </button>
+              <button
+                onClick={() => setOrientation("vertical")}
+                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm ${
+                  orientation === "vertical"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary hover:bg-secondary/80"
+                }`}
+              >
+                <MoveVertical className="w-4 h-4" />
+                Vertical
               </button>
             </div>
           </div>
-        )}
-      </div>
-    </motion.div>
+
+          <RadioGroup
+            value={colorPattern}
+            onValueChange={(value: ColorPattern) => setColorPattern(value)}
+            className="flex flex-col gap-2"
+          >
+            {patterns.map(({ value, label, icon }) => (
+              <div key={value} className="flex items-center space-x-2">
+                <RadioGroupItem value={value} id={value} />
+                <Label
+                  htmlFor={value}
+                  className="flex items-center gap-2 cursor-pointer text-sm text-gray-700 dark:text-gray-300"
+                >
+                  {icon}
+                  {label}
+                </Label>
+              </div>
+            ))}
+          </RadioGroup>
+
+          {(colorPattern === "fade" || colorPattern === "center-fade") && (
+            <div>
+              <Label className="text-sm text-gray-700 dark:text-gray-300 mb-2 block">
+                Adjustments
+              </Label>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setIsReversed(!isReversed)}
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm bg-secondary hover:bg-secondary/80"
+                >
+                  <ArrowLeftRight className="w-4 h-4" />
+                  {isReversed ? "Reverse" : "Normal"}
+                </button>
+                <button
+                  onClick={() => setIsRotated(!isRotated)}
+                  className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm ${
+                    isRotated
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-secondary hover:bg-secondary/80"
+                  }`}
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  {isRotated ? "Rotated" : "Normal"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 
@@ -418,54 +416,52 @@ const MiniSizeSelector = () => {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 5 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg p-3 shadow-lg border border-gray-200 dark:border-gray-700"
-    >
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            Dimensions
-          </Label>
-          <span className="text-xs text-gray-500 dark:text-gray-400">
-            blocks
-          </span>
-        </div>
-        <div className="flex gap-2">
-          <div className="flex-1 relative group">
-            <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
-              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                W
-              </span>
-            </div>
-            <Input
-              id="width"
-              type="number"
-              min="1"
-              value={width}
-              onChange={(e) => handleChange(e.target.value, "width")}
-              className="pl-7 h-9 bg-gray-50/50 dark:bg-gray-900/50 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-purple-500/20 transition-shadow"
-            />
+    <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200 dark:border-gray-700 shadow-lg">
+      <CardContent className="p-3">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Dimensions
+            </Label>
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              blocks
+            </span>
           </div>
-          <div className="flex-1 relative group">
-            <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
-              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                H
-              </span>
+          <div className="flex gap-2">
+            <div className="flex-1 relative group">
+              <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                  W
+                </span>
+              </div>
+              <Input
+                id="width"
+                type="number"
+                min="1"
+                value={width}
+                onChange={(e) => handleChange(e.target.value, "width")}
+                className="pl-7 h-9 bg-gray-50/50 dark:bg-gray-900/50 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-purple-500/20 transition-shadow"
+              />
             </div>
-            <Input
-              id="height"
-              type="number"
-              min="1"
-              value={height}
-              onChange={(e) => handleChange(e.target.value, "height")}
-              className="pl-7 h-9 bg-gray-50/50 dark:bg-gray-900/50 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-purple-500/20 transition-shadow"
-            />
+            <div className="flex-1 relative group">
+              <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                  H
+                </span>
+              </div>
+              <Input
+                id="height"
+                type="number"
+                min="1"
+                value={height}
+                onChange={(e) => handleChange(e.target.value, "height")}
+                className="pl-7 h-9 bg-gray-50/50 dark:bg-gray-900/50 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-purple-500/20 transition-shadow"
+              />
+            </div>
           </div>
         </div>
-      </div>
-    </motion.div>
+      </CardContent>
+    </Card>
   );
 };
 
@@ -487,33 +483,34 @@ const MiniInfoCard = () => {
   if (!details) return null;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 5 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg p-3 shadow-lg border border-gray-200 dark:border-gray-700"
-    >
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            Quick Info
-          </Label>
+    <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200 dark:border-gray-700 shadow-lg">
+      <CardContent className="p-3">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Quick Info
+            </Label>
+          </div>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+            <div className="text-xs text-gray-500 dark:text-gray-400">Size</div>
+            <div className="text-xs text-gray-700 dark:text-gray-200 text-right">
+              {details.feet.width.toFixed(1)}' ×{" "}
+              {details.feet.height.toFixed(1)}'
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              Weight
+            </div>
+            <div className="text-xs text-gray-700 dark:text-gray-200 text-right">
+              {details.weight.pounds.toFixed(1)} lbs
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">Area</div>
+            <div className="text-xs text-gray-700 dark:text-gray-200 text-right">
+              {details.area.squareFeet.toFixed(1)} sq ft
+            </div>
+          </div>
         </div>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-          <div className="text-xs text-gray-500 dark:text-gray-400">Size</div>
-          <div className="text-xs text-gray-700 dark:text-gray-200 text-right">
-            {details.feet.width.toFixed(1)}' × {details.feet.height.toFixed(1)}'
-          </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">Weight</div>
-          <div className="text-xs text-gray-700 dark:text-gray-200 text-right">
-            {details.weight.pounds.toFixed(1)} lbs
-          </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">Area</div>
-          <div className="text-xs text-gray-700 dark:text-gray-200 text-right">
-            {details.area.squareFeet.toFixed(1)} sq ft
-          </div>
-        </div>
-      </div>
-    </motion.div>
+      </CardContent>
+    </Card>
   );
 };
 
@@ -521,43 +518,41 @@ const MiniPriceCard = () => {
   const { pricing } = useCustomStore();
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 5 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg p-3 shadow-lg border border-gray-200 dark:border-gray-700"
-    >
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            Price
-          </Label>
-          <motion.div
-            key={pricing.total}
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="text-sm font-bold text-purple-600 dark:text-purple-400"
-          >
-            ${pricing.total.toFixed(2)}
-          </motion.div>
-        </div>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-          <div className="text-xs text-gray-500 dark:text-gray-400">Base</div>
-          <div className="text-xs text-gray-700 dark:text-gray-200 text-right">
-            ${pricing.basePrice.toFixed(2)}
+    <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200 dark:border-gray-700 shadow-lg">
+      <CardContent className="p-3">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Price
+            </Label>
+            <motion.div
+              key={pricing.total}
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="text-sm font-bold text-purple-600 dark:text-purple-400"
+            >
+              ${pricing.total.toFixed(2)}
+            </motion.div>
           </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">
-            Shipping
-          </div>
-          <div className="text-xs text-gray-700 dark:text-gray-200 text-right">
-            ${pricing.shipping.total.toFixed(2)}
-          </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">Tax</div>
-          <div className="text-xs text-gray-700 dark:text-gray-200 text-right">
-            ${pricing.tax.toFixed(2)}
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+            <div className="text-xs text-gray-500 dark:text-gray-400">Base</div>
+            <div className="text-xs text-gray-700 dark:text-gray-200 text-right">
+              ${pricing.basePrice.toFixed(2)}
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              Shipping
+            </div>
+            <div className="text-xs text-gray-700 dark:text-gray-200 text-right">
+              ${pricing.shipping.total.toFixed(2)}
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">Tax</div>
+            <div className="text-xs text-gray-700 dark:text-gray-200 text-right">
+              ${pricing.tax.toFixed(2)}
+            </div>
           </div>
         </div>
-      </div>
-    </motion.div>
+      </CardContent>
+    </Card>
   );
 };
 
@@ -573,7 +568,7 @@ const ControlsStack = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="absolute top-4 right-4 w-[280px] flex flex-col gap-3"
+      className="absolute top-20 right-4 w-[280px] flex flex-col gap-3"
     >
       <CompactPatternControls
         setIsExpanded={setIsExpanded}
@@ -595,6 +590,91 @@ const ControlsStack = ({
   );
 };
 
+const RulerOverlay = ({
+  visible,
+  dimensions,
+}: {
+  visible: boolean;
+  dimensions: { width: number; height: number };
+}) => {
+  const details = getDimensionsDetails(dimensions);
+  if (!details) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: visible ? 1 : 0 }}
+      className="absolute inset-0 pointer-events-none"
+    >
+      {/* Horizontal ruler */}
+      <motion.div
+        className="absolute top-[45%] left-8 right-8 flex items-center"
+        initial={{ width: 0 }}
+        animate={{ width: "calc(100% - 64px)" }}
+        transition={{ delay: 0.2 }}
+      >
+        <div className="h-px w-full bg-purple-500/50 dark:bg-purple-400/50" />
+        <div className="absolute -top-7 left-0 right-0 flex justify-between">
+          <div className="text-xs font-medium text-purple-600 dark:text-purple-400 bg-white/90 dark:bg-gray-800/90 px-2 py-1 rounded-md shadow-sm border border-purple-200 dark:border-purple-800">
+            0"
+          </div>
+          <div className="text-xs font-medium text-purple-600 dark:text-purple-400 bg-white/90 dark:bg-gray-800/90 px-2 py-1 rounded-md shadow-sm border border-purple-200 dark:border-purple-800">
+            {(details.blocks.width * 3).toFixed(1)}"
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Vertical ruler */}
+      <motion.div
+        className="absolute left-[45%] top-8 bottom-8 flex flex-col items-center"
+        initial={{ height: 0 }}
+        animate={{ height: "calc(100% - 64px)" }}
+        transition={{ delay: 0.2 }}
+      >
+        <div className="w-px h-full bg-purple-500/50 dark:bg-purple-400/50" />
+        <div className="absolute -left-7 top-0 bottom-0 flex flex-col justify-between items-end">
+          <div className="text-xs font-medium text-purple-600 dark:text-purple-400 bg-white/90 dark:bg-gray-800/90 px-2 py-1 rounded-md shadow-sm border border-purple-200 dark:border-purple-800">
+            {(details.blocks.height * 3).toFixed(1)}"
+          </div>
+          <div className="text-xs font-medium text-purple-600 dark:text-purple-400 bg-white/90 dark:bg-gray-800/90 px-2 py-1 rounded-md shadow-sm border border-purple-200 dark:border-purple-800">
+            0"
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};
+
+const RulerToggle = ({
+  showRuler,
+  setShowRuler,
+}: {
+  showRuler: boolean;
+  setShowRuler: (value: boolean) => void;
+}) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="absolute top-4 left-4 z-10"
+    >
+      <Button
+        size="sm"
+        variant="outline"
+        className={cn(
+          "bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm",
+          showRuler &&
+            "border-purple-500 dark:border-purple-400 text-purple-600 dark:text-purple-400"
+        )}
+        onClick={() => setShowRuler(!showRuler)}
+      >
+        <Ruler className="w-4 h-4 mr-2" />
+        Ruler
+      </Button>
+    </motion.div>
+  );
+};
+
 const Scene = ({
   isExpanded,
   setIsExpanded,
@@ -603,7 +683,8 @@ const Scene = ({
   setIsExpanded: (value: boolean) => void;
 }) => {
   const [shouldRerender, setShouldRerender] = useState(false);
-  const { selectedDesign, customPalette, patternType } = useCustomStore();
+  const [showRuler, setShowRuler] = useState(false);
+  const { selectedDesign, customPalette, dimensions } = useCustomStore();
   const cameraPosition = isExpanded ? [20, 20, 20] : [15, 15, 15];
   const cameraFov = isExpanded ? 40 : 45;
 
@@ -626,6 +707,9 @@ const Scene = ({
     <div className="relative w-full h-full">
       {!shouldRerender && (
         <>
+          {isExpanded && (
+            <RulerToggle showRuler={showRuler} setShowRuler={setShowRuler} />
+          )}
           <Canvas
             shadows
             className={cn("w-full h-full", showEmptyCustomInfo && "opacity-25")}
@@ -650,6 +734,9 @@ const Scene = ({
               makeDefault
             />
           </Canvas>
+          {showRuler && isExpanded && (
+            <RulerOverlay visible={showRuler} dimensions={dimensions} />
+          )}
           {showEmptyCustomInfo && <EmptyCustomPaletteInfo />}
           {isExpanded && <PreviewInfo />}
           <ControlsStack

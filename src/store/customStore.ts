@@ -86,7 +86,12 @@ export const useCustomStore = create<CustomStore>((set) => ({
   selectedColors: [],
   isRotated: false,
   patternType: "tiled",
-  setDimensions: (dimensions) => set({ dimensions }),
+  setDimensions: (dimensions) => {
+    set({ dimensions });
+    set((state) => ({
+      pricing: calculatePrice(dimensions, state.shippingSpeed),
+    }));
+  },
   setSelectedDesign: (design: ItemDesigns) => {
     const designName = design;
     set((state) => ({

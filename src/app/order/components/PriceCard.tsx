@@ -6,7 +6,9 @@ import { useCustomStore } from "@/store/customStore";
 import { cn } from "@/lib/utils";
 
 export function PriceCard() {
-  const { selectedSize, pricing } = useCustomStore();
+  const { dimensions, pricing } = useCustomStore();
+
+  const { width, height } = dimensions;
 
   const formatPrice = (amount: number) => {
     return (
@@ -71,7 +73,7 @@ export function PriceCard() {
               animate={{ scale: 1, opacity: 1 }}
               className={cn(
                 "text-lg font-bold",
-                selectedSize
+                width && height
                   ? "text-purple-600 dark:text-purple-400"
                   : "text-gray-400 dark:text-gray-600"
               )}
