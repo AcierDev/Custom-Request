@@ -52,6 +52,11 @@ interface CustomState {
   isRotated: boolean;
   patternStyle: PatternType;
   style: StyleType;
+  viewSettings: {
+    showRuler: boolean;
+    showWoodGrain: boolean;
+    showColorInfo: boolean;
+  };
 }
 
 interface CustomStore extends CustomState {
@@ -73,6 +78,9 @@ interface CustomStore extends CustomState {
   setIsRotated: (value: boolean) => void;
   setPatternType: (type: PatternType) => void;
   setStyle: (style: StyleType) => void;
+  setShowRuler: (value: boolean) => void;
+  setShowWoodGrain: (value: boolean) => void;
+  setShowColorInfo: (value: boolean) => void;
 }
 
 interface HoverState {
@@ -114,6 +122,11 @@ export const useCustomStore = create<CustomStore>((set) => ({
   isRotated: false,
   patternStyle: "tiled",
   style: "geometric",
+  viewSettings: {
+    showRuler: false,
+    showWoodGrain: false,
+    showColorInfo: false,
+  },
   setDimensions: (dimensions) => {
     set({ dimensions });
     set((state) => ({
@@ -240,4 +253,16 @@ export const useCustomStore = create<CustomStore>((set) => ({
   setIsRotated: (value) => set({ isRotated: value }),
   setPatternType: (type) => set({ patternStyle: type }),
   setStyle: (style) => set({ style }),
+  setShowRuler: (value) =>
+    set((state) => ({
+      viewSettings: { ...state.viewSettings, showRuler: value },
+    })),
+  setShowWoodGrain: (value) =>
+    set((state) => ({
+      viewSettings: { ...state.viewSettings, showWoodGrain: value },
+    })),
+  setShowColorInfo: (value) =>
+    set((state) => ({
+      viewSettings: { ...state.viewSettings, showColorInfo: value },
+    })),
 }));

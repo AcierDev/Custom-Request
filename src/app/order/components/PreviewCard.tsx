@@ -21,6 +21,7 @@ import {
   Info,
   X,
   Ruler,
+  Grid,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DesignCard } from "./DesignCard";
@@ -32,6 +33,8 @@ import { Input } from "@/components/ui/input";
 import { Html } from "@react-three/drei";
 import { TiledPattern } from "./preview/TiledPattern";
 import { StyleCard } from "./StyleCard";
+import { Switch } from "@/components/ui/switch";
+
 const PatternControls = () => {
   const {
     colorPattern,
@@ -658,32 +661,75 @@ const Ruler3D = ({ width, height }: { width: number; height: number }) => {
   );
 };
 
-const RulerToggle = ({
-  showRuler,
-  setShowRuler,
-}: {
-  showRuler: boolean;
-  setShowRuler: (value: boolean) => void;
-}) => {
+const ViewControls = () => {
+  const { viewSettings, setShowRuler, setShowWoodGrain, setShowColorInfo } =
+    useCustomStore();
+  const { showRuler, showWoodGrain, showColorInfo } = viewSettings;
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="absolute top-4 left-4 z-10"
+      className="absolute top-12 left-4 w-[280px] flex flex-col gap-3 z-50"
     >
-      <Button
-        size="sm"
-        variant="outline"
-        className={cn(
-          "bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm",
-          showRuler &&
-            "border-purple-500 dark:border-purple-400 text-purple-600 dark:text-purple-400"
-        )}
-        onClick={() => setShowRuler(!showRuler)}
-      >
-        <Ruler className="w-4 h-4 mr-2" />
-        Ruler
-      </Button>
+      <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200 dark:border-gray-700 shadow-lg">
+        <CardContent className="p-3">
+          <div className="space-y-4">
+            <Label className="text-sm text-gray-700 dark:text-gray-300">
+              View Options
+            </Label>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Ruler className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                    Show Ruler
+                  </span>
+                </div>
+                <Switch
+                  checked={showRuler}
+                  onCheckedChange={(value) => {
+                    setShowRuler(value);
+                    console.log("showRuler", value);
+                  }}
+                  onClick={() => {
+                    console.log("showRuler clicked");
+                  }}
+                  className="data-[state=checked]:bg-purple-600"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Grid className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                    Show Wood Grain
+                  </span>
+                </div>
+                <Switch
+                  checked={showWoodGrain}
+                  onCheckedChange={setShowWoodGrain}
+                  className="data-[state=checked]:bg-purple-600"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Info className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                    Show Color Info
+                  </span>
+                </div>
+                <Switch
+                  checked={showColorInfo}
+                  onCheckedChange={setShowColorInfo}
+                  className="data-[state=checked]:bg-purple-600"
+                />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </motion.div>
   );
 };
@@ -696,8 +742,9 @@ const Scene = ({
   setIsExpanded: (value: boolean) => void;
 }) => {
   const [shouldRerender, setShouldRerender] = useState(false);
-  const [showRuler, setShowRuler] = useState(false);
-  const { selectedDesign, customPalette, dimensions, style } = useCustomStore();
+  const { viewSettings, selectedDesign, customPalette, dimensions, style } =
+    useCustomStore();
+  const { showRuler, showWoodGrain, showColorInfo } = viewSettings;
   const cameraPosition = isExpanded ? [20, 20, 20] : [15, 15, 15];
   const cameraFov = isExpanded ? 40 : 45;
 
@@ -720,9 +767,7 @@ const Scene = ({
     <div className="relative w-full h-full">
       {!shouldRerender && (
         <>
-          {isExpanded && (
-            <RulerToggle showRuler={showRuler} setShowRuler={setShowRuler} />
-          )}
+          {isExpanded && <ViewControls />}
           <Canvas
             shadows
             className={cn("w-full h-full", showEmptyCustomInfo && "opacity-25")}
@@ -738,17 +783,29 @@ const Scene = ({
           >
             <ambientLight intensity={0.5} />
             <LightingHelpers />
-            {style === "geometric" && <GeometricPattern />}
-            {style === "tiled" && <TiledPattern />}
-            {/* TODO: Add StripedPattern when available */}
-            {style === "striped" && <TiledPattern />} {/* Temporary fallback */}
+            {style === "geometric" && (
+              <GeometricPattern
+                showWoodGrain={showWoodGrain}
+                showColorInfo={showColorInfo}
+              />
+            )}
+            {style === "tiled" && (
+              <TiledPattern
+                showWoodGrain={showWoodGrain}
+                showColorInfo={showColorInfo}
+              />
+            )}
+            {style === "striped" && (
+              <TiledPattern
+                showWoodGrain={showWoodGrain}
+                showColorInfo={showColorInfo}
+              />
+            )}
             {showRuler && isExpanded && (
-              <>
-                <Ruler3D
-                  width={dimensions.width * 0.5}
-                  height={dimensions.height * 0.5}
-                />
-              </>
+              <Ruler3D
+                width={dimensions.width * 0.5}
+                height={dimensions.height * 0.5}
+              />
             )}
             <OrbitControls
               enablePan={true}

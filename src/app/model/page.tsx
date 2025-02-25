@@ -2,13 +2,36 @@
 
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, useGLTF } from "@react-three/drei";
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Info, Sun, SunDim } from "lucide-react";
 import * as THREE from "three";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader";
+
+const MODELS = [
+  {
+    id: "untitled",
+    name: "Untitled",
+    path: "/models/untitled.glb",
+    format: "glb",
+  },
+  {
+    id: "kitchen",
+    name: "Kitchen",
+    path: "/models/kitchen.fbx",
+    format: "fbx",
+  },
+] as const;
 
 function Lights({
   ambientIntensity,
@@ -38,36 +61,77 @@ function Lights({
   );
 }
 
-// Updated Model component to handle GLB
+// Update Model component to handle both formats
 function Model({ filePath }: { filePath: string }) {
-  const model = useGLTF(filePath);
+  const [model, setModel] = useState<THREE.Group | null>(null);
 
-  // Apply materials and shadows to the model
-  model.scene.traverse((child: any) => {
-    if (child.isMesh) {
-      child.castShadow = true;
-      child.receiveShadow = true;
+  useEffect(() => {
+    const loadModel = async () => {
+      if (filePath.endsWith(".fbx")) {
+        const fbxLoader = new FBXLoader();
+        const fbxModel = await fbxLoader.loadAsync(filePath);
 
-      // If you need to modify materials, you can do it here
-      if (child.material) {
-        child.material.roughness = 0.7;
-        child.material.metalness = 0.2;
+        // Apply materials and shadows
+        fbxModel.traverse((child: any) => {
+          if (child.isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+            if (child.material) {
+              child.material.roughness = 0.7;
+              child.material.metalness = 0.2;
+            }
+          }
+        });
+
+        // Adjust scale for FBX
+        fbxModel.scale.setScalar(0.01); // FBX files often need scaling
+        setModel(fbxModel);
       }
-    }
-  });
+    };
 
-  return (
-    <primitive
-      object={model.scene}
-      scale={1}
-      rotation={[0, 0, 0]}
-      position={[0, -1, 0]}
-    />
-  );
+    if (filePath.endsWith(".fbx")) {
+      loadModel();
+    }
+  }, [filePath]);
+
+  // Handle GLB/GLTF files
+  const gltfModel = useGLTF(filePath.endsWith(".glb") ? filePath : "");
+
+  // If it's a GLB file, process it as before
+  if (filePath.endsWith(".glb")) {
+    gltfModel.scene.traverse((child: any) => {
+      if (child.isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+        if (child.material) {
+          child.material.roughness = 0.7;
+          child.material.metalness = 0.2;
+        }
+      }
+    });
+
+    return (
+      <primitive
+        object={gltfModel.scene}
+        scale={1}
+        rotation={[0, 0, 0]}
+        position={[0, -1, 0]}
+      />
+    );
+  }
+
+  // Return FBX model
+  if (model) {
+    return (
+      <primitive object={model} rotation={[0, 0, 0]} position={[0, -1, 0]} />
+    );
+  }
+
+  return null;
 }
 
 export default function Viewer() {
-  const modelPath = "/models/untitled.glb";
+  const [selectedModel, setSelectedModel] = useState(MODELS[0]);
   const [showLightingControls, setShowLightingControls] = useState(false);
   const [ambientIntensity, setAmbientIntensity] = useState(0.5);
   const [directionalIntensity, setDirectionalIntensity] = useState(1);
@@ -75,6 +139,28 @@ export default function Viewer() {
 
   return (
     <div className="relative w-full h-screen bg-background">
+      {/* Add Model Selector */}
+      <Card className="absolute top-4 left-20 p-2 z-10 bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg dark:bg-background/90">
+        <Select
+          value={selectedModel.id}
+          onValueChange={(value) => {
+            const model = MODELS.find((m) => m.id === value);
+            if (model) setSelectedModel(model);
+          }}
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Select a model" />
+          </SelectTrigger>
+          <SelectContent>
+            {MODELS.map((model) => (
+              <SelectItem key={model.id} value={model.id}>
+                {model.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </Card>
+
       {/* Controls Info Card */}
       <Card className="absolute top-4 right-4 p-4 z-10 bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg dark:bg-background/90">
         <div className="flex items-start gap-3">
@@ -165,7 +251,7 @@ export default function Viewer() {
           spotlightIntensity={spotlightIntensity}
         />
         <Suspense fallback={null}>
-          <Model filePath={modelPath} />
+          <Model filePath={selectedModel.path} />
         </Suspense>
         <OrbitControls
           enableDamping

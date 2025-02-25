@@ -9,9 +9,14 @@ import { ItemDesigns } from "@/typings/types";
 interface PlywoodBaseProps {
   width: number;
   height: number;
+  showWoodGrain?: boolean;
 }
 
-export function PlywoodBase({ width, height }: PlywoodBaseProps) {
+export function PlywoodBase({
+  width,
+  height,
+  showWoodGrain = true,
+}: PlywoodBaseProps) {
   const baseThickness = 0.2;
   const texture = useLoader(TextureLoader, "/textures/plywood.jpg");
   const { selectedDesign, customPalette, isReversed, colorPattern } =
@@ -61,7 +66,11 @@ export function PlywoodBase({ width, height }: PlywoodBaseProps) {
       {/* Main plywood base */}
       <mesh position={[-0.25, -0.25, -baseThickness / 2]} receiveShadow>
         <boxGeometry args={[width, height, baseThickness]} />
-        <meshStandardMaterial map={texture} roughness={0.8} metalness={0.1} />
+        <meshStandardMaterial
+          map={showWoodGrain ? texture : null}
+          roughness={0.8}
+          metalness={0.1}
+        />
       </mesh>
 
       {/* Left side */}

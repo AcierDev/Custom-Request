@@ -9,7 +9,7 @@ import { getDimensionsDetails } from "@/lib/utils";
 import { useState, useEffect, useRef } from "react";
 import * as THREE from "three";
 import type { BufferGeometry } from "three";
-import { Html } from "@react-three/drei";
+import { Html, useTexture } from "@react-three/drei";
 import { hoverStore } from "@/store/customStore";
 import { useStore } from "zustand";
 
@@ -56,7 +56,10 @@ const getColorIndex = (
   return index;
 };
 
-export function GeometricPattern() {
+export function GeometricPattern({
+  showWoodGrain = true,
+  showColorInfo = true,
+}) {
   const {
     dimensions,
     selectedDesign,
@@ -121,6 +124,18 @@ export function GeometricPattern() {
       }
     );
   }, []);
+
+  // Add texture loading
+  const woodTexture = useTexture("/textures/bw-wood-grain-3.jpg");
+
+  // Configure texture
+  useEffect(() => {
+    if (woodTexture) {
+      woodTexture.wrapS = woodTexture.wrapT = THREE.RepeatWrapping;
+      woodTexture.repeat.set(2, 2);
+      woodTexture.anisotropy = 16;
+    }
+  }, [woodTexture]);
 
   if (!details || !geometry) return null;
 
@@ -215,6 +230,7 @@ export function GeometricPattern() {
             color={color}
             roughness={0.7}
             metalness={0.1}
+            map={showWoodGrain ? woodTexture : null}
             emissive={
               (hoverInfo?.position[0] === x && hoverInfo?.position[1] === y) ||
               (pinnedInfo?.position[0] === x && pinnedInfo?.position[1] === y)
@@ -252,12 +268,16 @@ export function GeometricPattern() {
           }
         }}
       >
-        <PlywoodBase width={totalWidth} height={totalHeight} />
+        <PlywoodBase
+          width={totalWidth}
+          height={totalHeight}
+          showWoodGrain={showWoodGrain}
+        />
         {geometricBlocks}
       </group>
-      {(hoverInfo || pinnedInfo) && (
+      {showColorInfo && (hoverInfo || pinnedInfo) && (
         <Html position={[0, 0, 1]}>
-          <div className="min-w-[120px] px-3 py-2 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+          <div className="min-w-[140px] px-3 py-2 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
             <div className="space-y-2">
               <div className="flex items-center gap-3">
                 <div

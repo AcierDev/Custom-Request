@@ -6,7 +6,7 @@ import { DESIGN_COLORS } from "@/typings/color-maps";
 import { ItemDesigns } from "@/typings/types";
 import { Block } from "./Block";
 import { PlywoodBase } from "./PlywoodBase";
-import { useState, useRef } from "react";
+import { useRef } from "react";
 import { Html } from "@react-three/drei";
 import { hoverStore } from "@/store/customStore";
 import { useStore } from "zustand";
@@ -54,13 +54,7 @@ const getColorIndex = (
   return index;
 };
 
-interface HoverInfo {
-  position: [number, number];
-  color: string;
-  colorName?: string;
-}
-
-export function TiledPattern() {
+export function TiledPattern({ showWoodGrain = true, showColorInfo = true }) {
   const {
     dimensions,
     selectedDesign,
@@ -150,6 +144,7 @@ export function TiledPattern() {
           size={blockSize}
           height={randomHeight}
           color={color}
+          showWoodGrain={showWoodGrain}
           isHovered={
             (hoverInfo?.position[0] === x && hoverInfo?.position[1] === y) ||
             (pinnedInfo?.position[0] === x && pinnedInfo?.position[1] === y)
@@ -201,11 +196,15 @@ export function TiledPattern() {
             }
           }}
         >
-          <PlywoodBase width={baseWidth} height={baseHeight} />
+          <PlywoodBase
+            width={baseWidth}
+            height={baseHeight}
+            showWoodGrain={showWoodGrain}
+          />
           {blocks}
-          {(hoverInfo || pinnedInfo) && (
+          {showColorInfo && (hoverInfo || pinnedInfo) && (
             <Html position={[0, 0, 1]}>
-              <div className="min-w-[120px] px-3 py-2 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+              <div className="min-w-[140px] px-3 py-2 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
                 <div className="space-y-2">
                   <div className="flex items-center gap-3">
                     <div
