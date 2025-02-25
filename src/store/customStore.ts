@@ -110,7 +110,7 @@ const createColorMap = (colors: CustomColor[]): ColorMap => {
 
 export const useCustomStore = create<CustomStore>((set) => ({
   dimensions: { width: 16, height: 10 },
-  selectedDesign: ItemDesigns.Custom,
+  selectedDesign: ItemDesigns.Coastal,
   shippingSpeed: "standard",
   pricing: calculatePrice({ width: 16, height: 10 }, "standard"),
   colorPattern: "fade",
@@ -124,7 +124,7 @@ export const useCustomStore = create<CustomStore>((set) => ({
   style: "geometric",
   viewSettings: {
     showRuler: false,
-    showWoodGrain: false,
+    showWoodGrain: true,
     showColorInfo: false,
   },
   setDimensions: (dimensions) => {

@@ -13,6 +13,7 @@ interface BlockProps {
   onHover?: (isHovering: boolean) => void;
   onClick?: () => void;
   showWoodGrain?: boolean;
+  showColorInfo?: boolean;
 }
 
 export function Block({
@@ -24,6 +25,7 @@ export function Block({
   onHover,
   onClick,
   showWoodGrain = true,
+  showColorInfo = true,
 }: BlockProps) {
   const [x, y, z] = position;
   const adjustedPosition: [number, number, number] = [x, y, z + height / 2];
@@ -72,8 +74,8 @@ export function Block({
         color,
         roughness: 0.7,
         metalness: 0.1,
-        emissive: color,
-        emissiveIntensity: isHovered ? 0.5 : 0,
+        emissive: isHovered && showColorInfo ? color : "#000000",
+        emissiveIntensity: isHovered && showColorInfo ? 0.5 : 0,
       }),
       // Left face
       new THREE.MeshStandardMaterial({
@@ -81,8 +83,8 @@ export function Block({
         color,
         roughness: 0.7,
         metalness: 0.1,
-        emissive: color,
-        emissiveIntensity: isHovered ? 0.5 : 0,
+        emissive: isHovered && showColorInfo ? color : "#000000",
+        emissiveIntensity: isHovered && showColorInfo ? 0.5 : 0,
       }),
       // Top face
       new THREE.MeshStandardMaterial({
@@ -90,8 +92,8 @@ export function Block({
         color,
         roughness: 0.7,
         metalness: 0.1,
-        emissive: color,
-        emissiveIntensity: isHovered ? 0.5 : 0,
+        emissive: isHovered && showColorInfo ? color : "#000000",
+        emissiveIntensity: isHovered && showColorInfo ? 0.5 : 0,
       }),
       // Bottom face
       new THREE.MeshStandardMaterial({
@@ -99,8 +101,8 @@ export function Block({
         color,
         roughness: 0.7,
         metalness: 0.1,
-        emissive: color,
-        emissiveIntensity: isHovered ? 0.5 : 0,
+        emissive: isHovered && showColorInfo ? color : "#000000",
+        emissiveIntensity: isHovered && showColorInfo ? 0.5 : 0,
       }),
       // Front face
       new THREE.MeshStandardMaterial({
@@ -108,8 +110,8 @@ export function Block({
         color,
         roughness: 0.7,
         metalness: 0.1,
-        emissive: color,
-        emissiveIntensity: isHovered ? 0.5 : 0,
+        emissive: isHovered && showColorInfo ? color : "#000000",
+        emissiveIntensity: isHovered && showColorInfo ? 0.5 : 0,
       }),
       // Back face
       new THREE.MeshStandardMaterial({
@@ -117,11 +119,18 @@ export function Block({
         color,
         roughness: 0.7,
         metalness: 0.1,
-        emissive: color,
-        emissiveIntensity: isHovered ? 0.5 : 0,
+        emissive: isHovered && showColorInfo ? color : "#000000",
+        emissiveIntensity: isHovered && showColorInfo ? 0.5 : 0,
       }),
     ],
-    [uniqueSideTexture, uniqueTopTexture, color, isHovered, showWoodGrain]
+    [
+      uniqueSideTexture,
+      uniqueTopTexture,
+      color,
+      isHovered,
+      showWoodGrain,
+      showColorInfo,
+    ]
   );
 
   return (

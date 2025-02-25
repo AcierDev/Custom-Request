@@ -6,10 +6,13 @@ import { DESIGN_COLORS } from "@/typings/color-maps";
 import { ItemDesigns } from "@/typings/types";
 import { Block } from "./Block";
 import { PlywoodBase } from "./PlywoodBase";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Html } from "@react-three/drei";
 import { hoverStore } from "@/store/customStore";
 import { useStore } from "zustand";
+import { BlockSize } from "@/typings/constants";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 const getColorIndex = (
   x: number,
@@ -70,6 +73,9 @@ export function TiledPattern({ showWoodGrain = true, showColorInfo = true }) {
   const { hoverInfo, setHoverInfo, pinnedInfo, setPinnedInfo } =
     useStore(hoverStore);
 
+  // Add state for mini blocks
+  const [useMiniBlocks, setUseMiniBlocks] = useState(false);
+
   let colorMap = DESIGN_COLORS[selectedDesign];
 
   if (selectedDesign === ItemDesigns.Custom && customPalette.length > 0) {
@@ -85,7 +91,8 @@ export function TiledPattern({ showWoodGrain = true, showColorInfo = true }) {
     return null;
   }
 
-  const blockSize = 0.5;
+  // Modify blockSize to be dynamic based on state
+  const blockSize = useMiniBlocks ? BlockSize.Mini : BlockSize.Normal;
   const blockHeight = 0.1;
   const heightVariation = 0.2;
   const { width: modelWidth, height: modelHeight } = details.blocks;
@@ -145,25 +152,31 @@ export function TiledPattern({ showWoodGrain = true, showColorInfo = true }) {
           height={randomHeight}
           color={color}
           showWoodGrain={showWoodGrain}
+          showColorInfo={showColorInfo}
           isHovered={
-            (hoverInfo?.position[0] === x && hoverInfo?.position[1] === y) ||
-            (pinnedInfo?.position[0] === x && pinnedInfo?.position[1] === y)
+            showColorInfo &&
+            ((hoverInfo?.position[0] === x && hoverInfo?.position[1] === y) ||
+              (pinnedInfo?.position[0] === x && pinnedInfo?.position[1] === y))
           }
           onHover={(isHovering) => {
-            if (isHovering) {
-              setHoverInfo({ position: [x, y], color, colorName });
-            } else {
-              setHoverInfo(null);
+            if (showColorInfo) {
+              if (isHovering) {
+                setHoverInfo({ position: [x, y], color, colorName });
+              } else {
+                setHoverInfo(null);
+              }
             }
           }}
           onClick={() => {
-            if (
-              pinnedInfo?.position[0] === x &&
-              pinnedInfo?.position[1] === y
-            ) {
-              setPinnedInfo(null);
-            } else {
-              setPinnedInfo({ position: [x, y], color, colorName });
+            if (showColorInfo) {
+              if (
+                pinnedInfo?.position[0] === x &&
+                pinnedInfo?.position[1] === y
+              ) {
+                setPinnedInfo(null);
+              } else {
+                setPinnedInfo({ position: [x, y], color, colorName });
+              }
             }
           }}
         />
@@ -240,6 +253,20 @@ export function TiledPattern({ showWoodGrain = true, showColorInfo = true }) {
               </div>
             </Html>
           )}
+
+          {/* Block size toggle */}
+          <Html position={[0, baseHeight / 2 + 1, 0]}>
+            <div className="flex items-center space-x-2 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg px-3 py-2 shadow-lg border border-gray-200 dark:border-gray-700">
+              <Label className="text-sm text-gray-700 dark:text-gray-300">
+                Mini Blocks
+              </Label>
+              <Switch
+                checked={useMiniBlocks}
+                onCheckedChange={setUseMiniBlocks}
+                className="data-[state=checked]:bg-purple-600"
+              />
+            </div>
+          </Html>
         </group>
       </>
     )

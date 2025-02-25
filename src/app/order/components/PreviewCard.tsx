@@ -34,6 +34,11 @@ import { Html } from "@react-three/drei";
 import { TiledPattern } from "./preview/TiledPattern";
 import { StyleCard } from "./StyleCard";
 import { Switch } from "@/components/ui/switch";
+import {
+  GeometricLighting,
+  TiledLighting,
+  StripedLighting,
+} from "./preview/LightingSetups";
 
 const PatternControls = () => {
   const {
@@ -292,46 +297,24 @@ const EmptyCustomPaletteInfo = () => {
   );
 };
 
+// Update the LightingHelpers component to be dynamic based on style
 const LightingHelpers = () => {
+  const { style } = useCustomStore();
+
+  // Return the appropriate lighting setup based on the selected style
+  if (style === "geometric") {
+    return <GeometricLighting />;
+  } else if (style === "tiled") {
+    return <TiledLighting />;
+  } else if (style === "striped") {
+    return <StripedLighting />;
+  }
+
+  // Fallback lighting if no style is selected
   return (
     <>
-      {/* Grid helper */}
-
-      {/* Axes helper - Red is X, Green is Y, Blue is Z */}
-
-      {/* Primary light source (top-right-front) */}
-      <directionalLight
-        position={[15, 5, 5]}
-        castShadow
-        intensity={1}
-        shadow-mapSize-width={1024}
-        shadow-mapSize-height={1024}
-      ></directionalLight>
-
-      <directionalLight
-        position={[15, -5, 5]}
-        castShadow
-        intensity={1}
-        shadow-mapSize-width={1024}
-        shadow-mapSize-height={1024}
-      ></directionalLight>
-
-      {/* Secondary light source (bottom-left-back) */}
-      <directionalLight
-        position={[-5, -5, 10]}
-        castShadow
-        intensity={0.8}
-        shadow-mapSize-width={1024}
-        shadow-mapSize-height={1024}
-      ></directionalLight>
-
-      <directionalLight
-        position={[-15, -2, 5]}
-        castShadow
-        intensity={0.3}
-        shadow-mapSize-width={1024}
-        shadow-mapSize-height={1024}
-      ></directionalLight>
+      <ambientLight intensity={0.5} />
+      <directionalLight position={[10, 10, 10]} intensity={0.8} castShadow />
     </>
   );
 };
@@ -734,6 +717,21 @@ const ViewControls = () => {
   );
 };
 
+const ColorInfoHint = () => (
+  <motion.div
+    initial={{ opacity: 0, y: -10 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="absolute top-4 left-1/2 -translate-x-1/2 z-50"
+  >
+    <div className="flex items-center gap-2 px-3 py-2 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+      <Info className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+      <span className="text-sm text-gray-700 dark:text-gray-300">
+        Hover over blocks to see color details
+      </span>
+    </div>
+  </motion.div>
+);
+
 const Scene = ({
   isExpanded,
   setIsExpanded,
@@ -768,6 +766,7 @@ const Scene = ({
       {!shouldRerender && (
         <>
           {isExpanded && <ViewControls />}
+          {isExpanded && showColorInfo && <ColorInfoHint />}
           <Canvas
             shadows
             className={cn("w-full h-full", showEmptyCustomInfo && "opacity-25")}
@@ -781,7 +780,6 @@ const Scene = ({
               zoom: 1.4,
             }}
           >
-            <ambientLight intensity={0.5} />
             <LightingHelpers />
             {style === "geometric" && (
               <GeometricPattern
@@ -809,7 +807,7 @@ const Scene = ({
             )}
             <OrbitControls
               enablePan={true}
-              minDistance={isExpanded ? 12 : 8}
+              minDistance={isExpanded ? 4 : 15}
               maxDistance={isExpanded ? 35 : 25}
               target={[0, 0, 0]}
               makeDefault

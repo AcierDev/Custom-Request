@@ -1,17 +1,121 @@
 "use client";
 
-import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import { useCustomStore, ColorPattern } from "@/store/customStore";
 import { DESIGN_COLORS } from "@/typings/color-maps";
 import { ItemDesigns } from "@/typings/types";
 import { PlywoodBase } from "./PlywoodBase";
 import { getDimensionsDetails } from "@/lib/utils";
-import { useState, useEffect, useRef } from "react";
+import { useRef, useMemo } from "react";
 import * as THREE from "three";
 import type { BufferGeometry } from "three";
-import { Html, useTexture } from "@react-three/drei";
+import { Html } from "@react-three/drei";
 import { hoverStore } from "@/store/customStore";
 import { useStore } from "zustand";
+
+// Create a wedge geometry function
+const createWedgeGeometry = (): THREE.BufferGeometry => {
+  const geometry = new THREE.BufferGeometry();
+
+  // Calculate height based on 21.5 degree angle
+  const angleInRadians = (21.5 * Math.PI) / 180;
+  const height = Math.tan(angleInRadians);
+
+  // Define vertices for a wedge with square base
+  const positions: number[] = [
+    // Base (bottom)
+    -0.5,
+    -0.5,
+    0, // v0 - back left
+    0.5,
+    -0.5,
+    0, // v1 - back right
+    0.5,
+    0.5,
+    0, // v2 - front right
+    -0.5,
+    0.5,
+    0, // v3 - front left
+
+    // Top
+    -0.5,
+    -0.5,
+    height, // v4 - back left (elevated)
+    0.5,
+    -0.5,
+    height, // v5 - back right (elevated)
+    0.5,
+    0.5,
+    0, // v6 - front right (same as base)
+    -0.5,
+    0.5,
+    0, // v7 - front left (same as base)
+  ];
+
+  // Define faces using triangle indices
+  const indices: number[] = [
+    // Bottom face
+    0, 2, 1, 0, 3, 2,
+
+    // Top sloped face
+    4, 5, 6, 4, 6, 7,
+
+    // Left face
+    0, 4, 7, 0, 7, 3,
+
+    // Right face
+    1, 2, 6, 1, 6, 5,
+
+    // Back face
+    0, 1, 5, 0, 5, 4,
+
+    // Front face
+    3, 7, 6, 3, 6, 2,
+  ];
+
+  // Calculate normals
+  const normals: number[] = [];
+  // Create a temporary geometry to compute normals
+  const tempGeometry = new THREE.BufferGeometry();
+  tempGeometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(positions, 3)
+  );
+  tempGeometry.setIndex(indices);
+  tempGeometry.computeVertexNormals();
+
+  // Extract computed normals
+  const normalAttribute = tempGeometry.getAttribute("normal");
+  for (let i = 0; i < normalAttribute.count; i++) {
+    normals.push(
+      normalAttribute.getX(i),
+      normalAttribute.getY(i),
+      normalAttribute.getZ(i)
+    );
+  }
+
+  // Generate UVs for texture mapping
+  const uvs: number[] = [
+    // Base
+    0, 0, 1, 0, 1, 1, 0, 1,
+
+    // Top
+    0, 0, 1, 0, 1, 1, 0, 1,
+  ];
+
+  // Set attributes
+  geometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(positions, 3)
+  );
+  geometry.setAttribute("normal", new THREE.Float32BufferAttribute(normals, 3));
+  geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+  geometry.setIndex(indices);
+
+  // Center the geometry
+  geometry.center();
+
+  return geometry;
+};
 
 const getColorIndex = (
   x: number,
@@ -57,8 +161,8 @@ const getColorIndex = (
 };
 
 export function GeometricPattern({
-  showWoodGrain = true,
   showColorInfo = true,
+  showWoodGrain = true,
 }) {
   const {
     dimensions,
@@ -71,7 +175,19 @@ export function GeometricPattern({
   } = useCustomStore();
 
   const details = getDimensionsDetails(dimensions);
-  const [geometry, setGeometry] = useState<BufferGeometry | null>(null);
+
+  // Create wedge geometry programmatically
+  const geometry = useMemo(() => createWedgeGeometry(), []);
+
+  // Add texture loading for wood grain
+  const woodTexture = useMemo(() => {
+    if (!showWoodGrain) return null;
+    const loader = new THREE.TextureLoader();
+    const texture = loader.load("/textures/bw-wood-grain-3.jpg");
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(1, 1);
+    return texture;
+  }, [showWoodGrain]);
 
   // Use the hover store
   const { hoverInfo, setHoverInfo, pinnedInfo, setPinnedInfo } =
@@ -94,48 +210,6 @@ export function GeometricPattern({
           .map(() => Math.random() < 0.5)
       );
   }
-
-  // Load the STL file
-  useEffect(() => {
-    const loader = new STLLoader();
-    loader.load(
-      "/models/Geometric.stl",
-      (loadedGeometry: BufferGeometry) => {
-        // Center and normalize the geometry
-        loadedGeometry.center();
-        loadedGeometry.computeBoundingBox();
-        const box = loadedGeometry.boundingBox;
-        if (box) {
-          const size = new THREE.Vector3();
-          box.getSize(size);
-          const maxDim = Math.max(size.x, size.y, size.z);
-          const scale = 1 / maxDim; // Normalize to 1 unit
-          loadedGeometry.scale(scale, scale, scale);
-        }
-        setGeometry(loadedGeometry);
-      },
-      undefined,
-      (error: unknown) => {
-        if (error instanceof Error) {
-          console.error("Error loading model:", error.message);
-        } else {
-          console.error("Error loading model:", String(error));
-        }
-      }
-    );
-  }, []);
-
-  // Add texture loading
-  const woodTexture = useTexture("/textures/bw-wood-grain-3.jpg");
-
-  // Configure texture
-  useEffect(() => {
-    if (woodTexture) {
-      woodTexture.wrapS = woodTexture.wrapT = THREE.RepeatWrapping;
-      woodTexture.repeat.set(2, 2);
-      woodTexture.anisotropy = 16;
-    }
-  }, [woodTexture]);
 
   if (!details || !geometry) return null;
 
@@ -209,6 +283,8 @@ export function GeometricPattern({
           position={[xPos, yPos, zPos]}
           rotation={[0, 0, rotation]}
           scale={[blockSize, blockSize, blockSize]}
+          castShadow
+          receiveShadow
           onPointerEnter={(e) => {
             e.stopPropagation();
             setHoverInfo({ position: [x, y], color, colorName });
@@ -228,18 +304,22 @@ export function GeometricPattern({
         >
           <meshStandardMaterial
             color={color}
-            roughness={0.7}
-            metalness={0.1}
+            roughness={0.8}
+            metalness={0.05}
             map={showWoodGrain ? woodTexture : null}
             emissive={
-              (hoverInfo?.position[0] === x && hoverInfo?.position[1] === y) ||
-              (pinnedInfo?.position[0] === x && pinnedInfo?.position[1] === y)
+              showColorInfo &&
+              ((hoverInfo?.position[0] === x && hoverInfo?.position[1] === y) ||
+                (pinnedInfo?.position[0] === x &&
+                  pinnedInfo?.position[1] === y))
                 ? color
                 : "#000000"
             }
             emissiveIntensity={
-              (hoverInfo?.position[0] === x && hoverInfo?.position[1] === y) ||
-              (pinnedInfo?.position[0] === x && pinnedInfo?.position[1] === y)
+              showColorInfo &&
+              ((hoverInfo?.position[0] === x && hoverInfo?.position[1] === y) ||
+                (pinnedInfo?.position[0] === x &&
+                  pinnedInfo?.position[1] === y))
                 ? 0.5
                 : 0
             }
@@ -251,14 +331,6 @@ export function GeometricPattern({
 
   return (
     <>
-      <mesh
-        position={[0, 0, -1]}
-        onClick={() => setPinnedInfo(null)}
-        receiveShadow
-      >
-        <planeGeometry args={[100, 100]} />
-        <meshStandardMaterial transparent opacity={0} />
-      </mesh>
       <group
         scale={[1, 1, 1]}
         onClick={(e) => {
@@ -268,11 +340,7 @@ export function GeometricPattern({
           }
         }}
       >
-        <PlywoodBase
-          width={totalWidth}
-          height={totalHeight}
-          showWoodGrain={showWoodGrain}
-        />
+        <PlywoodBase width={totalWidth} height={totalHeight} />
         {geometricBlocks}
       </group>
       {showColorInfo && (hoverInfo || pinnedInfo) && (
