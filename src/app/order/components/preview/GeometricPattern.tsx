@@ -11,6 +11,7 @@ import type { BufferGeometry } from "three";
 import { Html } from "@react-three/drei";
 import { hoverStore } from "@/store/customStore";
 import { useStore } from "zustand";
+import { Block } from "./Block";
 
 // Create a wedge geometry function
 const createWedgeGeometry = (): THREE.BufferGeometry => {
@@ -176,27 +177,19 @@ export function GeometricPattern({
 
   const details = getDimensionsDetails(dimensions);
 
-  // Create wedge geometry programmatically
-  const geometry = useMemo(() => createWedgeGeometry(), []);
-
-  // Add texture loading for wood grain
-  const woodTexture = useMemo(() => {
-    if (!showWoodGrain) return null;
-    const loader = new THREE.TextureLoader();
-    const texture = loader.load("/textures/bw-wood-grain-3.jpg");
-    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(1, 1);
-    return texture;
-  }, [showWoodGrain]);
-
   // Use the hover store
   const { hoverInfo, setHoverInfo, pinnedInfo, setPinnedInfo } =
     useStore(hoverStore);
 
   // Create refs for rotation seeds
   const rotationSeedsRef = useRef<boolean[][]>();
+  // Create refs for texture variations
+  const textureVariationsRef =
+    useRef<
+      { scale: number; offsetX: number; offsetY: number; rotation: number }[][]
+    >();
 
-  // Initialize rotation seeds if not already done
+  // Initialize rotation seeds and texture variations if not already done
   if (
     !rotationSeedsRef.current ||
     rotationSeedsRef.current.length !== details?.blocks.width ||
@@ -209,9 +202,22 @@ export function GeometricPattern({
           .fill(0)
           .map(() => Math.random() < 0.5)
       );
+
+    textureVariationsRef.current = Array(details?.blocks.width || 0)
+      .fill(0)
+      .map((_, x) =>
+        Array(details?.blocks.height || 0)
+          .fill(0)
+          .map((_, y) => ({
+            scale: 0.15 + Math.abs(Math.sin(x * y * 3.14)) * 0.2,
+            offsetX: Math.abs((Math.sin(x * 2.5) * Math.cos(y * 1.7)) % 1),
+            offsetY: Math.abs((Math.cos(x * 1.8) * Math.sin(y * 2.2)) % 1),
+            rotation: (Math.sin(x * y) * Math.PI) / 6,
+          }))
+      );
   }
 
-  if (!details || !geometry) return null;
+  if (!details) return null;
 
   // Get the appropriate color map
   let colorEntries: [string, { hex: string; name?: string }][] = [];
@@ -234,8 +240,6 @@ export function GeometricPattern({
   const offsetX = -totalWidth / 2 - 0.25;
   const offsetY = -totalHeight / 2 - 0.25;
 
-  const geometricBlocks = [];
-
   // Update the getRotation function to use the memoized seeds
   const getRotation = (x: number, y: number, isHorizontal: boolean): number => {
     const seed = rotationSeedsRef.current![x][y];
@@ -252,83 +256,6 @@ export function GeometricPattern({
     return (x + y) % 2 === 0;
   };
 
-  for (let x = 0; x < modelWidth; x++) {
-    for (let y = 0; y < modelHeight; y++) {
-      const colorIndex = getColorIndex(
-        x,
-        y,
-        modelWidth,
-        modelHeight,
-        colorEntries.length,
-        orientation,
-        colorPattern,
-        isReversed,
-        isRotated
-      );
-
-      const colorEntry = colorEntries[colorIndex];
-      const color = colorEntry?.[1].hex || "#8B5E3B";
-      const colorName = colorEntry?.[1].name;
-      const xPos = x * blockSize + offsetX + blockSize / 2;
-      const yPos = y * blockSize + offsetY + blockSize / 2;
-      const zPos = blockSize / 2 - 0.138;
-
-      const isHorizontal = shouldBeHorizontal(x, y);
-      const rotation = getRotation(x, y, isHorizontal);
-
-      geometricBlocks.push(
-        <mesh
-          key={`${x}-${y}`}
-          geometry={geometry}
-          position={[xPos, yPos, zPos]}
-          rotation={[0, 0, rotation]}
-          scale={[blockSize, blockSize, blockSize]}
-          castShadow
-          receiveShadow
-          onPointerEnter={(e) => {
-            e.stopPropagation();
-            setHoverInfo({ position: [x, y], color, colorName });
-          }}
-          onPointerLeave={() => setHoverInfo(null)}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (
-              pinnedInfo?.position[0] === x &&
-              pinnedInfo?.position[1] === y
-            ) {
-              setPinnedInfo(null);
-            } else {
-              setPinnedInfo({ position: [x, y], color, colorName });
-            }
-          }}
-        >
-          <meshStandardMaterial
-            color={color}
-            roughness={0.8}
-            metalness={0.05}
-            map={showWoodGrain ? woodTexture : null}
-            emissive={
-              showColorInfo &&
-              ((hoverInfo?.position[0] === x && hoverInfo?.position[1] === y) ||
-                (pinnedInfo?.position[0] === x &&
-                  pinnedInfo?.position[1] === y))
-                ? color
-                : "#000000"
-            }
-            emissiveIntensity={
-              showColorInfo &&
-              ((hoverInfo?.position[0] === x && hoverInfo?.position[1] === y) ||
-                (pinnedInfo?.position[0] === x &&
-                  pinnedInfo?.position[1] === y))
-                ? 0.5
-                : 0
-            }
-          />
-        </mesh>
-      );
-    }
-  }
-
   return (
     <>
       <group
@@ -341,8 +268,77 @@ export function GeometricPattern({
         }}
       >
         <PlywoodBase width={totalWidth} height={totalHeight} />
-        {geometricBlocks}
+
+        {/* Render blocks using the Block component */}
+        {Array.from({ length: modelWidth }).map((_, x) =>
+          Array.from({ length: modelHeight }).map((_, y) => {
+            const colorIndex = getColorIndex(
+              x,
+              y,
+              modelWidth,
+              modelHeight,
+              colorEntries.length,
+              orientation,
+              colorPattern,
+              isReversed,
+              isRotated
+            );
+
+            const colorEntry = colorEntries[colorIndex];
+            const color = colorEntry?.[1].hex || "#8B5E3B";
+            const colorName = colorEntry?.[1].name;
+            const xPos = x * blockSize + offsetX + blockSize / 2;
+            const yPos = y * blockSize + offsetY + blockSize / 2;
+            const zPos = blockSize / 2 - 0.401;
+
+            const isHorizontal = shouldBeHorizontal(x, y);
+            const rotation = getRotation(x, y, isHorizontal);
+            const textureVariation = textureVariationsRef.current![x][y];
+
+            const isBlockHovered =
+              hoverInfo?.position[0] === x && hoverInfo?.position[1] === y;
+            const isBlockPinned =
+              pinnedInfo?.position[0] === x && pinnedInfo?.position[1] === y;
+
+            return (
+              <Block
+                key={`${x}-${y}`}
+                position={[xPos, yPos, zPos]}
+                size={blockSize}
+                height={blockSize}
+                color={color}
+                isHovered={isBlockHovered || isBlockPinned}
+                showWoodGrain={showWoodGrain}
+                showColorInfo={showColorInfo}
+                isGeometric={true}
+                rotation={rotation}
+                textureVariation={textureVariation}
+                onHover={(isHovering) => {
+                  if (isHovering) {
+                    setHoverInfo({ position: [x, y], color, colorName });
+                  } else if (
+                    hoverInfo?.position[0] === x &&
+                    hoverInfo?.position[1] === y
+                  ) {
+                    setHoverInfo(null);
+                  }
+                }}
+                onClick={() => {
+                  if (
+                    pinnedInfo?.position[0] === x &&
+                    pinnedInfo?.position[1] === y
+                  ) {
+                    setPinnedInfo(null);
+                  } else {
+                    setPinnedInfo({ position: [x, y], color, colorName });
+                  }
+                }}
+              />
+            );
+          })
+        )}
       </group>
+
       {showColorInfo && (hoverInfo || pinnedInfo) && (
         <Html position={[0, 0, 1]}>
           <div className="min-w-[140px] px-3 py-2 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">

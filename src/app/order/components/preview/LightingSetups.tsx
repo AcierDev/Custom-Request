@@ -5,14 +5,7 @@ import * as THREE from "three";
 import { useThree } from "@react-three/fiber";
 
 export function GeometricLighting() {
-  const { scene } = useThree();
   const lightGroupRef = useRef<THREE.Group>(null);
-
-  // Add theme detection for better lighting in dark mode
-  const isDarkMode =
-    typeof window !== "undefined" &&
-    window.matchMedia &&
-    window.matchMedia("(prefers-color-scheme: dark)").matches;
 
   useEffect(() => {
     // Clean up function to remove lights when component unmounts
@@ -30,13 +23,13 @@ export function GeometricLighting() {
   return (
     <group ref={lightGroupRef}>
       {/* Ambient light - softer for geometric patterns to enhance shadows */}
-      <ambientLight intensity={0.7} />
+      <ambientLight intensity={1} />
 
       {/* Primary directional light - top right */}
       <directionalLight
         position={[15, 5, 5]}
         castShadow
-        intensity={isDarkMode ? 0.6 : 0.5}
+        intensity={0.3}
         shadow-mapSize-width={1024}
         shadow-mapSize-height={1024}
       ></directionalLight>
@@ -44,7 +37,7 @@ export function GeometricLighting() {
       <directionalLight
         position={[15, -5, 5]}
         castShadow
-        intensity={0.5}
+        intensity={0.3}
         shadow-mapSize-width={1024}
         shadow-mapSize-height={1024}
       ></directionalLight>
@@ -53,7 +46,7 @@ export function GeometricLighting() {
       <directionalLight
         position={[-5, -5, 10]}
         castShadow
-        intensity={isDarkMode ? 0.9 : 0.8}
+        intensity={0.5}
         shadow-mapSize-width={1024}
         shadow-mapSize-height={1024}
       ></directionalLight>
@@ -61,7 +54,7 @@ export function GeometricLighting() {
       <directionalLight
         position={[-15, -2, 5]}
         castShadow
-        intensity={0.5}
+        intensity={0.3}
         shadow-mapSize-width={1024}
         shadow-mapSize-height={1024}
       ></directionalLight>

@@ -28,17 +28,17 @@ import { DesignCard } from "./DesignCard";
 import Link from "next/link";
 import { cn, getDimensionsDetails } from "@/lib/utils";
 import { ItemDesigns } from "@/typings/types";
-import { GeometricPattern } from "./preview/GeometricPattern";
+import { GeometricPattern } from "../../order/components/preview/GeometricPattern";
 import { Input } from "@/components/ui/input";
 import { Html } from "@react-three/drei";
-import { TiledPattern } from "./preview/TiledPattern";
+import { TiledPattern } from "../../order/components/preview/TiledPattern";
 import { StyleCard } from "./StyleCard";
 import { Switch } from "@/components/ui/switch";
 import {
   GeometricLighting,
   TiledLighting,
   StripedLighting,
-} from "./preview/LightingSetups";
+} from "../../order/components/preview/LightingSetups";
 
 const PatternControls = () => {
   const {
