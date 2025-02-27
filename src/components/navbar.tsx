@@ -10,6 +10,7 @@ import {
   Menu,
   ShoppingCart,
   Palette,
+  Eye,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
@@ -38,6 +39,8 @@ type NavItem = NavLinkItem | DividerItem;
 const mainNavItems: NavItem[] = [
   { href: "/order", icon: ShoppingCart, label: "Order", hotkey: "1" },
   { href: "/design", icon: Palette, label: "Design", hotkey: "2" },
+  { href: "/preview", icon: Eye, label: "Preview", hotkey: "3" },
+  { href: "/palette", icon: Palette, label: "Palette", hotkey: "4" },
 ];
 
 interface NavbarProps {

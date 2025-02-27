@@ -156,7 +156,7 @@ export function Block({
 
   // Load textures outside the component
   const [topTexture, sideTexture] = useTexture([
-    "/textures/bw-wood-texture-2.jpg",
+    "/textures/bw-wood-texture-4.jpg",
     "/textures/wood-side-grain.jpg",
   ]);
 
