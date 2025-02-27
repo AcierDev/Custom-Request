@@ -97,11 +97,12 @@ interface CustomStore extends CustomState {
   deletePalette: (id: string) => void;
   applyPalette: (paletteId: string) => void;
   loadPaletteForEditing: (paletteId: string) => void;
-  setActiveTab: (tab: string) => void;
+  setActiveTab: (tab: "create" | "saved" | "official") => void;
   updateColorName: (index: number, name: string) => void;
   updateColorHex: (index: number, hex: string) => void;
   resetPaletteEditor: () => void;
   loadOfficialPalette: (design: ItemDesigns) => void;
+  setCustomPalette: (palette: CustomColor[]) => void;
 }
 
 interface HoverState {
@@ -402,7 +403,8 @@ export const useCustomStore = create<CustomStore>((set, get) => ({
       };
     }),
 
-  setActiveTab: (tab) => set({ activeTab: tab }),
+  setActiveTab: (tab: "create" | "saved" | "official") =>
+    set({ activeTab: tab as "create" | "saved" | "official" }),
 
   resetPaletteEditor: () =>
     set({
@@ -429,5 +431,11 @@ export const useCustomStore = create<CustomStore>((set, get) => ({
         selectedColors: [], // Clear any selected colors
         activeTab: "create", // Switch to create tab
       };
+    }),
+
+  setCustomPalette: (palette: CustomColor[]) =>
+    set({
+      customPalette: palette,
+      currentColors: createColorMap(palette),
     }),
 }));

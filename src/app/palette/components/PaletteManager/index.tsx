@@ -15,20 +15,17 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
+  Plus,
   X,
-  Blend,
   ArrowLeft,
   ArrowRight,
   Info,
-  MousePointerClick,
-  Download,
-  Upload,
-  Copy,
-  Check,
   Palette,
   Trash2,
-  GripVertical,
+  Blend,
+  MousePointerClick,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -36,28 +33,15 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
-import { ColorHarmonyGenerator } from "./PaletteManager/ColorHarmonyGenerator";
-import { AddColorButton } from "./PaletteManager/AddColorButton";
-import { ColorSwatch } from "./PaletteManager/ColorSwatch";
-import { BlendingGuide } from "./PaletteManager/BlendingGuide";
 
-// Color swatch component
-interface ColorSwatchProps {
-  color: string;
-  name?: string;
-  index: number;
-  isSelected: boolean;
-  onSelect: () => void;
-  onRemove: () => void;
-  onEdit: () => void;
-  showBlendHint?: boolean;
-}
+// Import sub-components
+import { ColorSwatch } from "./ColorSwatch";
+import { AddColorButton } from "./AddColorButton";
+import { BlendingGuide } from "./BlendingGuide";
+import { ColorHarmonyGenerator } from "./ColorHarmonyGenerator";
 
-// Main component
 export function PaletteManager() {
   const {
     customPalette,
@@ -72,6 +56,7 @@ export function PaletteManager() {
     updateColorHex,
     editingPaletteId,
     resetPaletteEditor,
+    clearSelectedColors,
   } = useCustomStore();
 
   const [blendCount, setBlendCount] = useState(3);
@@ -537,45 +522,6 @@ export function PaletteManager() {
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-
-            <TooltipProvider delayDuration={300}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleExportPalette}
-                    disabled={customPalette.length === 0}
-                    className="h-8 px-3"
-                  >
-                    <Download className="h-4 w-4 mr-1 text-purple-600 dark:text-purple-400" />
-                    <span className="text-xs">Export</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  Export palette as JSON
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-
-            <TooltipProvider delayDuration={300}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowImportDialog(true)}
-                    className="h-8 px-3"
-                  >
-                    <Upload className="h-4 w-4 mr-1 text-purple-600 dark:text-purple-400" />
-                    <span className="text-xs">Import</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  Import palette from JSON
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
           </div>
         </div>
 
@@ -778,159 +724,6 @@ export function PaletteManager() {
           </motion.div>
         </div>
       )}
-
-      {/* Export Dialog */}
-      <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Export Palette</DialogTitle>
-            <DialogDescription>
-              Copy this JSON data or download as a file
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="relative">
-              <Textarea
-                readOnly
-                className="font-mono text-xs h-48 resize-none"
-                value={JSON.stringify(
-                  customPalette.map((color) => ({
-                    hex: color.hex,
-                    name: color.name || "",
-                  })),
-                  null,
-                  2
-                )}
-              />
-              <Button
-                size="sm"
-                variant="ghost"
-                className="absolute top-2 right-2 h-8 w-8 p-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm"
-                onClick={handleCopyToClipboard}
-              >
-                {copied ? (
-                  <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
-                ) : (
-                  <Copy className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-          </div>
-          <DialogFooter className="flex justify-between sm:justify-between">
-            <Button
-              variant="outline"
-              onClick={() => setShowExportDialog(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
-              onClick={handleDownloadPalette}
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Download .evpal
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Import Dialog */}
-      <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Import Palette</DialogTitle>
-            <DialogDescription>
-              Upload a file or paste JSON data to import a palette
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="import-file">Upload .evpal or .json file</Label>
-              <div className="mt-2 flex flex-col items-center justify-center w-full">
-                <label
-                  htmlFor="import-file"
-                  className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 border-gray-300 dark:border-gray-700 hover:border-purple-500 dark:hover:border-purple-400 transition-colors"
-                >
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <Upload className="w-8 h-8 mb-2 text-gray-500 dark:text-gray-400" />
-                    <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
-                      <span className="font-semibold">Click to upload</span> or
-                      drag and drop
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      .evpal or .json files only
-                    </p>
-                  </div>
-                  <Input
-                    id="import-file"
-                    type="file"
-                    accept=".evpal,.json"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                  />
-                </label>
-                {importText && (
-                  <div className="mt-2 text-sm text-green-600 dark:text-green-400 flex items-center gap-2">
-                    <Check className="h-4 w-4" />
-                    <span>File loaded successfully</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="relative pt-2">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-gray-300 dark:border-gray-700" />
-              </div>
-              <div className="relative flex justify-center text-xs">
-                <span className="bg-white dark:bg-gray-900 px-2 text-gray-500 dark:text-gray-400">
-                  OR PASTE JSON
-                </span>
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="import-json">JSON Data</Label>
-              <Textarea
-                id="import-json"
-                className="font-mono text-xs h-48 resize-none mt-2"
-                placeholder='[
-  {
-    "hex": "#6D28D9",
-    "name": "Purple"
-  },
-  {
-    "hex": "#DB2777",
-    "name": "Pink"
-  }
-]'
-                value={importText}
-                onChange={(e) => setImportText(e.target.value)}
-              />
-              {importError && (
-                <p className="text-sm text-red-500 dark:text-red-400 mt-2">
-                  {importError}
-                </p>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowImportDialog(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
-              onClick={handleImportPalette}
-              disabled={!importText.trim()}
-            >
-              Import
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Color Harmony Generator */}
       <AnimatePresence>

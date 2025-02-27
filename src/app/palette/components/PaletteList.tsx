@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useCustomStore, SavedPalette } from "@/store/customStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Tooltip,
   TooltipContent,
@@ -20,15 +19,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Edit,
-  Trash2,
-  Check,
-  Copy,
-  Palette,
-  Search,
-  SlidersHorizontal,
-} from "lucide-react";
+import { Edit, Trash2, Palette, Search, SlidersHorizontal } from "lucide-react";
 
 // Color strip component to display a palette preview
 const PalettePreview = ({
@@ -180,7 +171,6 @@ const PaletteCard = ({
 export function PaletteList() {
   const {
     savedPalettes,
-    updatePalette,
     deletePalette,
     applyPalette,
     loadPaletteForEditing,
