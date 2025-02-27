@@ -61,7 +61,7 @@ interface CustomState {
   patternStyle: PatternType;
   style: StyleType;
   savedPalettes: SavedPalette[];
-  activeTab: string;
+  activeTab: "create" | "saved" | "official";
   editingPaletteId: string | null;
   viewSettings: {
     showRuler: boolean;
@@ -101,6 +101,7 @@ interface CustomStore extends CustomState {
   updateColorName: (index: number, name: string) => void;
   updateColorHex: (index: number, hex: string) => void;
   resetPaletteEditor: () => void;
+  loadOfficialPalette: (design: ItemDesigns) => void;
 }
 
 interface HoverState {
@@ -202,13 +203,27 @@ export const useCustomStore = create<CustomStore>((set, get) => ({
       };
     }),
   toggleColorSelection: (hex) =>
-    set((state) => ({
-      selectedColors: state.selectedColors.includes(hex)
-        ? state.selectedColors.filter((h) => h !== hex)
-        : state.selectedColors.length < 2
-        ? [...state.selectedColors, hex]
-        : state.selectedColors,
-    })),
+    set((state) => {
+      // If the color is already selected, remove it
+      if (state.selectedColors.includes(hex)) {
+        return {
+          selectedColors: state.selectedColors.filter((h) => h !== hex),
+        };
+      }
+      // If we have less than 2 colors selected, add this one
+      else if (state.selectedColors.length < 2) {
+        return {
+          selectedColors: [...state.selectedColors, hex],
+        };
+      }
+      // If we already have 2 colors selected, replace the first one with this new one
+      else {
+        console.log("Already have 2 colors selected, replacing the first one");
+        return {
+          selectedColors: [hex, state.selectedColors[1]],
+        };
+      }
+    }),
   clearSelectedColors: () =>
     set({
       selectedColors: [],
@@ -394,5 +409,25 @@ export const useCustomStore = create<CustomStore>((set, get) => ({
       customPalette: [],
       selectedColors: [],
       editingPaletteId: null,
+    }),
+
+  loadOfficialPalette: (design: ItemDesigns) =>
+    set((state) => {
+      // Convert the official design colors to the CustomColor format
+      const designColors = DESIGN_COLORS[design];
+      const customColors: CustomColor[] = Object.values(designColors).map(
+        (color) => ({
+          hex: color.hex,
+          name: color.name,
+        })
+      );
+
+      return {
+        customPalette: customColors,
+        selectedDesign: ItemDesigns.Custom, // Set to Custom since we're creating a custom palette from an official one
+        currentColors: createColorMap(customColors),
+        selectedColors: [], // Clear any selected colors
+        activeTab: "create", // Switch to create tab
+      };
     }),
 }));

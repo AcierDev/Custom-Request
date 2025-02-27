@@ -5,10 +5,11 @@ import { motion } from "framer-motion";
 import { useCustomStore } from "@/store/customStore";
 import { PaletteManager } from "./components/PaletteManager";
 import { PaletteList } from "./components/PaletteList";
+import { OfficialPalettes } from "./components/OfficialPalettes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Save, Palette, Check } from "lucide-react";
+import { Plus, Save, Palette, Check, BookOpen } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -119,7 +120,7 @@ export default function PalettePage() {
             // If switching to create tab from saved tab, reset the editor
             if (
               value === "create" &&
-              activeTab === "saved" &&
+              (activeTab === "saved" || activeTab === "official") &&
               !editingPaletteId
             ) {
               resetPaletteEditor();
@@ -127,7 +128,7 @@ export default function PalettePage() {
             setActiveTab(value);
           }}
         >
-          <TabsList className="grid w-full max-w-md grid-cols-2 mb-8">
+          <TabsList className="grid w-full max-w-md grid-cols-3 mb-8">
             <TabsTrigger
               value="create"
               className="data-[state=active]:bg-purple-100 dark:data-[state=active]:bg-purple-900/30"
@@ -146,6 +147,15 @@ export default function PalettePage() {
               <div className="flex items-center gap-2">
                 <Palette className="h-4 w-4" />
                 <span>Saved Palettes</span>
+              </div>
+            </TabsTrigger>
+            <TabsTrigger
+              value="official"
+              className="data-[state=active]:bg-purple-100 dark:data-[state=active]:bg-purple-900/30"
+            >
+              <div className="flex items-center gap-2">
+                <BookOpen className="h-4 w-4" />
+                <span>Official Palettes</span>
               </div>
             </TabsTrigger>
           </TabsList>
@@ -279,6 +289,29 @@ export default function PalettePage() {
                 </CardHeader>
                 <CardContent>
                   <PaletteList />
+                </CardContent>
+              </Card>
+            </motion.div>
+          </TabsContent>
+
+          <TabsContent value="official" className="mt-0">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              transition={{ duration: 0.4 }}
+            >
+              <Card className="border-2 border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm shadow-lg">
+                <CardHeader>
+                  <CardTitle className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                    Official Palettes
+                  </CardTitle>
+                  <CardDescription>
+                    Browse and use our professionally designed color palettes
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <OfficialPalettes />
                 </CardContent>
               </Card>
             </motion.div>

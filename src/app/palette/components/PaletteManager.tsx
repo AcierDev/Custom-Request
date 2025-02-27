@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { HexColorPicker } from "react-colorful";
 import { useCustomStore, CustomColor } from "@/store/customStore";
@@ -27,7 +27,11 @@ import {
   ArrowRight,
   Edit,
   RefreshCw,
+  Info,
+  MousePointer,
+  MousePointerClick,
 } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 // Color swatch component
 interface ColorSwatchProps {
@@ -38,6 +42,7 @@ interface ColorSwatchProps {
   onSelect: () => void;
   onRemove: () => void;
   onEdit: () => void;
+  showBlendHint?: boolean;
 }
 
 const ColorSwatch = ({
@@ -48,10 +53,11 @@ const ColorSwatch = ({
   onSelect,
   onRemove,
   onEdit,
+  showBlendHint = false,
 }: ColorSwatchProps) => {
   return (
     <motion.div
-      className={`relative group ${
+      className={`relative group color-swatch ${
         isSelected ? "ring-2 ring-purple-500 dark:ring-purple-400" : ""
       }`}
       initial={{ opacity: 0, scale: 0.8 }}
@@ -62,7 +68,10 @@ const ColorSwatch = ({
     >
       <div
         className="w-full h-24 rounded-lg cursor-pointer overflow-hidden"
-        onClick={onSelect}
+        onClick={(e) => {
+          e.stopPropagation(); // Prevent event bubbling
+          onSelect();
+        }}
         style={{ backgroundColor: color }}
       >
         <div className="w-full h-full flex items-end p-2">
@@ -71,6 +80,24 @@ const ColorSwatch = ({
           </div>
         </div>
       </div>
+
+      {/* Blend hint indicator */}
+      {showBlendHint && !isSelected && (
+        <motion.div
+          className="absolute inset-0 flex items-center justify-center bg-black/10 dark:bg-white/10 rounded-lg pointer-events-none"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{
+            duration: 0.3,
+            repeat: Infinity,
+            repeatType: "reverse",
+          }}
+        >
+          <div className="bg-white dark:bg-gray-900 rounded-full p-2 shadow-lg">
+            <Blend className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+          </div>
+        </motion.div>
+      )}
 
       <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
         <TooltipProvider delayDuration={300}>
@@ -235,6 +262,99 @@ const AddColorButton = ({ onColorAdd, isEmpty }: AddColorButtonProps) => {
   );
 };
 
+// Blending Guide component
+const BlendingGuide = ({ onDismiss }: { onDismiss: () => void }) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      className="mb-4"
+    >
+      <Alert className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/40 dark:to-pink-950/40 border border-purple-200 dark:border-purple-800 shadow-sm">
+        <div className="flex items-start gap-3">
+          <div className="bg-purple-100 dark:bg-purple-900/50 p-2 rounded-full mt-0.5">
+            <Info className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+          </div>
+          <div className="flex-1">
+            <AlertDescription className="text-sm text-gray-700 dark:text-gray-300">
+              <span className="font-medium text-purple-700 dark:text-purple-400">
+                Pro tip:
+              </span>{" "}
+              Click on two colors to select them, then blend them together to
+              create beautiful gradients!
+              {/* Visual demonstration */}
+              <div className="mt-3 p-3 bg-white/50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-800">
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <div className="flex">
+                      <div className="w-8 h-8 rounded-l-md bg-purple-500 ring-2 ring-inset ring-purple-300 dark:ring-purple-700"></div>
+                      <div className="w-8 h-8 rounded-r-md bg-pink-500 ring-2 ring-inset ring-purple-300 dark:ring-purple-700"></div>
+                    </div>
+                    <motion.div
+                      animate={{ x: [0, 5, 0] }}
+                      transition={{
+                        duration: 1,
+                        repeat: Infinity,
+                        repeatDelay: 2,
+                      }}
+                    >
+                      <ArrowRight className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                    </motion.div>
+                    <div className="flex">
+                      <div className="w-6 h-8 bg-purple-500 rounded-l-md"></div>
+                      <div className="w-6 h-8 bg-purple-400"></div>
+                      <div className="w-6 h-8 bg-purple-300"></div>
+                      <div className="w-6 h-8 bg-pink-300"></div>
+                      <div className="w-6 h-8 bg-pink-400"></div>
+                      <div className="w-6 h-8 bg-pink-500 rounded-r-md"></div>
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400 flex-1">
+                    <div className="flex items-center gap-1 mb-1">
+                      <Blend className="h-3 w-3 text-purple-600 dark:text-purple-400" />
+                      <span className="font-medium text-purple-700 dark:text-purple-400">
+                        How it works:
+                      </span>
+                    </div>
+                    Select two colors, adjust the number of steps, and create a
+                    smooth gradient between them.
+                  </div>
+                </div>
+              </div>
+              <div className="mt-2 flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                <div className="flex items-center gap-1">
+                  <MousePointerClick className="h-3 w-3" />
+                  <span>Select first color</span>
+                </div>
+                <span>→</span>
+                <div className="flex items-center gap-1">
+                  <MousePointerClick className="h-3 w-3" />
+                  <span>Select second color</span>
+                </div>
+                <span>→</span>
+                <div className="flex items-center gap-1">
+                  <Blend className="h-3 w-3" />
+                  <span>Blend!</span>
+                </div>
+              </div>
+            </AlertDescription>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            onClick={onDismiss}
+          >
+            <X className="h-3 w-3" />
+            <span className="sr-only">Dismiss</span>
+          </Button>
+        </div>
+      </Alert>
+    </motion.div>
+  );
+};
+
 // Main component
 export function PaletteManager() {
   const {
@@ -256,11 +376,68 @@ export function PaletteManager() {
   const [editingColor, setEditingColor] = useState<number | null>(null);
   const [editColorHex, setEditColorHex] = useState("");
   const [editColorName, setEditColorName] = useState("");
+  const [showBlendingGuide, setShowBlendingGuide] = useState(false);
+  const [hasSeenBlendingGuide, setHasSeenBlendingGuide] = useState(false);
+  const [showSelectionHint, setShowSelectionHint] = useState(false);
 
-  const selectedColorIndex =
-    selectedColors.length === 1
-      ? customPalette.findIndex((color) => color.hex === selectedColors[0])
-      : -1;
+  // Initialize hasSeenBlendingGuide from localStorage
+  useEffect(() => {
+    const hasSeenGuide = localStorage.getItem("hasSeenBlendingGuide");
+    if (hasSeenGuide === "true") {
+      setHasSeenBlendingGuide(true);
+    }
+
+    const hasSeenSelectionHint = localStorage.getItem("hasSeenSelectionHint");
+    if (hasSeenSelectionHint === "true") {
+      setShowSelectionHint(false);
+    } else {
+      setShowSelectionHint(true);
+    }
+  }, []);
+
+  // Show blending guide when there are at least 2 colors but none are selected
+  useEffect(() => {
+    if (
+      customPalette.length >= 2 &&
+      selectedColors.length === 0 &&
+      !hasSeenBlendingGuide
+    ) {
+      setShowBlendingGuide(true);
+    } else if (selectedColors.length > 0) {
+      setShowBlendingGuide(false);
+    }
+
+    // Only hide selection hint after user has selected TWO colors
+    // This ensures we don't interfere with the ability to select a second color
+    if (selectedColors.length === 2 && showSelectionHint) {
+      setShowSelectionHint(false);
+      localStorage.setItem("hasSeenSelectionHint", "true");
+    }
+  }, [
+    customPalette.length,
+    selectedColors.length,
+    hasSeenBlendingGuide,
+    showSelectionHint,
+  ]);
+
+  const dismissBlendingGuide = () => {
+    setShowBlendingGuide(false);
+    setHasSeenBlendingGuide(true);
+    localStorage.setItem("hasSeenBlendingGuide", "true");
+  };
+
+  // Enhanced addColor function that shows the guide
+  const handleAddColor = (hex: string) => {
+    addCustomColor(hex);
+
+    // If this is the second color and user hasn't seen the hint yet, show it
+    if (customPalette.length === 1 && showSelectionHint) {
+      // Use a safer approach with requestAnimationFrame to avoid DOM manipulation issues
+      requestAnimationFrame(() => {
+        setShowSelectionHint(true); // Ensure hint is visible
+      });
+    }
+  };
 
   const handleEditColor = (index: number) => {
     const color = customPalette[index];
@@ -304,6 +481,21 @@ export function PaletteManager() {
       addCustomColor(randomColor);
     }
   };
+
+  const resetAllTips = () => {
+    localStorage.removeItem("hasSeenBlendingGuide");
+    localStorage.removeItem("hasSeenSelectionHint");
+    setHasSeenBlendingGuide(false);
+    setShowSelectionHint(true);
+    if (customPalette.length >= 2) {
+      setShowBlendingGuide(true);
+    }
+  };
+
+  const selectedColorIndex =
+    selectedColors.length === 1
+      ? customPalette.findIndex((color) => color.hex === selectedColors[0])
+      : -1;
 
   return (
     <div className="space-y-8">
@@ -421,8 +613,62 @@ export function PaletteManager() {
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
+
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={resetAllTips}
+                    className="h-8 px-2"
+                  >
+                    <Info className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Show tips again</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
+
+        {/* Blending Guide */}
+        <AnimatePresence>
+          {showBlendingGuide && (
+            <BlendingGuide onDismiss={dismissBlendingGuide} />
+          )}
+        </AnimatePresence>
+
+        {/* Selection Hint */}
+        <AnimatePresence>
+          {showSelectionHint &&
+            customPalette.length >= 2 &&
+            selectedColors.length === 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="mb-2 text-center pointer-events-none"
+              >
+                <div className="inline-block bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-sm px-3 py-1.5 rounded-full">
+                  <motion.div
+                    animate={{ scale: [1, 1.05, 1] }}
+                    transition={{
+                      duration: 1,
+                      repeat: Infinity,
+                      repeatDelay: 1,
+                    }}
+                    className="flex items-center gap-1.5"
+                  >
+                    <MousePointerClick className="h-3.5 w-3.5" />
+                    <span>Click on two colors to blend them together</span>
+                  </motion.div>
+                </div>
+              </motion.div>
+            )}
+        </AnimatePresence>
 
         {/* Color Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
@@ -434,15 +680,24 @@ export function PaletteManager() {
                 name={color.name}
                 index={index}
                 isSelected={selectedColors.includes(color.hex)}
-                onSelect={() => toggleColorSelection(color.hex)}
+                onSelect={() => {
+                  console.log(
+                    `Toggling selection for color ${index}: ${color.hex}`
+                  );
+                  console.log(
+                    `Current selected colors: ${selectedColors.join(", ")}`
+                  );
+                  toggleColorSelection(color.hex);
+                }}
                 onRemove={() => removeCustomColor(index)}
                 onEdit={() => handleEditColor(index)}
+                showBlendHint={selectedColors.length === 1}
               />
             ))}
           </AnimatePresence>
 
           <AddColorButton
-            onColorAdd={addCustomColor}
+            onColorAdd={handleAddColor}
             isEmpty={customPalette.length === 0}
           />
         </div>
@@ -451,18 +706,29 @@ export function PaletteManager() {
       {/* Blend Controls - Only show when 2 colors are selected */}
       {selectedColors.length === 2 && (
         <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          exit={{ opacity: 0, height: 0 }}
-          className="p-4 border border-purple-200 dark:border-purple-900/50 rounded-lg bg-purple-50 dark:bg-purple-900/20 backdrop-blur-sm"
+          initial={{ opacity: 0, height: 0, y: -10 }}
+          animate={{ opacity: 1, height: "auto", y: 0 }}
+          exit={{ opacity: 0, height: 0, y: -10 }}
+          transition={{
+            duration: 0.4,
+            type: "spring",
+            stiffness: 300,
+            damping: 25,
+          }}
+          className="p-4 border border-purple-200 dark:border-purple-900/50 rounded-lg bg-purple-50 dark:bg-purple-900/20 backdrop-blur-sm shadow-md"
         >
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <div className="flex items-center gap-2">
+            <motion.div
+              className="flex items-center gap-2"
+              initial={{ scale: 1 }}
+              animate={{ scale: [1, 1.05, 1] }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+            >
               <Blend className="h-5 w-5 text-purple-600 dark:text-purple-400" />
               <span className="font-medium text-purple-700 dark:text-purple-300">
                 Blend Colors
               </span>
-            </div>
+            </motion.div>
 
             <div className="flex-1 flex items-center gap-4">
               <div className="w-full max-w-xs flex items-center gap-4">
@@ -482,13 +748,21 @@ export function PaletteManager() {
                 </span>
               </div>
 
-              <Button
-                onClick={() => addBlendedColors(blendCount)}
-                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white whitespace-nowrap"
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
               >
-                <Blend className="mr-2 h-4 w-4" />
-                Create Blend
-              </Button>
+                <Button
+                  onClick={() => {
+                    setHasSeenBlendingGuide(true);
+                    addBlendedColors(blendCount);
+                  }}
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white whitespace-nowrap shadow-md hover:shadow-lg transition-all"
+                >
+                  <Blend className="mr-2 h-4 w-4" />
+                  Create Blend
+                </Button>
+              </motion.div>
             </div>
           </div>
         </motion.div>

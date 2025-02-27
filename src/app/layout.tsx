@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { useState } from "react";
 import { MobileWarning } from "@/components/mobile-warning";
 import { Analytics } from "@vercel/analytics/react";
+import { Toaster } from "sonner";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -62,6 +63,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <Toaster richColors position="top-right" />
           <LayoutContent>{children}</LayoutContent>
         </ThemeProvider>
       </body>
