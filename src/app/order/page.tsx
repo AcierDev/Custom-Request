@@ -2,7 +2,6 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { DesignCard } from "@/app/order/components/DesignCard";
 import { SizeCard } from "@/app/order/components/SizeCard";
 import { PriceCard } from "@/app/order/components/PriceCard";
@@ -28,10 +27,24 @@ function OrderContent() {
   const [showBanner, setShowBanner] = useState(false);
 
   useEffect(() => {
-    // Check if there's a share parameter in the URL
-    const shareData = searchParams.get("share");
-    if (shareData) {
+    // Check if there's a share parameter in the URL (either regular or short format)
+    const regularShareData = searchParams.get("share");
+    const shortShareData = searchParams.get("s");
+
+    // Process whichever parameter is present
+    if (regularShareData || shortShareData) {
+      let shareData;
+
+      // If we have the short format, construct the parameter with the "s=" prefix
+      if (shortShareData) {
+        shareData = `s=${shortShareData}`;
+      } else {
+        // Otherwise use the regular format with "share=" prefix
+        shareData = `share=${regularShareData}`;
+      }
+
       const success = loadFromShareableData(shareData);
+
       if (success) {
         setIsSharedDesign(true);
         setShowBanner(true);
