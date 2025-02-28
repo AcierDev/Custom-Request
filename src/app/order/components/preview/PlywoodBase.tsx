@@ -77,6 +77,8 @@ export function PlywoodBase({
       <mesh
         position={[-0.248 - width / 2, -0.25, -0.1]}
         rotation={[0, Math.PI / 2, 0]}
+        receiveShadow
+        castShadow
       >
         <boxGeometry args={[baseThickness + 0.001, height + 0.001, 0.005]} />
         <meshStandardMaterial
@@ -90,6 +92,8 @@ export function PlywoodBase({
       <mesh
         position={[-0.248 + width / 2, -0.25, -0.1]}
         rotation={[0, Math.PI / 2, 0]}
+        receiveShadow
+        castShadow
       >
         <boxGeometry args={[baseThickness + 0.001, height + 0.001, 0.005]} />
         <meshStandardMaterial

@@ -15,7 +15,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  Plus,
   X,
   ArrowLeft,
   ArrowRight,
@@ -26,15 +25,6 @@ import {
   MousePointerClick,
 } from "lucide-react";
 import { toast } from "sonner";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
 
 // Import sub-components
 import { ColorSwatch } from "./ColorSwatch";
@@ -91,15 +81,16 @@ export function PaletteManager() {
     const handleOpenHarmonyGenerator = (event: CustomEvent) => {
       const { baseColor } = event.detail;
       setShowHarmonyGenerator(true);
-
-      // We need to pass the base color to the harmony generator
-      // This can be done by setting a state variable that will be passed to the component
+      // We'll pass the base color to the harmony generator via another event
+      // when it's mounted
       if (baseColor) {
-        document.dispatchEvent(
-          new CustomEvent("setHarmonyBaseColor", {
-            detail: { baseColor },
-          })
-        );
+        setTimeout(() => {
+          document.dispatchEvent(
+            new CustomEvent("setHarmonyBaseColor", {
+              detail: { baseColor },
+            })
+          );
+        }, 100); // Small delay to ensure the harmony generator is mounted
       }
     };
 
@@ -203,6 +194,13 @@ export function PaletteManager() {
   };
 
   const resetAllTips = () => {
+    // If tips are currently showing, close them
+    if (showBlendingGuide) {
+      setShowBlendingGuide(false);
+      return;
+    }
+
+    // Otherwise, reset and show tips
     localStorage.removeItem("hasSeenBlendingGuide");
     localStorage.removeItem("hasSeenSelectionHint");
     setHasSeenBlendingGuide(false);
@@ -368,7 +366,7 @@ export function PaletteManager() {
     <div className="space-y-8">
       {/* Color Palette Display */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               {editingPaletteId ? "Edit Palette" : "Your Palette"}
@@ -382,146 +380,168 @@ export function PaletteManager() {
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            <TooltipProvider delayDuration={300}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => moveColorLeft(selectedColorIndex)}
-                    disabled={
-                      selectedColors.length !== 1 || selectedColorIndex <= 0
-                    }
-                    className="h-8 w-8 p-0"
-                  >
-                    <ArrowLeft className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  {selectedColors.length === 0
-                    ? "Select a color to move"
-                    : selectedColors.length > 1
-                    ? "Select only one color to move"
-                    : selectedColorIndex <= 0
-                    ? "Color is at the start"
-                    : "Move color left"}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
 
-            <TooltipProvider delayDuration={300}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => moveColorRight(selectedColorIndex)}
-                    disabled={
-                      selectedColors.length !== 1 ||
-                      selectedColorIndex === customPalette.length - 1 ||
-                      selectedColorIndex === -1
-                    }
-                    className="h-8 w-8 p-0"
-                  >
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  {selectedColors.length === 0
-                    ? "Select a color to move"
-                    : selectedColors.length > 1
-                    ? "Select only one color to move"
-                    : selectedColorIndex === customPalette.length - 1
-                    ? "Color is at the end"
-                    : "Move color right"}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Primary Actions Group */}
+            <div className="flex items-center rounded-md border border-gray-200 dark:border-gray-800 p-0.5 bg-white dark:bg-gray-900 shadow-sm">
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => moveColorLeft(selectedColorIndex)}
+                      disabled={
+                        selectedColors.length !== 1 || selectedColorIndex <= 0
+                      }
+                      className="h-8 w-8 p-0 rounded-none rounded-l-sm"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    {selectedColors.length === 0
+                      ? "Select a color to move"
+                      : selectedColors.length > 1
+                      ? "Select only one color to move"
+                      : selectedColorIndex <= 0
+                      ? "Color is at the start"
+                      : "Move color left"}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
 
-            {editingPaletteId && (
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => moveColorRight(selectedColorIndex)}
+                      disabled={
+                        selectedColors.length !== 1 ||
+                        selectedColorIndex === customPalette.length - 1 ||
+                        selectedColorIndex === -1
+                      }
+                      className="h-8 w-8 p-0 rounded-none rounded-r-sm border-l border-gray-200 dark:border-gray-800"
+                    >
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    {selectedColors.length === 0
+                      ? "Select a color to move"
+                      : selectedColors.length > 1
+                      ? "Select only one color to move"
+                      : selectedColorIndex === customPalette.length - 1
+                      ? "Color is at the end"
+                      : "Move color right"}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+
+            {/* Main Actions Group */}
+            <div className="flex items-center gap-2">
               <TooltipProvider delayDuration={300}>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={handleResetEditor}
-                      className="h-8 px-3 border-orange-200 hover:border-orange-300 dark:border-orange-800 dark:hover:border-orange-700"
+                      onClick={() =>
+                        setShowHarmonyGenerator(!showHarmonyGenerator)
+                      }
+                      className="h-8 px-3 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800/50"
                     >
-                      <X className="h-4 w-4 mr-1 text-orange-600 dark:text-orange-400" />
-                      <span className="text-xs text-orange-600 dark:text-orange-400">
-                        Cancel Edit
+                      <Palette className="h-4 w-4 mr-1 text-purple-600 dark:text-purple-400" />
+                      <span className="text-xs font-medium text-purple-700 dark:text-purple-300">
+                        Harmony
                       </span>
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="bottom">
-                    Cancel editing and reset palette
+                    <p>Generate color harmonies</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-            )}
 
-            <TooltipProvider delayDuration={300}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleClearPalette}
-                    disabled={customPalette.length === 0}
-                    className="h-8 px-3 border-red-200 hover:border-red-300 dark:border-red-800/30 dark:hover:border-red-700/30"
-                  >
-                    <Trash2 className="h-4 w-4 mr-1 text-red-600 dark:text-red-400" />
-                    <span className="text-xs text-red-600 dark:text-red-400">
-                      Clear
-                    </span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p>Clear all colors</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+              {editingPaletteId && (
+                <TooltipProvider delayDuration={300}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleResetEditor}
+                        className="h-8 px-3 border-orange-200 hover:border-orange-300 dark:border-orange-800/50 dark:hover:border-orange-700/50 bg-orange-50 dark:bg-orange-950/20"
+                      >
+                        <X className="h-4 w-4 mr-1 text-orange-600 dark:text-orange-400" />
+                        <span className="text-xs font-medium text-orange-600 dark:text-orange-400">
+                          Cancel Edit
+                        </span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      Cancel editing and reset palette
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
 
-            <TooltipProvider delayDuration={300}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={resetAllTips}
-                    className="h-8 px-2"
-                  >
-                    <Info className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p>Show tips again</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleClearPalette}
+                      disabled={customPalette.length === 0}
+                      className="h-8 px-3 border-red-200 hover:border-red-300 dark:border-red-800/30 dark:hover:border-red-700/30 bg-red-50 dark:bg-red-950/20"
+                    >
+                      <Trash2 className="h-4 w-4 mr-1 text-red-600 dark:text-red-400" />
+                      <span className="text-xs font-medium text-red-600 dark:text-red-400">
+                        Clear
+                      </span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p>Clear all colors</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
 
-            <TooltipProvider delayDuration={300}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      setShowHarmonyGenerator(!showHarmonyGenerator)
-                    }
-                    className="h-8 px-3"
-                  >
-                    <Palette className="h-4 w-4 mr-1 text-purple-600 dark:text-purple-400" />
-                    <span className="text-xs">Harmony</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p>Generate color harmonies</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            {/* Utility Actions */}
+            <div className="flex items-center gap-1 ml-1">
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    {(customPalette.length >= 2 || showBlendingGuide) && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={resetAllTips}
+                        className={`h-7 w-7 rounded-full ${
+                          showBlendingGuide
+                            ? "bg-purple-100 dark:bg-purple-900/30"
+                            : "bg-gray-100 dark:bg-gray-800"
+                        }`}
+                      >
+                        {showBlendingGuide ? (
+                          <X className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                        ) : (
+                          <Info className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                        )}
+                      </Button>
+                    )}
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p>{showBlendingGuide ? "Hide tips" : "Show tips"}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           </div>
         </div>
 

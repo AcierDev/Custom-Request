@@ -3,7 +3,6 @@
 import { motion } from "framer-motion";
 import { X, Blend, MousePointerClick, Info, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { BlendingGuideProps } from "./types";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export const BlendingGuide = ({ onDismiss }: { onDismiss: () => void }) => {
@@ -14,7 +13,7 @@ export const BlendingGuide = ({ onDismiss }: { onDismiss: () => void }) => {
       exit={{ opacity: 0, y: -10 }}
       className="mb-4"
     >
-      <Alert className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/40 dark:to-pink-950/40 border border-purple-200 dark:border-purple-800 shadow-sm">
+      <Alert className="dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 shadow-sm">
         <div className="flex items-start gap-3">
           <div className="bg-purple-100 dark:bg-purple-900/50 p-2 rounded-full mt-0.5">
             <Info className="h-4 w-4 text-purple-600 dark:text-purple-400" />

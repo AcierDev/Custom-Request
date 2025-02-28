@@ -38,7 +38,6 @@ type NavItem = NavLinkItem | DividerItem;
 
 const mainNavItems: NavItem[] = [
   { href: "/order", icon: ShoppingCart, label: "Order", hotkey: "1" },
-  { href: "/design", icon: Palette, label: "Design", hotkey: "2" },
   { href: "/preview", icon: Eye, label: "Preview", hotkey: "3" },
   { href: "/palette", icon: Palette, label: "Palette", hotkey: "4" },
 ];

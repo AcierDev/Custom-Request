@@ -39,5 +39,5 @@ export interface HarmonyOption {
   id: string;
   name: string;
   description: string;
-  generate: (baseColor: string) => string[];
+  generate: (color: string, count?: number) => string[];
 }
