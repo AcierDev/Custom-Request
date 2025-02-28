@@ -4,7 +4,12 @@ import { calculatePrice, PriceBreakdown } from "@/lib/pricing";
 import { mixPaintColors } from "@/lib/colorUtils";
 import { DESIGN_COLORS } from "@/typings/color-maps";
 import { createStore } from "zustand/vanilla";
-import { generateShareableUrl, extractStateFromUrl } from "@/lib/urlUtils";
+import {
+  generateShareableUrl,
+  extractStateFromUrl,
+  generateShortShareableUrl,
+  extractStateFromShortUrl,
+} from "@/lib/urlUtils";
 
 export type ShippingSpeed = "standard" | "expedited" | "rushed";
 export type ColorPattern =
@@ -105,6 +110,7 @@ interface CustomStore extends CustomState {
   loadOfficialPalette: (design: ItemDesigns) => void;
   setCustomPalette: (palette: CustomColor[]) => void;
   generateShareableLink: () => string;
+  generateShortShareableLink: () => string;
   loadFromShareableData: (data: string) => boolean;
 }
 
@@ -477,10 +483,44 @@ export const useCustomStore = create<CustomStore>((set, get) => ({
     return generateShareableUrl(shareableState);
   },
 
+  generateShortShareableLink: () => {
+    const state = get();
+
+    // Extract only the properties we want to share
+    const shareableState: ShareableState = {
+      dimensions: state.dimensions,
+      selectedDesign: state.selectedDesign,
+      shippingSpeed: state.shippingSpeed,
+      colorPattern: state.colorPattern,
+      orientation: state.orientation,
+      isReversed: state.isReversed,
+      customPalette: state.customPalette,
+      isRotated: state.isRotated,
+      patternStyle: state.patternStyle,
+      style: state.style,
+    };
+
+    // Use the short URL compression utility
+    return generateShortShareableUrl(shareableState);
+  },
+
   loadFromShareableData: (data: string) => {
     try {
-      // Use the extraction utility to parse the compressed data
-      const shareableState = extractStateFromUrl<ShareableState>(data);
+      // Determine if this is a short URL or regular URL based on the parameter
+      // Short URLs use 's=' parameter, regular URLs use 'share='
+      let shareableState: ShareableState;
+
+      if (data.includes("s=")) {
+        // Extract the actual data part after 's='
+        const shortData = data.split("s=")[1];
+        shareableState = extractStateFromShortUrl<ShareableState>(shortData);
+      } else {
+        // Regular URL format
+        const regularData = data.includes("share=")
+          ? data.split("share=")[1]
+          : data;
+        shareableState = extractStateFromUrl<ShareableState>(regularData);
+      }
 
       // Validate the data structure
       if (!shareableState.dimensions || !shareableState.selectedDesign) {

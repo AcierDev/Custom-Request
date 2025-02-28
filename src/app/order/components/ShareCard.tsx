@@ -6,17 +6,23 @@ import { useCustomStore } from "@/store/customStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Share2, Copy, Check, Link, Loader2 } from "lucide-react";
+import { Share2, Copy, Check, Link, Loader2, LinkIcon } from "lucide-react";
 import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 export function ShareCard() {
   const generateShareableLink = useCustomStore(
     (state) => state.generateShareableLink
   );
+  const generateShortShareableLink = useCustomStore(
+    (state) => state.generateShortShareableLink
+  );
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [shareableLink, setShareableLink] = useState("");
   const [copied, setCopied] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [useShortLink, setUseShortLink] = useState(true);
 
   const handleGenerateLink = async () => {
     setIsGenerating(true);
@@ -24,7 +30,9 @@ export function ShareCard() {
     try {
       // Wrap in setTimeout to allow UI to update with loading state
       setTimeout(() => {
-        const link = generateShareableLink();
+        const link = useShortLink
+          ? generateShortShareableLink()
+          : generateShareableLink();
         setShareableLink(link);
         setShowShareDialog(true);
         setIsGenerating(false);
@@ -101,11 +109,29 @@ export function ShareCard() {
                   They'll see exactly what you've created!
                 </p>
 
+                <div className="flex items-center space-x-2 mb-2">
+                  <Switch
+                    id="use-short-link"
+                    checked={useShortLink}
+                    onCheckedChange={(checked) => {
+                      setUseShortLink(checked);
+                      // Regenerate the link with the new setting
+                      const link = checked
+                        ? generateShortShareableLink()
+                        : generateShareableLink();
+                      setShareableLink(link);
+                    }}
+                  />
+                  <Label htmlFor="use-short-link" className="text-sm">
+                    Use shorter link format
+                  </Label>
+                </div>
+
                 <div className="flex items-center gap-2">
                   <Input
                     value={shareableLink}
                     readOnly
-                    className="flex-1 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700"
+                    className="flex-1 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-sm"
                   />
                   <Button
                     onClick={handleCopyLink}
