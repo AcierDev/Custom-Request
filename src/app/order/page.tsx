@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { DesignCard } from "@/app/order/components/DesignCard";
@@ -14,12 +14,18 @@ import { StyleCard } from "@/app/order/components/StyleCard";
 import { ShareCard } from "@/app/order/components/ShareCard";
 import { useCustomStore } from "@/store/customStore";
 import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
+import { Share2, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
-export default function Custom() {
+// Create a separate component that uses useSearchParams
+function OrderContent() {
   const searchParams = useSearchParams();
   const loadFromShareableData = useCustomStore(
     (state) => state.loadFromShareableData
   );
+  const [isSharedDesign, setIsSharedDesign] = useState(false);
+  const [showBanner, setShowBanner] = useState(false);
 
   useEffect(() => {
     // Check if there's a share parameter in the URL
@@ -27,6 +33,8 @@ export default function Custom() {
     if (shareData) {
       const success = loadFromShareableData(shareData);
       if (success) {
+        setIsSharedDesign(true);
+        setShowBanner(true);
         toast.success("Design loaded successfully!");
       } else {
         toast.error(
@@ -37,7 +45,37 @@ export default function Custom() {
   }, [searchParams, loadFromShareableData]);
 
   return (
-    <div className="w-full h-screen">
+    <div className="w-full h-screen relative">
+      {/* Shared Design Banner */}
+      <AnimatePresence>
+        {showBanner && (
+          <motion.div
+            initial={{ opacity: 0, y: -50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -50 }}
+            className="absolute top-0 left-0 right-0 bg-gradient-to-r from-purple-600 to-pink-600 text-white py-2 px-4 z-50"
+          >
+            <div className="container mx-auto flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Share2 className="h-5 w-5" />
+                <span>
+                  You're viewing a shared design. Feel free to customize it or
+                  create your own!
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowBanner(false)}
+                className="text-white hover:bg-white/20"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="w-full h-full dark:bg-gray-900 flex justify-between p-8">
         {/* Left column */}
         <div className="flex flex-col gap-4 w-1/4">
@@ -61,5 +99,27 @@ export default function Custom() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Loading fallback component
+function OrderLoading() {
+  return (
+    <div className="w-full h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="flex flex-col items-center gap-4">
+        <div className="h-8 w-8 border-4 border-t-purple-600 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></div>
+        <p className="text-gray-600 dark:text-gray-400">
+          Loading your design...
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export default function Custom() {
+  return (
+    <Suspense fallback={<OrderLoading />}>
+      <OrderContent />
+    </Suspense>
   );
 }

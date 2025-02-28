@@ -6,7 +6,7 @@ import { useCustomStore } from "@/store/customStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Share2, Copy, Check, Link } from "lucide-react";
+import { Share2, Copy, Check, Link, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export function ShareCard() {
@@ -16,11 +16,24 @@ export function ShareCard() {
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [shareableLink, setShareableLink] = useState("");
   const [copied, setCopied] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
-  const handleGenerateLink = () => {
-    const link = generateShareableLink();
-    setShareableLink(link);
-    setShowShareDialog(true);
+  const handleGenerateLink = async () => {
+    setIsGenerating(true);
+
+    try {
+      // Wrap in setTimeout to allow UI to update with loading state
+      setTimeout(() => {
+        const link = generateShareableLink();
+        setShareableLink(link);
+        setShowShareDialog(true);
+        setIsGenerating(false);
+      }, 100);
+    } catch (error) {
+      console.error("Error generating link:", error);
+      toast.error("Failed to generate shareable link");
+      setIsGenerating(false);
+    }
   };
 
   const handleCopyLink = () => {
@@ -49,10 +62,20 @@ export function ShareCard() {
 
           <Button
             onClick={handleGenerateLink}
+            disabled={isGenerating}
             className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
           >
-            <Share2 className="mr-2 h-4 w-4" />
-            Generate Shareable Link
+            {isGenerating ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Generating Link...
+              </>
+            ) : (
+              <>
+                <Share2 className="mr-2 h-4 w-4" />
+                Generate Shareable Link
+              </>
+            )}
           </Button>
         </CardContent>
       </Card>
