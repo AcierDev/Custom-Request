@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, SlidersHorizontal, Palette } from "lucide-react";
 import { PaletteCard } from "./PaletteCard";
+import { toast } from "sonner";
 
 export function PaletteList() {
   const {

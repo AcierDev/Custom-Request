@@ -56,11 +56,9 @@ export function PaletteManager() {
   const [showBlendingGuide, setShowBlendingGuide] = useState(false);
   const [hasSeenBlendingGuide, setHasSeenBlendingGuide] = useState(false);
   const [showSelectionHint, setShowSelectionHint] = useState(false);
-  const [showExportDialog, setShowExportDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [importText, setImportText] = useState("");
   const [importError, setImportError] = useState("");
-  const [copied, setCopied] = useState(false);
   const [showHarmonyGenerator, setShowHarmonyGenerator] = useState(false);
 
   // Initialize hasSeenBlendingGuide from localStorage
@@ -215,125 +213,76 @@ export function PaletteManager() {
       ? customPalette.findIndex((color) => color.hex === selectedColors[0])
       : -1;
 
-  const handleExportPalette = () => {
-    setShowExportDialog(true);
-  };
-
-  const handleCopyToClipboard = () => {
-    const exportData = JSON.stringify(
-      customPalette.map((color) => ({
-        hex: color.hex,
-        name: color.name || "",
-      })),
-      null,
-      2
-    );
-    navigator.clipboard.writeText(exportData);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleDownloadPalette = () => {
-    const exportData = JSON.stringify(
-      {
-        version: "1.0.0",
-        format: "evpal",
-        name: "Everwood Palette",
-        created: new Date().toISOString(),
-        colors: customPalette.map((color) => ({
-          hex: color.hex,
-          name: color.name || "",
-        })),
-      },
-      null,
-      2
-    );
-
-    // Create a Blob and download link
-    const blob = new Blob([exportData], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `palette-${new Date().toISOString().slice(0, 10)}.evpal`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-
-    setShowExportDialog(false);
-    toast.success("Palette downloaded successfully!");
-  };
-
   const handleImportPalette = () => {
     try {
-      setImportError("");
-      const importData = JSON.parse(importText);
-
-      // Handle both formats: array of colors or .evpal format
-      let colorsArray;
-
-      if (Array.isArray(importData)) {
-        colorsArray = importData;
-      } else if (
-        importData.format === "evpal" &&
-        Array.isArray(importData.colors)
-      ) {
-        colorsArray = importData.colors;
-      } else {
-        setImportError("Invalid format: Could not find color data");
+      let importData;
+      try {
+        importData = JSON.parse(importText);
+      } catch (e) {
+        setImportError("Invalid JSON format. Please check your input.");
         return;
       }
 
-      const validColors = colorsArray.filter((item: { hex: string }) => {
-        if (!item.hex || typeof item.hex !== "string") return false;
-        return /^#[0-9A-Fa-f]{6}$/.test(item.hex);
+      // Check if it's a direct array of colors or a palette object with a colors property
+      const colorsArray = Array.isArray(importData)
+        ? importData
+        : importData.colors;
+
+      if (!colorsArray || !Array.isArray(colorsArray)) {
+        setImportError(
+          "Invalid palette format. Expected an array of colors or an object with a colors array."
+        );
+        return;
+      }
+
+      // Validate each color
+      const validColors = colorsArray.filter((color) => {
+        if (!color.hex) {
+          return false;
+        }
+        // Basic hex validation
+        return /^#([0-9A-F]{3}){1,2}$/i.test(color.hex);
       });
 
       if (validColors.length === 0) {
-        setImportError("No valid colors found in the imported data");
+        setImportError("No valid colors found in the imported data.");
         return;
       }
 
-      // Reset the palette
-      resetPaletteEditor();
-
-      // Add each color
-      validColors.forEach((color: { hex: string; name?: string }) => {
-        addCustomColor(color.hex);
-        if (color.name) {
-          const index = customPalette.length;
-          updateColorName(index, color.name);
-        }
+      // Clear current palette and add imported colors
+      useCustomStore.setState({
+        customPalette: validColors.map((color) => ({
+          hex: color.hex,
+          name: color.name || "",
+        })),
+        selectedColors: [],
       });
 
       setShowImportDialog(false);
       setImportText("");
-
+      setImportError("");
       toast.success(`Imported ${validColors.length} colors successfully!`);
     } catch (error) {
-      setImportError("Invalid JSON format. Please check your data.");
+      setImportError("An error occurred while importing the palette.");
+      console.error("Import error:", error);
     }
   };
 
-  // File upload handler for import
+  // Handle file upload for import
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check file extension
-    if (!file.name.endsWith(".evpal") && !file.name.endsWith(".json")) {
-      setImportError("Please upload a .evpal or .json file");
-      return;
-    }
-
     const reader = new FileReader();
     reader.onload = (event) => {
-      if (event.target?.result) {
-        setImportText(event.target.result as string);
+      try {
+        const fileContent = event.target?.result as string;
+        setImportText(fileContent);
+        setImportError("");
+      } catch (error) {
+        setImportError("Failed to read the file.");
+        console.error("File read error:", error);
       }
-    };
-    reader.onerror = () => {
-      setImportError("Error reading file");
     };
     reader.readAsText(file);
   };
@@ -484,27 +433,6 @@ export function PaletteManager() {
                     </TooltipTrigger>
                     <TooltipContent side="bottom">
                       <p>Import a palette</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-
-                <TooltipProvider delayDuration={300}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleExportPalette}
-                        disabled={customPalette.length === 0}
-                        className="h-8 px-3 border-green-200 hover:border-green-300 dark:border-green-800/50 dark:hover:border-green-700/50 bg-green-50 dark:bg-green-950/20"
-                      >
-                        <span className="text-xs font-medium text-green-600 dark:text-green-400">
-                          Export
-                        </span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom">
-                      <p>Export your palette</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -782,64 +710,6 @@ export function PaletteManager() {
                   className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
                 >
                   Save Changes
-                </Button>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      )}
-
-      {/* Export Dialog */}
-      {showExportDialog && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            className="bg-white dark:bg-gray-900 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl border-2 border-gray-200 dark:border-gray-700"
-          >
-            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-              Export Palette
-            </h3>
-
-            <div className="space-y-4">
-              <p className="text-gray-600 dark:text-gray-400">
-                Your palette contains {customPalette.length} colors. You can
-                copy the palette data or download it as a file.
-              </p>
-
-              <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-md overflow-auto max-h-48">
-                <pre className="text-xs text-gray-800 dark:text-gray-300 whitespace-pre-wrap">
-                  {JSON.stringify(
-                    customPalette.map((color) => ({
-                      hex: color.hex,
-                      name: color.name || "",
-                    })),
-                    null,
-                    2
-                  )}
-                </pre>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-3 mt-6">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowExportDialog(false)}
-                  className="sm:order-1"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleCopyToClipboard}
-                  className="bg-blue-600 hover:bg-blue-700 text-white sm:order-2"
-                >
-                  {copied ? "Copied!" : "Copy to Clipboard"}
-                </Button>
-                <Button
-                  onClick={handleDownloadPalette}
-                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white sm:order-3"
-                >
-                  Download Palette
                 </Button>
               </div>
             </div>

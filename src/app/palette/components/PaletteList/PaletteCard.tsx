@@ -1,7 +1,8 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { Edit, Trash2, Palette } from "lucide-react";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Edit, Trash2, Palette, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -19,6 +20,7 @@ import {
 } from "@/components/ui/card";
 import { PaletteCardProps } from "./types";
 import { PalettePreview } from "./PalettePreview";
+import { toast } from "sonner";
 
 export const PaletteCard = ({
   palette,
@@ -27,6 +29,60 @@ export const PaletteCard = ({
   onApply,
   isEditing,
 }: PaletteCardProps) => {
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleExportPalette = () => {
+    setShowExportDialog(true);
+  };
+
+  const handleCopyToClipboard = () => {
+    const exportData = JSON.stringify(
+      palette.colors.map((color) => ({
+        hex: color.hex,
+        name: color.name || "",
+      })),
+      null,
+      2
+    );
+    navigator.clipboard.writeText(exportData);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDownloadPalette = () => {
+    const exportData = JSON.stringify(
+      {
+        version: "1.0.0",
+        format: "evpal",
+        name: palette.name,
+        created: new Date().toISOString(),
+        colors: palette.colors.map((color) => ({
+          hex: color.hex,
+          name: color.name || "",
+        })),
+      },
+      null,
+      2
+    );
+
+    // Create a Blob and download link
+    const blob = new Blob([exportData], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${palette.name
+      .replace(/\s+/g, "-")
+      .toLowerCase()}-${new Date().toISOString().slice(0, 10)}.evpal`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    setShowExportDialog(false);
+    toast.success("Palette downloaded successfully!");
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -111,6 +167,24 @@ export const PaletteCard = ({
                   <Button
                     variant="ghost"
                     size="icon"
+                    className="h-8 w-8 text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400"
+                    onClick={handleExportPalette}
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Export palette</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     className="h-8 w-8 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
                     onClick={() => onDelete(palette.id)}
                   >
@@ -135,6 +209,64 @@ export const PaletteCard = ({
           </Button>
         </CardFooter>
       </Card>
+
+      {/* Export Dialog */}
+      {showExportDialog && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="bg-white dark:bg-gray-900 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl border-2 border-gray-200 dark:border-gray-700"
+          >
+            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+              Export "{palette.name}"
+            </h3>
+
+            <div className="space-y-4">
+              <p className="text-gray-600 dark:text-gray-400">
+                This palette contains {palette.colors.length} colors. You can
+                copy the palette data or download it as a file.
+              </p>
+
+              <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-md overflow-auto max-h-48">
+                <pre className="text-xs text-gray-800 dark:text-gray-300 whitespace-pre-wrap">
+                  {JSON.stringify(
+                    palette.colors.map((color) => ({
+                      hex: color.hex,
+                      name: color.name || "",
+                    })),
+                    null,
+                    2
+                  )}
+                </pre>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3 mt-6">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowExportDialog(false)}
+                  className="sm:order-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleCopyToClipboard}
+                  className="bg-blue-600 hover:bg-blue-700 text-white sm:order-2"
+                >
+                  {copied ? "Copied!" : "Copy to Clipboard"}
+                </Button>
+                <Button
+                  onClick={handleDownloadPalette}
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white sm:order-3"
+                >
+                  Download Palette
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </motion.div>
   );
 };
