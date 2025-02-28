@@ -11,7 +11,6 @@ import { PaletteCard } from "./PaletteCard";
 export function PaletteList() {
   const {
     savedPalettes,
-    updatePalette,
     deletePalette,
     applyPalette,
     loadPaletteForEditing,

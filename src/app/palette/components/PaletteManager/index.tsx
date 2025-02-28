@@ -466,6 +466,50 @@ export function PaletteManager() {
                 </Tooltip>
               </TooltipProvider>
 
+              {/* Import/Export Buttons */}
+              <div className="flex items-center gap-1">
+                <TooltipProvider delayDuration={300}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowImportDialog(true)}
+                        className="h-8 px-3 border-blue-200 hover:border-blue-300 dark:border-blue-800/50 dark:hover:border-blue-700/50 bg-blue-50 dark:bg-blue-950/20"
+                      >
+                        <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
+                          Import
+                        </span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Import a palette</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
+                <TooltipProvider delayDuration={300}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleExportPalette}
+                        disabled={customPalette.length === 0}
+                        className="h-8 px-3 border-green-200 hover:border-green-300 dark:border-green-800/50 dark:hover:border-green-700/50 bg-green-50 dark:bg-green-950/20"
+                      >
+                        <span className="text-xs font-medium text-green-600 dark:text-green-400">
+                          Export
+                        </span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Export your palette</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+
               {editingPaletteId && (
                 <TooltipProvider delayDuration={300}>
                   <Tooltip>
@@ -738,6 +782,135 @@ export function PaletteManager() {
                   className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
                 >
                   Save Changes
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Export Dialog */}
+      {showExportDialog && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="bg-white dark:bg-gray-900 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl border-2 border-gray-200 dark:border-gray-700"
+          >
+            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+              Export Palette
+            </h3>
+
+            <div className="space-y-4">
+              <p className="text-gray-600 dark:text-gray-400">
+                Your palette contains {customPalette.length} colors. You can
+                copy the palette data or download it as a file.
+              </p>
+
+              <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-md overflow-auto max-h-48">
+                <pre className="text-xs text-gray-800 dark:text-gray-300 whitespace-pre-wrap">
+                  {JSON.stringify(
+                    customPalette.map((color) => ({
+                      hex: color.hex,
+                      name: color.name || "",
+                    })),
+                    null,
+                    2
+                  )}
+                </pre>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3 mt-6">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowExportDialog(false)}
+                  className="sm:order-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleCopyToClipboard}
+                  className="bg-blue-600 hover:bg-blue-700 text-white sm:order-2"
+                >
+                  {copied ? "Copied!" : "Copy to Clipboard"}
+                </Button>
+                <Button
+                  onClick={handleDownloadPalette}
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white sm:order-3"
+                >
+                  Download Palette
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Import Dialog */}
+      {showImportDialog && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="bg-white dark:bg-gray-900 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl border-2 border-gray-200 dark:border-gray-700"
+          >
+            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+              Import Palette
+            </h3>
+
+            <div className="space-y-4">
+              <p className="text-gray-600 dark:text-gray-400">
+                Paste your palette data below or upload a palette file (.evpal
+                or .json).
+              </p>
+
+              <div className="space-y-2">
+                <Label htmlFor="import-text">Palette Data (JSON)</Label>
+                <textarea
+                  id="import-text"
+                  value={importText}
+                  onChange={(e) => setImportText(e.target.value)}
+                  placeholder='[{"hex":"#ff0000","name":"Red"},{"hex":"#00ff00","name":"Green"}]'
+                  className="w-full h-32 p-3 text-sm border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="import-file">Or Upload a File</Label>
+                <Input
+                  id="import-file"
+                  type="file"
+                  accept=".evpal,.json"
+                  onChange={handleFileUpload}
+                  className="cursor-pointer"
+                />
+              </div>
+
+              {importError && (
+                <div className="p-3 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-md text-sm">
+                  {importError}
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3 mt-6">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowImportDialog(false);
+                    setImportText("");
+                    setImportError("");
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleImportPalette}
+                  disabled={!importText.trim()}
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+                >
+                  Import Palette
                 </Button>
               </div>
             </div>
