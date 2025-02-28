@@ -4,6 +4,7 @@ import { calculatePrice, PriceBreakdown } from "@/lib/pricing";
 import { mixPaintColors } from "@/lib/colorUtils";
 import { DESIGN_COLORS } from "@/typings/color-maps";
 import { createStore } from "zustand/vanilla";
+import { generateShareableUrl, extractStateFromUrl } from "@/lib/urlUtils";
 
 export type ShippingSpeed = "standard" | "expedited" | "rushed";
 export type ColorPattern =
@@ -103,6 +104,8 @@ interface CustomStore extends CustomState {
   resetPaletteEditor: () => void;
   loadOfficialPalette: (design: ItemDesigns) => void;
   setCustomPalette: (palette: CustomColor[]) => void;
+  generateShareableLink: () => string;
+  loadFromShareableData: (data: string) => boolean;
 }
 
 interface HoverState {
@@ -129,6 +132,20 @@ const createColorMap = (colors: CustomColor[]): ColorMap => {
     ])
   );
 };
+
+// Define the shareable state interface - only include what's needed for sharing
+interface ShareableState {
+  dimensions: Dimensions;
+  selectedDesign: ItemDesigns;
+  shippingSpeed: ShippingSpeed;
+  colorPattern: ColorPattern;
+  orientation: Orientation;
+  isReversed: boolean;
+  customPalette: CustomColor[];
+  isRotated: boolean;
+  patternStyle: PatternType;
+  style: StyleType;
+}
 
 export const useCustomStore = create<CustomStore>((set, get) => ({
   dimensions: { width: 16, height: 10 },
@@ -438,4 +455,67 @@ export const useCustomStore = create<CustomStore>((set, get) => ({
       customPalette: palette,
       currentColors: createColorMap(palette),
     }),
+
+  generateShareableLink: () => {
+    const state = get();
+
+    // Extract only the properties we want to share
+    const shareableState: ShareableState = {
+      dimensions: state.dimensions,
+      selectedDesign: state.selectedDesign,
+      shippingSpeed: state.shippingSpeed,
+      colorPattern: state.colorPattern,
+      orientation: state.orientation,
+      isReversed: state.isReversed,
+      customPalette: state.customPalette,
+      isRotated: state.isRotated,
+      patternStyle: state.patternStyle,
+      style: state.style,
+    };
+
+    // Use the compression utility to generate a more compact URL
+    return generateShareableUrl(shareableState);
+  },
+
+  loadFromShareableData: (data: string) => {
+    try {
+      // Use the extraction utility to parse the compressed data
+      const shareableState = extractStateFromUrl<ShareableState>(data);
+
+      // Validate the data structure
+      if (!shareableState.dimensions || !shareableState.selectedDesign) {
+        return false;
+      }
+
+      // Update the store with the shared state
+      set({
+        dimensions: shareableState.dimensions,
+        selectedDesign: shareableState.selectedDesign,
+        shippingSpeed: shareableState.shippingSpeed,
+        colorPattern: shareableState.colorPattern,
+        orientation: shareableState.orientation,
+        isReversed: shareableState.isReversed,
+        customPalette: shareableState.customPalette,
+        isRotated: shareableState.isRotated,
+        patternStyle: shareableState.patternStyle,
+        style: shareableState.style,
+        // Update the current colors based on the custom palette
+        currentColors:
+          shareableState.selectedDesign === ItemDesigns.Custom &&
+          shareableState.customPalette.length > 0
+            ? createColorMap(shareableState.customPalette)
+            : DESIGN_COLORS[shareableState.selectedDesign],
+        // Update pricing based on the dimensions and shipping speed
+        pricing: calculatePrice(
+          shareableState.dimensions,
+          shareableState.shippingSpeed
+        ),
+      });
+
+      return true;
+    } catch (error) {
+      console.error("Failed to load shared data:", error);
+      return false;
+    }
+  },
 }));
