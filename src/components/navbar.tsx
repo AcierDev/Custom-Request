@@ -12,6 +12,9 @@ import {
   Palette,
   Eye,
   LogOut,
+  User,
+  ChevronDown,
+  Save,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
@@ -20,6 +23,17 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/lib/auth-context";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useCustomStore } from "@/store/customStore";
+import { toast } from "sonner";
 
 type NavItemBase = {
   hotkey?: string;
@@ -46,8 +60,6 @@ const mainNavItems: NavItem[] = [
 
 interface NavbarProps {
   onOpenSettings: () => void;
-  sidebarOpen: boolean;
-  onSidebarOpenChange: (open: boolean) => void;
 }
 
 interface NavLinkProps {
@@ -56,17 +68,16 @@ interface NavLinkProps {
   label: string;
 }
 
-export function Navbar({
-  onOpenSettings,
-  sidebarOpen,
-  onSidebarOpenChange,
-}: NavbarProps) {
+export function Navbar({ onOpenSettings }: NavbarProps) {
   const { theme, setTheme } = useTheme();
   const pathname = usePathname();
   const router = useRouter();
   const { user, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState(pathname);
   const [navigationSequence, setNavigationSequence] = useState<string[]>([]);
+  const saveToDatabase = useCustomStore((state) => state.saveToDatabase);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
     setActiveTab(pathname);
@@ -115,7 +126,38 @@ export function Navbar({
     };
   }, [handleHotkey]);
 
-  const toggleSidebar = () => onSidebarOpenChange(!sidebarOpen);
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
+  // Get user initials for avatar fallback
+  const getUserInitials = () => {
+    if (!user || !user.name) return "U";
+
+    const nameParts = user.name.split(" ");
+    if (nameParts.length === 1) return nameParts[0].charAt(0).toUpperCase();
+
+    return (
+      nameParts[0].charAt(0) + nameParts[nameParts.length - 1].charAt(0)
+    ).toUpperCase();
+  };
+
+  const handleSaveData = async () => {
+    if (!user) return;
+
+    setIsSaving(true);
+    try {
+      const success = await saveToDatabase();
+      if (success) {
+        toast.success("Your design data has been saved");
+      } else {
+        toast.error("Failed to save your design data");
+      }
+    } catch (error) {
+      console.error("Error saving data:", error);
+      toast.error("An error occurred while saving your data");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const NavLink = ({ href, icon: Icon, label }: NavLinkProps) => {
     if (!href) return null;
@@ -137,13 +179,15 @@ export function Navbar({
           activeTab === href
             ? "bg-secondary text-secondary-foreground"
             : "text-muted-foreground hover:bg-muted hover:text-primary"
-        } ${!sidebarOpen ? "justify-center" : ""}`}
+        } ${!isSidebarOpen ? "justify-center" : ""}`}
         onClick={handleClick}
       >
         <Icon
-          className={`h-5 w-5 flex-shrink-0 ${!sidebarOpen ? "mr-0" : "mr-3"}`}
+          className={`h-5 w-5 flex-shrink-0 ${
+            !isSidebarOpen ? "mr-0" : "mr-3"
+          }`}
         />
-        {sidebarOpen && <span>{label}</span>}
+        {isSidebarOpen && <span>{label}</span>}
       </Link>
     );
   };
@@ -153,11 +197,11 @@ export function Navbar({
       {/* Desktop Sidebar */}
       <aside
         className={`${
-          sidebarOpen ? "w-64" : "w-16"
+          isSidebarOpen ? "w-64" : "w-16"
         } fixed h-screen transition-all duration-300 ease-in-out border-r dark:border-gray-800 border-gray-200 bg-white dark:bg-gradient-to-b dark:from-gray-800 dark:to-gray-600 hidden lg:block z-30`}
       >
         <div className="h-16 flex items-center justify-between px-4 bg-gray-50 dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800">
-          {sidebarOpen && (
+          {isSidebarOpen && (
             <span className="text-lg font-bold cursor-pointer text-gray-900 dark:text-white hover:text-primary transition-colors">
               Everwood
             </span>
@@ -167,10 +211,10 @@ export function Navbar({
             size="icon"
             onClick={toggleSidebar}
             className={`${
-              sidebarOpen ? "" : "mx-auto"
+              isSidebarOpen ? "" : "mx-auto"
             } hover:bg-gray-200 dark:hover:bg-gray-800`}
           >
-            {sidebarOpen ? (
+            {isSidebarOpen ? (
               <ChevronLeft className="h-4 w-4" />
             ) : (
               <ChevronRight className="h-4 w-4" />
@@ -202,7 +246,7 @@ export function Navbar({
           <div className="p-3 border-t border-gray-200 dark:border-gray-600 bg-gray-50/80 dark:bg-gray-900/50">
             <div
               className={`${
-                sidebarOpen ? "flex gap-2" : "flex flex-col gap-2"
+                isSidebarOpen ? "flex gap-2" : "flex flex-col gap-2"
               }`}
             >
               <Button
@@ -224,23 +268,59 @@ export function Navbar({
               </Button>
               <Button
                 className={`flex items-center justify-center bg-primary text-primary-foreground hover:bg-primary/90 ${
-                  sidebarOpen ? "flex-1" : ""
+                  isSidebarOpen ? "flex-1" : ""
                 }`}
                 onClick={onOpenSettings}
               >
                 <Settings className="h-5 w-5 flex-shrink-0" />
-                {sidebarOpen && <span className="ml-2">Settings</span>}
+                {isSidebarOpen && <span className="ml-2">Settings</span>}
               </Button>
               {user && (
-                <Button
-                  variant="destructive"
-                  size={sidebarOpen ? "default" : "icon"}
-                  onClick={signOut}
-                  className="flex-shrink-0"
-                >
-                  <LogOut className="h-5 w-5 flex-shrink-0" />
-                  {sidebarOpen && <span className="ml-2">Sign Out</span>}
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="flex-shrink-0 p-0 h-9 w-9 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800"
+                    >
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage
+                          src={user.image || ""}
+                          alt={user.name || user.email}
+                        />
+                        <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                          {getUserInitials()}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="cursor-pointer"
+                      onClick={() => router.push("/profile")}
+                    >
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Profile</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="cursor-pointer"
+                      onClick={handleSaveData}
+                      disabled={isSaving}
+                    >
+                      <Save className="mr-2 h-4 w-4" />
+                      <span>{isSaving ? "Saving..." : "Save My Designs"}</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="cursor-pointer text-destructive focus:text-destructive"
+                      onClick={signOut}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Sign out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
             </div>
           </div>
@@ -263,10 +343,58 @@ export function Navbar({
             </SheetTrigger>
             <span
               className="text-xl font-bold mr-auto cursor-pointer text-gray-900 dark:text-white hover:text-primary transition-colors"
-              onClick={() => router.push("/dashboard")}
+              onClick={() => router.push("/order")}
             >
               Everwood
             </span>
+
+            {user && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="ml-auto mr-2 p-0 h-9 w-9 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800"
+                  >
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage
+                        src={user.image || ""}
+                        alt={user.name || user.email}
+                      />
+                      <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                        {getUserInitials()}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="cursor-pointer"
+                    onClick={() => router.push("/profile")}
+                  >
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="cursor-pointer"
+                    onClick={handleSaveData}
+                    disabled={isSaving}
+                  >
+                    <Save className="mr-2 h-4 w-4" />
+                    <span>{isSaving ? "Saving..." : "Save My Designs"}</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="cursor-pointer text-destructive focus:text-destructive"
+                    onClick={signOut}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Sign out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
 
             <SheetContent
               side="left"
@@ -319,16 +447,6 @@ export function Navbar({
                       </span>
                     </Button>
                   </div>
-                  {user && (
-                    <Button
-                      variant="destructive"
-                      className="w-full mt-2 flex items-center justify-center"
-                      onClick={signOut}
-                    >
-                      <LogOut className="mr-2 h-5 w-5" />
-                      Sign Out
-                    </Button>
-                  )}
                 </div>
               </div>
             </SheetContent>

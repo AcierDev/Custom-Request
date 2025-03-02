@@ -6,6 +6,7 @@ import {
   useState,
   useEffect,
   ReactNode,
+  Suspense,
 } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
@@ -24,11 +25,12 @@ type AuthContextType = {
   signOut: () => Promise<void>;
   initiateGoogleAuth: () => Promise<void>;
   handleGoogleCallback: (response: any) => Promise<void>;
+  saveUserData: (data: any) => Promise<boolean>;
+  loadUserData: () => Promise<any | null>;
 };
 
 // Google OAuth configuration
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
-console.log("GOOGLE_CLIENT_ID", GOOGLE_CLIENT_ID);
 const GOOGLE_REDIRECT_URI =
   typeof window !== "undefined"
     ? `${window.location.origin}/api/auth/google/callback`
@@ -36,7 +38,8 @@ const GOOGLE_REDIRECT_URI =
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+// Create a separate component that uses navigation hooks
+function AuthProviderContent({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
@@ -290,6 +293,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Function to save user data to MongoDB
+  const saveUserData = async (data: any): Promise<boolean> => {
+    if (!user) return false;
+
+    try {
+      const response = await fetch("/api/user-data", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          storeData: data,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save user data");
+      }
+
+      const result = await response.json();
+      return result.success;
+    } catch (error) {
+      console.error("Error saving user data:", error);
+      return false;
+    }
+  };
+
+  // Function to load user data from MongoDB
+  const loadUserData = async (): Promise<any | null> => {
+    if (!user) return null;
+
+    try {
+      const response = await fetch(`/api/user-data?userId=${user.id}`);
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          // No data found for this user, which is fine
+          return null;
+        }
+        throw new Error("Failed to load user data");
+      }
+
+      const result = await response.json();
+      return result.data?.storeData || null;
+    } catch (error) {
+      console.error("Error loading user data:", error);
+      return null;
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -299,10 +353,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signOut,
         initiateGoogleAuth,
         handleGoogleCallback,
+        saveUserData,
+        loadUserData,
       }}
     >
       {children}
     </AuthContext.Provider>
+  );
+}
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  return (
+    <Suspense fallback={<div>Loading authentication...</div>}>
+      <AuthProviderContent>{children}</AuthProviderContent>
+    </Suspense>
   );
 }
 

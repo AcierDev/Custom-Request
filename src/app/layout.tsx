@@ -8,6 +8,8 @@ import { useState } from "react";
 import { MobileWarning } from "@/components/mobile-warning";
 import { Toaster } from "sonner";
 import { AuthProvider } from "@/lib/auth-context";
+import { AuthContextProvider } from "@/components/AuthContextProvider";
+import { Footer } from "@/components/footer";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -32,13 +34,22 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         sidebarOpen={sidebarOpen}
         onSidebarOpenChange={setSidebarOpen}
       />
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto flex flex-col">
         <div
           className={`${
             sidebarOpen ? "lg:ml-64" : "lg:ml-16"
-          } mt-14 lg:mt-0 transition-[margin] duration-300`}
+          } mt-14 lg:mt-0 transition-[margin] duration-300 flex-1`}
         >
-          <main className="w-full px-4 sm:px-6 lg:px-8">{children}</main>
+          <main className="w-full px-4 sm:px-6 lg:px-8 min-h-[calc(100vh-64px)]">
+            {children}
+          </main>
+        </div>
+        <div
+          className={`${
+            sidebarOpen ? "lg:ml-64" : "lg:ml-16"
+          } transition-[margin] duration-300`}
+        >
+          <Footer />
         </div>
       </div>
     </div>
@@ -63,8 +74,10 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
-            <Toaster richColors position="top-right" />
-            <LayoutContent>{children}</LayoutContent>
+            <AuthContextProvider>
+              <Toaster richColors position="top-right" />
+              <LayoutContent>{children}</LayoutContent>
+            </AuthContextProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

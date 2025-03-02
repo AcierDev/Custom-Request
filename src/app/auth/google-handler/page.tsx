@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
-export default function GoogleAuthHandler() {
+// Create a separate client component that uses useSearchParams
+function GoogleAuthHandlerContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -48,5 +49,23 @@ export default function GoogleAuthHandler() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function GoogleAuthHandler() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-background to-muted/30 dark:from-gray-950 dark:to-gray-900">
+          <div className="text-center">
+            <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-primary" />
+            <h1 className="text-2xl font-bold mb-2">Loading</h1>
+            <p className="text-muted-foreground">Please wait...</p>
+          </div>
+        </div>
+      }
+    >
+      <GoogleAuthHandlerContent />
+    </Suspense>
   );
 }

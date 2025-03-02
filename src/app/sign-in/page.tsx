@@ -12,8 +12,8 @@ import {
   Loader2,
   AlertCircle,
   X,
-  Share2,
   Info,
+  Share2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/lib/auth-context";
+import { Suspense } from "react";
 
 // Error messages for different error codes
 const ERROR_MESSAGES: Record<string, string> = {
@@ -41,7 +42,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   default: "An error occurred during authentication. Please try again.",
 };
 
-export default function SignIn() {
+// Create a separate client component that uses useSearchParams
+function SignInContent() {
   const { signIn, isLoading: authLoading } = useAuth();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
@@ -311,5 +313,33 @@ export default function SignIn() {
         </Card>
       </motion.div>
     </div>
+  );
+}
+
+export default function SignIn() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center p-4">
+          <div className="w-full max-w-md">
+            <Card className="border-muted/30 shadow-lg backdrop-blur-sm bg-background/95">
+              <CardHeader className="space-y-1">
+                <CardTitle className="text-2xl font-bold text-center">
+                  Welcome to Everwood
+                </CardTitle>
+                <CardDescription className="text-center">
+                  Loading...
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      }
+    >
+      <SignInContent />
+    </Suspense>
   );
 }

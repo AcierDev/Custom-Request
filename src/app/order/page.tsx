@@ -17,6 +17,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Share2, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
+import { Suspense } from "react";
 
 // Create a separate component that uses useSearchParams
 function OrderContent() {
@@ -166,5 +167,18 @@ export default function Custom() {
     );
   }
 
-  return <OrderContent />;
+  return (
+    <Suspense
+      fallback={
+        <div className="w-full h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+          </div>
+        </div>
+      }
+    >
+      <OrderContent />
+    </Suspense>
+  );
 }
