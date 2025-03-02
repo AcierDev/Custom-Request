@@ -11,6 +11,7 @@ import {
   ShoppingCart,
   Palette,
   Eye,
+  LogOut,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
@@ -18,6 +19,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useAuth } from "@/lib/auth-context";
 
 type NavItemBase = {
   hotkey?: string;
@@ -62,6 +64,7 @@ export function Navbar({
   const { theme, setTheme } = useTheme();
   const pathname = usePathname();
   const router = useRouter();
+  const { user, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState(pathname);
   const [navigationSequence, setNavigationSequence] = useState<string[]>([]);
 
@@ -228,6 +231,17 @@ export function Navbar({
                 <Settings className="h-5 w-5 flex-shrink-0" />
                 {sidebarOpen && <span className="ml-2">Settings</span>}
               </Button>
+              {user && (
+                <Button
+                  variant="destructive"
+                  size={sidebarOpen ? "default" : "icon"}
+                  onClick={signOut}
+                  className="flex-shrink-0"
+                >
+                  <LogOut className="h-5 w-5 flex-shrink-0" />
+                  {sidebarOpen && <span className="ml-2">Sign Out</span>}
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -305,6 +319,16 @@ export function Navbar({
                       </span>
                     </Button>
                   </div>
+                  {user && (
+                    <Button
+                      variant="destructive"
+                      className="w-full mt-2 flex items-center justify-center"
+                      onClick={signOut}
+                    >
+                      <LogOut className="mr-2 h-5 w-5" />
+                      Sign Out
+                    </Button>
+                  )}
                 </div>
               </div>
             </SheetContent>

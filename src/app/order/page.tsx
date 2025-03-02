@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { DesignCard } from "@/app/order/components/DesignCard";
 import { SizeCard } from "@/app/order/components/SizeCard";
 import { PriceCard } from "@/app/order/components/PriceCard";
@@ -14,25 +14,35 @@ import { ShareCard } from "@/app/order/components/ShareCard";
 import { useCustomStore } from "@/store/customStore";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { Share2, X } from "lucide-react";
+import { Share2, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/auth-context";
 
 // Create a separate component that uses useSearchParams
 function OrderContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const loadFromShareableData = useCustomStore(
     (state) => state.loadFromShareableData
   );
   const [isSharedDesign, setIsSharedDesign] = useState(false);
   const [showBanner, setShowBanner] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const { user, isLoading: authLoading } = useAuth();
 
   useEffect(() => {
+    // If authentication is still loading, wait for it
+    if (authLoading) return;
+
+    // If user is not authenticated, they will be redirected by the auth context
+    if (!user) return;
+
     // Check if there's a share parameter in the URL (either regular or short format)
     const regularShareData = searchParams.get("share");
     const shortShareData = searchParams.get("s");
 
-    // Process whichever parameter is present
     if (regularShareData || shortShareData) {
+      // Process whichever parameter is present
       let shareData;
 
       // If we have the short format, construct the parameter with the "s=" prefix
@@ -43,19 +53,40 @@ function OrderContent() {
         shareData = `share=${regularShareData}`;
       }
 
-      const success = loadFromShareableData(shareData);
+      try {
+        const success = loadFromShareableData(shareData);
 
-      if (success) {
-        setIsSharedDesign(true);
-        setShowBanner(true);
-        toast.success("Design loaded successfully!");
-      } else {
-        toast.error(
-          "Failed to load the shared design. The link may be invalid or expired."
-        );
+        if (success) {
+          setIsSharedDesign(true);
+          setShowBanner(true);
+          toast.success("Design loaded successfully!");
+        } else {
+          toast.error(
+            "Failed to load the shared design. The link may be invalid or expired."
+          );
+        }
+      } catch (error) {
+        console.error("Error loading shared design:", error);
+        toast.error("An error occurred while loading the design.");
       }
     }
-  }, [searchParams, loadFromShareableData]);
+
+    // Design is loaded (or failed to load), but we're done loading
+    setIsLoading(false);
+  }, [searchParams, loadFromShareableData, user, authLoading, router]);
+
+  if (isLoading || authLoading) {
+    return (
+      <div className="w-full h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="text-gray-600 dark:text-gray-400">
+            {authLoading ? "Authenticating..." : "Loading your design..."}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-screen relative">
@@ -66,6 +97,7 @@ function OrderContent() {
             initial={{ opacity: 0, y: -50 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -50 }}
+            transition={{ duration: 0.3 }}
             className="absolute top-0 left-0 right-0 bg-gradient-to-r from-purple-600 to-pink-600 text-white py-2 px-4 z-50"
           >
             <div className="container mx-auto flex items-center justify-between">
@@ -115,24 +147,24 @@ function OrderContent() {
   );
 }
 
-// Loading fallback component
-function OrderLoading() {
-  return (
-    <div className="w-full h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-      <div className="flex flex-col items-center gap-4">
-        <div className="h-8 w-8 border-4 border-t-purple-600 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></div>
-        <p className="text-gray-600 dark:text-gray-400">
-          Loading your design...
-        </p>
-      </div>
-    </div>
-  );
-}
-
 export default function Custom() {
-  return (
-    <Suspense fallback={<OrderLoading />}>
-      <OrderContent />
-    </Suspense>
-  );
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Handle hydration mismatch by only rendering after component mounts
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return (
+      <div className="w-full h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="text-gray-600 dark:text-gray-400">Initializing...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return <OrderContent />;
 }
