@@ -141,7 +141,14 @@ export function GeometricPattern({
   };
 
   // Create a pre-calculated color map for perfect distribution
-  const colorMapRef = useRef<number[][]>();
+  const colorMapRef = useRef<
+    number[][] & {
+      orientation?: string;
+      colorPattern?: ColorPattern;
+      isReversed?: boolean;
+      isRotated?: boolean;
+    }
+  >();
 
   // Generate a new color map if needed
   if (
@@ -422,10 +429,24 @@ export function GeometricPattern({
     isRotated,
   ]);
 
+  // Calculate the position offset for vertical orientation
+  // When rotated, we need to adjust the position to keep the model centered
+  const verticalPositionOffset =
+    orientation === "vertical"
+      ? [0, 0, 0] // Center position for vertical orientation
+      : [0, 0, 0]; // Center position for horizontal orientation
+
   return (
     <>
       <group
-        scale={[1, 1, 1]}
+        rotation={
+          orientation === "vertical"
+            ? isReversed
+              ? [0, 0, -Math.PI / 2]
+              : [0, 0, Math.PI / 2]
+            : [0, 0, 0] // No rotation for horizontal
+        }
+        position={[0, 0, 0]}
         onClick={(e) => {
           // Clear pinned info when clicking outside blocks
           if (e.object.type === "Group") {
@@ -433,7 +454,11 @@ export function GeometricPattern({
           }
         }}
       >
-        <PlywoodBase width={totalWidth} height={totalHeight} />
+        <PlywoodBase
+          width={totalWidth}
+          height={totalHeight}
+          showWoodGrain={showWoodGrain}
+        />
 
         {/* Render blocks using the Block component */}
         {Array.from({ length: modelWidth }).map((_, x) =>
@@ -443,6 +468,8 @@ export function GeometricPattern({
             const colorEntry = colorEntries[colorIndex];
             const color = colorEntry?.[1].hex || "#8B5E3B";
             const colorName = colorEntry?.[1].name;
+
+            // Calculate position based on orientation
             const xPos = x * blockSize + offsetX + blockSize / 2;
             const yPos = y * blockSize + offsetY + blockSize / 2;
             const zPos = blockSize / 2 - 0.401;

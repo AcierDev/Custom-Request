@@ -31,7 +31,10 @@ export const ImportCard = ({ onImport }: ImportCardProps) => {
       transition={{ duration: 0.3 }}
       layout
     >
-      <Card className="overflow-hidden border border-dashed border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 hover:shadow-md transition-all hover:border-purple-400 dark:hover:border-purple-600 group h-full flex flex-col">
+      <Card
+        className="overflow-hidden border border-dashed border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 hover:shadow-md transition-all hover:border-purple-400 dark:hover:border-purple-600 group h-full flex flex-col cursor-pointer hover:scale-[1.01] active:scale-[0.99]"
+        onClick={onImport}
+      >
         <CardHeader className="p-4 pb-2">
           <CardTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             Import Palette
@@ -51,7 +54,7 @@ export const ImportCard = ({ onImport }: ImportCardProps) => {
                 <Upload className="h-6 w-6 text-purple-600 dark:text-purple-400" />
               </div>
               <p className="text-sm text-gray-600 dark:text-gray-400 group-hover:text-purple-700 dark:group-hover:text-purple-300 transition-colors">
-                Drag & drop or click to import
+                Click anywhere to import
               </p>
             </div>
           </div>
@@ -61,7 +64,10 @@ export const ImportCard = ({ onImport }: ImportCardProps) => {
             variant="outline"
             size="sm"
             className="w-full h-9 text-sm font-medium text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-900/30 hover:bg-purple-50 dark:hover:bg-purple-900/20 group-hover:bg-purple-100 dark:group-hover:bg-purple-900/30"
-            onClick={onImport}
+            onClick={(e) => {
+              e.stopPropagation(); // Prevent double triggering
+              onImport();
+            }}
           >
             <FileUp className="h-4 w-4 mr-2" />
             Import Palette

@@ -93,6 +93,8 @@ interface CustomState {
 interface CustomStore extends CustomState {
   setDimensions: (dimensions: Dimensions) => void;
   setSelectedDesign: (design: ItemDesigns) => void;
+  previousDesign: () => void;
+  nextDesign: () => void;
   setShippingSpeed: (speed: ShippingSpeed) => void;
   setColorPattern: (pattern: ColorPattern) => void;
   setOrientation: (orientation: Orientation) => void;
@@ -238,6 +240,21 @@ export const useCustomStore = create<CustomStore>()(
             ? createColorMap(state.customPalette)
             : DESIGN_COLORS[design],
       }));
+    },
+    previousDesign: () => {
+      const designKeys = Object.values(ItemDesigns);
+      const currentDesign = get().selectedDesign;
+      const currentIndex = designKeys.indexOf(currentDesign);
+      const prevIndex =
+        (currentIndex - 1 + designKeys.length) % designKeys.length;
+      get().setSelectedDesign(designKeys[prevIndex]);
+    },
+    nextDesign: () => {
+      const designKeys = Object.values(ItemDesigns);
+      const currentDesign = get().selectedDesign;
+      const currentIndex = designKeys.indexOf(currentDesign);
+      const nextIndex = (currentIndex + 1) % designKeys.length;
+      get().setSelectedDesign(designKeys[nextIndex]);
     },
     setShippingSpeed: (speed) =>
       set((state) => ({
@@ -756,7 +773,7 @@ useCustomStore.subscribe(
   (state) => {
     // Create a selector that picks the tracked properties
     return AUTO_SAVE_TRACKED_PROPERTIES.reduce((acc, key) => {
-      acc[key] = state[key];
+      acc[key] = state[key] as any; // Use type assertion to avoid type error
       return acc;
     }, {} as Partial<CustomState>);
   },

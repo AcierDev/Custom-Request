@@ -16,18 +16,22 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
-
+import { ChevronLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ChevronRight } from "lucide-react";
 const sizeOptions = [...Object.values(ItemSizes), "custom"];
 
 type Unit = "blocks" | "inches" | "feet";
 
-export function SizeCard() {
+export function SizeCard({ compact = false }: { compact?: boolean }) {
   const { dimensions, setDimensions } = useCustomStore();
   const [customWidth, setCustomWidth] = useState(dimensions.width.toString());
   const [customHeight, setCustomHeight] = useState(
     dimensions.height.toString()
   );
   const [unit, setUnit] = useState<Unit>("blocks");
+
+  const { selectedDesign, previousDesign, nextDesign } = useCustomStore();
 
   // Find the current size based on dimensions
   const currentSize =
@@ -107,6 +111,43 @@ export function SizeCard() {
       }
     }
   };
+
+  if (compact) {
+    return (
+      <Card
+        className={`dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200 dark:border-gray-700 shadow-lg`}
+      >
+        <CardContent className="py-3 px-4 flex items-center justify-between gap-6">
+          <div className="flex flex-col min-w-0">
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+              Design
+            </span>
+            <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 truncate">
+              {selectedDesign}
+            </span>
+          </div>
+          <div className="flex gap-1 shrink-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700/50"
+              onClick={previousDesign}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700/50"
+              onClick={nextDesign}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="h-1/3 dark:bg-gray-800/50 backdrop-blur-sm border-2 border-gray-200 dark:border-gray-700">

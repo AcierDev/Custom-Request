@@ -20,7 +20,6 @@ import {
   ArrowRight,
   Info,
   Palette,
-  Trash2,
   Blend,
   MousePointerClick,
 } from "lucide-react";
@@ -250,63 +249,65 @@ export function PaletteManager() {
 
           <div className="flex flex-wrap items-center gap-2">
             {/* Primary Actions Group */}
-            <div className="flex items-center rounded-md border border-gray-200 dark:border-gray-800 p-0.5 bg-white dark:bg-gray-900 shadow-sm">
-              <TooltipProvider delayDuration={300}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => moveColorLeft(selectedColorIndex)}
-                      disabled={
-                        selectedColors.length !== 1 || selectedColorIndex <= 0
-                      }
-                      className="h-8 w-8 p-0 rounded-none rounded-l-sm"
-                    >
-                      <ArrowLeft className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    {selectedColors.length === 0
-                      ? "Select a color to move"
-                      : selectedColors.length > 1
-                      ? "Select only one color to move"
-                      : selectedColorIndex <= 0
-                      ? "Color is at the start"
-                      : "Move color left"}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+            {selectedColors.length > 0 && (
+              <div className="flex items-center rounded-md border border-gray-200 dark:border-gray-800 p-0.5 bg-white dark:bg-gray-900 shadow-sm">
+                <TooltipProvider delayDuration={300}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => moveColorLeft(selectedColorIndex)}
+                        disabled={
+                          selectedColors.length !== 1 || selectedColorIndex <= 0
+                        }
+                        className="h-8 w-8 p-0 rounded-none rounded-l-sm"
+                      >
+                        <ArrowLeft className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      {selectedColors.length === 0
+                        ? "Select a color to move"
+                        : selectedColors.length > 1
+                        ? "Select only one color to move"
+                        : selectedColorIndex <= 0
+                        ? "Color is at the start"
+                        : "Move color left"}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
 
-              <TooltipProvider delayDuration={300}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => moveColorRight(selectedColorIndex)}
-                      disabled={
-                        selectedColors.length !== 1 ||
-                        selectedColorIndex === customPalette.length - 1 ||
-                        selectedColorIndex === -1
-                      }
-                      className="h-8 w-8 p-0 rounded-none rounded-r-sm border-l border-gray-200 dark:border-gray-800"
-                    >
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    {selectedColors.length === 0
-                      ? "Select a color to move"
-                      : selectedColors.length > 1
-                      ? "Select only one color to move"
-                      : selectedColorIndex === customPalette.length - 1
-                      ? "Color is at the end"
-                      : "Move color right"}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
+                <TooltipProvider delayDuration={300}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => moveColorRight(selectedColorIndex)}
+                        disabled={
+                          selectedColors.length !== 1 ||
+                          selectedColorIndex === customPalette.length - 1 ||
+                          selectedColorIndex === -1
+                        }
+                        className="h-8 w-8 p-0 rounded-none rounded-r-sm border-l border-gray-200 dark:border-gray-800"
+                      >
+                        <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      {selectedColors.length === 0
+                        ? "Select a color to move"
+                        : selectedColors.length > 1
+                        ? "Select only one color to move"
+                        : selectedColorIndex === customPalette.length - 1
+                        ? "Color is at the end"
+                        : "Move color right"}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            )}
 
             {/* Main Actions Group */}
             <div className="flex items-center gap-2">

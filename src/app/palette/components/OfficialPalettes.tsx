@@ -14,6 +14,8 @@ import {
   SlidersHorizontal,
   Check,
   Copy,
+  Eye,
+  ShoppingCart,
 } from "lucide-react";
 import {
   Card,
@@ -41,6 +43,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 // Define palette categories
 type PaletteCategory =
@@ -91,11 +94,13 @@ const PalettePreview = ({ design }: { design: ItemDesigns }) => {
 // Official Palette Card component
 const OfficialPaletteCard = ({
   design,
-  onUse,
+  onVisualize,
+  onOrder,
   onCustomize,
 }: {
   design: ItemDesigns;
-  onUse: (design: ItemDesigns) => void;
+  onVisualize: (design: ItemDesigns) => void;
+  onOrder: (design: ItemDesigns) => void;
   onCustomize: (design: ItemDesigns) => void;
 }) => {
   const colors = Object.values(DESIGN_COLORS[design]);
@@ -189,7 +194,7 @@ const OfficialPaletteCard = ({
           </div>
         </CardContent>
 
-        <CardFooter className="p-3 pt-0 flex justify-between border-t border-gray-100 dark:border-gray-800 mt-auto">
+        <CardFooter className="p-3 flex justify-between border-t border-gray-100 dark:border-gray-800 mt-auto">
           <Dialog
             open={isCustomizeDialogOpen}
             onOpenChange={setIsCustomizeDialogOpen}
@@ -243,15 +248,45 @@ const OfficialPaletteCard = ({
             </DialogContent>
           </Dialog>
 
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 text-xs font-medium text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-900/30 hover:bg-purple-50 dark:hover:bg-purple-900/20"
-            onClick={() => onUse(design)}
-          >
-            <Palette className="h-3 w-3 mr-1" />
-            Use Palette
-          </Button>
+          <div className="flex gap-2">
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs font-medium text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/30 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                    onClick={() => onVisualize(design)}
+                  >
+                    <Eye className="h-3 w-3 mr-1" />
+                    Visualize
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Apply palette and preview</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs font-medium text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-900/30 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                    onClick={() => onOrder(design)}
+                  >
+                    <ShoppingCart className="h-3 w-3 mr-1" />
+                    Order
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Apply palette and go to order</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </CardFooter>
       </Card>
     </motion.div>
@@ -264,6 +299,7 @@ export function OfficialPalettes() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<PaletteCategory>("All");
   const [appliedDesign, setAppliedDesign] = useState<ItemDesigns | null>(null);
+  const router = useRouter();
 
   // Get all designs except Custom
   const officialDesigns = Object.values(ItemDesigns).filter(
@@ -281,17 +317,29 @@ export function OfficialPalettes() {
     return matchesSearch && matchesCategory;
   });
 
-  const handleUseOfficialPalette = (design: ItemDesigns) => {
+  const handleVisualizeOfficialPalette = (design: ItemDesigns) => {
     setSelectedDesign(design);
     setAppliedDesign(design);
 
+    // Navigate to preview page
+    router.push("/preview");
+
     // Show success toast
-    toast.success(`${design} palette applied successfully!`, {
-      description: "The palette has been applied to your design.",
-      action: {
-        label: "View Design",
-        onClick: () => (window.location.href = "/"),
-      },
+    toast.success(`${design} palette applied for preview`, {
+      description: "Navigating to the preview page.",
+    });
+  };
+
+  const handleOrderOfficialPalette = (design: ItemDesigns) => {
+    setSelectedDesign(design);
+    setAppliedDesign(design);
+
+    // Navigate to order page
+    router.push("/order");
+
+    // Show success toast
+    toast.success(`${design} palette applied for ordering`, {
+      description: "Navigating to the order page.",
     });
   };
 
@@ -369,7 +417,8 @@ export function OfficialPalettes() {
               <OfficialPaletteCard
                 key={design}
                 design={design}
-                onUse={handleUseOfficialPalette}
+                onVisualize={handleVisualizeOfficialPalette}
+                onOrder={handleOrderOfficialPalette}
                 onCustomize={handleCustomizeOfficialPalette}
               />
             ))}

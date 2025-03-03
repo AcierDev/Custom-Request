@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { useCustomStore } from "@/store/customStore";
+import { ColorPattern, useCustomStore } from "@/store/customStore";
 import { Button } from "@/components/ui/button";
 import {
   ArrowLeft,
@@ -34,6 +34,8 @@ import { ItemDesigns } from "@/typings/types";
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { SizeCard } from "../order/components/SizeCard";
+import { StyleCard } from "../order/components/StyleCard";
 
 export default function PreviewPage() {
   const router = useRouter();
@@ -41,18 +43,6 @@ export default function PreviewPage() {
   const { viewSettings, selectedDesign, customPalette, dimensions, style } =
     useCustomStore();
   const { showRuler, showWoodGrain, showColorInfo } = viewSettings;
-
-  // Add pattern control options
-  const {
-    colorPattern,
-    setColorPattern,
-    orientation,
-    setOrientation,
-    isReversed,
-    setIsReversed,
-    isRotated,
-    setIsRotated,
-  } = useCustomStore();
 
   useEffect(() => {
     setMounted(true);
@@ -87,6 +77,8 @@ export default function PreviewPage() {
       {/* Enhanced view controls with pattern options */}
       <div className="absolute top-4 right-4 z-50 flex flex-col gap-3">
         <ViewControls />
+        <SizeCard compact />
+        <StyleCard compact />
 
         <PatternControls />
       </div>
