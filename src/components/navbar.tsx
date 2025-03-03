@@ -77,7 +77,7 @@ export function Navbar({ onOpenSettings }: NavbarProps) {
   const [navigationSequence, setNavigationSequence] = useState<string[]>([]);
   const saveToDatabase = useCustomStore((state) => state.saveToDatabase);
   const [isSaving, setIsSaving] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   useEffect(() => {
     setActiveTab(pathname);

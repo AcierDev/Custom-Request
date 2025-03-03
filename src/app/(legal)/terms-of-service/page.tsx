@@ -293,7 +293,7 @@ export default function TermsOfService() {
               If you have any questions about these Terms, please contact us:
             </p>
             <ul className="list-disc pl-6 space-y-2">
-              <li>By email: support@everwoodus.com</li>
+              <li>By email: support@everwood.shop</li>
             </ul>
           </CardContent>
         </Card>

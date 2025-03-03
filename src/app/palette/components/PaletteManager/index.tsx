@@ -51,15 +51,17 @@ export function PaletteManager() {
 
   const [blendCount, setBlendCount] = useState(3);
   const [editingColor, setEditingColor] = useState<number | null>(null);
-  const [editColorHex, setEditColorHex] = useState("");
+  const [editColorHex, setEditColorHex] = useState("#000000");
   const [editColorName, setEditColorName] = useState("");
   const [showBlendingGuide, setShowBlendingGuide] = useState(false);
   const [hasSeenBlendingGuide, setHasSeenBlendingGuide] = useState(false);
   const [showSelectionHint, setShowSelectionHint] = useState(false);
-  const [showImportDialog, setShowImportDialog] = useState(false);
-  const [importText, setImportText] = useState("");
-  const [importError, setImportError] = useState("");
   const [showHarmonyGenerator, setShowHarmonyGenerator] = useState(false);
+  const [tipsShown, setTipsShown] = useState<Record<string, boolean>>({
+    blending: true,
+    harmony: true,
+    selection: true,
+  });
 
   // Initialize hasSeenBlendingGuide from localStorage
   useEffect(() => {
@@ -213,97 +215,13 @@ export function PaletteManager() {
       ? customPalette.findIndex((color) => color.hex === selectedColors[0])
       : -1;
 
-  const handleImportPalette = () => {
-    try {
-      let importData;
-      try {
-        importData = JSON.parse(importText);
-      } catch (e) {
-        setImportError("Invalid JSON format. Please check your input.");
-        return;
-      }
-
-      // Check if it's a direct array of colors or a palette object with a colors property
-      const colorsArray = Array.isArray(importData)
-        ? importData
-        : importData.colors;
-
-      if (!colorsArray || !Array.isArray(colorsArray)) {
-        setImportError(
-          "Invalid palette format. Expected an array of colors or an object with a colors array."
-        );
-        return;
-      }
-
-      // Validate each color
-      const validColors = colorsArray.filter((color) => {
-        if (!color.hex) {
-          return false;
-        }
-        // Basic hex validation
-        return /^#([0-9A-F]{3}){1,2}$/i.test(color.hex);
-      });
-
-      if (validColors.length === 0) {
-        setImportError("No valid colors found in the imported data.");
-        return;
-      }
-
-      // Clear current palette and add imported colors
-      useCustomStore.setState({
-        customPalette: validColors.map((color) => ({
-          hex: color.hex,
-          name: color.name || "",
-        })),
-        selectedColors: [],
-      });
-
-      setShowImportDialog(false);
-      setImportText("");
-      setImportError("");
-      toast.success(`Imported ${validColors.length} colors successfully!`);
-    } catch (error) {
-      setImportError("An error occurred while importing the palette.");
-      console.error("Import error:", error);
-    }
-  };
-
-  // Handle file upload for import
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const fileContent = event.target?.result as string;
-        setImportText(fileContent);
-        setImportError("");
-      } catch (error) {
-        setImportError("Failed to read the file.");
-        console.error("File read error:", error);
-      }
-    };
-    reader.readAsText(file);
-  };
-
   const handleAddHarmonyColors = (colors: string[]) => {
-    // Reset the palette if it's empty
-    if (customPalette.length === 0) {
-      colors.forEach((color) => {
-        addCustomColor(color);
-      });
-    } else {
-      // Otherwise just add the new colors
-      colors.forEach((color) => {
-        addCustomColor(color);
-      });
-    }
-
-    // Close the harmony generator after adding colors
-    setShowHarmonyGenerator(false);
-
-    toast.success(`Added ${colors.length} colors to your palette!`);
+    // Add the harmony colors to the palette
+    const newColors = colors.map((hex) => ({ hex, name: "" }));
+    useCustomStore.setState({
+      customPalette: [...customPalette, ...newColors],
+    });
+    toast.success(`Added ${colors.length} harmony colors to your palette!`);
   };
 
   const handleClearPalette = () => {
@@ -415,104 +333,36 @@ export function PaletteManager() {
                 </Tooltip>
               </TooltipProvider>
 
-              {/* Import/Export Buttons */}
-              <div className="flex items-center gap-1">
+              {/* Utility Actions */}
+              <div className="flex items-center gap-1 ml-1">
                 <TooltipProvider delayDuration={300}>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowImportDialog(true)}
-                        className="h-8 px-3 border-blue-200 hover:border-blue-300 dark:border-blue-800/50 dark:hover:border-blue-700/50 bg-blue-50 dark:bg-blue-950/20"
-                      >
-                        <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
-                          Import
-                        </span>
-                      </Button>
+                      {(customPalette.length >= 2 || showBlendingGuide) && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={resetAllTips}
+                          className={`h-7 w-7 rounded-full ${
+                            showBlendingGuide
+                              ? "bg-purple-100 dark:bg-purple-900/30"
+                              : "bg-gray-100 dark:bg-gray-800"
+                          }`}
+                        >
+                          {showBlendingGuide ? (
+                            <X className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                          ) : (
+                            <Info className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                          )}
+                        </Button>
+                      )}
                     </TooltipTrigger>
                     <TooltipContent side="bottom">
-                      <p>Import a palette</p>
+                      <p>{showBlendingGuide ? "Hide tips" : "Show tips"}</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </div>
-
-              {editingPaletteId && (
-                <TooltipProvider delayDuration={300}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleResetEditor}
-                        className="h-8 px-3 border-orange-200 hover:border-orange-300 dark:border-orange-800/50 dark:hover:border-orange-700/50 bg-orange-50 dark:bg-orange-950/20"
-                      >
-                        <X className="h-4 w-4 mr-1 text-orange-600 dark:text-orange-400" />
-                        <span className="text-xs font-medium text-orange-600 dark:text-orange-400">
-                          Cancel Edit
-                        </span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom">
-                      Cancel editing and reset palette
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
-
-              <TooltipProvider delayDuration={300}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleClearPalette}
-                      disabled={customPalette.length === 0}
-                      className="h-8 px-3 border-red-200 hover:border-red-300 dark:border-red-800/30 dark:hover:border-red-700/30 bg-red-50 dark:bg-red-950/20"
-                    >
-                      <Trash2 className="h-4 w-4 mr-1 text-red-600 dark:text-red-400" />
-                      <span className="text-xs font-medium text-red-600 dark:text-red-400">
-                        Clear
-                      </span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    <p>Clear all colors</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-
-            {/* Utility Actions */}
-            <div className="flex items-center gap-1 ml-1">
-              <TooltipProvider delayDuration={300}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    {(customPalette.length >= 2 || showBlendingGuide) && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={resetAllTips}
-                        className={`h-7 w-7 rounded-full ${
-                          showBlendingGuide
-                            ? "bg-purple-100 dark:bg-purple-900/30"
-                            : "bg-gray-100 dark:bg-gray-800"
-                        }`}
-                      >
-                        {showBlendingGuide ? (
-                          <X className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
-                        ) : (
-                          <Info className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
-                        )}
-                      </Button>
-                    )}
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    <p>{showBlendingGuide ? "Hide tips" : "Show tips"}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
             </div>
           </div>
         </div>
@@ -710,77 +560,6 @@ export function PaletteManager() {
                   className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
                 >
                   Save Changes
-                </Button>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      )}
-
-      {/* Import Dialog */}
-      {showImportDialog && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            className="bg-white dark:bg-gray-900 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl border-2 border-gray-200 dark:border-gray-700"
-          >
-            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-              Import Palette
-            </h3>
-
-            <div className="space-y-4">
-              <p className="text-gray-600 dark:text-gray-400">
-                Paste your palette data below or upload a palette file (.evpal
-                or .json).
-              </p>
-
-              <div className="space-y-2">
-                <Label htmlFor="import-text">Palette Data (JSON)</Label>
-                <textarea
-                  id="import-text"
-                  value={importText}
-                  onChange={(e) => setImportText(e.target.value)}
-                  placeholder='[{"hex":"#ff0000","name":"Red"},{"hex":"#00ff00","name":"Green"}]'
-                  className="w-full h-32 p-3 text-sm border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="import-file">Or Upload a File</Label>
-                <Input
-                  id="import-file"
-                  type="file"
-                  accept=".evpal,.json"
-                  onChange={handleFileUpload}
-                  className="cursor-pointer"
-                />
-              </div>
-
-              {importError && (
-                <div className="p-3 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-md text-sm">
-                  {importError}
-                </div>
-              )}
-
-              <div className="flex justify-end gap-3 mt-6">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setShowImportDialog(false);
-                    setImportText("");
-                    setImportError("");
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleImportPalette}
-                  disabled={!importText.trim()}
-                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
-                >
-                  Import Palette
                 </Button>
               </div>
             </div>

@@ -2,7 +2,14 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Edit, Trash2, Palette, Download } from "lucide-react";
+import {
+  Edit,
+  Trash2,
+  Palette,
+  Download,
+  Eye,
+  ShoppingCart,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -26,7 +33,8 @@ export const PaletteCard = ({
   palette,
   onEdit,
   onDelete,
-  onApply,
+  onVisualize,
+  onOrder,
   isEditing,
 }: PaletteCardProps) => {
   const [showExportDialog, setShowExportDialog] = useState(false);
@@ -92,7 +100,7 @@ export const PaletteCard = ({
       layout
     >
       <Card
-        className={`overflow-hidden border ${
+        className={`overflow-hidden border h-full flex flex-col ${
           isEditing
             ? "border-purple-400 dark:border-purple-600 border-2"
             : "border-gray-200 dark:border-gray-800"
@@ -114,11 +122,12 @@ export const PaletteCard = ({
             {palette.colors.length} colors
           </CardDescription>
         </CardHeader>
-        <CardContent className="p-4 pt-2">
+        <CardContent className="p-4 pt-2 flex-1 flex flex-col">
           <PalettePreview colors={palette.colors} />
 
-          <div className="mt-3 grid grid-cols-5 gap-1">
-            {palette.colors.map((color, index) => (
+          <div className="mt-3 grid grid-cols-5 gap-1 min-h-[104px] flex-1 relative">
+            {/* Show only the first 10 colors (2 rows) */}
+            {palette.colors.slice(0, 10).map((color, index) => (
               <TooltipProvider
                 key={`${color.hex}-${index}`}
                 delayDuration={300}
@@ -139,6 +148,23 @@ export const PaletteCard = ({
                 </Tooltip>
               </TooltipProvider>
             ))}
+
+            {/* Add placeholder color squares to fill up to two rows if needed */}
+            {Array.from({
+              length: Math.max(0, 10 - Math.min(palette.colors.length, 10)),
+            }).map((_, index) => (
+              <div
+                key={`placeholder-${index}`}
+                className="w-full aspect-square rounded-md  bg-gray-50 dark:bg-gray-800/20"
+              />
+            ))}
+
+            {/* Show indicator if there are more colors */}
+            {palette.colors.length > 10 && (
+              <div className="absolute -bottom-1 right-4 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-xs px-2 py-0.5 rounded-full">
+                +{palette.colors.length - 10} more
+              </div>
+            )}
           </div>
         </CardContent>
         <CardFooter className="p-3 pt-0 flex justify-between">
@@ -198,15 +224,45 @@ export const PaletteCard = ({
             </TooltipProvider>
           </div>
 
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 text-xs font-medium text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-900/30 hover:bg-purple-50 dark:hover:bg-purple-900/20"
-            onClick={() => onApply(palette)}
-          >
-            <Palette className="h-3 w-3 mr-1" />
-            Apply
-          </Button>
+          <div className="flex gap-2">
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs font-medium text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/30 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                    onClick={() => onVisualize(palette)}
+                  >
+                    <Eye className="h-3 w-3 mr-1" />
+                    Visualize
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Apply palette and preview</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs font-medium text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-900/30 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                    onClick={() => onOrder(palette)}
+                  >
+                    <ShoppingCart className="h-3 w-3 mr-1" />
+                    Order
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Apply palette and go to order</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </CardFooter>
       </Card>
 

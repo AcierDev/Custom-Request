@@ -61,6 +61,7 @@ export async function saveUserData(
  */
 export async function getUserData(userId: string): Promise<UserData | null> {
   try {
+    console.log("Getting user data for user:", userId);
     const collection = await getCollection(COLLECTION_NAME);
     const userData = await collection.findOne({ userId });
     return userData as UserData | null;

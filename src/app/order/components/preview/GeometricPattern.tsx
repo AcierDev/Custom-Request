@@ -12,253 +12,6 @@ import { hoverStore } from "@/store/customStore";
 import { useStore } from "zustand";
 import { Block } from "./Block";
 
-const getColorIndex = (
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  totalColors: number,
-  orientation: "horizontal" | "vertical",
-  colorPattern: ColorPattern,
-  isReversed: boolean,
-  isRotated: boolean
-): number => {
-  let index = 0;
-
-  // If rotated, swap x and y coordinates
-  if (isRotated) {
-    [x, y] = [y, width - 1 - x];
-  }
-
-  // Helper function to add controlled noise to create more natural transitions
-  const addNoise = (value: number, amount: number = 0.1): number => {
-    // Generate deterministic noise based on position
-    const noise = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
-    const noiseValue = (noise - Math.floor(noise)) * 2 - 1; // Range -1 to 1
-
-    // Apply scaled noise to the value
-    return Math.max(0, Math.min(1, value + noiseValue * amount));
-  };
-
-  // Helper function to create a more cohesive dithering pattern
-  const createDitheredIndex = (
-    baseProgress: number,
-    patternVariation: number = 0
-  ): number => {
-    // Calculate the base index
-    // Ensure we handle the edge case for the last color
-    const exactIndex = baseProgress * (totalColors - 1);
-    const lowerIndex = Math.floor(exactIndex);
-    const upperIndex = Math.min(Math.ceil(exactIndex), totalColors - 1);
-
-    // If they're the same, no need for dithering
-    if (lowerIndex === upperIndex) return lowerIndex;
-
-    // Calculate the fractional part
-    const fraction = exactIndex - lowerIndex;
-
-    // Create a bias toward solid colors for more cohesive areas
-    // This makes transitions happen in smaller regions
-    const transitionWidth = 0.3; // Width of transition zone (0-1)
-    const halfWidth = transitionWidth / 2;
-
-    // Calculate normalized position within color band
-    const normalizedPos = fraction % 1;
-
-    // If we're in the middle of a color band, use the lower color
-    if (normalizedPos < 0.5 - halfWidth) {
-      return lowerIndex;
-    }
-    // If we're past the transition zone, use the upper color
-    else if (normalizedPos > 0.5 + halfWidth) {
-      return upperIndex;
-    }
-    // In the transition zone, use dithering
-    else {
-      // Map position in transition zone to 0-1 range
-      const transitionPos =
-        (normalizedPos - (0.5 - halfWidth)) / transitionWidth;
-
-      // Simple ordered dithering pattern (2x2)
-      const ditherMatrix = [
-        [0.25, 0.75],
-        [1.0, 0.5],
-      ];
-
-      // Get matrix coordinates based on pattern variation
-      let mx = x % 2;
-      let my = y % 2;
-
-      // Apply pattern variation for different orientations
-      if (patternVariation === 1) {
-        mx = (x + y) % 2;
-        my = (x - y + 2) % 2;
-      }
-
-      // Get threshold from dither matrix
-      const threshold = ditherMatrix[my][mx];
-
-      // Choose between lower and upper index based on threshold
-      return transitionPos > threshold ? upperIndex : lowerIndex;
-    }
-  };
-
-  // Helper function to apply a smoother distribution curve
-  const applyDistributionCurve = (
-    progress: number,
-    pattern: ColorPattern
-  ): number => {
-    switch (pattern) {
-      case "fade":
-        // Smoother linear distribution with slight curve
-        return Math.pow(progress, 1.1);
-      case "center-fade":
-        // Smoother center emphasis
-        return Math.pow(progress, 1.15);
-      default:
-        return progress;
-    }
-  };
-
-  // Helper function to create bands for more cohesive color groups
-  const createBands = (progress: number, bandCount: number = 0): number => {
-    if (bandCount <= 0) return progress;
-
-    // Create bands by stepping the progress
-    const step = 1 / bandCount;
-
-    // Special handling for values very close to 1.0 to ensure last band gets proper representation
-    if (progress >= 1.0 - step * 0.1) {
-      return 1.0 - Number.EPSILON;
-    }
-
-    // Determine which band this progress falls into
-    // Ensure we don't exceed the last band index
-    const bandIndex = Math.min(Math.floor(progress * bandCount), bandCount - 1);
-    const bandStart = bandIndex * step;
-    const bandEnd = (bandIndex + 1) * step;
-
-    // Calculate position within the band (0-1)
-    const bandPos = (progress - bandStart) / step;
-
-    // Smooth the transition between bands
-    const smoothedBandPos = Math.pow(bandPos, 1.2);
-
-    // Return the smoothed position within the overall range
-    // Ensure we don't exceed 1.0
-    return Math.min(bandStart + smoothedBandPos * step, 1.0 - Number.EPSILON);
-  };
-
-  // Helper function to ensure equal distribution of colors
-  const equalizeColorDistribution = (
-    progress: number,
-    totalColors: number
-  ): number => {
-    // Create equal-sized segments for each color
-    const segmentSize = 1 / totalColors;
-
-    // Fix for edge case: ensure the last color gets proper representation
-    // If progress is very close to 1.0, ensure it maps to the last color
-    if (progress > 1.0 - segmentSize * 0.5) {
-      return 1.0 - Number.EPSILON; // Just slightly less than 1.0
-    }
-
-    // Determine which segment this progress falls into
-    // Use Math.floor to ensure we don't exceed the last index
-    const segmentIndex = Math.min(
-      Math.floor(progress * totalColors),
-      totalColors - 1
-    );
-
-    // Calculate the position within the segment (0-1)
-    const segmentPos = (progress - segmentIndex * segmentSize) / segmentSize;
-
-    // Apply a slight curve to the segment position to create smoother transitions
-    // while maintaining equal distribution
-    const curvedSegmentPos = Math.pow(segmentPos, 1.1);
-
-    // Calculate the new progress value that ensures equal distribution
-    // Ensure we don't exceed 1.0 by clamping the result
-    const equalizedProgress = Math.min(
-      (segmentIndex + curvedSegmentPos) / totalColors,
-      1.0 - Number.EPSILON
-    );
-
-    return equalizedProgress;
-  };
-
-  switch (colorPattern) {
-    case "fade": {
-      // Calculate primary progress based on orientation
-      const progress =
-        orientation === "horizontal" ? (x + 0.5) / width : (y + 0.5) / height;
-      const adjustedProgress = isReversed ? 1 - progress : progress;
-
-      // Add very subtle noise to avoid perfectly straight lines
-      const noisyProgress = addNoise(adjustedProgress, 0.005);
-
-      // Equalize color distribution to ensure each color gets equal space
-      const equalizedProgress = equalizeColorDistribution(
-        noisyProgress,
-        totalColors
-      );
-
-      // Create bands for more cohesive color groups
-      // Use exactly totalColors bands to ensure equal distribution
-      const bandCount = totalColors;
-      const bandedProgress = createBands(equalizedProgress, bandCount);
-
-      // Apply a gentler distribution curve to maintain the equal distribution
-      const distributedProgress = applyDistributionCurve(
-        bandedProgress,
-        "fade"
-      );
-
-      // Apply cohesive dithering pattern
-      const patternVariation = orientation === "horizontal" ? 0 : 1;
-      index = createDitheredIndex(distributedProgress, patternVariation);
-      break;
-    }
-    case "center-fade": {
-      const progress = orientation === "horizontal" ? x / width : y / height;
-      const centerProgress =
-        progress <= 0.5 ? progress * 2 : (1 - progress) * 2;
-      const adjustedProgress = isReversed ? 1 - centerProgress : centerProgress;
-
-      // Add very subtle noise
-      const noisyProgress = addNoise(adjustedProgress, 0.008);
-
-      // Equalize color distribution to ensure each color gets equal space
-      const equalizedProgress = equalizeColorDistribution(
-        noisyProgress,
-        totalColors
-      );
-
-      // Create bands for more cohesive color groups
-      // Use exactly totalColors bands to ensure equal distribution
-      const bandCount = totalColors;
-      const bandedProgress = createBands(equalizedProgress, bandCount);
-
-      // Apply a gentler distribution curve to maintain the equal distribution
-      const distributedProgress = applyDistributionCurve(
-        bandedProgress,
-        "center-fade"
-      );
-
-      // Apply cohesive dithering pattern
-      const patternVariation = orientation === "horizontal" ? 0 : 1;
-      index = createDitheredIndex(distributedProgress, patternVariation);
-      break;
-    }
-    case "random":
-      index = Math.floor(Math.random() * totalColors);
-      break;
-  }
-
-  index = Math.max(0, Math.min(index, totalColors - 1));
-  return index;
-};
-
 export function GeometricPattern({
   showColorInfo = true,
   showWoodGrain = true,
@@ -395,7 +148,10 @@ export function GeometricPattern({
     !colorMapRef.current ||
     colorMapRef.current.length !== modelWidth ||
     colorMapRef.current[0]?.length !== modelHeight ||
-    colorMapRef.current.colorCount !== colorEntries.length
+    colorMapRef.current.orientation !== orientation ||
+    colorMapRef.current.colorPattern !== colorPattern ||
+    colorMapRef.current.isReversed !== isReversed ||
+    colorMapRef.current.isRotated !== isRotated
   ) {
     // Create a deterministic but visually pleasing distribution
     const generateColorMap = () => {
@@ -504,11 +260,34 @@ export function GeometricPattern({
           }
         }
       } else {
-        // For other patterns, just distribute randomly
+        // For other patterns, distribute with respect to isReversed
         let index = 0;
-        for (let x = 0; x < modelWidth; x++) {
-          for (let y = 0; y < modelHeight; y++) {
-            colorMap[x][y] = shuffledColors[index++];
+
+        if (isReversed) {
+          // If reversed, we'll fill the array in reverse order
+          if (orientation === "horizontal") {
+            // Reverse the x direction
+            for (let x = modelWidth - 1; x >= 0; x--) {
+              for (let y = 0; y < modelHeight; y++) {
+                colorMap[x][y] =
+                  shuffledColors[index++ % shuffledColors.length];
+              }
+            }
+          } else {
+            // Reverse the y direction
+            for (let x = 0; x < modelWidth; x++) {
+              for (let y = modelHeight - 1; y >= 0; y--) {
+                colorMap[x][y] =
+                  shuffledColors[index++ % shuffledColors.length];
+              }
+            }
+          }
+        } else {
+          // Normal order
+          for (let x = 0; x < modelWidth; x++) {
+            for (let y = 0; y < modelHeight; y++) {
+              colorMap[x][y] = shuffledColors[index++ % shuffledColors.length];
+            }
           }
         }
       }
@@ -516,6 +295,31 @@ export function GeometricPattern({
       // Add a property to track the color count
       Object.defineProperty(colorMap, "colorCount", {
         value: colorEntries.length,
+        writable: true,
+        configurable: true,
+      });
+
+      // Add properties to track the current settings
+      Object.defineProperty(colorMap, "orientation", {
+        value: orientation,
+        writable: true,
+        configurable: true,
+      });
+
+      Object.defineProperty(colorMap, "colorPattern", {
+        value: colorPattern,
+        writable: true,
+        configurable: true,
+      });
+
+      Object.defineProperty(colorMap, "isReversed", {
+        value: isReversed,
+        writable: true,
+        configurable: true,
+      });
+
+      Object.defineProperty(colorMap, "isRotated", {
+        value: isRotated,
         writable: true,
         configurable: true,
       });
@@ -530,9 +334,6 @@ export function GeometricPattern({
   const getColorIndexWithDebug = (
     x: number,
     y: number,
-    width: number,
-    height: number,
-    totalColors: number,
     orientation: "horizontal" | "vertical",
     colorPattern: ColorPattern,
     isReversed: boolean,
@@ -567,9 +368,6 @@ export function GeometricPattern({
     return getColorIndexWithDebug(
       x,
       y,
-      modelWidth,
-      modelHeight,
-      colorEntries.length,
       orientation,
       colorPattern,
       isReversed,
@@ -581,14 +379,6 @@ export function GeometricPattern({
   useEffect(() => {
     // Wait for all blocks to be rendered
     const timer = setTimeout(() => {
-      console.log("=== Color Distribution Debug Info ===");
-      console.log(`Total blocks: ${debugInfoRef.current.totalBlocks}`);
-      console.log(`Total colors: ${colorEntries.length}`);
-      console.log(
-        `Expected blocks per color: ${debugInfoRef.current.expectedPerColor}`
-      );
-      console.log("Color counts:", debugInfoRef.current.colorCounts);
-
       // Calculate percentage of each color
       const percentages = Object.entries(debugInfoRef.current.colorCounts).map(
         ([colorIndex, count]) => ({
@@ -597,7 +387,6 @@ export function GeometricPattern({
           percentage: (count / debugInfoRef.current.totalBlocks) * 100,
         })
       );
-      console.log("Color percentages:", percentages);
 
       // Check for missing colors
       const missingColors = [];
@@ -620,12 +409,6 @@ export function GeometricPattern({
           count,
           difference: count - expectedCount,
         }));
-
-      if (unevenColors.length > 0) {
-        console.warn("Uneven color distribution:", unevenColors);
-      } else {
-        console.log("✅ Color distribution is even!");
-      }
     }, 500);
 
     return () => clearTimeout(timer);

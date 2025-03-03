@@ -323,9 +323,12 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
 
   // Function to load user data from MongoDB
   const loadUserData = async (): Promise<any | null> => {
+    console.log("Loading user data");
+    console.log("User:", user);
     if (!user) return null;
 
     try {
+      console.log("Fetching user data for user:", user.id);
       const response = await fetch(`/api/user-data?userId=${user.id}`);
 
       if (!response.ok) {

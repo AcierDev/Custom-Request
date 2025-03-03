@@ -76,6 +76,7 @@ interface CustomState {
   selectedColors: string[];
   isRotated: boolean;
   patternStyle: PatternType;
+  isReversed: boolean;
   style: StyleType;
   savedPalettes: SavedPalette[];
   activeTab: "create" | "saved" | "official";
@@ -640,6 +641,8 @@ export const useCustomStore = create<CustomStore>()(
           viewSettings: state.viewSettings,
         };
 
+        console.log("Persistent state:", persistentState);
+
         // Save to MongoDB via the auth context
         const success = await authContext.saveUserData(persistentState);
 
@@ -699,7 +702,8 @@ export const useCustomStore = create<CustomStore>()(
             data.selectedDesign === ItemDesigns.Custom &&
             data.customPalette?.length > 0
               ? createColorMap(data.customPalette)
-              : DESIGN_COLORS[data.selectedDesign || get().selectedDesign],
+              : DESIGN_COLORS[data.selectedDesign as ItemDesigns] ||
+                get().currentColors,
           // Update pricing based on the dimensions and shipping speed
           pricing: calculatePrice(
             data.dimensions || get().dimensions,

@@ -2,7 +2,6 @@
 
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 
 export default function PrivacyPolicy() {
   return (
@@ -208,7 +207,7 @@ export default function PrivacyPolicy() {
               contact us:
             </p>
             <ul className="list-disc pl-6 space-y-2">
-              <li>By email: support@everwoodus.com</li>
+              <li>By email: support@everwood.shop</li>
             </ul>
           </CardContent>
         </Card>
