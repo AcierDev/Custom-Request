@@ -62,6 +62,32 @@ export function GeometricPattern({
     calculationSamples: [],
   });
 
+  // Create a pre-calculated color map for perfect distribution
+  const colorMapRef = useRef<
+    number[][] & {
+      orientation?: string;
+      colorPattern?: ColorPattern;
+      isReversed?: boolean;
+      isRotated?: boolean;
+      selectedDesign?: string;
+      customPaletteLength?: number;
+    }
+  >();
+
+  // Force colorMapRef to reset when design or custom palette changes
+  useEffect(() => {
+    // Reset the colorMapRef to force regeneration
+    if (colorMapRef.current) {
+      if (
+        colorMapRef.current.selectedDesign !== selectedDesign ||
+        (selectedDesign === ItemDesigns.Custom &&
+          colorMapRef.current.customPaletteLength !== customPalette.length)
+      ) {
+        colorMapRef.current = undefined;
+      }
+    }
+  }, [selectedDesign, customPalette.length]);
+
   // Initialize rotation seeds and texture variations if not already done
   if (
     !rotationSeedsRef.current ||
@@ -140,16 +166,6 @@ export function GeometricPattern({
     return (x + y) % 2 === 0;
   };
 
-  // Create a pre-calculated color map for perfect distribution
-  const colorMapRef = useRef<
-    number[][] & {
-      orientation?: string;
-      colorPattern?: ColorPattern;
-      isReversed?: boolean;
-      isRotated?: boolean;
-    }
-  >();
-
   // Generate a new color map if needed
   if (
     !colorMapRef.current ||
@@ -158,7 +174,10 @@ export function GeometricPattern({
     colorMapRef.current.orientation !== orientation ||
     colorMapRef.current.colorPattern !== colorPattern ||
     colorMapRef.current.isReversed !== isReversed ||
-    colorMapRef.current.isRotated !== isRotated
+    colorMapRef.current.isRotated !== isRotated ||
+    colorMapRef.current.selectedDesign !== selectedDesign ||
+    (selectedDesign === ItemDesigns.Custom &&
+      colorMapRef.current.customPaletteLength !== customPalette.length)
   ) {
     // Create a deterministic but visually pleasing distribution
     const generateColorMap = () => {
@@ -222,14 +241,38 @@ export function GeometricPattern({
 
         // Create a mapping function based on position
         const getPositionIndex = (x: number, y: number): number => {
-          if (orientation === "horizontal") {
-            return isReversed
-              ? (modelWidth - 1 - x) * modelHeight + y
-              : x * modelHeight + y;
+          if (colorPattern === "center-fade") {
+            // Calculate progress from edge to center
+            const progress =
+              orientation === "horizontal"
+                ? x / (modelWidth - 1) // Use width-1 to include the last position
+                : y / (modelHeight - 1); // Use height-1 to include the last position
+
+            // Transform progress to create center fade effect
+            // This will make progress go from 0->1 for first half, and 1->0 for second half
+            const centerProgress =
+              progress <= 0.5
+                ? progress * 2 // First half: 0->1
+                : (1 - progress) * 2; // Second half: 1->0
+
+            // Apply reversal if needed
+            const adjustedProgress = isReversed
+              ? 1 - centerProgress
+              : centerProgress;
+
+            // Calculate the index in the color array
+            return Math.floor(adjustedProgress * (shuffledColors.length - 1));
           } else {
-            return isReversed
-              ? x * modelHeight + (modelHeight - 1 - y)
-              : x * modelHeight + y;
+            // Regular fade pattern
+            if (orientation === "horizontal") {
+              return isReversed
+                ? (modelWidth - 1 - x) * modelHeight + y
+                : x * modelHeight + y;
+            } else {
+              return isReversed
+                ? x * modelHeight + (modelHeight - 1 - y)
+                : x * modelHeight + y;
+            }
           }
         };
 
@@ -242,27 +285,30 @@ export function GeometricPattern({
         }
 
         // Post-process: Randomize blocks within columns that have more than one color
-        for (let x = 0; x < modelWidth; x++) {
-          // Check if this column has more than one color
-          const colorsInColumn = new Set<number>();
-          for (let y = 0; y < modelHeight; y++) {
-            colorsInColumn.add(colorMap[x][y]);
-          }
-
-          // If column has more than one color, randomize the blocks in this column
-          if (colorsInColumn.size > 1) {
-            // Collect all colors in this column
-            const columnColors: number[] = [];
+        // Only do this for regular fade, not center-fade
+        if (colorPattern === "fade") {
+          for (let x = 0; x < modelWidth; x++) {
+            // Check if this column has more than one color
+            const colorsInColumn = new Set<number>();
             for (let y = 0; y < modelHeight; y++) {
-              columnColors.push(colorMap[x][y]);
+              colorsInColumn.add(colorMap[x][y]);
             }
 
-            // Shuffle the colors within this column
-            const shuffledColumnColors = shuffleArray([...columnColors]);
+            // If column has more than one color, randomize the blocks in this column
+            if (colorsInColumn.size > 1) {
+              // Collect all colors in this column
+              const columnColors: number[] = [];
+              for (let y = 0; y < modelHeight; y++) {
+                columnColors.push(colorMap[x][y]);
+              }
 
-            // Apply the shuffled colors back to the column
-            for (let y = 0; y < modelHeight; y++) {
-              colorMap[x][y] = shuffledColumnColors[y];
+              // Shuffle the colors within this column
+              const shuffledColumnColors = shuffleArray([...columnColors]);
+
+              // Apply the shuffled colors back to the column
+              for (let y = 0; y < modelHeight; y++) {
+                colorMap[x][y] = shuffledColumnColors[y];
+              }
             }
           }
         }
@@ -327,6 +373,20 @@ export function GeometricPattern({
 
       Object.defineProperty(colorMap, "isRotated", {
         value: isRotated,
+        writable: true,
+        configurable: true,
+      });
+
+      // Add property to track the selected design
+      Object.defineProperty(colorMap, "selectedDesign", {
+        value: selectedDesign,
+        writable: true,
+        configurable: true,
+      });
+
+      // Add property to track the custom palette length
+      Object.defineProperty(colorMap, "customPaletteLength", {
+        value: customPalette.length,
         writable: true,
         configurable: true,
       });
@@ -439,6 +499,11 @@ export function GeometricPattern({
   return (
     <>
       <group
+        key={`${selectedDesign}-${
+          customPalette.length
+        }-${colorPattern}-${orientation}-${isReversed ? 1 : 0}-${
+          isRotated ? 1 : 0
+        }`}
         rotation={
           orientation === "vertical"
             ? isReversed

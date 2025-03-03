@@ -254,7 +254,7 @@ export function TiledPattern({ showWoodGrain = true, showColorInfo = true }) {
             </Html>
           )}
 
-          {/* Block size toggle */}
+          {/* Block size toggle
           <Html position={[0, baseHeight / 2 + 1, 0]}>
             <div className="flex items-center space-x-2 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg px-3 py-2 shadow-lg border border-gray-200 dark:border-gray-700">
               <Label className="text-sm text-gray-700 dark:text-gray-300">
@@ -266,7 +266,7 @@ export function TiledPattern({ showWoodGrain = true, showColorInfo = true }) {
                 className="data-[state=checked]:bg-purple-600"
               />
             </div>
-          </Html>
+          </Html> */}
         </group>
       </>
     )

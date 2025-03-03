@@ -87,7 +87,7 @@ export function DesignCard({
   if (compact) {
     return (
       <Card
-        className={`dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200 dark:border-gray-700 shadow-lg ${className}`}
+        className={`dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200 dark:border-gray-700 shadow-lg ${className}`}
       >
         <CardContent className="py-3 px-4 flex items-center justify-between gap-6">
           <div className="flex flex-col min-w-0">
