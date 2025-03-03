@@ -50,6 +50,6 @@ export async function closeMongoDbConnection(): Promise<void> {
 
 // Helper function to get a collection
 export async function getCollection(collectionName: string) {
-  const { db } = await getMongoDb();
+  const db = await getMongoDb();
   return db.collection(collectionName);
 }

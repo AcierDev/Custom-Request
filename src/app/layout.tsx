@@ -10,6 +10,7 @@ import { Toaster } from "sonner";
 import { AuthProvider } from "@/lib/auth-context";
 import { AuthContextProvider } from "@/components/AuthContextProvider";
 import { Footer } from "@/components/footer";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -28,6 +29,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-300 dark:bg-gray-900">
+      <SpeedInsights />
       <MobileWarning />
       <Navbar
         onOpenSettings={() => {}}
