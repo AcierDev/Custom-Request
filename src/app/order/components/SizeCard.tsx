@@ -16,22 +16,24 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, ChevronRight, Ruler } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ChevronRight } from "lucide-react";
+
 const sizeOptions = [...Object.values(ItemSizes), "custom"];
 
 type Unit = "blocks" | "inches" | "feet";
 
-export function SizeCard({ compact = false }: { compact?: boolean }) {
+interface SizeCardProps {
+  compact?: boolean;
+}
+
+export function SizeCard({ compact = false }: SizeCardProps) {
   const { dimensions, setDimensions } = useCustomStore();
   const [customWidth, setCustomWidth] = useState(dimensions.width.toString());
   const [customHeight, setCustomHeight] = useState(
     dimensions.height.toString()
   );
   const [unit, setUnit] = useState<Unit>("blocks");
-
-  const { selectedDesign, previousDesign, nextDesign } = useCustomStore();
 
   // Find the current size based on dimensions
   const currentSize =
@@ -112,18 +114,42 @@ export function SizeCard({ compact = false }: { compact?: boolean }) {
     }
   };
 
+  // Cycle through predefined sizes
+  const cycleSize = (direction: "next" | "prev") => {
+    const standardSizes = Object.values(ItemSizes);
+    const currentIndex = standardSizes.indexOf(currentSize as ItemSizes);
+
+    // If current size is custom or not found, start from the beginning or end
+    if (currentIndex === -1) {
+      const newSize =
+        direction === "next"
+          ? standardSizes[0]
+          : standardSizes[standardSizes.length - 1];
+      setDimensions(sizeToDimensions(newSize));
+      return;
+    }
+
+    // Calculate next or previous index
+    const newIndex =
+      direction === "next"
+        ? (currentIndex + 1) % standardSizes.length
+        : (currentIndex - 1 + standardSizes.length) % standardSizes.length;
+
+    setDimensions(sizeToDimensions(standardSizes[newIndex]));
+  };
+
   if (compact) {
     return (
-      <Card
-        className={`dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200 dark:border-gray-700 shadow-lg`}
-      >
+      <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200 dark:border-gray-700 shadow-lg">
         <CardContent className="py-3 px-4 flex items-center justify-between gap-6">
           <div className="flex flex-col min-w-0">
             <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-              Design
+              Size
             </span>
             <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 truncate">
-              {selectedDesign}
+              {currentSize === "custom"
+                ? `${dimensions.width}×${dimensions.height} blocks`
+                : SIZE_STRING[currentSize as ItemSizes]}
             </span>
           </div>
           <div className="flex gap-1 shrink-0">
@@ -131,7 +157,7 @@ export function SizeCard({ compact = false }: { compact?: boolean }) {
               variant="ghost"
               size="icon"
               className="h-7 w-7 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700/50"
-              onClick={previousDesign}
+              onClick={() => cycleSize("prev")}
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -139,7 +165,7 @@ export function SizeCard({ compact = false }: { compact?: boolean }) {
               variant="ghost"
               size="icon"
               className="h-7 w-7 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700/50"
-              onClick={nextDesign}
+              onClick={() => cycleSize("next")}
             >
               <ChevronRight className="h-4 w-4" />
             </Button>

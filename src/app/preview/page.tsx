@@ -36,6 +36,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { SizeCard } from "../order/components/SizeCard";
 import { StyleCard } from "../order/components/StyleCard";
+import { DesignCard } from "../order/components/DesignCard";
 
 export default function PreviewPage() {
   const router = useRouter();
@@ -77,6 +78,7 @@ export default function PreviewPage() {
       {/* Enhanced view controls with pattern options */}
       <div className="absolute top-4 right-4 z-50 flex flex-col gap-3">
         <ViewControls />
+        <DesignCard compact />
         <SizeCard compact />
         <StyleCard compact />
 
