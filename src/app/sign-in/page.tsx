@@ -12,7 +12,6 @@ import {
   Loader2,
   AlertCircle,
   X,
-  Info,
   Share2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -38,7 +37,9 @@ const ERROR_MESSAGES: Record<string, string> = {
   user_info: "Authentication failed: Could not retrieve user information",
   server_error: "Authentication failed: Server error",
   no_token: "Authentication failed: No token received",
+  invalid_token: "Authentication failed: Invalid or expired token",
   processing: "Authentication failed: Error processing authentication",
+  facebook_auth_error: "Facebook authentication failed. Please try again.",
   default: "An error occurred during authentication. Please try again.",
 };
 
@@ -47,34 +48,31 @@ function SignInContent() {
   const { signIn, isLoading: authLoading } = useAuth();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
-  const [isLoading, setIsLoading] = useState<{ [key: string]: boolean }>({
+  const [error, setError] = useState<string | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
+  const [redirectInfo, setRedirectInfo] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState({
     google: false,
     apple: false,
     facebook: false,
     email: false,
   });
-  const [error, setError] = useState<string | null>(null);
-  const [redirectInfo, setRedirectInfo] = useState<string | null>(null);
 
-  // Check for error parameter in URL
+  // Check for error in URL
   useEffect(() => {
     const errorCode = searchParams.get("error");
     if (errorCode) {
       setError(ERROR_MESSAGES[errorCode] || ERROR_MESSAGES.default);
     }
-  }, [searchParams]);
 
-  // Check if user was redirected from a shared design link
-  useEffect(() => {
-    const redirectUrl = localStorage.getItem("everwood_redirect_after_signin");
-    if (
-      redirectUrl &&
-      redirectUrl.includes("order") &&
-      (redirectUrl.includes("share=") || redirectUrl.includes("s="))
-    ) {
-      setRedirectInfo("Sign in to view the shared design");
+    // Check for redirect info
+    const redirectAfterSignin = localStorage.getItem(
+      "everwood_redirect_after_signin"
+    );
+    if (redirectAfterSignin) {
+      setRedirectInfo("You'll be redirected after signing in");
     }
-  }, []);
+  }, [searchParams]);
 
   const handleProviderSignIn = async (provider: string) => {
     try {
@@ -95,8 +93,11 @@ function SignInContent() {
 
     try {
       setError(null);
+      setEmailSent(false);
       setIsLoading({ ...isLoading, email: true });
       await signIn("email", email);
+      // If we get here, the email was sent successfully
+      setEmailSent(true);
     } catch (error) {
       console.error("Error signing in with email:", error);
       setError("Failed to sign in with email. Please try again.");
@@ -171,6 +172,27 @@ function SignInContent() {
                   </Alert>
                 </motion.div>
               )}
+
+              {emailSent && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Alert
+                    variant="default"
+                    className="mb-4 bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-green-500 dark:text-green-400" />
+                      <AlertDescription className="flex-1 text-green-700 dark:text-green-300">
+                        Magic link sent! Check your email to continue.
+                      </AlertDescription>
+                    </div>
+                  </Alert>
+                </motion.div>
+              )}
             </AnimatePresence>
 
             <div className="grid grid-cols-2 gap-4">
@@ -227,7 +249,7 @@ function SignInContent() {
 
               <Button
                 variant="outline"
-                className="flex items-center justify-center gap-2 h-12 border-muted-foreground/20 hover:bg-muted/50"
+                className="flex items-center justify-center gap-2 h-12 border-muted-foreground/20 hover:bg-muted/50 relative overflow-hidden group"
                 onClick={() => handleProviderSignIn("facebook")}
                 disabled={isAnyLoading}
               >
@@ -235,8 +257,9 @@ function SignInContent() {
                   <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
                   <>
-                    <Facebook className="h-5 w-5" />
-                    <span>Facebook</span>
+                    <div className="absolute inset-0 w-3 bg-[#1877F2] transform -skew-x-[20deg] -translate-x-full group-hover:animate-facebook-btn" />
+                    <Facebook className="h-5 w-5 text-[#1877F2] z-10" />
+                    <span className="z-10">Facebook</span>
                   </>
                 )}
               </Button>

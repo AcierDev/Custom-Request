@@ -1,43 +1,46 @@
-import { MongoClient, ServerApiVersion } from "mongodb";
+import { MongoClient, Db } from "mongodb";
 
-// Connection URI
-const uri = process.env.MONGODB_URI || "";
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017";
+const MONGODB_DB = process.env.MONGODB_DB || "app";
 
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
-const client = new MongoClient(uri, {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-  },
-});
-
-// Database Name
-const dbName = process.env.MONGODB_DB || "everwood";
-
-// Cache the database connection
+// Cache the MongoDB connection to prevent multiple connections
 let cachedClient: MongoClient | null = null;
-let cachedDb: any = null;
+let cachedDb: Db | null = null;
 
-export async function connectToDatabase() {
-  // If we have a cached connection, use it
+/**
+ * Connect to MongoDB and return the database instance
+ */
+export async function getMongoDb(): Promise<Db> {
+  // If we have a cached connection, return it
   if (cachedClient && cachedDb) {
-    return { client: cachedClient, db: cachedDb };
+    return cachedDb;
   }
 
-  // If no cached connection, create a new one
-  if (!cachedClient) {
-    cachedClient = await client.connect();
-  }
+  // Create a new connection
+  const client = new MongoClient(MONGODB_URI);
+  await client.connect();
+  const db = client.db(MONGODB_DB);
 
-  // Get the database
-  cachedDb = cachedClient.db(dbName);
+  // Create indexes for tokens collection
+  const tokensCollection = db.collection("tokens");
+  await tokensCollection.createIndexes([
+    { key: { id: 1 }, unique: true },
+    { key: { userId: 1 } },
+    { key: { expiresAt: 1 }, expireAfterSeconds: 0 }, // TTL index for automatic cleanup
+    { key: { type: 1 } },
+  ]);
 
-  return { client: cachedClient, db: cachedDb };
+  // Cache the connection
+  cachedClient = client;
+  cachedDb = db;
+
+  return db;
 }
 
-// Helper function to close the connection
-export async function closeConnection() {
+/**
+ * Close the MongoDB connection
+ */
+export async function closeMongoDbConnection(): Promise<void> {
   if (cachedClient) {
     await cachedClient.close();
     cachedClient = null;
@@ -47,6 +50,6 @@ export async function closeConnection() {
 
 // Helper function to get a collection
 export async function getCollection(collectionName: string) {
-  const { db } = await connectToDatabase();
+  const { db } = await getMongoDb();
   return db.collection(collectionName);
 }

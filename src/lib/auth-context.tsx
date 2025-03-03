@@ -36,6 +36,13 @@ const GOOGLE_REDIRECT_URI =
     ? `${window.location.origin}/api/auth/google/callback`
     : "";
 
+// Facebook OAuth configuration
+const FACEBOOK_CLIENT_ID = process.env.NEXT_PUBLIC_FACEBOOK_CLIENT_ID || "";
+const FACEBOOK_REDIRECT_URI =
+  typeof window !== "undefined"
+    ? `${window.location.origin}/api/auth/facebook/callback`
+    : "";
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Create a separate component that uses navigation hooks
@@ -238,6 +245,33 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
         return;
       }
 
+      if (provider === "facebook") {
+        // Redirect to Facebook auth endpoint
+        window.location.href = "/api/auth/facebook";
+        return;
+      }
+
+      if (provider === "email" && email) {
+        // Call the email authentication API
+        const response = await fetch("/api/auth/email", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to send magic link");
+        }
+
+        // Email sent successfully, the user will receive an email with a magic link
+        // The magic link will redirect to the callback endpoint, which will handle the authentication
+        return;
+      }
+
       // Mock implementation for other providers
       const mockUser: User = {
         id: `user-${Math.random().toString(36).substring(2, 9)}`,
@@ -278,6 +312,12 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
       // Handle Google sign out if needed
       if (user?.provider === "google" && window.google) {
         window.google.accounts.id.disableAutoSelect();
+      }
+
+      // Handle Facebook sign out if needed
+      if (user?.provider === "facebook") {
+        // You might want to revoke Facebook access token here
+        // For now, we'll just clear local data
       }
 
       // Clear user data

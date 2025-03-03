@@ -77,8 +77,6 @@ body {
   }
 }
 
-
-
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -86,4 +84,17 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+@keyframes facebook-btn {
+  0% {
+    transform: translateX(-100%) skewX(-20deg);
+  }
+  100% {
+    transform: translateX(1000%) skewX(-20deg);
+  }
+}
+
+.animate-facebook-btn {
+  animation: facebook-btn 1s ease-in-out;
 }
