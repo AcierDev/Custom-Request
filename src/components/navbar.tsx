@@ -15,6 +15,8 @@ import {
   User,
   ChevronDown,
   Save,
+  PencilRuler,
+  LogIn,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
@@ -54,7 +56,8 @@ type NavItem = NavLinkItem | DividerItem;
 
 const mainNavItems: NavItem[] = [
   { href: "/order", icon: ShoppingCart, label: "Order", hotkey: "1" },
-  { href: "/preview", icon: Eye, label: "Preview", hotkey: "3" },
+  { href: "/preview", icon: Eye, label: "Preview", hotkey: "2" },
+  { href: "/design", icon: PencilRuler, label: "Design", hotkey: "3" },
   { href: "/palette", icon: Palette, label: "Palette", hotkey: "4" },
 ];
 
@@ -72,7 +75,7 @@ export function Navbar({ onOpenSettings }: NavbarProps) {
   const { theme, setTheme } = useTheme();
   const pathname = usePathname();
   const router = useRouter();
-  const { user, signOut } = useAuth();
+  const { user, signOut, isGuest } = useAuth();
   const [activeTab, setActiveTab] = useState(pathname);
   const [navigationSequence, setNavigationSequence] = useState<string[]>([]);
   const saveToDatabase = useCustomStore((state) => state.saveToDatabase);
@@ -141,8 +144,6 @@ export function Navbar({ onOpenSettings }: NavbarProps) {
   };
 
   const handleSaveData = async () => {
-    if (!user) return;
-
     setIsSaving(true);
     try {
       const success = await saveToDatabase();
@@ -275,7 +276,7 @@ export function Navbar({ onOpenSettings }: NavbarProps) {
                 <Settings className="h-5 w-5 flex-shrink-0" />
                 {isSidebarOpen && <span className="ml-2">Settings</span>}
               </Button>
-              {user && (
+              {user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -312,6 +313,7 @@ export function Navbar({ onOpenSettings }: NavbarProps) {
                       <Save className="mr-2 h-4 w-4" />
                       <span>{isSaving ? "Saving..." : "Save My Designs"}</span>
                     </DropdownMenuItem>
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem
                       className="cursor-pointer text-destructive focus:text-destructive"
                       onClick={signOut}
@@ -321,6 +323,59 @@ export function Navbar({ onOpenSettings }: NavbarProps) {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+              ) : isGuest ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="flex-shrink-0 p-0 h-9 w-9 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800"
+                    >
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback className="text-xs bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300">
+                          G
+                        </AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>Guest User</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="cursor-pointer"
+                      onClick={() => router.push("/profile")}
+                    >
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Profile</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="cursor-pointer"
+                      onClick={handleSaveData}
+                      disabled={isSaving}
+                    >
+                      <Save className="mr-2 h-4 w-4" />
+                      <span>{isSaving ? "Saving..." : "Save My Designs"}</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="cursor-pointer text-primary focus:text-primary"
+                      onClick={() => router.push("/sign-in")}
+                    >
+                      <LogIn className="mr-2 h-4 w-4" />
+                      <span>Sign in</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => router.push("/sign-in")}
+                  className="flex-shrink-0 hover:bg-gray-200 dark:hover:bg-gray-800"
+                >
+                  <LogIn className="h-5 w-5" />
+                  <span className="sr-only">Sign in</span>
+                </Button>
               )}
             </div>
           </div>
@@ -348,7 +403,7 @@ export function Navbar({ onOpenSettings }: NavbarProps) {
               Everwood
             </span>
 
-            {user && (
+            {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -385,6 +440,7 @@ export function Navbar({ onOpenSettings }: NavbarProps) {
                     <Save className="mr-2 h-4 w-4" />
                     <span>{isSaving ? "Saving..." : "Save My Designs"}</span>
                   </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="cursor-pointer text-destructive focus:text-destructive"
                     onClick={signOut}
@@ -394,6 +450,52 @@ export function Navbar({ onOpenSettings }: NavbarProps) {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+            ) : isGuest ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="ml-auto mr-2 p-0 h-9 w-9 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800"
+                  >
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="text-xs bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300">
+                        G
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>Guest User</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="cursor-pointer"
+                    onClick={handleSaveData}
+                    disabled={isSaving}
+                  >
+                    <Save className="mr-2 h-4 w-4" />
+                    <span>{isSaving ? "Saving..." : "Save My Designs"}</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="cursor-pointer text-primary focus:text-primary"
+                    onClick={() => router.push("/sign-in")}
+                  >
+                    <LogIn className="mr-2 h-4 w-4" />
+                    <span>Sign in</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push("/sign-in")}
+                className="ml-auto"
+              >
+                <LogIn className="mr-2 h-4 w-4" />
+                Sign in
+              </Button>
             )}
 
             <SheetContent

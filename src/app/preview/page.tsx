@@ -2,20 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { ColorPattern, useCustomStore } from "@/store/customStore";
+import { useCustomStore } from "@/store/customStore";
 import { Button } from "@/components/ui/button";
-import {
-  ArrowLeft,
-  Info,
-  Download,
-  Share,
-  Paintbrush,
-  Shuffle,
-  MoveHorizontal,
-  MoveVertical,
-  ArrowLeftRight,
-  RotateCcw,
-} from "lucide-react";
+import { ArrowLeft, Info, Download, Share } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Canvas } from "@react-three/fiber";
@@ -32,11 +21,6 @@ import { ColorInfoHint } from "../order/components/preview/ColorInfoHint";
 import { Ruler3D } from "../order/components/preview/Ruler3D";
 import { ItemDesigns } from "@/typings/types";
 import { cn } from "@/lib/utils";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { SizeCard } from "../order/components/SizeCard";
-import { StyleCard } from "../order/components/StyleCard";
-import { DesignCard } from "../order/components/DesignCard";
 
 export default function PreviewPage() {
   const router = useRouter();
@@ -71,18 +55,13 @@ export default function PreviewPage() {
           Back
         </Button>
         <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-          3D Preview
+          Preview Mode
         </h1>
       </div>
 
-      {/* Enhanced view controls with pattern options */}
-      <div className="absolute top-4 right-4 z-50 flex flex-col gap-3">
+      {/* View controls only */}
+      <div className="absolute top-4 right-4 z-50">
         <ViewControls />
-        <DesignCard compact />
-        <SizeCard compact />
-        <StyleCard compact />
-
-        <PatternControls />
       </div>
 
       {/* Color info hint */}
@@ -159,12 +138,12 @@ export default function PreviewPage() {
             </div>
             <div className="space-y-1 flex-1">
               <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                Full-Screen Preview Mode
+                Preview Mode
               </h4>
               <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
-                Explore your design from any angle. Use the controls in the top
-                right to customize the view. Natural light variations will
-                create dynamic shadows and highlight the unique grain patterns.
+                This is a simplified preview of your design. Use the view
+                controls to customize how you see your design. You can toggle
+                the ruler, wood grain, and color information.
               </p>
             </div>
           </div>
@@ -186,151 +165,5 @@ export default function PreviewPage() {
         </Button>
       </div>
     </div>
-  );
-}
-
-// Add the PatternControls component
-function PatternControls() {
-  const {
-    colorPattern,
-    setColorPattern,
-    orientation,
-    setOrientation,
-    isReversed,
-    setIsReversed,
-    isRotated,
-    setIsRotated,
-    selectedDesign,
-    customPalette,
-  } = useCustomStore();
-
-  // Hide controls if custom is selected with no colors
-  const showControls = !(
-    selectedDesign === ItemDesigns.Custom && customPalette.length === 0
-  );
-
-  if (!showControls) return null;
-
-  const patterns: {
-    value: ColorPattern;
-    label: string;
-    icon: React.ReactNode;
-    description: string;
-  }[] = [
-    {
-      value: "fade",
-      label: "Fade",
-      icon: <Paintbrush className="w-4 h-4" />,
-      description: "Smooth gradient from one color to another",
-    },
-    {
-      value: "center-fade",
-      label: "Center Fade",
-      icon: <ArrowLeftRight className="w-4 h-4" />,
-      description: "Gradient that fades from center outward",
-    },
-    {
-      value: "random",
-      label: "Random",
-      icon: <Shuffle className="w-4 h-4" />,
-      description: "Random arrangement of colors",
-    },
-  ];
-
-  return (
-    <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200 dark:border-gray-700 shadow-lg">
-      <div className="p-3 space-y-4">
-        <div className="space-y-2">
-          <Label className="text-sm text-gray-700 dark:text-gray-300">
-            Pattern
-          </Label>
-          <RadioGroup
-            value={colorPattern}
-            onValueChange={(value: ColorPattern) => setColorPattern(value)}
-            className="space-y-1.5"
-          >
-            {patterns.map(({ value, label, icon }) => (
-              <div
-                key={value}
-                className={`flex items-center space-x-2 rounded-md px-2 py-1.5 ${
-                  colorPattern === value
-                    ? "bg-purple-100 dark:bg-purple-900/20"
-                    : ""
-                }`}
-              >
-                <RadioGroupItem value={value} id={`pattern-${value}`} />
-                <Label
-                  htmlFor={`pattern-${value}`}
-                  className="flex items-center cursor-pointer"
-                >
-                  {icon}
-                  <span className="ml-2 text-sm">{label}</span>
-                </Label>
-              </div>
-            ))}
-          </RadioGroup>
-        </div>
-
-        <div className="space-y-2">
-          <Label className="text-sm text-gray-700 dark:text-gray-300">
-            Orientation
-          </Label>
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant={orientation === "horizontal" ? "default" : "outline"}
-              className={
-                orientation === "horizontal"
-                  ? "bg-purple-600 hover:bg-purple-700"
-                  : ""
-              }
-              onClick={() => setOrientation("horizontal")}
-            >
-              <MoveHorizontal className="w-4 h-4 mr-1" />
-              <span className="text-xs">Horizontal</span>
-            </Button>
-            <Button
-              size="sm"
-              variant={orientation === "vertical" ? "default" : "outline"}
-              className={
-                orientation === "vertical"
-                  ? "bg-purple-600 hover:bg-purple-700"
-                  : ""
-              }
-              onClick={() => setOrientation("vertical")}
-            >
-              <MoveVertical className="w-4 h-4 mr-1" />
-              <span className="text-xs">Vertical</span>
-            </Button>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label className="text-sm text-gray-700 dark:text-gray-300">
-            Options
-          </Label>
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant={isReversed ? "default" : "outline"}
-              className={isReversed ? "bg-purple-600 hover:bg-purple-700" : ""}
-              onClick={() => setIsReversed(!isReversed)}
-            >
-              <ArrowLeftRight className="w-4 h-4 mr-1" />
-              <span className="text-xs">Reverse</span>
-            </Button>
-            <Button
-              size="sm"
-              variant={isRotated ? "default" : "outline"}
-              className={isRotated ? "bg-purple-600 hover:bg-purple-700" : ""}
-              onClick={() => setIsRotated(!isRotated)}
-            >
-              <RotateCcw className="w-4 h-4 mr-1" />
-              <span className="text-xs">Rotate</span>
-            </Button>
-          </div>
-        </div>
-      </div>
-    </Card>
   );
 }

@@ -21,12 +21,14 @@ type User = {
 type AuthContextType = {
   user: User | null;
   isLoading: boolean;
+  isGuest: boolean;
   signIn: (provider: string, email?: string) => Promise<void>;
   signOut: () => Promise<void>;
   initiateGoogleAuth: () => Promise<void>;
   handleGoogleCallback: (response: any) => Promise<void>;
   saveUserData: (data: any) => Promise<boolean>;
   loadUserData: () => Promise<any | null>;
+  continueAsGuest: () => void;
 };
 
 // Google OAuth configuration
@@ -49,6 +51,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 function AuthProviderContent({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isGuest, setIsGuest] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -78,9 +81,14 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
       try {
         // In a real app, you would check for a session/token here
         const storedUser = localStorage.getItem("everwood_user");
+        const isGuestMode =
+          localStorage.getItem("everwood_guest_mode") === "true";
 
         if (storedUser) {
           setUser(JSON.parse(storedUser));
+        } else if (isGuestMode) {
+          // Restore guest mode if it was active
+          setIsGuest(true);
         }
       } catch (error) {
         console.error("Authentication error:", error);
@@ -92,14 +100,21 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
     checkAuth();
   }, []);
 
-  // Redirect unauthenticated users away from protected routes
+  // Modified to not force redirect - make sign-in optional
   useEffect(() => {
+    // Only redirect to sign-in page if not a guest and not authenticated
+    // and only on protected routes that require sign-in
     if (
       !isLoading &&
       !user &&
+      !isGuest &&
+      pathname !== "/" &&
       pathname !== "/sign-in" &&
       !pathname.includes("/_") &&
-      !pathname.includes("/auth/")
+      !pathname.includes("/auth/") &&
+      // Check for any routes that should be accessible to all users
+      !pathname.includes("/about") &&
+      !pathname.includes("/contact")
     ) {
       // Check if there's a share parameter in the URL
       const regularShareData = searchParams.get("share");
@@ -120,7 +135,7 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
 
       router.push("/sign-in");
     }
-  }, [user, isLoading, pathname, router, searchParams]);
+  }, [user, isLoading, isGuest, pathname, router, searchParams]);
 
   // Initialize Google One Tap
   useEffect(() => {
@@ -152,6 +167,24 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
       console.error("Error initializing Google One Tap:", error);
     }
   }, [pathname, user]);
+
+  // Function to continue as guest
+  const continueAsGuest = () => {
+    setIsGuest(true);
+    setUser(null);
+    localStorage.setItem("everwood_guest_mode", "true");
+
+    // Check if there's a redirect URL saved
+    const redirectUrl = localStorage.getItem("everwood_redirect_after_signin");
+
+    if (redirectUrl) {
+      localStorage.removeItem("everwood_redirect_after_signin");
+      router.push(redirectUrl);
+    } else {
+      // Default redirect to order page
+      router.push("/order");
+    }
+  };
 
   const initiateGoogleAuth = async () => {
     setIsLoading(true);
@@ -194,6 +227,8 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
       };
 
       setUser(googleUser);
+      setIsGuest(false); // Exit guest mode when signing in
+      localStorage.removeItem("everwood_guest_mode"); // Remove guest mode flag
       localStorage.setItem("everwood_user", JSON.stringify(googleUser));
 
       // Check if there's a redirect URL saved
@@ -283,6 +318,8 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
       };
 
       setUser(mockUser);
+      setIsGuest(false); // Exit guest mode when signing in
+      localStorage.removeItem("everwood_guest_mode"); // Remove guest mode flag
       localStorage.setItem("everwood_user", JSON.stringify(mockUser));
 
       // Check if there's a redirect URL saved
@@ -322,7 +359,9 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
 
       // Clear user data
       setUser(null);
+      setIsGuest(false); // Also exit guest mode
       localStorage.removeItem("everwood_user");
+      localStorage.removeItem("everwood_guest_mode");
       localStorage.removeItem("everwood_redirect_after_signin");
       router.push("/sign-in");
     } catch (error) {
@@ -392,12 +431,14 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
       value={{
         user,
         isLoading,
+        isGuest,
         signIn,
         signOut,
         initiateGoogleAuth,
         handleGoogleCallback,
         saveUserData,
         loadUserData,
+        continueAsGuest,
       }}
     >
       {children}

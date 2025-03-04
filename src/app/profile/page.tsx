@@ -16,6 +16,7 @@ import {
   Edit,
   Trash2,
   LogOut,
+  LogIn,
 } from "lucide-react";
 import {
   Card,
@@ -45,7 +46,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 
 export default function ProfilePage() {
-  const { user, signOut, isLoading } = useAuth();
+  const { user, signOut, isLoading, isGuest } = useAuth();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("overview");
   const [isEditing, setIsEditing] = useState(false);
@@ -64,7 +65,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     // Redirect to sign-in if not authenticated
-    if (!isLoading && !user) {
+    if (!isLoading && !user && !isGuest) {
       router.push("/sign-in");
     }
 
@@ -72,7 +73,7 @@ export default function ProfilePage() {
     if (user?.name) {
       setDisplayName(user.name);
     }
-  }, [user, isLoading, router]);
+  }, [user, isGuest, isLoading, router]);
 
   // Format the last saved time
   const formatLastSaved = () => {
@@ -118,6 +119,172 @@ export default function ProfilePage() {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
           <p className="text-muted-foreground">Loading your profile...</p>
         </div>
+      </div>
+    );
+  }
+
+  // Show guest user profile
+  if (isGuest) {
+    return (
+      <div className="container max-w-6xl py-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <Card className="shadow-md">
+            <CardHeader className="pb-2 border-b">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <Avatar className="h-16 w-16 border-2 border-blue-200">
+                    <AvatarFallback className="text-xl bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300">
+                      G
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h1 className="text-3xl font-bold">Guest User</h1>
+                    <p className="text-muted-foreground">
+                      You're currently using Everwood as a guest
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => router.push("/sign-in")}
+                  className="md:self-start"
+                >
+                  <LogIn className="mr-2 h-4 w-4" />
+                  Sign in
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6 space-y-6">
+              <div className="bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 p-4 rounded-md border border-blue-200 dark:border-blue-800">
+                <h3 className="font-medium text-lg mb-2">About Guest Mode</h3>
+                <p className="mb-4">
+                  As a guest user, your designs and preferences are saved in
+                  your browser's local storage. This means:
+                </p>
+                <ul className="list-disc pl-5 space-y-1 mb-4">
+                  <li>
+                    Your designs are only available on this device and browser
+                  </li>
+                  <li>Clearing your browser data will erase your designs</li>
+                  <li>
+                    You won't be able to access your designs from other devices
+                  </li>
+                </ul>
+                <p>
+                  Create an account to save your designs to the cloud and access
+                  them from anywhere!
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-medium mb-2">Data Overview</h3>
+                <Separator className="my-2" />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 my-4">
+                  <Card className="bg-primary/5 border-primary/20">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                        Current Design
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center justify-between">
+                        <span className="text-2xl font-bold">1</span>
+                        <ShoppingCart className="h-5 w-5 text-primary" />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-primary/5 border-primary/20">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                        Saved Palettes
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center justify-between">
+                        <span className="text-2xl font-bold">
+                          {savedPalettes.length}
+                        </span>
+                        <Palette className="h-5 w-5 text-primary" />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-primary/5 border-primary/20">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                        Last Saved
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium truncate">
+                          {formatLastSaved()}
+                        </span>
+                        <Clock className="h-5 w-5 text-primary" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-medium mb-2">Quick Actions</h3>
+                <Separator className="my-2" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <Button
+                    variant="outline"
+                    className="justify-between"
+                    onClick={() => router.push("/order")}
+                  >
+                    <span className="flex items-center">
+                      <ShoppingCart className="mr-2 h-4 w-4" />
+                      Create New Design
+                    </span>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="justify-between"
+                    onClick={() => router.push("/palette")}
+                  >
+                    <span className="flex items-center">
+                      <Palette className="mr-2 h-4 w-4" />
+                      Manage Palettes
+                    </span>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="justify-between"
+                    onClick={handleSaveData}
+                    disabled={isSaving}
+                  >
+                    <span className="flex items-center">
+                      <Save className="mr-2 h-4 w-4" />
+                      {isSaving ? "Saving..." : "Save All Data"}
+                    </span>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="default"
+                    className="justify-between"
+                    onClick={() => router.push("/sign-in")}
+                  >
+                    <span className="flex items-center">
+                      <LogIn className="mr-2 h-4 w-4" />
+                      Sign in to Your Account
+                    </span>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
     );
   }

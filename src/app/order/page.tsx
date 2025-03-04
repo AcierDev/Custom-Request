@@ -29,14 +29,14 @@ function OrderContent() {
   const [isSharedDesign, setIsSharedDesign] = useState(false);
   const [showBanner, setShowBanner] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, isGuest } = useAuth();
 
   useEffect(() => {
     // If authentication is still loading, wait for it
     if (authLoading) return;
 
-    // If user is not authenticated, they will be redirected by the auth context
-    if (!user) return;
+    // If user is not authenticated and not in guest mode, they will be redirected by the auth context
+    if (!user && !isGuest) return;
 
     // Check if there's a share parameter in the URL (either regular or short format)
     const regularShareData = searchParams.get("share");
@@ -74,7 +74,7 @@ function OrderContent() {
 
     // Design is loaded (or failed to load), but we're done loading
     setIsLoading(false);
-  }, [searchParams, loadFromShareableData, user, authLoading, router]);
+  }, [searchParams, loadFromShareableData, user, isGuest, authLoading, router]);
 
   if (isLoading || authLoading) {
     return (
@@ -122,7 +122,44 @@ function OrderContent() {
         )}
       </AnimatePresence>
 
-      <div className="w-full h-full dark:bg-gray-900 flex justify-between p-8">
+      {/* Guest Mode Banner */}
+      <AnimatePresence>
+        {isGuest && (
+          <motion.div
+            initial={{ opacity: 0, y: -50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -50 }}
+            transition={{ duration: 0.3 }}
+            className="absolute top-0 left-0 right-0 bg-gradient-to-r from-blue-500 to-teal-500 text-white py-2 px-4 z-50"
+          >
+            <div className="container mx-auto flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="h-5 w-5 rounded-full bg-white/30 flex items-center justify-center">
+                  <span className="text-xs font-semibold">G</span>
+                </div>
+                <span>
+                  You're using Everwood as a guest. Sign in to save your designs
+                  across devices.
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push("/sign-in")}
+                className="text-white border-white/40 hover:bg-white/20 hover:text-white"
+              >
+                Sign in
+              </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div
+        className={`w-full h-full dark:bg-gray-900 flex justify-between p-8 ${
+          isGuest || showBanner ? "pt-20" : ""
+        }`}
+      >
         {/* Left column */}
         <div className="flex flex-col gap-4 w-1/4">
           <DesignCard />

@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
-  Apple,
   Facebook,
   Mail,
   ArrowRight,
@@ -13,6 +12,7 @@ import {
   AlertCircle,
   X,
   Share2,
+  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,7 +45,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 
 // Create a separate client component that uses useSearchParams
 function SignInContent() {
-  const { signIn, isLoading: authLoading } = useAuth();
+  const { signIn, isLoading: authLoading, continueAsGuest } = useAuth();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -53,9 +53,9 @@ function SignInContent() {
   const [redirectInfo, setRedirectInfo] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState({
     google: false,
-    apple: false,
     facebook: false,
     email: false,
+    guest: false,
   });
 
   // Check for error in URL
@@ -103,6 +103,18 @@ function SignInContent() {
       setError("Failed to sign in with email. Please try again.");
     } finally {
       setIsLoading({ ...isLoading, email: false });
+    }
+  };
+
+  const handleGuestAccess = () => {
+    try {
+      setError(null);
+      setIsLoading({ ...isLoading, guest: true });
+      continueAsGuest();
+    } catch (error) {
+      console.error("Error continuing as guest:", error);
+      setError("Failed to continue as guest. Please try again.");
+      setIsLoading({ ...isLoading, guest: false });
     }
   };
 
@@ -233,22 +245,6 @@ function SignInContent() {
 
               <Button
                 variant="outline"
-                className="flex items-center justify-center gap-2 h-12 border-muted-foreground/20 hover:bg-muted/50"
-                onClick={() => handleProviderSignIn("apple")}
-                disabled={isAnyLoading}
-              >
-                {isLoading.apple ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <>
-                    <Apple className="h-5 w-5" />
-                    <span>Apple</span>
-                  </>
-                )}
-              </Button>
-
-              <Button
-                variant="outline"
                 className="flex items-center justify-center gap-2 h-12 border-muted-foreground/20 hover:bg-muted/50 relative overflow-hidden group"
                 onClick={() => handleProviderSignIn("facebook")}
                 disabled={isAnyLoading}
@@ -257,34 +253,41 @@ function SignInContent() {
                   <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
                   <>
-                    <div className="absolute inset-0 w-3 bg-[#1877F2] transform -skew-x-[20deg] -translate-x-full group-hover:animate-facebook-btn" />
+                    <div className="absolute inset-0 w-3 bg-[#1877F2] transform -skew-x-[20deg] -translate-x-full group-hover:animate-google-btn" />
                     <Facebook className="h-5 w-5 text-[#1877F2] z-10" />
                     <span className="z-10">Facebook</span>
                   </>
                 )}
               </Button>
-
-              <Button
-                variant="outline"
-                className="flex items-center justify-center gap-2 h-12 border-muted-foreground/20 hover:bg-muted/50"
-                onClick={() => document.getElementById("email-form")?.focus()}
-                disabled={isAnyLoading}
-              >
-                <Mail className="h-5 w-5" />
-                <span>Email</span>
-              </Button>
             </div>
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <Separator className="w-full" />
+                <span className="w-full border-t border-muted-foreground/20" />
               </div>
-              <div className="relative flex justify-center text-xs uppercase">
+              <div className="relative flex justify-center text-xs">
                 <span className="bg-background px-2 text-muted-foreground">
-                  Or continue with email
+                  Or continue without an account
                 </span>
               </div>
             </div>
+
+            <Button
+              variant="outline"
+              className="w-full flex items-center justify-center gap-2 h-12 border-muted-foreground/20 hover:bg-muted/50 relative overflow-hidden group"
+              onClick={handleGuestAccess}
+              disabled={isAnyLoading}
+            >
+              {isLoading.guest ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <>
+                  <div className="absolute inset-0 w-3 bg-blue-400 transform -skew-x-[20deg] -translate-x-full group-hover:animate-google-btn" />
+                  <User className="h-5 w-5 z-10" />
+                  <span className="z-10">Continue as Guest</span>
+                </>
+              )}
+            </Button>
 
             <form onSubmit={handleEmailSignIn} className="space-y-4">
               <div className="space-y-2">
@@ -314,24 +317,17 @@ function SignInContent() {
               </Button>
             </form>
           </CardContent>
-          <CardFooter className="flex flex-col space-y-2">
-            <p className="text-center text-sm text-muted-foreground">
-              By continuing, you agree to our{" "}
-              <Link
-                href="#"
-                className="underline underline-offset-4 hover:text-primary"
-              >
-                Terms of Service
-              </Link>{" "}
-              and{" "}
-              <Link
-                href="#"
-                className="underline underline-offset-4 hover:text-primary"
-              >
-                Privacy Policy
-              </Link>
-              .
-            </p>
+          <CardFooter className="text-center text-xs text-muted-foreground mt-4">
+            <div className="w-full">
+              By continuing, you agree to our Terms of Service and Privacy
+              Policy.
+              <div className="mt-2">
+                <span>Guest users can create and share designs, </span>
+                <span className="font-medium text-primary">
+                  but data may be lost if you clear your browser storage.
+                </span>
+              </div>
+            </div>
           </CardFooter>
         </Card>
       </motion.div>

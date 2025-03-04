@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { ItemSizes, ItemDesigns, Dimensions } from "@/typings/types";
+import { ItemDesigns, Dimensions } from "@/typings/types";
 import { calculatePrice, PriceBreakdown } from "@/lib/pricing";
 import { mixPaintColors } from "@/lib/colorUtils";
 import { DESIGN_COLORS } from "@/typings/color-maps";
@@ -130,8 +130,9 @@ interface CustomStore extends CustomState {
   loadFromShareableData: (data: string) => boolean;
   saveToDatabase: () => Promise<boolean>;
   loadFromDatabase: () => Promise<boolean>;
-  syncWithDatabase: (autoSave?: boolean) => void;
-  setAutoSaveEnabled: (enabled: boolean) => void; // Add method to toggle auto-save
+  syncWithDatabase: (autoSave?: boolean) => (() => void) | void;
+  setAutoSaveEnabled: (enabled: boolean) => void;
+  saveToLocalStorage: () => boolean;
 }
 
 interface HoverState {
@@ -628,53 +629,180 @@ export const useCustomStore = create<CustomStore>()(
       }
     },
 
-    // Save the current state to MongoDB
-    saveToDatabase: async () => {
-      try {
-        // Only run in browser
-        if (typeof window === "undefined") return false;
+    // Set up automatic syncing with the database
+    syncWithDatabase: (autoSave = true): (() => void) | void => {
+      // Only run in browser
+      if (typeof window === "undefined") return;
 
-        // Get the auth context from window
+      // Get auth context if available
+      const authContext = (window as any).__authContext;
+      const isAuthenticated = authContext?.user !== null;
+      const isGuest = authContext?.isGuest === true;
+
+      // For authenticated users, try to load from database
+      if (isAuthenticated) {
+        get().loadFromDatabase();
+      } else if (isGuest) {
+        // For guest users, try to load from local storage
+        try {
+          const savedState = localStorage.getItem("everwood_guest_data");
+          if (savedState) {
+            const data = JSON.parse(savedState) as PersistentState;
+
+            // Update the store with the loaded data
+            set({
+              ...data,
+              // Recalculate derived fields
+              currentColors:
+                data.customPalette && data.customPalette.length > 0
+                  ? createColorMap(data.customPalette)
+                  : DESIGN_COLORS[data.selectedDesign as ItemDesigns] ||
+                    get().currentColors,
+              // Update pricing based on the dimensions and shipping speed
+              pricing: calculatePrice(
+                data.dimensions || get().dimensions,
+                data.shippingSpeed || get().shippingSpeed
+              ),
+              lastSaved: Date.now(),
+            });
+
+            console.log("Store data loaded from local storage for guest user");
+          }
+        } catch (error) {
+          console.error("Error loading guest data from local storage:", error);
+        }
+      }
+
+      if (autoSave) {
+        // Set up auto-save
+        const saveInterval = setInterval(() => {
+          if (!get().autoSaveEnabled) return;
+
+          // Get fresh auth context in case it changed
+          const authContext = (window as any).__authContext;
+          const isAuthenticated = authContext?.user !== null;
+          const isGuest = authContext?.isGuest === true;
+
+          if (isAuthenticated) {
+            // For authenticated users, save to database
+            get().saveToDatabase();
+          } else if (isGuest) {
+            // For guest users, save to local storage
+            try {
+              const stateToSave: PersistentState = {
+                dimensions: get().dimensions,
+                selectedDesign: get().selectedDesign,
+                shippingSpeed: get().shippingSpeed,
+                colorPattern: get().colorPattern,
+                orientation: get().orientation,
+                isReversed: get().isReversed,
+                customPalette: get().customPalette,
+                isRotated: get().isRotated,
+                patternStyle: get().patternStyle,
+                style: get().style,
+                savedPalettes: get().savedPalettes,
+                viewSettings: get().viewSettings,
+              };
+
+              localStorage.setItem(
+                "everwood_guest_data",
+                JSON.stringify(stateToSave)
+              );
+              set({ lastSaved: Date.now() });
+              console.log("Store data saved to local storage for guest user");
+            } catch (error) {
+              console.error("Error saving guest data to local storage:", error);
+            }
+          }
+        }, 30000); // Save every 30 seconds
+
+        // Clean up on unmount
+        return () => clearInterval(saveInterval);
+      }
+    },
+
+    // Add a new function to save data locally for guest users
+    saveToLocalStorage: (): boolean => {
+      try {
+        const stateToSave: PersistentState = {
+          dimensions: get().dimensions,
+          selectedDesign: get().selectedDesign,
+          shippingSpeed: get().shippingSpeed,
+          colorPattern: get().colorPattern,
+          orientation: get().orientation,
+          isReversed: get().isReversed,
+          customPalette: get().customPalette,
+          isRotated: get().isRotated,
+          patternStyle: get().patternStyle,
+          style: get().style,
+          savedPalettes: get().savedPalettes,
+          viewSettings: get().viewSettings,
+        };
+
+        localStorage.setItem(
+          "everwood_guest_data",
+          JSON.stringify(stateToSave)
+        );
+        set({ lastSaved: Date.now() });
+        console.log("Store data manually saved to local storage");
+        return true;
+      } catch (error) {
+        console.error("Error saving data to local storage:", error);
+        return false;
+      }
+    },
+
+    // Update saveToDatabase to handle both authenticated and guest users
+    saveToDatabase: async (): Promise<boolean> => {
+      // In browser environment, check auth status from global context
+      if (typeof window !== "undefined") {
         const authContext = (window as any).__authContext;
-        if (!authContext || !authContext.user || !authContext.saveUserData) {
-          console.warn("Auth context not available for saving data");
+        const isAuthenticated = authContext?.user !== null;
+        const isGuest = authContext?.isGuest === true;
+
+        if (isGuest) {
+          // For guest users, save to local storage instead
+          return get().saveToLocalStorage();
+        }
+
+        if (!isAuthenticated) {
+          console.error("Cannot save to database: user not authenticated");
           return false;
         }
 
-        // Extract the data we want to persist
-        const state = get();
-        const persistentState: PersistentState = {
-          dimensions: state.dimensions,
-          selectedDesign: state.selectedDesign,
-          shippingSpeed: state.shippingSpeed,
-          colorPattern: state.colorPattern,
-          orientation: state.orientation,
-          isReversed: state.isReversed,
-          customPalette: state.customPalette,
-          isRotated: state.isRotated,
-          patternStyle: state.patternStyle,
-          style: state.style,
-          savedPalettes: state.savedPalettes,
-          viewSettings: state.viewSettings,
-        };
+        try {
+          // Create a persistable state object
+          const stateToSave: PersistentState = {
+            dimensions: get().dimensions,
+            selectedDesign: get().selectedDesign,
+            shippingSpeed: get().shippingSpeed,
+            colorPattern: get().colorPattern,
+            orientation: get().orientation,
+            isReversed: get().isReversed,
+            customPalette: get().customPalette,
+            isRotated: get().isRotated,
+            patternStyle: get().patternStyle,
+            style: get().style,
+            savedPalettes: get().savedPalettes,
+            viewSettings: get().viewSettings,
+          };
 
-        console.log("Persistent state:", persistentState);
+          // Use the saveUserData method from auth context
+          const success = await authContext.saveUserData(stateToSave);
 
-        // Save to MongoDB via the auth context
-        const success = await authContext.saveUserData(persistentState);
+          if (success) {
+            set({ lastSaved: Date.now() });
+            console.log("Store data saved to database");
+          }
 
-        if (success) {
-          console.log("Store data saved to database");
-          set({ lastSaved: Date.now() });
-        } else {
-          console.error("Failed to save store data to database");
+          return success;
+        } catch (error) {
+          console.error("Error saving to database:", error);
+          return false;
         }
-
-        return success;
-      } catch (error) {
-        console.error("Error saving to database:", error);
-        return false;
       }
+
+      return false;
     },
 
     // Load state from MongoDB
@@ -734,27 +862,6 @@ export const useCustomStore = create<CustomStore>()(
       } catch (error) {
         console.error("Error loading from database:", error);
         return false;
-      }
-    },
-
-    // Set up automatic syncing with the database
-    syncWithDatabase: (autoSave = true) => {
-      // Only run in browser
-      if (typeof window === "undefined") return;
-
-      // Load data initially
-      get().loadFromDatabase();
-
-      if (autoSave) {
-        // Set up auto-save
-        const saveInterval = setInterval(() => {
-          if (get().autoSaveEnabled) {
-            get().saveToDatabase();
-          }
-        }, 30000); // Save every 30 seconds
-
-        // Clean up on unmount
-        return () => clearInterval(saveInterval);
       }
     },
 

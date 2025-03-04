@@ -17,19 +17,18 @@ export function AuthContextProvider({
     }
   }, [auth]);
 
-  // Set up database syncing when user changes
+  // Set up data syncing when authentication state changes
   useEffect(() => {
-    if (auth.user) {
-      // User is logged in, sync with database
-      const cleanup = syncWithDatabase(true);
+    // User is logged in or in guest mode, sync with appropriate storage
+    const cleanup = syncWithDatabase(true);
 
-      return () => {
-        if (typeof cleanup === "function") {
-          cleanup();
-        }
-      };
-    }
-  }, [auth.user, syncWithDatabase]);
+    return () => {
+      // The cleanup function is now properly typed in syncWithDatabase to return () => void | void
+      if (typeof cleanup === "function") {
+        cleanup();
+      }
+    };
+  }, [auth.user, auth.isGuest, syncWithDatabase]);
 
   return <>{children}</>;
 }
