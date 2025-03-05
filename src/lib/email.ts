@@ -179,7 +179,7 @@ function getMagicLinkTemplate(link: string, email: string): string {
         </div>
         <div class="footer">
           <p>This email was sent to ${email}</p>
-          <p>&copy; ${new Date().getFullYear()} Everwood. All rights reserved.</p>
+          <p>&copy; ${new Date().getFullYear()} Everwood LLC. All rights reserved.</p>
         </div>
       </div>
     </body>

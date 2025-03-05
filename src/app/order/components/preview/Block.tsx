@@ -3,6 +3,7 @@
 import { useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import { useEffect, useMemo } from "react";
+import { useCustomStore } from "@/store/customStore";
 
 interface BlockProps {
   position: [number, number, number];
@@ -16,6 +17,7 @@ interface BlockProps {
   showColorInfo?: boolean;
   isGeometric?: boolean;
   rotation?: number;
+  reducedSize?: boolean;
   textureVariation?: {
     scale: number;
     offsetX: number;
@@ -279,12 +281,19 @@ export function Block({
     [uniqueTopTexture, color, isHovered, showWoodGrain, showColorInfo]
   );
 
+  const { useMini } = useCustomStore();
+
   if (isGeometric) {
+    // Apply 10% size reduction if reducedSize is true
+    const sizeScale = useMini ? 0.9 : 1.0;
+    const adjustedSize = size * sizeScale;
+    const adjustedHeight = height * sizeScale;
+
     return (
       <mesh
         position={adjustedPosition}
         rotation={[0, 0, rotation]}
-        scale={[size, size, height]}
+        scale={[adjustedSize, adjustedSize, adjustedHeight]}
         geometry={wedgeGeometry}
         material={geometricMaterial}
         castShadow

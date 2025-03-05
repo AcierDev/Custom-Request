@@ -10,17 +10,41 @@ interface PlywoodBaseProps {
   width: number;
   height: number;
   showWoodGrain?: boolean;
+  blockSize: number;
+  adjustedModelWidth: number;
+  adjustedModelHeight: number;
+  useMini: boolean;
 }
 
 export function PlywoodBase({
   width,
   height,
   showWoodGrain = true,
+  blockSize,
+  adjustedModelWidth,
+  adjustedModelHeight,
+  useMini,
 }: PlywoodBaseProps) {
   const baseThickness = 0.2;
   const texture = useLoader(TextureLoader, "/textures/plywood.jpg");
   const { selectedDesign, customPalette, isReversed, colorPattern } =
     useCustomStore();
+
+  // Compute offsets to align with the blocks grid
+  const totalWidth = adjustedModelWidth * blockSize;
+  const totalHeight = adjustedModelHeight * blockSize;
+  const offsetX = -totalWidth / 2 - 0.25;
+  const offsetY = -totalHeight / 2 - 0.25;
+
+  // Compute center position to align with the blocks grid
+  const centerX =
+    offsetX +
+    blockSize / 2 +
+    ((adjustedModelWidth - 1) * (useMini ? 0.9 : 1) * blockSize) / 2;
+  const centerY =
+    offsetY +
+    blockSize / 2 +
+    ((adjustedModelHeight - 1) * (useMini ? 0.9 : 1) * blockSize) / 2;
 
   // Get the appropriate color map
   let colorEntries: [string, { hex: string; name?: string }][] = [];
@@ -64,41 +88,17 @@ export function PlywoodBase({
   return (
     <>
       {/* Main plywood base */}
-      <mesh position={[-0.25, -0.25, -baseThickness / 2]} receiveShadow>
-        <boxGeometry args={[width, height, baseThickness]} />
+      <mesh position={[centerX, centerY, -baseThickness / 2]} receiveShadow>
+        <boxGeometry
+          args={[
+            width * (useMini ? 0.9 : 1),
+            height * (useMini ? 0.9 : 1),
+            baseThickness,
+          ]}
+        />
         <meshStandardMaterial
           map={showWoodGrain ? texture : null}
           roughness={0.8}
-          metalness={0.1}
-        />
-      </mesh>
-
-      {/* Left side */}
-      <mesh
-        position={[-0.248 - width / 2, -0.25, -0.1]}
-        rotation={[0, Math.PI / 2, 0]}
-        receiveShadow
-        castShadow
-      >
-        <boxGeometry args={[baseThickness + 0.001, height + 0.001, 0.005]} />
-        <meshStandardMaterial
-          color={leftColor}
-          roughness={0.7}
-          metalness={0.1}
-        />
-      </mesh>
-
-      {/* Right side */}
-      <mesh
-        position={[-0.248 + width / 2, -0.25, -0.1]}
-        rotation={[0, Math.PI / 2, 0]}
-        receiveShadow
-        castShadow
-      >
-        <boxGeometry args={[baseThickness + 0.001, height + 0.001, 0.005]} />
-        <meshStandardMaterial
-          color={rightColor}
-          roughness={0.7}
           metalness={0.1}
         />
       </mesh>

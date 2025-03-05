@@ -122,39 +122,6 @@ function OrderContent() {
         )}
       </AnimatePresence>
 
-      {/* Guest Mode Banner */}
-      <AnimatePresence>
-        {isGuest && (
-          <motion.div
-            initial={{ opacity: 0, y: -50 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -50 }}
-            transition={{ duration: 0.3 }}
-            className="absolute top-0 left-0 right-0 bg-gradient-to-r from-blue-500 to-teal-500 text-white py-2 px-4 z-50"
-          >
-            <div className="container mx-auto flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="h-5 w-5 rounded-full bg-white/30 flex items-center justify-center">
-                  <span className="text-xs font-semibold">G</span>
-                </div>
-                <span>
-                  You're using Everwood as a guest. Sign in to save your designs
-                  across devices.
-                </span>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => router.push("/sign-in")}
-                className="text-white border-white/40 hover:bg-white/20 hover:text-white"
-              >
-                Sign in
-              </Button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       <div
         className={`w-full h-full dark:bg-gray-900 flex justify-between p-8 ${
           isGuest || showBanner ? "pt-20" : ""

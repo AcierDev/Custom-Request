@@ -76,6 +76,7 @@ interface CustomState {
   selectedColors: string[];
   isRotated: boolean;
   patternStyle: PatternType;
+  useMini: boolean;
   isReversed: boolean;
   style: StyleType;
   savedPalettes: SavedPalette[];
@@ -111,6 +112,7 @@ interface CustomStore extends CustomState {
   setIsRotated: (value: boolean) => void;
   setPatternType: (type: PatternType) => void;
   setStyle: (style: StyleType) => void;
+  setUseMini: (value: boolean) => void;
   setShowRuler: (value: boolean) => void;
   setShowWoodGrain: (value: boolean) => void;
   setShowColorInfo: (value: boolean) => void;
@@ -216,6 +218,7 @@ export const useCustomStore = create<CustomStore>()(
     isRotated: false,
     patternStyle: "tiled",
     style: "geometric",
+    useMini: true,
     savedPalettes: [],
     activeTab: "create",
     editingPaletteId: null,
@@ -232,6 +235,7 @@ export const useCustomStore = create<CustomStore>()(
         pricing: calculatePrice(dimensions, state.shippingSpeed),
       }));
     },
+    setUseMini: (value: boolean) => set({ useMini: value }),
     setSelectedDesign: (design: ItemDesigns) => {
       const designName = design;
       set((state) => ({

@@ -144,7 +144,7 @@ export default function TermsOfService() {
           <CardContent className="space-y-4">
             <p>
               The Services and their original content, features, and
-              functionality are owned by Everwood and are protected by
+              functionality are owned by Everwood LLC and are protected by
               international copyright, trademark, patent, trade secret, and
               other intellectual property or proprietary rights laws.
             </p>

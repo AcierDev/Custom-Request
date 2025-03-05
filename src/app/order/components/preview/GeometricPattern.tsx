@@ -23,6 +23,7 @@ export function GeometricPattern({
     orientation,
     isReversed,
     isRotated,
+    useMini,
     customPalette,
   } = useCustomStore();
 
@@ -88,34 +89,6 @@ export function GeometricPattern({
     }
   }, [selectedDesign, customPalette.length]);
 
-  // Initialize rotation seeds and texture variations if not already done
-  if (
-    !rotationSeedsRef.current ||
-    rotationSeedsRef.current.length !== details?.blocks.width ||
-    rotationSeedsRef.current[0]?.length !== details?.blocks.height
-  ) {
-    rotationSeedsRef.current = Array(details?.blocks.width || 0)
-      .fill(0)
-      .map(() =>
-        Array(details?.blocks.height || 0)
-          .fill(0)
-          .map(() => Math.random() < 0.5)
-      );
-
-    textureVariationsRef.current = Array(details?.blocks.width || 0)
-      .fill(0)
-      .map((_, x) =>
-        Array(details?.blocks.height || 0)
-          .fill(0)
-          .map((_, y) => ({
-            scale: 0.15 + Math.abs(Math.sin(x * y * 3.14)) * 0.2,
-            offsetX: Math.abs((Math.sin(x * 2.5) * Math.cos(y * 1.7)) % 1),
-            offsetY: Math.abs((Math.cos(x * 1.8) * Math.sin(y * 2.2)) % 1),
-            rotation: (Math.sin(x * y) * Math.PI) / 6,
-          }))
-      );
-  }
-
   if (!details) return null;
 
   // Get the appropriate color map
@@ -133,18 +106,53 @@ export function GeometricPattern({
   }
 
   const { width: modelWidth, height: modelHeight } = details.blocks;
+
+  // Calculate adjusted dimensions for mini mode
+  const adjustedModelWidth = useMini ? Math.ceil(modelWidth * 1.1) : modelWidth;
+  const adjustedModelHeight = useMini
+    ? Math.ceil(modelHeight * 1.1)
+    : modelHeight;
+
   const blockSize = 0.5;
-  const totalWidth = modelWidth * blockSize;
-  const totalHeight = modelHeight * blockSize;
+  const totalWidth = adjustedModelWidth * blockSize;
+  const totalHeight = adjustedModelHeight * blockSize;
   const offsetX = -totalWidth / 2 - 0.25;
   const offsetY = -totalHeight / 2 - 0.25;
+
+  // Initialize rotation seeds and texture variations if not already done
+  if (
+    !rotationSeedsRef.current ||
+    rotationSeedsRef.current.length !== adjustedModelWidth ||
+    rotationSeedsRef.current[0]?.length !== adjustedModelHeight
+  ) {
+    rotationSeedsRef.current = Array(adjustedModelWidth)
+      .fill(0)
+      .map(() =>
+        Array(adjustedModelHeight)
+          .fill(0)
+          .map(() => Math.random() < 0.5)
+      );
+
+    textureVariationsRef.current = Array(adjustedModelWidth)
+      .fill(0)
+      .map((_, x) =>
+        Array(adjustedModelHeight)
+          .fill(0)
+          .map((_, y) => ({
+            scale: 0.15 + Math.abs(Math.sin(x * y * 3.14)) * 0.2,
+            offsetX: Math.abs((Math.sin(x * 2.5) * Math.cos(y * 1.7)) % 1),
+            offsetY: Math.abs((Math.cos(x * 1.8) * Math.sin(y * 2.2)) % 1),
+            rotation: (Math.sin(x * y) * Math.PI) / 6,
+          }))
+      );
+  }
 
   // Reset color counts for debugging
   colorCountsRef.current = {};
   debugInfoRef.current = {
-    totalBlocks: modelWidth * modelHeight,
+    totalBlocks: adjustedModelWidth * adjustedModelHeight,
     expectedPerColor: Math.floor(
-      (modelWidth * modelHeight) / colorEntries.length
+      (adjustedModelWidth * adjustedModelHeight) / colorEntries.length
     ),
     colorCounts: {},
     calculationSamples: [],
@@ -169,8 +177,8 @@ export function GeometricPattern({
   // Generate a new color map if needed
   if (
     !colorMapRef.current ||
-    colorMapRef.current.length !== modelWidth ||
-    colorMapRef.current[0]?.length !== modelHeight ||
+    colorMapRef.current.length !== adjustedModelWidth ||
+    colorMapRef.current[0]?.length !== adjustedModelHeight ||
     colorMapRef.current.orientation !== orientation ||
     colorMapRef.current.colorPattern !== colorPattern ||
     colorMapRef.current.isReversed !== isReversed ||
@@ -182,7 +190,7 @@ export function GeometricPattern({
     // Create a deterministic but visually pleasing distribution
     const generateColorMap = () => {
       // Total number of blocks
-      const totalBlocks = modelWidth * modelHeight;
+      const totalBlocks = adjustedModelWidth * adjustedModelHeight;
 
       // Calculate how many blocks each color should get
       const blocksPerColor = Math.floor(totalBlocks / colorEntries.length);
@@ -229,9 +237,9 @@ export function GeometricPattern({
       const shuffledColors = shuffleArray([...allColorIndices]);
 
       // Create the 2D color map
-      const colorMap: number[][] = Array(modelWidth)
+      const colorMap: number[][] = Array(adjustedModelWidth)
         .fill(0)
-        .map(() => Array(modelHeight).fill(0));
+        .map(() => Array(adjustedModelHeight).fill(0));
 
       // Distribute colors in a visually pleasing pattern
       // For fade patterns, we want to maintain some spatial coherence
@@ -245,8 +253,8 @@ export function GeometricPattern({
             // Calculate progress from edge to center
             const progress =
               orientation === "horizontal"
-                ? x / (modelWidth - 1) // Use width-1 to include the last position
-                : y / (modelHeight - 1); // Use height-1 to include the last position
+                ? x / (adjustedModelWidth - 1) // Use width-1 to include the last position
+                : y / (adjustedModelHeight - 1); // Use height-1 to include the last position
 
             // Transform progress to create center fade effect
             // This will make progress go from 0->1 for first half, and 1->0 for second half
@@ -266,19 +274,19 @@ export function GeometricPattern({
             // Regular fade pattern
             if (orientation === "horizontal") {
               return isReversed
-                ? (modelWidth - 1 - x) * modelHeight + y
-                : x * modelHeight + y;
+                ? (adjustedModelWidth - 1 - x) * adjustedModelHeight + y
+                : x * adjustedModelHeight + y;
             } else {
               return isReversed
-                ? x * modelHeight + (modelHeight - 1 - y)
-                : x * modelHeight + y;
+                ? x * adjustedModelHeight + (adjustedModelHeight - 1 - y)
+                : x * adjustedModelHeight + y;
             }
           }
         };
 
         // Fill the color map based on position
-        for (let x = 0; x < modelWidth; x++) {
-          for (let y = 0; y < modelHeight; y++) {
+        for (let x = 0; x < adjustedModelWidth; x++) {
+          for (let y = 0; y < adjustedModelHeight; y++) {
             const index = getPositionIndex(x, y);
             colorMap[x][y] = shuffledColors[index % shuffledColors.length];
           }
@@ -287,10 +295,10 @@ export function GeometricPattern({
         // Post-process: Randomize blocks within columns that have more than one color
         // Only do this for regular fade, not center-fade
         if (colorPattern === "fade") {
-          for (let x = 0; x < modelWidth; x++) {
+          for (let x = 0; x < adjustedModelWidth; x++) {
             // Check if this column has more than one color
             const colorsInColumn = new Set<number>();
-            for (let y = 0; y < modelHeight; y++) {
+            for (let y = 0; y < adjustedModelHeight; y++) {
               colorsInColumn.add(colorMap[x][y]);
             }
 
@@ -298,7 +306,7 @@ export function GeometricPattern({
             if (colorsInColumn.size > 1) {
               // Collect all colors in this column
               const columnColors: number[] = [];
-              for (let y = 0; y < modelHeight; y++) {
+              for (let y = 0; y < adjustedModelHeight; y++) {
                 columnColors.push(colorMap[x][y]);
               }
 
@@ -306,7 +314,7 @@ export function GeometricPattern({
               const shuffledColumnColors = shuffleArray([...columnColors]);
 
               // Apply the shuffled colors back to the column
-              for (let y = 0; y < modelHeight; y++) {
+              for (let y = 0; y < adjustedModelHeight; y++) {
                 colorMap[x][y] = shuffledColumnColors[y];
               }
             }
@@ -320,16 +328,16 @@ export function GeometricPattern({
           // If reversed, we'll fill the array in reverse order
           if (orientation === "horizontal") {
             // Reverse the x direction
-            for (let x = modelWidth - 1; x >= 0; x--) {
-              for (let y = 0; y < modelHeight; y++) {
+            for (let x = adjustedModelWidth - 1; x >= 0; x--) {
+              for (let y = 0; y < adjustedModelHeight; y++) {
                 colorMap[x][y] =
                   shuffledColors[index++ % shuffledColors.length];
               }
             }
           } else {
             // Reverse the y direction
-            for (let x = 0; x < modelWidth; x++) {
-              for (let y = modelHeight - 1; y >= 0; y--) {
+            for (let x = 0; x < adjustedModelWidth; x++) {
+              for (let y = adjustedModelHeight - 1; y >= 0; y--) {
                 colorMap[x][y] =
                   shuffledColors[index++ % shuffledColors.length];
               }
@@ -337,8 +345,8 @@ export function GeometricPattern({
           }
         } else {
           // Normal order
-          for (let x = 0; x < modelWidth; x++) {
-            for (let y = 0; y < modelHeight; y++) {
+          for (let x = 0; x < adjustedModelWidth; x++) {
+            for (let y = 0; y < adjustedModelHeight; y++) {
               colorMap[x][y] = shuffledColors[index++ % shuffledColors.length];
             }
           }
@@ -442,60 +450,6 @@ export function GeometricPattern({
     );
   };
 
-  // Log debug information after rendering
-  useEffect(() => {
-    // Wait for all blocks to be rendered
-    const timer = setTimeout(() => {
-      // Calculate percentage of each color
-      const percentages = Object.entries(debugInfoRef.current.colorCounts).map(
-        ([colorIndex, count]) => ({
-          colorIndex: parseInt(colorIndex),
-          count,
-          percentage: (count / debugInfoRef.current.totalBlocks) * 100,
-        })
-      );
-
-      // Check for missing colors
-      const missingColors = [];
-      for (let i = 0; i < colorEntries.length; i++) {
-        if (!debugInfoRef.current.colorCounts[i]) {
-          missingColors.push(i);
-        }
-      }
-
-      if (missingColors.length > 0) {
-        console.warn("Missing colors:", missingColors);
-      }
-
-      // Check for uneven distribution
-      const expectedCount = debugInfoRef.current.expectedPerColor;
-      const unevenColors = Object.entries(debugInfoRef.current.colorCounts)
-        .filter(([_, count]) => Math.abs(count - expectedCount) > 1)
-        .map(([colorIndex, count]) => ({
-          colorIndex: parseInt(colorIndex),
-          count,
-          difference: count - expectedCount,
-        }));
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [
-    colorEntries.length,
-    modelWidth,
-    modelHeight,
-    orientation,
-    colorPattern,
-    isReversed,
-    isRotated,
-  ]);
-
-  // Calculate the position offset for vertical orientation
-  // When rotated, we need to adjust the position to keep the model centered
-  const verticalPositionOffset =
-    orientation === "vertical"
-      ? [0, 0, 0] // Center position for vertical orientation
-      : [0, 0, 0]; // Center position for horizontal orientation
-
   return (
     <>
       <group
@@ -503,17 +457,16 @@ export function GeometricPattern({
           customPalette.length
         }-${colorPattern}-${orientation}-${isReversed ? 1 : 0}-${
           isRotated ? 1 : 0
-        }`}
+        }-${useMini ? 1 : 0}`}
         rotation={
           orientation === "vertical"
             ? isReversed
               ? [0, 0, -Math.PI / 2]
               : [0, 0, Math.PI / 2]
-            : [0, 0, 0] // No rotation for horizontal
+            : [0, 0, 0]
         }
         position={[0, 0, 0]}
         onClick={(e) => {
-          // Clear pinned info when clicking outside blocks
           if (e.object.type === "Group") {
             setPinnedInfo(null);
           }
@@ -523,11 +476,14 @@ export function GeometricPattern({
           width={totalWidth}
           height={totalHeight}
           showWoodGrain={showWoodGrain}
+          blockSize={blockSize}
+          adjustedModelWidth={adjustedModelWidth}
+          adjustedModelHeight={adjustedModelHeight}
+          useMini={useMini}
         />
 
-        {/* Render blocks using the Block component */}
-        {Array.from({ length: modelWidth }).map((_, x) =>
-          Array.from({ length: modelHeight }).map((_, y) => {
+        {Array.from({ length: adjustedModelWidth }).map((_, x) =>
+          Array.from({ length: adjustedModelHeight }).map((_, y) => {
             const colorIndex = getColorIndexDebug(x, y);
 
             const colorEntry = colorEntries[colorIndex];
@@ -535,8 +491,10 @@ export function GeometricPattern({
             const colorName = colorEntry?.[1].name;
 
             // Calculate position based on orientation
-            const xPos = x * blockSize + offsetX + blockSize / 2;
-            const yPos = y * blockSize + offsetY + blockSize / 2;
+            const xPos =
+              x * (useMini ? 0.9 : 1) * blockSize + offsetX + blockSize / 2;
+            const yPos =
+              y * (useMini ? 0.9 : 1) * blockSize + offsetY + blockSize / 2;
             const zPos = blockSize / 2 - 0.401;
 
             const isHorizontal = shouldBeHorizontal(x, y);

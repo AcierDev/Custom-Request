@@ -15,6 +15,8 @@ import {
   MoveVertical,
   ArrowLeftRight,
   RotateCcw,
+  Minimize2,
+  Maximize2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
@@ -81,7 +83,7 @@ export default function DesignPage() {
         <DesignCard compact />
         <SizeCard compact />
         <StyleCard compact />
-
+        <MiniCard compact />
         <PatternControls />
       </div>
 
@@ -186,6 +188,41 @@ export default function DesignPage() {
         </Button>
       </div>
     </div>
+  );
+}
+
+// Add the MiniCard component
+function MiniCard({ compact = false }: { compact?: boolean }) {
+  const { useMini, setUseMini } = useCustomStore();
+
+  return (
+    <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200 dark:border-gray-700 shadow-lg">
+      <div className="p-3 space-y-2">
+        <Label className="text-sm text-gray-700 dark:text-gray-300">
+          Size Mode
+        </Label>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant={useMini ? "default" : "outline"}
+            className={useMini ? "bg-purple-600 hover:bg-purple-700" : ""}
+            onClick={() => setUseMini(true)}
+          >
+            <Minimize2 className="w-4 h-4 mr-1" />
+            <span className="text-xs">Mini</span>
+          </Button>
+          <Button
+            size="sm"
+            variant={!useMini ? "default" : "outline"}
+            className={!useMini ? "bg-purple-600 hover:bg-purple-700" : ""}
+            onClick={() => setUseMini(false)}
+          >
+            <Maximize2 className="w-4 h-4 mr-1" />
+            <span className="text-xs">Full</span>
+          </Button>
+        </div>
+      </div>
+    </Card>
   );
 }
 

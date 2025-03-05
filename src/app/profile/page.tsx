@@ -115,10 +115,19 @@ export default function ProfilePage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-          <p className="text-muted-foreground">Loading your profile...</p>
-        </div>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex flex-col items-center space-y-4"
+        >
+          <div className="relative w-12 h-12">
+            <div className="absolute top-0 left-0 w-full h-full border-4 border-primary/20 rounded-full"></div>
+            <div className="absolute top-0 left-0 w-full h-full border-4 border-t-primary rounded-full animate-spin"></div>
+          </div>
+          <p className="text-muted-foreground font-medium">
+            Loading your profile...
+          </p>
+        </motion.div>
       </div>
     );
   }
@@ -126,33 +135,36 @@ export default function ProfilePage() {
   // Show guest user profile
   if (isGuest) {
     return (
-      <div className="container max-w-6xl py-8">
+      <div className="container max-w-6xl py-8 px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
         >
-          <Card className="shadow-md">
-            <CardHeader className="pb-2 border-b">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <Avatar className="h-16 w-16 border-2 border-blue-200">
-                    <AvatarFallback className="text-xl bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300">
+          <Card className="shadow-lg border-2 border-primary/10 dark:border-primary/5">
+            <CardHeader className="pb-2 border-b dark:border-border/50">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="flex items-center gap-6">
+                  <Avatar className="h-20 w-20 ring-2 ring-primary/20 ring-offset-2 ring-offset-background transition-shadow duration-300 hover:ring-primary/30">
+                    <AvatarFallback className="text-2xl bg-primary/10 text-primary font-semibold">
                       G
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <h1 className="text-3xl font-bold">Guest User</h1>
-                    <p className="text-muted-foreground">
+                    <h1 className="text-3xl font-bold tracking-tight">
+                      Guest User
+                    </h1>
+                    <p className="text-muted-foreground mt-1">
                       You're currently using Everwood as a guest
                     </p>
                   </div>
                 </div>
                 <Button
                   onClick={() => router.push("/sign-in")}
-                  className="md:self-start"
+                  className="md:self-start shadow-sm hover:shadow-md transition-shadow duration-300"
+                  size="lg"
                 >
-                  <LogIn className="mr-2 h-4 w-4" />
+                  <LogIn className="mr-2 h-5 w-5" />
                   Sign in
                 </Button>
               </div>
@@ -294,39 +306,58 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="container max-w-6xl py-8">
+    <div className="container max-w-6xl py-8 px-4 sm:px-6 lg:px-8">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
       >
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
-          <div className="flex items-center space-x-4">
-            <Avatar className="h-16 w-16 border-2 border-primary">
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-8 mb-8">
+          <motion.div
+            className="flex items-start space-x-6"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <Avatar className="h-24 w-24 ring-2 ring-primary/20 ring-offset-2 ring-offset-background transition-shadow duration-300 hover:ring-primary/30">
               <AvatarImage
                 src={user.image || ""}
                 alt={user.name || user.email}
               />
-              <AvatarFallback className="text-xl bg-primary/10 text-primary">
+              <AvatarFallback className="text-2xl bg-primary/10 text-primary font-semibold">
                 {getUserInitials()}
               </AvatarFallback>
             </Avatar>
             <div>
-              <h1 className="text-3xl font-bold">{user.name || "User"}</h1>
-              <p className="text-muted-foreground">{user.email}</p>
-              <div className="flex items-center mt-1">
-                <Badge variant="outline" className="mr-2">
+              <h1 className="text-4xl font-bold tracking-tight">
+                {user.name || "User"}
+              </h1>
+              <p className="text-muted-foreground mt-1">{user.email}</p>
+              <div className="flex items-center mt-3 gap-2">
+                <Badge
+                  variant="outline"
+                  className="px-3 py-1 text-sm font-medium"
+                >
                   {user.provider || "Account"}
                 </Badge>
-                <Badge variant="secondary">Member</Badge>
+                <Badge
+                  variant="secondary"
+                  className="px-3 py-1 text-sm font-medium"
+                >
+                  Member
+                </Badge>
               </div>
             </div>
-          </div>
-          <div className="mt-4 md:mt-0 flex space-x-2">
+          </motion.div>
+          <motion.div
+            className="flex gap-3"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+          >
             <Button
               variant="outline"
-              size="sm"
-              className="flex items-center"
+              className="flex items-center shadow-sm hover:shadow-md transition-all duration-300"
               onClick={() => setIsEditing(true)}
             >
               <Edit className="mr-2 h-4 w-4" />
@@ -334,44 +365,63 @@ export default function ProfilePage() {
             </Button>
             <Button
               variant="destructive"
-              size="sm"
-              className="flex items-center"
+              className="flex items-center shadow-sm hover:shadow-md transition-all duration-300"
               onClick={() => setConfirmingSignOut(true)}
             >
               <LogOut className="mr-2 h-4 w-4" />
               Sign Out
             </Button>
-          </div>
+          </motion.div>
         </div>
 
         <Tabs
           defaultValue="overview"
           value={activeTab}
           onValueChange={setActiveTab}
-          className="space-y-4"
+          className="space-y-6"
         >
-          <TabsList className="grid grid-cols-3 md:w-[400px]">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="designs">My Designs</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
+          <TabsList className="inline-flex h-12 items-center text-muted-foreground bg-background border-2 border-primary/10 dark:border-primary/5 rounded-lg p-1 shadow-sm">
+            <TabsTrigger
+              value="overview"
+              className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-6 py-2.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm"
+            >
+              Overview
+            </TabsTrigger>
+            <TabsTrigger
+              value="designs"
+              className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-6 py-2.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm"
+            >
+              My Designs
+            </TabsTrigger>
+            <TabsTrigger
+              value="settings"
+              className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-6 py-2.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm"
+            >
+              Settings
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-4">
+          <TabsContent value="overview">
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
             >
-              <Card className="shadow-md">
-                <CardHeader>
-                  <CardTitle>Account Overview</CardTitle>
-                  <CardDescription>
+              <Card className="shadow-lg border-2 border-primary/10 dark:border-primary/5">
+                <CardHeader className="space-y-2">
+                  <CardTitle className="text-2xl">Account Overview</CardTitle>
+                  <CardDescription className="text-base">
                     View a summary of your account and recent activity
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Card className="bg-primary/5 border-primary/20">
+                <CardContent className="space-y-8">
+                  <motion.div
+                    className="grid grid-cols-1 md:grid-cols-3 gap-6"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                  >
+                    <Card className="bg-primary/5 border-2 border-primary/10 dark:bg-primary/[0.03] dark:border-primary/5 transition-shadow duration-300 hover:shadow-md">
                       <CardHeader className="pb-2">
                         <CardTitle className="text-sm font-medium text-muted-foreground">
                           Saved Designs
@@ -379,13 +429,15 @@ export default function ProfilePage() {
                       </CardHeader>
                       <CardContent>
                         <div className="flex items-center justify-between">
-                          <span className="text-2xl font-bold">1</span>
-                          <ShoppingCart className="h-5 w-5 text-primary" />
+                          <span className="text-3xl font-bold text-primary">
+                            1
+                          </span>
+                          <ShoppingCart className="h-6 w-6 text-primary/60" />
                         </div>
                       </CardContent>
                     </Card>
 
-                    <Card className="bg-primary/5 border-primary/20">
+                    <Card className="bg-primary/5 border-2 border-primary/10 dark:bg-primary/[0.03] dark:border-primary/5 transition-shadow duration-300 hover:shadow-md">
                       <CardHeader className="pb-2">
                         <CardTitle className="text-sm font-medium text-muted-foreground">
                           Saved Palettes
@@ -393,15 +445,15 @@ export default function ProfilePage() {
                       </CardHeader>
                       <CardContent>
                         <div className="flex items-center justify-between">
-                          <span className="text-2xl font-bold">
+                          <span className="text-3xl font-bold text-primary">
                             {savedPalettes.length}
                           </span>
-                          <Palette className="h-5 w-5 text-primary" />
+                          <Palette className="h-6 w-6 text-primary/60" />
                         </div>
                       </CardContent>
                     </Card>
 
-                    <Card className="bg-primary/5 border-primary/20">
+                    <Card className="bg-primary/5 border-2 border-primary/10 dark:bg-primary/[0.03] dark:border-primary/5 transition-shadow duration-300 hover:shadow-md">
                       <CardHeader className="pb-2">
                         <CardTitle className="text-sm font-medium text-muted-foreground">
                           Last Saved
@@ -409,14 +461,14 @@ export default function ProfilePage() {
                       </CardHeader>
                       <CardContent>
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium truncate">
+                          <span className="text-3xl font-bold text-primary">
                             {formatLastSaved()}
                           </span>
-                          <Clock className="h-5 w-5 text-primary" />
+                          <Clock className="h-6 w-6 text-primary/60" />
                         </div>
                       </CardContent>
                     </Card>
-                  </div>
+                  </motion.div>
 
                   <div>
                     <h3 className="text-lg font-medium mb-2">
@@ -505,13 +557,13 @@ export default function ProfilePage() {
             </motion.div>
           </TabsContent>
 
-          <TabsContent value="designs" className="space-y-4">
+          <TabsContent value="designs">
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
             >
-              <Card className="shadow-md">
+              <Card className="shadow-lg border-2 border-primary/10 dark:border-primary/5">
                 <CardHeader>
                   <CardTitle>My Designs</CardTitle>
                   <CardDescription>
@@ -626,13 +678,13 @@ export default function ProfilePage() {
             </motion.div>
           </TabsContent>
 
-          <TabsContent value="settings" className="space-y-4">
+          <TabsContent value="settings">
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
             >
-              <Card className="shadow-md">
+              <Card className="shadow-lg border-2 border-primary/10 dark:border-primary/5">
                 <CardHeader>
                   <CardTitle>Account Settings</CardTitle>
                   <CardDescription>
@@ -696,16 +748,16 @@ export default function ProfilePage() {
 
       {/* Edit Profile Dialog */}
       <Dialog open={isEditing} onOpenChange={setIsEditing}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] shadow-lg border-2 border-primary/10 dark:border-primary/5">
           <DialogHeader>
-            <DialogTitle>Edit Profile</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-2xl">Edit Profile</DialogTitle>
+            <DialogDescription className="text-base">
               Update your profile information.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-6 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
+              <Label htmlFor="name" className="text-right font-medium">
                 Name
               </Label>
               <Input
@@ -716,18 +768,18 @@ export default function ProfilePage() {
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="email" className="text-right">
+              <Label htmlFor="email" className="text-right font-medium">
                 Email
               </Label>
               <Input
                 id="email"
                 value={user.email}
                 disabled
-                className="col-span-3"
+                className="col-span-3 bg-muted"
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setIsEditing(false)}>
               Cancel
             </Button>
@@ -739,6 +791,7 @@ export default function ProfilePage() {
                 );
                 setIsEditing(false);
               }}
+              className="shadow-sm hover:shadow-md transition-shadow duration-300"
             >
               Save changes
             </Button>
@@ -748,21 +801,25 @@ export default function ProfilePage() {
 
       {/* Sign Out Confirmation Dialog */}
       <Dialog open={confirmingSignOut} onOpenChange={setConfirmingSignOut}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] shadow-lg border-2 border-primary/10 dark:border-primary/5">
           <DialogHeader>
-            <DialogTitle>Sign Out</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-2xl">Sign Out</DialogTitle>
+            <DialogDescription className="text-base">
               Are you sure you want to sign out of your account?
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="gap-2">
             <Button
               variant="outline"
               onClick={() => setConfirmingSignOut(false)}
             >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={signOut}>
+            <Button
+              variant="destructive"
+              onClick={signOut}
+              className="shadow-sm hover:shadow-md transition-shadow duration-300"
+            >
               Sign Out
             </Button>
           </DialogFooter>
