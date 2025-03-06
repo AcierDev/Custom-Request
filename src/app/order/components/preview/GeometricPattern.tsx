@@ -114,8 +114,11 @@ export function GeometricPattern({
     : modelHeight;
 
   const blockSize = 0.5;
-  const totalWidth = adjustedModelWidth * blockSize;
-  const totalHeight = adjustedModelHeight * blockSize;
+  const blockSpacing = useMini ? 0.9 : 1; // Extract the spacing factor
+
+  // Calculate total dimensions based on actual block spacing
+  const totalWidth = adjustedModelWidth * blockSize * blockSpacing;
+  const totalHeight = adjustedModelHeight * blockSize * blockSpacing;
   const offsetX = -totalWidth / 2 - 0.25;
   const offsetY = -totalHeight / 2 - 0.25;
 
@@ -491,11 +494,9 @@ export function GeometricPattern({
             const colorName = colorEntry?.[1].name;
 
             // Calculate position based on orientation
-            const xPos =
-              x * (useMini ? 0.9 : 1) * blockSize + offsetX + blockSize / 2;
-            const yPos =
-              y * (useMini ? 0.9 : 1) * blockSize + offsetY + blockSize / 2;
-            const zPos = blockSize / 2 - 0.401;
+            const xPos = x * blockSpacing * blockSize + offsetX + blockSize / 2;
+            const yPos = y * blockSpacing * blockSize + offsetY + blockSize / 2;
+            const zPos = blockSize / 2 - (useMini ? 0.41 : 0.401);
 
             const isHorizontal = shouldBeHorizontal(x, y);
             const rotation = getRotation(x, y, isHorizontal);

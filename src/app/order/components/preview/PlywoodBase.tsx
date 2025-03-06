@@ -33,18 +33,14 @@ export function PlywoodBase({
   // Compute offsets to align with the blocks grid
   const totalWidth = adjustedModelWidth * blockSize;
   const totalHeight = adjustedModelHeight * blockSize;
-  const offsetX = -totalWidth / 2 - 0.25;
-  const offsetY = -totalHeight / 2 - 0.25;
+  const offsetX = -totalWidth / 2 - 0.25 + (useMini ? 0.03 : 0);
+  const offsetY = -totalHeight / 2 - 0.25 + (useMini ? 0.03 : 0);
 
   // Compute center position to align with the blocks grid
   const centerX =
-    offsetX +
-    blockSize / 2 +
-    ((adjustedModelWidth - 1) * (useMini ? 0.9 : 1) * blockSize) / 2;
+    offsetX + blockSize / 2 + ((adjustedModelWidth - 1) * blockSize) / 2;
   const centerY =
-    offsetY +
-    blockSize / 2 +
-    ((adjustedModelHeight - 1) * (useMini ? 0.9 : 1) * blockSize) / 2;
+    offsetY + blockSize / 2 + ((adjustedModelHeight - 1) * blockSize) / 2;
 
   // Get the appropriate color map
   let colorEntries: [string, { hex: string; name?: string }][] = [];
@@ -89,13 +85,7 @@ export function PlywoodBase({
     <>
       {/* Main plywood base */}
       <mesh position={[centerX, centerY, -baseThickness / 2]} receiveShadow>
-        <boxGeometry
-          args={[
-            width * (useMini ? 0.9 : 1),
-            height * (useMini ? 0.9 : 1),
-            baseThickness,
-          ]}
-        />
+        <boxGeometry args={[width, height, baseThickness]} />
         <meshStandardMaterial
           map={showWoodGrain ? texture : null}
           roughness={0.8}

@@ -25,35 +25,19 @@ const geistMono = localFont({
 
 // Create a client component for the content
 function LayoutContent({ children }: { children: React.ReactNode }) {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-300 dark:bg-gray-900">
+    <div className="flex h-screen bg-gray-300 dark:bg-gray-900">
       <SpeedInsights />
       <MobileWarning />
-      <Navbar
-        onOpenSettings={() => {}}
-        sidebarOpen={sidebarOpen}
-        onSidebarOpenChange={setSidebarOpen}
-      />
-      <div className="flex-1 overflow-auto flex flex-col">
-        <div
-          className={`${
-            sidebarOpen ? "lg:ml-64" : "lg:ml-16"
-          } mt-14 lg:mt-0 transition-[margin] duration-300 flex-1`}
-        >
-          <main className="w-full px-4 sm:px-6 lg:px-8 min-h-[calc(100vh-64px)]">
+      <Navbar onOpenSettings={() => {}} />
+      <div className="flex-1 flex flex-col">
+        <div className="lg:ml-64 mt-14 lg:mt-0 transition-[margin] duration-300 flex flex-col h-full">
+          <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 overflow-y-auto pb-16">
             {children}
           </main>
         </div>
-        <div
-          className={`${
-            sidebarOpen ? "lg:ml-64" : "lg:ml-16"
-          } transition-[margin] duration-300`}
-        >
-          <Footer />
-        </div>
       </div>
+      {/* <Footer /> */}
     </div>
   );
 }

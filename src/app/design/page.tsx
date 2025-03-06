@@ -199,7 +199,7 @@ function MiniCard({ compact = false }: { compact?: boolean }) {
     <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200 dark:border-gray-700 shadow-lg">
       <div className="p-3 space-y-2">
         <Label className="text-sm text-gray-700 dark:text-gray-300">
-          Size Mode
+          Block Size
         </Label>
         <div className="flex gap-2">
           <Button
