@@ -29,7 +29,7 @@ export function GeometricLighting() {
       <directionalLight
         position={[15, 5, 5]}
         castShadow
-        intensity={0.3}
+        intensity={0.7}
         shadow-mapSize-width={1024}
         shadow-mapSize-height={1024}
       ></directionalLight>
@@ -37,7 +37,7 @@ export function GeometricLighting() {
       <directionalLight
         position={[15, -5, 5]}
         castShadow
-        intensity={0.3}
+        intensity={0.7}
         shadow-mapSize-width={1024}
         shadow-mapSize-height={1024}
       ></directionalLight>
@@ -55,6 +55,14 @@ export function GeometricLighting() {
         position={[-15, -2, 5]}
         castShadow
         intensity={0.3}
+        shadow-mapSize-width={1024}
+        shadow-mapSize-height={1024}
+      ></directionalLight>
+
+      <directionalLight
+        position={[0, 0, -5]}
+        castShadow
+        intensity={0.5}
         shadow-mapSize-width={1024}
         shadow-mapSize-height={1024}
       ></directionalLight>
@@ -88,7 +96,7 @@ export function TiledLighting() {
         <directionalLight
           position={[15, 5, 5]}
           castShadow
-          intensity={1}
+          intensity={0.8}
           shadow-mapSize-width={1024}
           shadow-mapSize-height={1024}
         ></directionalLight>
@@ -96,7 +104,7 @@ export function TiledLighting() {
         <directionalLight
           position={[15, -5, 5]}
           castShadow
-          intensity={1}
+          intensity={0.8}
           shadow-mapSize-width={1024}
           shadow-mapSize-height={1024}
         ></directionalLight>

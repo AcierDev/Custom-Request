@@ -7,10 +7,10 @@ import { SizeCard } from "@/app/order/components/SizeCard";
 import { PriceCard } from "@/app/order/components/PriceCard";
 import { ShippingCard } from "@/app/order/components/ShippingCard";
 import { DimensionsCard } from "@/app/order/components/DimensionsCard";
-import { ShippingDurationCard } from "@/app/order/components/ShippingDurationCard";
 import { PreviewCard } from "@/app/order/components/PreviewCard";
 import { StyleCard } from "@/app/order/components/StyleCard";
 import { ShareCard } from "@/app/order/components/ShareCard";
+import { OrderCard } from "@/app/order/components/OrderCard";
 import { useCustomStore } from "@/store/customStore";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -143,9 +143,9 @@ function OrderContent() {
         {/* Right column */}
         <div className="flex flex-col gap-4 w-1/4">
           <DimensionsCard />
-          <ShippingDurationCard />
           <PriceCard />
           <ShareCard />
+          <OrderCard />
         </div>
       </div>
     </div>

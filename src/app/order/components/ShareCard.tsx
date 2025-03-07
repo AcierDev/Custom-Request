@@ -64,10 +64,6 @@ export function ShareCard() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            Generate a link to share your current design with others.
-          </p>
-
           <Button
             onClick={handleGenerateLink}
             disabled={isGenerating}

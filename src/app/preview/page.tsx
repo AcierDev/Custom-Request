@@ -21,6 +21,7 @@ import { ColorInfoHint } from "../order/components/preview/ColorInfoHint";
 import { Ruler3D } from "../order/components/preview/Ruler3D";
 import { ItemDesigns } from "@/typings/types";
 import { cn } from "@/lib/utils";
+import { ShareDialog } from "@/components/ShareDialog";
 
 export default function PreviewPage() {
   const router = useRouter();
@@ -28,6 +29,7 @@ export default function PreviewPage() {
   const { viewSettings, selectedDesign, customPalette, dimensions, style } =
     useCustomStore();
   const { showRuler, showWoodGrain, showColorInfo } = viewSettings;
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -159,11 +161,20 @@ export default function PreviewPage() {
           <Download className="w-4 h-4 mr-2" />
           Save Image
         </Button>
-        <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white">
+        <Button
+          className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+          onClick={() => setIsShareDialogOpen(true)}
+        >
           <Share className="w-4 h-4 mr-2" />
           Share Design
         </Button>
       </div>
+
+      {/* Share Dialog */}
+      <ShareDialog
+        isOpen={isShareDialogOpen}
+        onClose={() => setIsShareDialogOpen(false)}
+      />
     </div>
   );
 }

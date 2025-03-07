@@ -39,6 +39,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { SizeCard } from "../order/components/SizeCard";
 import { StyleCard } from "../order/components/StyleCard";
 import { DesignCard } from "../order/components/DesignCard";
+import { ShareDialog } from "@/components/ShareDialog";
 
 export default function DesignPage() {
   const router = useRouter();
@@ -46,6 +47,7 @@ export default function DesignPage() {
   const { viewSettings, selectedDesign, customPalette, dimensions, style } =
     useCustomStore();
   const { showRuler, showWoodGrain, showColorInfo } = viewSettings;
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -182,11 +184,20 @@ export default function DesignPage() {
           <Download className="w-4 h-4 mr-2" />
           Save Image
         </Button>
-        <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white">
+        <Button
+          className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+          onClick={() => setIsShareDialogOpen(true)}
+        >
           <Share className="w-4 h-4 mr-2" />
           Share Design
         </Button>
       </div>
+
+      {/* Share Dialog */}
+      <ShareDialog
+        isOpen={isShareDialogOpen}
+        onClose={() => setIsShareDialogOpen(false)}
+      />
     </div>
   );
 }

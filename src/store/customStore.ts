@@ -86,6 +86,7 @@ interface CustomState {
     showRuler: boolean;
     showWoodGrain: boolean;
     showColorInfo: boolean;
+    showHanger: boolean;
   };
   lastSaved: number; // Add timestamp for last save
   autoSaveEnabled: boolean; // Flag to enable/disable auto-save
@@ -116,6 +117,7 @@ interface CustomStore extends CustomState {
   setShowRuler: (value: boolean) => void;
   setShowWoodGrain: (value: boolean) => void;
   setShowColorInfo: (value: boolean) => void;
+  setShowHanger: (value: boolean) => void;
   savePalette: (name: string) => void;
   updatePalette: (id: string, updates: Partial<SavedPalette>) => void;
   deletePalette: (id: string) => void;
@@ -135,6 +137,12 @@ interface CustomStore extends CustomState {
   syncWithDatabase: (autoSave?: boolean) => (() => void) | void;
   setAutoSaveEnabled: (enabled: boolean) => void;
   saveToLocalStorage: () => boolean;
+  createDraftOrder: () => Promise<{
+    success: boolean;
+    checkoutUrl?: string;
+    error?: string;
+    draftOrder?: any;
+  }>;
 }
 
 interface HoverState {
@@ -183,6 +191,7 @@ interface PersistentState extends ShareableState {
     showRuler: boolean;
     showWoodGrain: boolean;
     showColorInfo: boolean;
+    showHanger: boolean;
   };
 }
 
@@ -226,6 +235,7 @@ export const useCustomStore = create<CustomStore>()(
       showRuler: false,
       showWoodGrain: true,
       showColorInfo: false,
+      showHanger: true,
     },
     lastSaved: 0,
     autoSaveEnabled: true,
@@ -404,6 +414,10 @@ export const useCustomStore = create<CustomStore>()(
     setShowColorInfo: (value) =>
       set((state) => ({
         viewSettings: { ...state.viewSettings, showColorInfo: value },
+      })),
+    setShowHanger: (value) =>
+      set((state) => ({
+        viewSettings: { ...state.viewSettings, showHanger: value },
       })),
     savePalette: (name) =>
       set((state) => {
@@ -871,6 +885,56 @@ export const useCustomStore = create<CustomStore>()(
 
     // Toggle auto-save functionality
     setAutoSaveEnabled: (enabled) => set({ autoSaveEnabled: enabled }),
+
+    // Add the createDraftOrder method
+    createDraftOrder: async () => {
+      try {
+        // Save the current design state before creating the order
+        const state = get();
+
+        // Create the draft order
+        const response = await fetch("/api/create-draft-order", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            dimensions: state.dimensions,
+            selectedDesign: state.selectedDesign,
+            shippingSpeed: state.shippingSpeed,
+            colorPattern: state.colorPattern,
+            orientation: state.orientation,
+            customPalette: state.customPalette,
+            pricing: state.pricing,
+            isReversed: state.isReversed,
+            patternStyle: state.patternStyle,
+            style: state.style,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          return {
+            success: false,
+            error: data.error || "Failed to create order",
+          };
+        }
+
+        return {
+          success: true,
+          checkoutUrl: data.checkoutUrl || null,
+          draftOrder: data.draftOrder || null,
+        };
+      } catch (error) {
+        console.error("Error creating order:", error);
+        return {
+          success: false,
+          error:
+            error instanceof Error ? error.message : "Failed to create order",
+        };
+      }
+    },
   }))
 );
 

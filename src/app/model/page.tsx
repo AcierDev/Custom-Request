@@ -1,7 +1,7 @@
 "use client";
 
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, useGLTF } from "@react-three/drei";
+import { OrbitControls, useGLTF, useFBX } from "@react-three/drei";
 import { Suspense, useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Info, Sun, SunDim } from "lucide-react";
@@ -16,7 +16,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader";
 
 const MODELS = [
   {
@@ -29,6 +28,12 @@ const MODELS = [
     id: "kitchen",
     name: "Kitchen",
     path: "/models/kitchen.fbx",
+    format: "fbx",
+  },
+  {
+    id: "hanger",
+    name: "Hanger",
+    path: "/models/hanger.fbx",
     format: "fbx",
   },
 ] as const;
@@ -68,8 +73,7 @@ function Model({ filePath }: { filePath: string }) {
   useEffect(() => {
     const loadModel = async () => {
       if (filePath.endsWith(".fbx")) {
-        const fbxLoader = new FBXLoader();
-        const fbxModel = await fbxLoader.loadAsync(filePath);
+        const fbxModel = useFBX(filePath);
 
         // Apply materials and shadows
         fbxModel.traverse((child: any) => {

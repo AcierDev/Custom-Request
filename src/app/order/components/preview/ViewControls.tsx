@@ -5,16 +5,21 @@ import { useCustomStore } from "@/store/customStore";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Ruler, Grid, Info } from "lucide-react";
+import { Ruler, Grid, Info, Paperclip } from "lucide-react";
 
 interface ViewControlsProps {
   className?: string;
 }
 
 export function ViewControls({ className = "" }: ViewControlsProps) {
-  const { viewSettings, setShowRuler, setShowWoodGrain, setShowColorInfo } =
-    useCustomStore();
-  const { showRuler, showWoodGrain, showColorInfo } = viewSettings;
+  const {
+    viewSettings,
+    setShowRuler,
+    setShowWoodGrain,
+    setShowColorInfo,
+    setShowHanger,
+  } = useCustomStore();
+  const { showRuler, showWoodGrain, showColorInfo, showHanger } = viewSettings;
 
   return (
     <motion.div
@@ -52,6 +57,20 @@ export function ViewControls({ className = "" }: ViewControlsProps) {
               <Switch
                 checked={showWoodGrain}
                 onCheckedChange={setShowWoodGrain}
+                className="data-[state=checked]:bg-purple-600"
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Paperclip className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                <span className="text-sm text-gray-700 dark:text-gray-300">
+                  Show Hanger
+                </span>
+              </div>
+              <Switch
+                checked={showHanger}
+                onCheckedChange={setShowHanger}
                 className="data-[state=checked]:bg-purple-600"
               />
             </div>

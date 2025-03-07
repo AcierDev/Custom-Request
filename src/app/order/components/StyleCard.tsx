@@ -25,12 +25,12 @@ const styles: {
     icon: <Grid className="w-4 h-4" />,
     description: "Classic tiled arrangement with varying heights",
   },
-  {
-    value: "striped",
-    label: "Striped",
-    icon: <LayoutGrid className="w-4 h-4" />,
-    description: "Clean, linear patterns with smooth transitions",
-  },
+  // {
+  //   value: "striped",
+  //   label: "Striped",
+  //   icon: <LayoutGrid className="w-4 h-4" />,
+  //   description: "Clean, linear patterns with smooth transitions",
+  // },
 ];
 
 interface StyleCardProps {
@@ -51,7 +51,7 @@ export function StyleCard({ compact = false }: StyleCardProps) {
             <RadioGroup
               value={style}
               onValueChange={(value: StyleType) => setStyle(value)}
-              className="grid grid-cols-3 gap-1.5"
+              className="grid grid-cols-2 gap-1.5"
             >
               {styles.map(({ value, label, icon }) => (
                 <Label
