@@ -222,7 +222,7 @@ export function TiledPattern({
             position={driftFactor.to((d) => [
               baseXPos + calculateDrift(x, d),
               yPos,
-              zPos + 0.25, // Adjust z-position to align with plywood base
+              zPos + 0.27, // Adjust z-position to align with plywood base
             ])}
           >
             <MemoizedBlock
@@ -315,7 +315,7 @@ export function TiledPattern({
           showWoodGrain={showWoodGrain}
           blockSize={blockSize}
           adjustedModelWidth={adjustedModelWidth}
-          adjustedModelHeight={adjustedModelHeight}
+          adjustedModelHeight={adjustedModelHeight + 0.005}
           useMini={useMini}
         />
         {blocks}

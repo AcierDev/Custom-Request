@@ -180,7 +180,7 @@ export function PlywoodBase({
   const dimensions = useMemo(() => {
     // Use the same blockSpacing factor as in GeometricPattern
     const blockSpacing = useMini ? 0.9 : 1;
-    const baseThickness = 0.2;
+    const baseThickness = 0.07;
 
     // Compute accurate dimensions using the same calculation as the geometric pattern
     const totalWidth = adjustedModelWidth * blockSize * blockSpacing;
@@ -305,13 +305,13 @@ export function PlywoodBase({
   // Create position calculation functions for animated panels
   const leftPanelPosition = useMemo(
     () => (d: number) =>
-      [leftPanelX - driftDistance * d - 0.225, centerY, -baseThickness / 2],
+      [leftPanelX - driftDistance * d - 0.249, centerY, -baseThickness / 2],
     [leftPanelX, driftDistance, centerY, baseThickness]
   );
 
   const rightPanelPosition = useMemo(
     () => (d: number) =>
-      [rightPanelX + driftDistance * d - 0.245, centerY, -baseThickness / 2],
+      [rightPanelX + driftDistance * d - 0.25, centerY, -baseThickness / 2],
     [rightPanelX, driftDistance, centerY, baseThickness]
   );
 
@@ -319,9 +319,9 @@ export function PlywoodBase({
   const leftSidePosition = useMemo(
     () => (d: number) =>
       [
-        (useMini ? 0.03 : 0) - 0.248 - totalWidth / 2 - driftDistance * d,
+        (useMini ? 0.03 : 0) - 0.248 - totalWidth / 2 - driftDistance * d + 0.0,
         (useMini ? 0.03 : 0) - 0.25,
-        -0.1,
+        -0.035,
       ],
     [useMini, totalWidth, driftDistance]
   );
@@ -329,9 +329,13 @@ export function PlywoodBase({
   const rightSidePosition = useMemo(
     () => (d: number) =>
       [
-        (useMini ? -0.47 : -0.5) + 0.248 + totalWidth / 2 + driftDistance * d,
+        (useMini ? -0.47 : -0.5) +
+          0.248 +
+          totalWidth / 2 +
+          driftDistance * d +
+          0.001,
         (useMini ? 0.03 : 0) - 0.25,
-        -0.1,
+        -0.035,
       ],
     [useMini, totalWidth, driftDistance]
   );
@@ -357,7 +361,7 @@ export function PlywoodBase({
 
         {/* Center panel */}
         <PlywoodPanel
-          position={[centerPanelX - 0.225, centerY, -baseThickness / 2]}
+          position={[centerPanelX - 0.249, centerY, -baseThickness / 2]}
           args={[centerPanelWidth, totalHeight, baseThickness]}
           texture={texture}
           showWoodGrain={showWoodGrain}
@@ -366,7 +370,7 @@ export function PlywoodBase({
         {/* Right panel */}
         <AnimatedPlywoodPanel
           positionFn={driftFactor.to(rightPanelPosition)}
-          args={[rightPanelWidth - 0.03, totalHeight, baseThickness]}
+          args={[rightPanelWidth, totalHeight, baseThickness]}
           texture={texture}
           showWoodGrain={showWoodGrain}
         />

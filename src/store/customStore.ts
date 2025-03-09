@@ -186,11 +186,13 @@ interface ShareableState {
   isRotated: boolean;
   patternStyle: PatternType;
   style: StyleType;
+  useMini: boolean;
 }
 
 // Define what we want to persist in the database
 interface PersistentState extends ShareableState {
   savedPalettes: SavedPalette[];
+  useMini: boolean;
   viewSettings: {
     showRuler: boolean;
     showWoodGrain: boolean;
@@ -233,7 +235,7 @@ export const useCustomStore = create<CustomStore>()(
     isRotated: false,
     patternStyle: "tiled",
     style: "geometric",
-    useMini: true,
+    useMini: false,
     savedPalettes: [],
     activeTab: "create",
     editingPaletteId: null,
@@ -431,6 +433,10 @@ export const useCustomStore = create<CustomStore>()(
       set((state) => ({
         viewSettings: { ...state.viewSettings, showSplitPanel: value },
       })),
+    setShowFPS: (value) =>
+      set((state) => ({
+        viewSettings: { ...state.viewSettings, showFPS: value },
+      })),
     savePalette: (name) =>
       set((state) => {
         if (state.customPalette.length === 0) return state;
@@ -577,6 +583,7 @@ export const useCustomStore = create<CustomStore>()(
         isRotated: state.isRotated,
         patternStyle: state.patternStyle,
         style: state.style,
+        useMini: state.useMini,
       };
 
       // Use the compression utility to generate a more compact URL
@@ -598,6 +605,7 @@ export const useCustomStore = create<CustomStore>()(
         isRotated: state.isRotated,
         patternStyle: state.patternStyle,
         style: state.style,
+        useMini: state.useMini,
       };
 
       // Use the short URL compression utility
@@ -686,6 +694,7 @@ export const useCustomStore = create<CustomStore>()(
               showColorInfo: data.viewSettings?.showColorInfo ?? false,
               showHanger: data.viewSettings?.showHanger ?? true,
               showSplitPanel: data.viewSettings?.showSplitPanel ?? false,
+              showFPS: data.viewSettings?.showFPS ?? false,
             };
 
             // Update the store with the loaded data
@@ -740,6 +749,7 @@ export const useCustomStore = create<CustomStore>()(
                 isRotated: get().isRotated,
                 patternStyle: get().patternStyle,
                 style: get().style,
+                useMini: get().useMini,
                 savedPalettes: get().savedPalettes,
                 viewSettings: get().viewSettings,
               };
@@ -776,6 +786,7 @@ export const useCustomStore = create<CustomStore>()(
           patternStyle: get().patternStyle,
           style: get().style,
           savedPalettes: get().savedPalettes,
+          useMini: get().useMini,
           viewSettings: get().viewSettings,
         };
 
@@ -825,6 +836,7 @@ export const useCustomStore = create<CustomStore>()(
             style: get().style,
             savedPalettes: get().savedPalettes,
             viewSettings: get().viewSettings,
+            useMini: get().useMini,
           };
 
           // Use the saveUserData method from auth context
@@ -895,6 +907,7 @@ export const useCustomStore = create<CustomStore>()(
             showSplitPanel:
               data.viewSettings?.showSplitPanel ??
               get().viewSettings.showSplitPanel,
+            showFPS: data.viewSettings?.showFPS ?? get().viewSettings.showFPS,
           },
           // Update the current colors based on the custom palette
           currentColors:

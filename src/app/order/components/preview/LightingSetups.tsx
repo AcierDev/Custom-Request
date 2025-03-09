@@ -129,7 +129,7 @@ export function TiledLighting() {
         <directionalLight
           position={[0, 0, -5]}
           castShadow
-          intensity={0.5}
+          intensity={1}
           shadow-mapSize-width={1024}
           shadow-mapSize-height={1024}
         ></directionalLight>

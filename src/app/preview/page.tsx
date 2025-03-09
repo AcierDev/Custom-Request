@@ -11,17 +11,17 @@ import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Stats } from "@react-three/drei";
 import { GeometricPattern } from "../order/components/preview/GeometricPattern";
 import { TiledPattern } from "../order/components/preview/TiledPattern";
-import {
-  GeometricLighting,
-  TiledLighting,
-  StripedLighting,
-} from "../order/components/preview/LightingSetups";
+import { RotatableLighting } from "../order/components/preview/RotatableLighting";
 import { ViewControls } from "../order/components/preview/ViewControls";
 import { ColorInfoHint } from "../order/components/preview/ColorInfoHint";
 import { Ruler3D } from "../order/components/preview/Ruler3D";
 import { ItemDesigns } from "@/typings/types";
 import { cn } from "@/lib/utils";
 import { ShareDialog } from "@/components/ShareDialog";
+import { LightingControls } from "../order/components/preview/LightingControls";
+
+// Define the time of day type
+type TimeOfDay = "morning" | "afternoon" | "night";
 
 export default function PreviewPage() {
   const router = useRouter();
@@ -30,6 +30,9 @@ export default function PreviewPage() {
     useCustomStore();
   const { showRuler, showWoodGrain, showColorInfo } = viewSettings;
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+
+  // State for time of day lighting control
+  const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>("morning");
 
   useEffect(() => {
     setMounted(true);
@@ -61,9 +64,16 @@ export default function PreviewPage() {
         </h1>
       </div>
 
-      {/* View controls only */}
-      <div className="absolute top-4 right-4 z-50">
+      {/* View controls and Lighting controls stacked */}
+      <div className="absolute top-4 right-4 z-50 flex flex-col gap-3">
         <ViewControls />
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <LightingControls value={timeOfDay} onChange={setTimeOfDay} />
+        </motion.div>
       </div>
 
       {/* Color info hint */}
@@ -81,10 +91,8 @@ export default function PreviewPage() {
           }}
         >
           <Stats />
-          {/* Lighting based on style */}
-          {style === "geometric" && <GeometricLighting />}
-          {style === "tiled" && <TiledLighting />}
-          {style === "striped" && <StripedLighting />}
+          {/* Use the RotatableLighting component instead of direct lighting components */}
+          <RotatableLighting timeOfDay={timeOfDay} style={style} />
 
           {/* Pattern based on style */}
           {style === "geometric" && (
