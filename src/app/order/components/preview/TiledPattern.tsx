@@ -2,7 +2,7 @@
 
 import { useCustomStore } from "@/store/customStore";
 import { getDimensionsDetails } from "@/lib/utils";
-import { useRef } from "react";
+import { useRef, useMemo, useCallback, memo } from "react";
 import { Html } from "@react-three/drei";
 import { hoverStore } from "@/store/customStore";
 import { useStore } from "zustand";
@@ -16,8 +16,13 @@ import {
   generateColorMap,
   calculateBlockLayout,
   initializeTextureVariations,
+  TextureVariation,
 } from "./patternUtils";
 import { ItemDesigns } from "@/typings/types";
+import { useSpring, animated } from "@react-spring/three";
+
+// Create a memoized Block component to prevent unnecessary re-renders
+const MemoizedBlock = memo(Block);
 
 export function TiledPattern({
   showWoodGrain = true,
@@ -32,7 +37,11 @@ export function TiledPattern({
     isRotated,
     customPalette,
     useMini,
+    viewSettings,
   } = useCustomStore();
+
+  const { showSplitPanel } = viewSettings;
+
   const details = getDimensionsDetails(dimensions);
 
   // Use the hover store
@@ -46,7 +55,7 @@ export function TiledPattern({
   const heightsRef = useRef<number[][]>();
 
   // Create a ref for texture variations
-  const textureVariationsRef = useRef<any[][]>();
+  const textureVariationsRef = useRef<TextureVariation[][]>();
 
   if (!details) {
     return null;
@@ -61,12 +70,37 @@ export function TiledPattern({
 
   // Modify blockSize to be dynamic based on state
   const blockSize = useMini ? BlockSize.Mini : BlockSize.Normal;
-  const blockSpacing = 1;
+  // Use the same blockSpacing as in GeometricPattern
+  const blockSpacing = useMini ? 0.9 : 1;
   const blockHeight = 0.1;
-  const heightVariation = 0.2;
+  // Reduce height variation to prevent blocks from going below the plywood base
+  const heightVariation = 0.15;
   const { width: modelWidth, height: modelHeight } = details.blocks;
 
   // Calculate layout dimensions
+  const layoutDetails = useMemo(() => {
+    return {
+      ...calculateBlockLayout(
+        modelWidth,
+        modelHeight,
+        blockSize,
+        blockSpacing,
+        useMini
+      ),
+      // Calculate split points for animation
+      oneThirdWidth: Math.floor(
+        calculateBlockLayout(
+          modelWidth,
+          modelHeight,
+          blockSize,
+          blockSpacing,
+          useMini
+        ).adjustedModelWidth / 3
+      ),
+      driftAmount: blockSize * 2,
+    };
+  }, [modelWidth, modelHeight, blockSize, blockSpacing, useMini]);
+
   const {
     adjustedModelWidth,
     adjustedModelHeight,
@@ -74,13 +108,12 @@ export function TiledPattern({
     totalHeight,
     offsetX,
     offsetY,
-  } = calculateBlockLayout(
-    modelWidth,
-    modelHeight,
-    blockSize,
-    blockSpacing,
-    useMini
-  );
+    oneThirdWidth,
+    driftAmount,
+  } = layoutDetails;
+
+  // Calculate two-thirds width based on one-third
+  const twoThirdsWidth = oneThirdWidth * 2;
 
   // Initialize heights if not already done
   if (
@@ -96,6 +129,7 @@ export function TiledPattern({
           .map(() => blockHeight + Math.random() * heightVariation)
       );
 
+    // Initialize texture variations with proper typing
     textureVariationsRef.current = initializeTextureVariations(
       adjustedModelWidth,
       adjustedModelHeight
@@ -128,74 +162,138 @@ export function TiledPattern({
     );
   }
 
+  // Memoize the animation spring
+  const driftFactorSpring = useSpring({
+    driftFactor: showSplitPanel ? 1 : 0,
+    config: { mass: 1, tension: 170, friction: 26 },
+  });
+  const { driftFactor } = driftFactorSpring;
+
+  // Memoize the drift calculation function
+  const calculateDrift = useCallback(
+    (xIndex: number, driftValue: number) => {
+      if (xIndex < oneThirdWidth) {
+        // Left section - drift left
+        return -driftAmount * driftValue;
+      } else if (xIndex >= twoThirdsWidth) {
+        // Right section - drift right
+        return driftAmount * driftValue;
+      }
+      // Center section - no drift
+      return 0;
+    },
+    [oneThirdWidth, twoThirdsWidth, driftAmount]
+  );
+
   // Get color index from the color map
   const getColorIndex = (x: number, y: number) => {
     return colorMapRef.current![x][y];
   };
 
-  const blocks = [];
+  // Memoize block creation to prevent unnecessary recalculations
+  const blocks = useMemo(() => {
+    const blockElements = [];
 
-  for (let x = 0; x < adjustedModelWidth; x++) {
-    for (let y = 0; y < adjustedModelHeight; y++) {
-      const randomHeight = heightsRef.current[x][y];
-      const colorIndex = getColorIndex(x, y);
-      const colorEntry = colorEntries[colorIndex];
-      const color = colorEntry?.[1].hex || "#8B5E3B";
-      const colorName = colorEntry?.[1].name;
+    for (let x = 0; x < adjustedModelWidth; x++) {
+      for (let y = 0; y < adjustedModelHeight; y++) {
+        const randomHeight = heightsRef.current![x][y];
+        const colorIndex = getColorIndex(x, y);
+        const colorEntry = colorEntries[colorIndex];
+        const color = colorEntry?.[1].hex || "#8B5E3B";
+        const colorName = colorEntry?.[1].name;
 
-      // Calculate position based on orientation
-      const xPos = x * blockSpacing * blockSize + offsetX + blockSize / 2;
-      const yPos = y * blockSpacing * blockSize + offsetY + blockSize / 2;
-      const zPos = randomHeight / 2 - 0.401;
+        // Get the texture variation for this block
+        const textureVariation = textureVariationsRef.current![x][y];
 
-      const isBlockHovered =
-        hoverInfo?.position[0] === x && hoverInfo?.position[1] === y;
-      const isBlockPinned =
-        pinnedInfo?.position[0] === x && pinnedInfo?.position[1] === y;
+        // Calculate base position without drift
+        const baseXPos = x * blockSpacing * blockSize + offsetX + blockSize / 2;
+        const yPos = y * blockSpacing * blockSize + offsetY + blockSize / 2;
+        // Use similar z-position calculation as GeometricPattern
+        const zPos = randomHeight / 2 - (useMini ? 0.41 : 0.401);
 
-      blocks.push(
-        <Block
-          key={`${x}-${y}`}
-          position={[
-            xPos + (useMini ? 0.02999 : 0),
-            yPos + (useMini ? 0.0301 : 0),
-            zPos + 0.255,
-          ]}
-          size={blockSize}
-          height={randomHeight}
-          color={color}
-          showWoodGrain={showWoodGrain}
-          showColorInfo={showColorInfo}
-          isHovered={isBlockHovered || isBlockPinned}
-          textureVariation={textureVariationsRef.current![x][y]}
-          onHover={(isHovering) => {
-            if (showColorInfo) {
-              if (isHovering) {
-                setHoverInfo({ position: [x, y], color, colorName });
-              } else if (
-                hoverInfo?.position[0] === x &&
-                hoverInfo?.position[1] === y
-              ) {
-                setHoverInfo(null);
-              }
-            }
-          }}
-          onClick={() => {
-            if (showColorInfo) {
-              if (
-                pinnedInfo?.position[0] === x &&
-                pinnedInfo?.position[1] === y
-              ) {
-                setPinnedInfo(null);
-              } else {
-                setPinnedInfo({ position: [x, y], color, colorName });
-              }
-            }
-          }}
-        />
-      );
+        const isBlockHovered =
+          hoverInfo?.position[0] === x && hoverInfo?.position[1] === y;
+        const isBlockPinned =
+          pinnedInfo?.position[0] === x && pinnedInfo?.position[1] === y;
+
+        blockElements.push(
+          <animated.group
+            key={`block-${x}-${y}`}
+            position={driftFactor.to((d) => [
+              baseXPos + calculateDrift(x, d),
+              yPos,
+              zPos + 0.25, // Adjust z-position to align with plywood base
+            ])}
+          >
+            <MemoizedBlock
+              position={[0, 0, 0]} // Position is handled by the parent group
+              size={blockSize}
+              height={randomHeight}
+              color={color}
+              showWoodGrain={showWoodGrain}
+              showColorInfo={showColorInfo}
+              isHovered={isBlockHovered || isBlockPinned}
+              textureVariation={textureVariation}
+              onHover={(isHovering) => {
+                if (showColorInfo) {
+                  if (isHovering) {
+                    setHoverInfo({ position: [x, y], color, colorName });
+                  } else if (
+                    hoverInfo?.position[0] === x &&
+                    hoverInfo?.position[1] === y
+                  ) {
+                    setHoverInfo(null);
+                  }
+                }
+              }}
+              onClick={() => {
+                if (showColorInfo) {
+                  if (
+                    pinnedInfo?.position[0] === x &&
+                    pinnedInfo?.position[1] === y
+                  ) {
+                    setPinnedInfo(null);
+                  } else {
+                    setPinnedInfo({ position: [x, y], color, colorName });
+                  }
+                }
+              }}
+            />
+          </animated.group>
+        );
+      }
     }
-  }
+
+    return blockElements;
+  }, [
+    adjustedModelWidth,
+    adjustedModelHeight,
+    blockSize,
+    blockSpacing,
+    offsetX,
+    offsetY,
+    useMini,
+    colorEntries,
+    showWoodGrain,
+    showColorInfo,
+    hoverInfo,
+    pinnedInfo,
+    setHoverInfo,
+    setPinnedInfo,
+    driftFactor,
+    calculateDrift,
+  ]);
+
+  // Handle group click to clear pinned info
+  const handleGroupClick = useCallback(
+    (e: any) => {
+      // Clear pinned info when clicking outside blocks
+      if (e.object.type === "Group") {
+        setPinnedInfo(null);
+      }
+    },
+    [setPinnedInfo]
+  );
 
   return (
     <>
@@ -209,16 +307,11 @@ export function TiledPattern({
       </mesh>
       <group
         rotation={orientation === "vertical" ? [0, 0, Math.PI / 2] : [0, 0, 0]}
-        onClick={(e) => {
-          // Clear pinned info when clicking outside blocks
-          if (e.object.type === "Group") {
-            setPinnedInfo(null);
-          }
-        }}
+        onClick={handleGroupClick}
       >
         <PlywoodBase
           width={totalWidth}
-          height={totalHeight + 0.001}
+          height={totalHeight}
           showWoodGrain={showWoodGrain}
           blockSize={blockSize}
           adjustedModelWidth={adjustedModelWidth}

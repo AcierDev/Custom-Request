@@ -189,23 +189,15 @@ export function Block({
     if (top) {
       // Process top texture
       top.wrapS = top.wrapT = THREE.RepeatWrapping;
-      const topScale = isGeometric
-        ? textureVariation.scale
-        : 0.15 + Math.abs(Math.sin(x * y * 3.14)) * 0.2;
+      // Always use the provided textureVariation regardless of isGeometric
+      const topScale = textureVariation.scale;
       top.repeat.set(topScale, topScale);
       top.anisotropy = 8; // Reduced from 16 for performance
 
-      const topOffsetX = isGeometric
-        ? textureVariation.offsetX
-        : Math.abs((Math.sin(x * 2.5) * Math.cos(y * 1.7) + z * 0.5) % 1);
-
-      const topOffsetY = isGeometric
-        ? textureVariation.offsetY
-        : Math.abs((Math.cos(x * 1.8) * Math.sin(y * 2.2) + z * 0.3) % 1);
-
-      const textureRotation = isGeometric
-        ? textureVariation.rotation
-        : (Math.sin(x * y) * Math.PI) / 6;
+      // Always use the provided textureVariation for offsets
+      const topOffsetX = textureVariation.offsetX;
+      const topOffsetY = textureVariation.offsetY;
+      const textureRotation = textureVariation.rotation;
 
       top.rotation = textureRotation;
       top.offset.set(topOffsetX, topOffsetY);
@@ -220,16 +212,7 @@ export function Block({
     }
 
     return { uniqueTopTexture: top, uniqueSideTexture: side };
-  }, [
-    showWoodGrain,
-    topTexture,
-    sideTexture,
-    x,
-    y,
-    z,
-    isGeometric,
-    textureVariation,
-  ]);
+  }, [showWoodGrain, topTexture, sideTexture, textureVariation]);
 
   // Create materials with better memoization pattern
   const materialKey = `${color}-${isHovered}-${showWoodGrain}-${showColorInfo}`;
@@ -250,21 +233,24 @@ export function Block({
 
   // Update material properties for existing material instead of creating new materials
   useEffect(() => {
-    if (meshRef.current && meshRef.current.material) {
+    if (meshRef.current) {
       const material = meshRef.current.material;
+
       if (Array.isArray(material)) {
         material.forEach((m) => {
-          m.emissive.set(isHovered && showColorInfo ? color : "#000000");
-          m.emissiveIntensity = isHovered && showColorInfo ? 0.5 : 0;
-          m.needsUpdate = true;
+          if (m instanceof THREE.MeshStandardMaterial) {
+            m.emissive.set(isHovered && showColorInfo ? color : "#000000");
+            m.emissiveIntensity = isHovered && showColorInfo ? 0.5 : 0;
+            m.needsUpdate = true;
+          }
         });
-      } else {
+      } else if (material instanceof THREE.MeshStandardMaterial) {
         material.emissive.set(isHovered && showColorInfo ? color : "#000000");
         material.emissiveIntensity = isHovered && showColorInfo ? 0.5 : 0;
         material.needsUpdate = true;
       }
     }
-  }, [isHovered, showColorInfo, color]);
+  }, [isHovered, color, showColorInfo]);
 
   const { useMini } = useCustomStore();
 

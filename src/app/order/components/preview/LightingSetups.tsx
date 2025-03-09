@@ -125,6 +125,14 @@ export function TiledLighting() {
           shadow-mapSize-width={1024}
           shadow-mapSize-height={1024}
         ></directionalLight>
+
+        <directionalLight
+          position={[0, 0, -5]}
+          castShadow
+          intensity={0.5}
+          shadow-mapSize-width={1024}
+          shadow-mapSize-height={1024}
+        ></directionalLight>
       </>
 
       {/* Bottom fill light */}
@@ -134,7 +142,6 @@ export function TiledLighting() {
 }
 
 export function StripedLighting() {
-  const { scene } = useThree();
   const lightGroupRef = useRef<THREE.Group>(null);
 
   useEffect(() => {
