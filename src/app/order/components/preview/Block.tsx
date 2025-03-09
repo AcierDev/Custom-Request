@@ -2,7 +2,7 @@
 
 import { useTexture } from "@react-three/drei";
 import * as THREE from "three";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useCustomStore } from "@/store/customStore";
 
 interface BlockProps {
@@ -26,8 +26,13 @@ interface BlockProps {
   };
 }
 
-// Create a wedge geometry function
+// Create a wedge geometry function - moved outside component for reuse
 const createWedgeGeometry = (): THREE.BufferGeometry => {
+  // Use a static variable to cache the geometry
+  if ((createWedgeGeometry as any).cachedGeometry) {
+    return (createWedgeGeometry as any).cachedGeometry;
+  }
+
   const geometry = new THREE.BufferGeometry();
 
   // Calculate height based on 21.5 degree angle
@@ -128,11 +133,18 @@ const createWedgeGeometry = (): THREE.BufferGeometry => {
   // Center the geometry
   geometry.center();
 
+  // Cache the geometry
+  (createWedgeGeometry as any).cachedGeometry = geometry;
   return geometry;
 };
 
-// Memoize the wedge geometry
+// Memoize the wedge geometry - now outside of render cycles and shared across all instances
 const wedgeGeometry = createWedgeGeometry();
+// Create a shared box geometry
+const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
+
+// Create texture loader outside components to reuse
+let textureCache: Record<string, THREE.Texture> = {};
 
 export function Block({
   position,
@@ -155,49 +167,135 @@ export function Block({
 }: BlockProps) {
   const [x, y, z] = position;
   const adjustedPosition: [number, number, number] = [x, y, z + height / 2];
+  const meshRef = useRef<THREE.Mesh>(null);
 
-  // Load textures outside the component
-  const [topTexture, sideTexture] = useTexture([
-    "/textures/bw-wood-texture-4.jpg",
-    "/textures/wood-side-grain.jpg",
-  ]);
+  // Load textures with caching - load only if wood grain is shown
+  const texturePaths = showWoodGrain
+    ? ["/textures/bw-wood-texture-4.jpg", "/textures/wood-side-grain.jpg"]
+    : [];
+
+  const textures = useTexture(texturePaths);
+  const topTexture = showWoodGrain ? textures[0] : null;
+  const sideTexture = showWoodGrain ? textures[1] : null;
 
   // Create unique textures with useMemo to prevent unnecessary recreation
   const { uniqueTopTexture, uniqueSideTexture } = useMemo(() => {
-    const top = topTexture.clone();
-    const side = sideTexture.clone();
+    if (!showWoodGrain)
+      return { uniqueTopTexture: null, uniqueSideTexture: null };
 
-    // Process top texture
-    top.wrapS = top.wrapT = THREE.RepeatWrapping;
-    const topScale = isGeometric
-      ? textureVariation.scale
-      : 0.15 + Math.abs(Math.sin(x * y * 3.14)) * 0.2;
-    top.repeat.set(topScale, topScale);
-    top.anisotropy = 16;
+    const top = topTexture?.clone();
+    const side = sideTexture?.clone();
 
-    const topOffsetX = isGeometric
-      ? textureVariation.offsetX
-      : Math.abs((Math.sin(x * 2.5) * Math.cos(y * 1.7) + z * 0.5) % 1);
+    if (top) {
+      // Process top texture
+      top.wrapS = top.wrapT = THREE.RepeatWrapping;
+      const topScale = isGeometric
+        ? textureVariation.scale
+        : 0.15 + Math.abs(Math.sin(x * y * 3.14)) * 0.2;
+      top.repeat.set(topScale, topScale);
+      top.anisotropy = 8; // Reduced from 16 for performance
 
-    const topOffsetY = isGeometric
-      ? textureVariation.offsetY
-      : Math.abs((Math.cos(x * 1.8) * Math.sin(y * 2.2) + z * 0.3) % 1);
+      const topOffsetX = isGeometric
+        ? textureVariation.offsetX
+        : Math.abs((Math.sin(x * 2.5) * Math.cos(y * 1.7) + z * 0.5) % 1);
 
-    const textureRotation = isGeometric
-      ? textureVariation.rotation
-      : (Math.sin(x * y) * Math.PI) / 6;
+      const topOffsetY = isGeometric
+        ? textureVariation.offsetY
+        : Math.abs((Math.cos(x * 1.8) * Math.sin(y * 2.2) + z * 0.3) % 1);
 
-    top.rotation = textureRotation;
-    top.offset.set(topOffsetX, topOffsetY);
+      const textureRotation = isGeometric
+        ? textureVariation.rotation
+        : (Math.sin(x * y) * Math.PI) / 6;
 
-    // Process side texture
-    side.wrapS = side.wrapT = THREE.RepeatWrapping;
-    const sideScale = 0.2;
-    side.repeat.set(sideScale, sideScale);
-    side.anisotropy = 16;
+      top.rotation = textureRotation;
+      top.offset.set(topOffsetX, topOffsetY);
+    }
+
+    if (side) {
+      // Process side texture
+      side.wrapS = side.wrapT = THREE.RepeatWrapping;
+      const sideScale = 0.2;
+      side.repeat.set(sideScale, sideScale);
+      side.anisotropy = 8; // Reduced from 16 for performance
+    }
 
     return { uniqueTopTexture: top, uniqueSideTexture: side };
-  }, [topTexture, sideTexture, x, y, z, isGeometric, textureVariation]);
+  }, [
+    showWoodGrain,
+    topTexture,
+    sideTexture,
+    x,
+    y,
+    z,
+    isGeometric,
+    textureVariation,
+  ]);
+
+  // Create materials with better memoization pattern
+  const materialKey = `${color}-${isHovered}-${showWoodGrain}-${showColorInfo}`;
+
+  // Create a single material for geometric blocks
+  const geometricMaterial = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        map: showWoodGrain ? uniqueTopTexture : null,
+        color,
+        roughness: 0.8,
+        metalness: 0.05,
+        emissive: isHovered && showColorInfo ? color : "#000000",
+        emissiveIntensity: isHovered && showColorInfo ? 0.5 : 0,
+      }),
+    [uniqueTopTexture, color, isHovered, showWoodGrain, showColorInfo]
+  );
+
+  // Update material properties for existing material instead of creating new materials
+  useEffect(() => {
+    if (meshRef.current && meshRef.current.material) {
+      const material = meshRef.current.material;
+      if (Array.isArray(material)) {
+        material.forEach((m) => {
+          m.emissive.set(isHovered && showColorInfo ? color : "#000000");
+          m.emissiveIntensity = isHovered && showColorInfo ? 0.5 : 0;
+          m.needsUpdate = true;
+        });
+      } else {
+        material.emissive.set(isHovered && showColorInfo ? color : "#000000");
+        material.emissiveIntensity = isHovered && showColorInfo ? 0.5 : 0;
+        material.needsUpdate = true;
+      }
+    }
+  }, [isHovered, showColorInfo, color]);
+
+  const { useMini } = useCustomStore();
+
+  if (isGeometric) {
+    // Apply 10% size reduction if reducedSize is true
+    const sizeScale = useMini ? 0.9 : 1.0;
+    const adjustedSize = size * sizeScale;
+    const adjustedHeight = height * sizeScale;
+
+    return (
+      <mesh
+        ref={meshRef}
+        position={adjustedPosition}
+        rotation={[0, 0, rotation]}
+        scale={[adjustedSize, adjustedSize, adjustedHeight]}
+        geometry={wedgeGeometry}
+        material={geometricMaterial}
+        castShadow
+        receiveShadow
+        onPointerEnter={(e) => {
+          e.stopPropagation();
+          onHover?.(true);
+        }}
+        onPointerLeave={() => onHover?.(false)}
+        onClick={(e) => {
+          e.stopPropagation();
+          onClick?.();
+        }}
+      />
+    );
+  }
 
   // Create materials array with useMemo
   const materials = useMemo(
@@ -267,55 +365,14 @@ export function Block({
     ]
   );
 
-  // Create a single material for geometric blocks
-  const geometricMaterial = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        map: showWoodGrain ? uniqueTopTexture : null,
-        color,
-        roughness: 0.8,
-        metalness: 0.05,
-        emissive: isHovered && showColorInfo ? color : "#000000",
-        emissiveIntensity: isHovered && showColorInfo ? 0.5 : 0,
-      }),
-    [uniqueTopTexture, color, isHovered, showWoodGrain, showColorInfo]
-  );
-
-  const { useMini } = useCustomStore();
-
-  if (isGeometric) {
-    // Apply 10% size reduction if reducedSize is true
-    const sizeScale = useMini ? 0.9 : 1.0;
-    const adjustedSize = size * sizeScale;
-    const adjustedHeight = height * sizeScale;
-
-    return (
-      <mesh
-        position={adjustedPosition}
-        rotation={[0, 0, rotation]}
-        scale={[adjustedSize, adjustedSize, adjustedHeight]}
-        geometry={wedgeGeometry}
-        material={geometricMaterial}
-        castShadow
-        receiveShadow
-        onPointerEnter={(e) => {
-          e.stopPropagation();
-          onHover?.(true);
-        }}
-        onPointerLeave={() => onHover?.(false)}
-        onClick={(e) => {
-          e.stopPropagation();
-          onClick?.();
-        }}
-      />
-    );
-  }
-
   return (
     <mesh
+      ref={meshRef}
       position={adjustedPosition}
       castShadow
       receiveShadow
+      geometry={boxGeometry}
+      scale={[size, size, height]}
       onPointerEnter={(e) => {
         e.stopPropagation();
         onHover?.(true);
@@ -326,7 +383,6 @@ export function Block({
         onClick?.();
       }}
     >
-      <boxGeometry args={[size, size, height]} />
       {materials.map((material, index) => (
         <primitive key={index} object={material} attach={`material-${index}`} />
       ))}

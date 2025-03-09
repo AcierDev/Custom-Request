@@ -2,7 +2,7 @@
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls } from "@react-three/drei";
+import { OrbitControls, Stats } from "@react-three/drei";
 import { useCustomStore, ColorPattern } from "@/store/customStore";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
@@ -781,9 +781,10 @@ const Scene = ({
                 cameraPosition[2],
               ],
               fov: cameraFov,
-              zoom: 1.4,
+              zoom: isExpanded ? 1.4 : 1.2,
             }}
           >
+            <Stats />
             <LightingHelpers />
             {style === "geometric" && (
               <GeometricPattern

@@ -365,8 +365,10 @@ export function calculateBlockLayout(
   // Calculate total dimensions based on actual block spacing
   const totalWidth = adjustedModelWidth * blockSize * blockSpacing;
   const totalHeight = adjustedModelHeight * blockSize * blockSpacing;
-  const offsetX = -totalWidth / 2 - 0.25;
-  const offsetY = -totalHeight / 2 - 0.25;
+
+  // Calculate offsets with adjustment for mini mode
+  const offsetX = -totalWidth / 2 - 0.25 + (useMini ? 0.03 : 0);
+  const offsetY = -totalHeight / 2 - 0.25 + (useMini ? 0.03 : 0);
 
   return {
     adjustedModelWidth,

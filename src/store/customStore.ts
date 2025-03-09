@@ -87,6 +87,8 @@ interface CustomState {
     showWoodGrain: boolean;
     showColorInfo: boolean;
     showHanger: boolean;
+    showSplitPanel: boolean;
+    showFPS: boolean;
   };
   lastSaved: number; // Add timestamp for last save
   autoSaveEnabled: boolean; // Flag to enable/disable auto-save
@@ -118,6 +120,8 @@ interface CustomStore extends CustomState {
   setShowWoodGrain: (value: boolean) => void;
   setShowColorInfo: (value: boolean) => void;
   setShowHanger: (value: boolean) => void;
+  setShowSplitPanel: (value: boolean) => void;
+  setShowFPS: (value: boolean) => void;
   savePalette: (name: string) => void;
   updatePalette: (id: string, updates: Partial<SavedPalette>) => void;
   deletePalette: (id: string) => void;
@@ -192,6 +196,8 @@ interface PersistentState extends ShareableState {
     showWoodGrain: boolean;
     showColorInfo: boolean;
     showHanger: boolean;
+    showSplitPanel: boolean;
+    showFPS: boolean;
   };
 }
 
@@ -236,6 +242,8 @@ export const useCustomStore = create<CustomStore>()(
       showWoodGrain: true,
       showColorInfo: false,
       showHanger: true,
+      showSplitPanel: false,
+      showFPS: false,
     },
     lastSaved: 0,
     autoSaveEnabled: true,
@@ -418,6 +426,10 @@ export const useCustomStore = create<CustomStore>()(
     setShowHanger: (value) =>
       set((state) => ({
         viewSettings: { ...state.viewSettings, showHanger: value },
+      })),
+    setShowSplitPanel: (value) =>
+      set((state) => ({
+        viewSettings: { ...state.viewSettings, showSplitPanel: value },
       })),
     savePalette: (name) =>
       set((state) => {
@@ -667,9 +679,19 @@ export const useCustomStore = create<CustomStore>()(
           if (savedState) {
             const data = JSON.parse(savedState) as PersistentState;
 
+            // Ensure viewSettings has all required properties including showSplitPanel
+            const viewSettings = {
+              showRuler: data.viewSettings?.showRuler ?? false,
+              showWoodGrain: data.viewSettings?.showWoodGrain ?? true,
+              showColorInfo: data.viewSettings?.showColorInfo ?? false,
+              showHanger: data.viewSettings?.showHanger ?? true,
+              showSplitPanel: data.viewSettings?.showSplitPanel ?? false,
+            };
+
             // Update the store with the loaded data
             set({
               ...data,
+              viewSettings,
               // Recalculate derived fields
               currentColors:
                 data.customPalette && data.customPalette.length > 0
@@ -859,7 +881,21 @@ export const useCustomStore = create<CustomStore>()(
           patternStyle: data.patternStyle || get().patternStyle,
           style: data.style || get().style,
           savedPalettes: data.savedPalettes || get().savedPalettes,
-          viewSettings: data.viewSettings || get().viewSettings,
+          viewSettings: {
+            showRuler:
+              data.viewSettings?.showRuler ?? get().viewSettings.showRuler,
+            showWoodGrain:
+              data.viewSettings?.showWoodGrain ??
+              get().viewSettings.showWoodGrain,
+            showColorInfo:
+              data.viewSettings?.showColorInfo ??
+              get().viewSettings.showColorInfo,
+            showHanger:
+              data.viewSettings?.showHanger ?? get().viewSettings.showHanger,
+            showSplitPanel:
+              data.viewSettings?.showSplitPanel ??
+              get().viewSettings.showSplitPanel,
+          },
           // Update the current colors based on the custom palette
           currentColors:
             data.selectedDesign === ItemDesigns.Custom &&

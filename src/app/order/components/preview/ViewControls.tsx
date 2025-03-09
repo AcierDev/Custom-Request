@@ -5,7 +5,13 @@ import { useCustomStore } from "@/store/customStore";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Ruler, Grid, Info, Paperclip } from "lucide-react";
+import {
+  Ruler,
+  Grid,
+  Info,
+  Paperclip,
+  SplitSquareVertical,
+} from "lucide-react";
 
 interface ViewControlsProps {
   className?: string;
@@ -18,8 +24,15 @@ export function ViewControls({ className = "" }: ViewControlsProps) {
     setShowWoodGrain,
     setShowColorInfo,
     setShowHanger,
+    setShowSplitPanel,
   } = useCustomStore();
-  const { showRuler, showWoodGrain, showColorInfo, showHanger } = viewSettings;
+  const {
+    showRuler,
+    showWoodGrain,
+    showColorInfo,
+    showHanger,
+    showSplitPanel,
+  } = viewSettings;
 
   return (
     <motion.div
@@ -85,6 +98,20 @@ export function ViewControls({ className = "" }: ViewControlsProps) {
               <Switch
                 checked={showColorInfo}
                 onCheckedChange={setShowColorInfo}
+                className="data-[state=checked]:bg-purple-600"
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <SplitSquareVertical className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                <span className="text-sm text-gray-700 dark:text-gray-300">
+                  Split Panel View
+                </span>
+              </div>
+              <Switch
+                checked={showSplitPanel}
+                onCheckedChange={setShowSplitPanel}
                 className="data-[state=checked]:bg-purple-600"
               />
             </div>

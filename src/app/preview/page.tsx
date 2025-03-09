@@ -8,7 +8,7 @@ import { ArrowLeft, Info, Download, Share } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls } from "@react-three/drei";
+import { OrbitControls, Stats } from "@react-three/drei";
 import { GeometricPattern } from "../order/components/preview/GeometricPattern";
 import { TiledPattern } from "../order/components/preview/TiledPattern";
 import {
@@ -80,6 +80,7 @@ export default function PreviewPage() {
             zoom: 1.4,
           }}
         >
+          <Stats />
           {/* Lighting based on style */}
           {style === "geometric" && <GeometricLighting />}
           {style === "tiled" && <TiledLighting />}
