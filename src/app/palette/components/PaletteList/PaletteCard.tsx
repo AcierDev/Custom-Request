@@ -9,6 +9,7 @@ import {
   Download,
   Eye,
   ShoppingCart,
+  FolderIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,6 +37,8 @@ export const PaletteCard = ({
   onVisualize,
   onOrder,
   isEditing,
+  onMove,
+  inFolder = false,
 }: PaletteCardProps) => {
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -212,7 +215,11 @@ export const PaletteCard = ({
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
-                    onClick={() => onDelete(palette.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      onDelete(palette.id);
+                    }}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -222,6 +229,31 @@ export const PaletteCard = ({
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
+
+            {/* Add Move to Folder option */}
+            {onMove && (
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-gray-500 hover:text-amber-600 dark:text-gray-400 dark:hover:text-amber-400"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        onMove();
+                      }}
+                    >
+                      <FolderIcon className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p>Move to folder</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </div>
 
           <div className="flex gap-2">

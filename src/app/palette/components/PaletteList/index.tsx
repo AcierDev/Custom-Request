@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Search, SlidersHorizontal, Palette, Upload } from "lucide-react";
 import { PaletteCard } from "./PaletteCard";
 import { ImportCard } from "./ImportCard";
+import { FolderSection } from "./FolderSection";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
@@ -178,44 +179,57 @@ export function PaletteList() {
         </Button>
       </div>
 
-      {/* Palettes grid */}
-      {filteredPalettes.length > 0 || searchQuery === "" ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <AnimatePresence>
-            {filteredPalettes.map((palette) => (
-              <div key={palette.id} className="h-full">
-                <PaletteCard
-                  palette={palette}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                  onVisualize={handleVisualize}
-                  onOrder={handleOrder}
-                  isEditing={palette.id === editingPaletteId}
-                />
-              </div>
-            ))}
+      {/* Palettes section */}
+      {searchQuery ? (
+        // When searching, show flat list of palettes
+        filteredPalettes.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <AnimatePresence>
+              {filteredPalettes.map((palette) => (
+                <div key={palette.id} className="h-full">
+                  <PaletteCard
+                    palette={palette}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    onVisualize={handleVisualize}
+                    onOrder={handleOrder}
+                    isEditing={palette.id === editingPaletteId}
+                  />
+                </div>
+              ))}
+            </AnimatePresence>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-full mb-4">
+              <Palette className="h-8 w-8 text-gray-500 dark:text-gray-400" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">
+              No palettes found
+            </h3>
+            <p className="text-gray-500 dark:text-gray-400 max-w-md">
+              No palettes match "{searchQuery}". Try a different search term.
+            </p>
+          </div>
+        )
+      ) : (
+        // When not searching, show the folder organization
+        <div className="space-y-4">
+          <FolderSection
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onVisualize={handleVisualize}
+            onOrder={handleOrder}
+          />
 
-            {/* Only show import card when not filtering */}
-            {searchQuery === "" && (
+          {/* Import card (outside of folders) */}
+          {savedPalettes.length > 0 && (
+            <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="h-full">
                 <ImportCard onImport={handleOpenImport} />
               </div>
-            )}
-          </AnimatePresence>
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-full mb-4">
-            <Palette className="h-8 w-8 text-gray-500 dark:text-gray-400" />
-          </div>
-          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">
-            No palettes found
-          </h3>
-          <p className="text-gray-500 dark:text-gray-400 max-w-md">
-            {searchQuery
-              ? `No palettes match "${searchQuery}". Try a different search term.`
-              : "You haven't saved any palettes yet. Create a new palette to get started."}
-          </p>
+            </div>
+          )}
         </div>
       )}
 

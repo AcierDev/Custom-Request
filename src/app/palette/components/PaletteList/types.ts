@@ -13,4 +13,6 @@ export interface PaletteCardProps {
   onVisualize: (palette: SavedPalette) => void;
   onOrder: (palette: SavedPalette) => void;
   isEditing: boolean;
+  onMove?: () => void;
+  inFolder?: boolean;
 }

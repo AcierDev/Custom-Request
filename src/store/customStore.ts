@@ -51,6 +51,14 @@ export type SavedPalette = {
   colors: CustomColor[];
   createdAt: string;
   updatedAt?: string;
+  folderId?: string;
+};
+
+export type Folder = {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt?: string;
 };
 
 export type PatternType = "tiled" | "geometric";
@@ -80,6 +88,7 @@ interface CustomState {
   isReversed: boolean;
   style: StyleType;
   savedPalettes: SavedPalette[];
+  folders: Folder[];
   activeTab: "create" | "saved" | "official";
   editingPaletteId: string | null;
   viewSettings: {
@@ -90,8 +99,9 @@ interface CustomState {
     showSplitPanel: boolean;
     showFPS: boolean;
   };
-  lastSaved: number; // Add timestamp for last save
-  autoSaveEnabled: boolean; // Flag to enable/disable auto-save
+  lastSaved: number;
+  autoSaveEnabled: boolean;
+  dataSyncVersion: number;
 }
 
 interface CustomStore extends CustomState {
@@ -122,7 +132,7 @@ interface CustomStore extends CustomState {
   setShowHanger: (value: boolean) => void;
   setShowSplitPanel: (value: boolean) => void;
   setShowFPS: (value: boolean) => void;
-  savePalette: (name: string) => void;
+  savePalette: (name: string, folderId?: string) => void;
   updatePalette: (id: string, updates: Partial<SavedPalette>) => void;
   deletePalette: (id: string) => void;
   applyPalette: (paletteId: string) => void;
@@ -147,6 +157,10 @@ interface CustomStore extends CustomState {
     error?: string;
     draftOrder?: any;
   }>;
+  createFolder: (name: string) => string;
+  updateFolder: (id: string, updates: Partial<Folder>) => void;
+  deleteFolder: (id: string) => void;
+  movePaletteToFolder: (paletteId: string, folderId: string | null) => void;
 }
 
 interface HoverState {
@@ -192,6 +206,7 @@ interface ShareableState {
 // Define what we want to persist in the database
 interface PersistentState extends ShareableState {
   savedPalettes: SavedPalette[];
+  folders: Folder[];
   useMini: boolean;
   viewSettings: {
     showRuler: boolean;
@@ -201,6 +216,7 @@ interface PersistentState extends ShareableState {
     showSplitPanel: boolean;
     showFPS: boolean;
   };
+  dataSyncVersion?: number;
 }
 
 // List of state properties that should trigger an auto-save when changed
@@ -216,6 +232,7 @@ const AUTO_SAVE_TRACKED_PROPERTIES: (keyof CustomState)[] = [
   "patternStyle",
   "style",
   "savedPalettes",
+  "folders",
   "viewSettings",
 ];
 
@@ -237,6 +254,7 @@ export const useCustomStore = create<CustomStore>()(
     style: "geometric",
     useMini: false,
     savedPalettes: [],
+    folders: [],
     activeTab: "create",
     editingPaletteId: null,
     viewSettings: {
@@ -249,6 +267,7 @@ export const useCustomStore = create<CustomStore>()(
     },
     lastSaved: 0,
     autoSaveEnabled: true,
+    dataSyncVersion: 1,
     setDimensions: (dimensions) => {
       set({ dimensions });
       set((state) => ({
@@ -437,22 +456,46 @@ export const useCustomStore = create<CustomStore>()(
       set((state) => ({
         viewSettings: { ...state.viewSettings, showFPS: value },
       })),
-    savePalette: (name) =>
-      set((state) => {
-        if (state.customPalette.length === 0) return state;
+    savePalette: (name: string, folderId?: string) => {
+      const { customPalette } = get();
+      if (customPalette.length === 0) {
+        return;
+      }
 
-        const newPalette: SavedPalette = {
-          id: Date.now().toString(),
-          name: name || `Palette ${state.savedPalettes.length + 1}`,
-          colors: [...state.customPalette],
-          createdAt: new Date().toISOString(),
-        };
+      const paletteId = Date.now().toString();
+      const newPalette: SavedPalette = {
+        id: paletteId,
+        name,
+        colors: [...customPalette],
+        createdAt: new Date().toISOString(),
+        folderId,
+      };
 
-        return {
+      const editingId = get().editingPaletteId;
+      if (editingId) {
+        set((state) => ({
+          savedPalettes: state.savedPalettes.map((palette) =>
+            palette.id === editingId
+              ? {
+                  ...palette,
+                  name,
+                  colors: [...customPalette],
+                  updatedAt: new Date().toISOString(),
+                  folderId,
+                }
+              : palette
+          ),
+          editingPaletteId: null,
+          lastSaved: Date.now(),
+        }));
+      } else {
+        set((state) => ({
           savedPalettes: [...state.savedPalettes, newPalette],
-        };
-      }),
-
+          editingPaletteId: null,
+          lastSaved: Date.now(),
+        }));
+      }
+    },
     updatePalette: (id, updates) =>
       set((state) => ({
         savedPalettes: state.savedPalettes.map((palette) =>
@@ -465,14 +508,12 @@ export const useCustomStore = create<CustomStore>()(
             : palette
         ),
       })),
-
     deletePalette: (id) =>
       set((state) => ({
         savedPalettes: state.savedPalettes.filter(
           (palette) => palette.id !== id
         ),
       })),
-
     applyPalette: (paletteId) =>
       set((state) => {
         const palette = state.savedPalettes.find((p) => p.id === paletteId);
@@ -484,7 +525,6 @@ export const useCustomStore = create<CustomStore>()(
           currentColors: createColorMap(palette.colors),
         };
       }),
-
     loadPaletteForEditing: (paletteId) =>
       set((state) => {
         const palette = state.savedPalettes.find((p) => p.id === paletteId);
@@ -494,10 +534,9 @@ export const useCustomStore = create<CustomStore>()(
           customPalette: [...palette.colors],
           selectedDesign: ItemDesigns.Custom,
           currentColors: createColorMap(palette.colors),
-          selectedColors: [], // Clear any selected colors
+          selectedColors: [],
         };
       }),
-
     updateColorName: (index, name) =>
       set((state) => {
         if (index < 0 || index >= state.customPalette.length) return state;
@@ -510,7 +549,6 @@ export const useCustomStore = create<CustomStore>()(
           currentColors: createColorMap(newPalette),
         };
       }),
-
     updateColorHex: (index, hex) =>
       set((state) => {
         if (
@@ -531,20 +569,16 @@ export const useCustomStore = create<CustomStore>()(
           ),
         };
       }),
-
     setActiveTab: (tab: "create" | "saved" | "official") =>
       set({ activeTab: tab as "create" | "saved" | "official" }),
-
     resetPaletteEditor: () =>
       set({
         customPalette: [],
         selectedColors: [],
         editingPaletteId: null,
       }),
-
     loadOfficialPalette: (design: ItemDesigns) =>
       set((state) => {
-        // Convert the official design colors to the CustomColor format
         const designColors = DESIGN_COLORS[design];
         const customColors: CustomColor[] = Object.values(designColors).map(
           (color) => ({
@@ -555,23 +589,20 @@ export const useCustomStore = create<CustomStore>()(
 
         return {
           customPalette: customColors,
-          selectedDesign: ItemDesigns.Custom, // Set to Custom since we're creating a custom palette from an official one
+          selectedDesign: ItemDesigns.Custom,
           currentColors: createColorMap(customColors),
-          selectedColors: [], // Clear any selected colors
-          activeTab: "create", // Switch to create tab
+          selectedColors: [],
+          activeTab: "create",
         };
       }),
-
     setCustomPalette: (palette: CustomColor[]) =>
       set({
         customPalette: palette,
         currentColors: createColorMap(palette),
       }),
-
     generateShareableLink: () => {
       const state = get();
 
-      // Extract only the properties we want to share
       const shareableState: ShareableState = {
         dimensions: state.dimensions,
         selectedDesign: state.selectedDesign,
@@ -586,14 +617,11 @@ export const useCustomStore = create<CustomStore>()(
         useMini: state.useMini,
       };
 
-      // Use the compression utility to generate a more compact URL
       return generateShareableUrl(shareableState);
     },
-
     generateShortShareableLink: () => {
       const state = get();
 
-      // Extract only the properties we want to share
       const shareableState: ShareableState = {
         dimensions: state.dimensions,
         selectedDesign: state.selectedDesign,
@@ -608,34 +636,26 @@ export const useCustomStore = create<CustomStore>()(
         useMini: state.useMini,
       };
 
-      // Use the short URL compression utility
       return generateShortShareableUrl(shareableState);
     },
-
     loadFromShareableData: (data: string) => {
       try {
-        // Determine if this is a short URL or regular URL based on the parameter
-        // Short URLs use 's=' parameter, regular URLs use 'share='
         let shareableState: ShareableState;
 
         if (data.includes("s=")) {
-          // Extract the actual data part after 's='
           const shortData = data.split("s=")[1];
           shareableState = extractStateFromShortUrl<ShareableState>(shortData);
         } else {
-          // Regular URL format
           const regularData = data.includes("share=")
             ? data.split("share=")[1]
             : data;
           shareableState = extractStateFromUrl<ShareableState>(regularData);
         }
 
-        // Validate the data structure
         if (!shareableState.dimensions || !shareableState.selectedDesign) {
           return false;
         }
 
-        // Update the store with the shared state
         set({
           dimensions: shareableState.dimensions,
           selectedDesign: shareableState.selectedDesign,
@@ -647,13 +667,11 @@ export const useCustomStore = create<CustomStore>()(
           isRotated: shareableState.isRotated,
           patternStyle: shareableState.patternStyle,
           style: shareableState.style,
-          // Update the current colors based on the custom palette
           currentColors:
             shareableState.selectedDesign === ItemDesigns.Custom &&
             shareableState.customPalette.length > 0
               ? createColorMap(shareableState.customPalette)
               : DESIGN_COLORS[shareableState.selectedDesign],
-          // Update pricing based on the dimensions and shipping speed
           pricing: calculatePrice(
             shareableState.dimensions,
             shareableState.shippingSpeed
@@ -666,28 +684,23 @@ export const useCustomStore = create<CustomStore>()(
         return false;
       }
     },
-
-    // Set up automatic syncing with the database
     syncWithDatabase: (autoSave = true): (() => void) | void => {
-      // Only run in browser
       if (typeof window === "undefined") return;
 
-      // Get auth context if available
       const authContext = (window as any).__authContext;
       const isAuthenticated = authContext?.user !== null;
       const isGuest = authContext?.isGuest === true;
 
-      // For authenticated users, try to load from database
       if (isAuthenticated) {
         get().loadFromDatabase();
       } else if (isGuest) {
-        // For guest users, try to load from local storage
         try {
           const savedState = localStorage.getItem("everwood_guest_data");
           if (savedState) {
-            const data = JSON.parse(savedState) as PersistentState;
+            const data = JSON.parse(savedState) as PersistentState & {
+              dataSyncVersion?: number;
+            };
 
-            // Ensure viewSettings has all required properties including showSplitPanel
             const viewSettings = {
               showRuler: data.viewSettings?.showRuler ?? false,
               showWoodGrain: data.viewSettings?.showWoodGrain ?? true,
@@ -697,84 +710,65 @@ export const useCustomStore = create<CustomStore>()(
               showFPS: data.viewSettings?.showFPS ?? false,
             };
 
-            // Update the store with the loaded data
-            set({
-              ...data,
-              viewSettings,
-              // Recalculate derived fields
-              currentColors:
-                data.customPalette && data.customPalette.length > 0
-                  ? createColorMap(data.customPalette)
-                  : DESIGN_COLORS[data.selectedDesign as ItemDesigns] ||
-                    get().currentColors,
-              // Update pricing based on the dimensions and shipping speed
-              pricing: calculatePrice(
-                data.dimensions || get().dimensions,
-                data.shippingSpeed || get().shippingSpeed
-              ),
-              lastSaved: Date.now(),
-            });
+            const localVersion = get().dataSyncVersion;
+            const storedVersion = data.dataSyncVersion || 0;
 
-            console.log("Store data loaded from local storage for guest user");
+            if (storedVersion >= localVersion || get().lastSaved === 0) {
+              set({
+                ...data,
+                viewSettings,
+                folders: data.folders || [],
+                currentColors:
+                  data.customPalette && data.customPalette.length > 0
+                    ? createColorMap(data.customPalette)
+                    : DESIGN_COLORS[data.selectedDesign as ItemDesigns] ||
+                      get().currentColors,
+                pricing: calculatePrice(
+                  data.dimensions || get().dimensions,
+                  data.shippingSpeed || get().shippingSpeed
+                ),
+                dataSyncVersion: Math.max(storedVersion, localVersion),
+                lastSaved: Date.now(),
+              });
+
+              console.log(
+                `Loaded data from localStorage (version ${storedVersion})`
+              );
+            } else {
+              console.log(
+                `Local data (v${localVersion}) is newer than stored data (v${storedVersion}). Keeping local data.`
+              );
+            }
           }
         } catch (error) {
-          console.error("Error loading guest data from local storage:", error);
+          console.error("Error loading from localStorage:", error);
         }
       }
 
       if (autoSave) {
-        // Set up auto-save
         const saveInterval = setInterval(() => {
           if (!get().autoSaveEnabled) return;
 
-          // Get fresh auth context in case it changed
           const authContext = (window as any).__authContext;
           const isAuthenticated = authContext?.user !== null;
           const isGuest = authContext?.isGuest === true;
 
           if (isAuthenticated) {
-            // For authenticated users, save to database
             get().saveToDatabase();
           } else if (isGuest) {
-            // For guest users, save to local storage
-            try {
-              const stateToSave: PersistentState = {
-                dimensions: get().dimensions,
-                selectedDesign: get().selectedDesign,
-                shippingSpeed: get().shippingSpeed,
-                colorPattern: get().colorPattern,
-                orientation: get().orientation,
-                isReversed: get().isReversed,
-                customPalette: get().customPalette,
-                isRotated: get().isRotated,
-                patternStyle: get().patternStyle,
-                style: get().style,
-                useMini: get().useMini,
-                savedPalettes: get().savedPalettes,
-                viewSettings: get().viewSettings,
-              };
-
-              localStorage.setItem(
-                "everwood_guest_data",
-                JSON.stringify(stateToSave)
-              );
-              set({ lastSaved: Date.now() });
-              console.log("Store data saved to local storage for guest user");
-            } catch (error) {
-              console.error("Error saving guest data to local storage:", error);
-            }
+            get().saveToLocalStorage();
           }
-        }, 30000); // Save every 30 seconds
+        }, 30000);
 
-        // Clean up on unmount
         return () => clearInterval(saveInterval);
       }
     },
-
-    // Add a new function to save data locally for guest users
     saveToLocalStorage: (): boolean => {
       try {
-        const stateToSave: PersistentState = {
+        const currentVersion = get().dataSyncVersion;
+        const newVersion = currentVersion + 1;
+
+        const stateToSave: PersistentState & { dataSyncVersion: number } = {
           dimensions: get().dimensions,
           selectedDesign: get().selectedDesign,
           shippingSpeed: get().shippingSpeed,
@@ -786,162 +780,261 @@ export const useCustomStore = create<CustomStore>()(
           patternStyle: get().patternStyle,
           style: get().style,
           savedPalettes: get().savedPalettes,
+          folders: get().folders,
           useMini: get().useMini,
           viewSettings: get().viewSettings,
+          dataSyncVersion: newVersion,
         };
 
         localStorage.setItem(
           "everwood_guest_data",
           JSON.stringify(stateToSave)
         );
-        set({ lastSaved: Date.now() });
-        console.log("Store data manually saved to local storage");
+
+        set({
+          lastSaved: Date.now(),
+          dataSyncVersion: newVersion,
+        });
+
+        console.log(
+          `Store data saved to local storage (version ${newVersion})`
+        );
         return true;
       } catch (error) {
         console.error("Error saving data to local storage:", error);
         return false;
       }
     },
-
-    // Update saveToDatabase to handle both authenticated and guest users
     saveToDatabase: async (): Promise<boolean> => {
-      // In browser environment, check auth status from global context
       if (typeof window !== "undefined") {
         const authContext = (window as any).__authContext;
         const isAuthenticated = authContext?.user !== null;
         const isGuest = authContext?.isGuest === true;
 
         if (isGuest) {
-          // For guest users, save to local storage instead
           return get().saveToLocalStorage();
         }
 
-        if (!isAuthenticated) {
-          console.error("Cannot save to database: user not authenticated");
-          return false;
-        }
+        if (isAuthenticated) {
+          try {
+            const currentVersion = get().dataSyncVersion;
+            const newVersion = currentVersion + 1;
 
-        try {
-          // Create a persistable state object
-          const stateToSave: PersistentState = {
-            dimensions: get().dimensions,
-            selectedDesign: get().selectedDesign,
-            shippingSpeed: get().shippingSpeed,
-            colorPattern: get().colorPattern,
-            orientation: get().orientation,
-            isReversed: get().isReversed,
-            customPalette: get().customPalette,
-            isRotated: get().isRotated,
-            patternStyle: get().patternStyle,
-            style: get().style,
-            savedPalettes: get().savedPalettes,
-            viewSettings: get().viewSettings,
-            useMini: get().useMini,
-          };
+            const stateToSave: PersistentState & { dataSyncVersion: number } = {
+              dimensions: get().dimensions,
+              selectedDesign: get().selectedDesign,
+              shippingSpeed: get().shippingSpeed,
+              colorPattern: get().colorPattern,
+              orientation: get().orientation,
+              isReversed: get().isReversed,
+              customPalette: get().customPalette,
+              isRotated: get().isRotated,
+              patternStyle: get().patternStyle,
+              style: get().style,
+              savedPalettes: get().savedPalettes,
+              folders: get().folders,
+              useMini: get().useMini,
+              viewSettings: get().viewSettings,
+              dataSyncVersion: newVersion,
+            };
 
-          // Use the saveUserData method from auth context
-          const success = await authContext.saveUserData(stateToSave);
+            const hasNoLocalData =
+              stateToSave.savedPalettes.length === 0 &&
+              stateToSave.folders.length === 0;
+            const isKnownFreshStart = get().lastSaved === 0;
 
-          if (success) {
-            set({ lastSaved: Date.now() });
-            console.log("Store data saved to database");
+            if (hasNoLocalData && !isKnownFreshStart) {
+              try {
+                const currentData = await authContext.loadUserData();
+
+                if (currentData) {
+                  if (
+                    currentData.dataSyncVersion &&
+                    currentData.dataSyncVersion > currentVersion
+                  ) {
+                    console.warn(
+                      "Server has newer data (version mismatch). Aborting save to prevent data loss."
+                    );
+                    const loadSuccess = await get().loadFromDatabase();
+                    return loadSuccess;
+                  }
+
+                  if (
+                    currentData.savedPalettes?.length > 0 ||
+                    currentData.folders?.length > 0
+                  ) {
+                    stateToSave.savedPalettes = currentData.savedPalettes || [];
+                    stateToSave.folders = currentData.folders || [];
+                    console.log(
+                      "Preserved existing palettes and folders during save"
+                    );
+                  }
+                }
+              } catch (fetchError) {
+                console.error(
+                  "Failed to fetch current data during save:",
+                  fetchError
+                );
+                return false;
+              }
+            }
+
+            const success = await authContext.saveUserData(stateToSave);
+
+            if (success) {
+              set({
+                lastSaved: Date.now(),
+                dataSyncVersion: newVersion,
+              });
+              return true;
+            }
+          } catch (error) {
+            console.error("Error saving data to database:", error);
           }
-
-          return success;
-        } catch (error) {
-          console.error("Error saving to database:", error);
-          return false;
         }
       }
-
       return false;
     },
-
-    // Load state from MongoDB
-    loadFromDatabase: async () => {
+    loadFromDatabase: async (): Promise<boolean> => {
       try {
-        // Only run in browser
         if (typeof window === "undefined") return false;
 
-        // Get the auth context from window
         const authContext = (window as any).__authContext;
         if (!authContext || !authContext.user || !authContext.loadUserData) {
-          console.warn("Auth context not available for loading data");
+          console.error("Auth context not available for database load");
           return false;
         }
 
-        // Load from MongoDB via the auth context
-        const data = await authContext.loadUserData();
+        let loadAttempts = 0;
+        const maxAttempts = 3;
+        let data = null;
+
+        while (loadAttempts < maxAttempts && !data) {
+          try {
+            data = await authContext.loadUserData();
+            break;
+          } catch (loadError) {
+            loadAttempts++;
+            console.error(`Load attempt ${loadAttempts} failed:`, loadError);
+
+            if (loadAttempts < maxAttempts) {
+              await new Promise((resolve) =>
+                setTimeout(resolve, 500 * Math.pow(2, loadAttempts - 1))
+              );
+            }
+          }
+        }
 
         if (!data) {
-          console.log("No stored data found for user");
+          console.error("Failed to load user data after multiple attempts");
           return false;
         }
 
-        // Update the store with the loaded data
-        set({
-          dimensions: data.dimensions || get().dimensions,
-          selectedDesign: data.selectedDesign || get().selectedDesign,
-          shippingSpeed: data.shippingSpeed || get().shippingSpeed,
-          colorPattern: data.colorPattern || get().colorPattern,
-          orientation: data.orientation || get().orientation,
-          isReversed:
-            data.isReversed !== undefined ? data.isReversed : get().isReversed,
-          customPalette: data.customPalette || get().customPalette,
-          isRotated:
-            data.isRotated !== undefined ? data.isRotated : get().isRotated,
-          patternStyle: data.patternStyle || get().patternStyle,
-          style: data.style || get().style,
-          savedPalettes: data.savedPalettes || get().savedPalettes,
+        if (!data.dimensions) {
+          console.error("Loaded data is missing key properties");
+          return false;
+        }
+
+        const localVersion = get().dataSyncVersion;
+        const serverVersion = data.dataSyncVersion || 0;
+
+        if (localVersion > serverVersion && get().lastSaved > 0) {
+          console.log(
+            `Local data (v${localVersion}) is newer than server data (v${serverVersion}). Keeping local data.`
+          );
+          return false;
+        }
+
+        const isFirstLoad = get().lastSaved === 0;
+
+        let mergedState: Partial<PersistentState> = { ...data };
+
+        if (
+          !isFirstLoad &&
+          get().lastSaved > 0 &&
+          localVersion >= serverVersion
+        ) {
+          const currentState = get();
+
+          if (
+            currentState.savedPalettes.length >
+            (data.savedPalettes?.length || 0)
+          ) {
+            console.log("Using local palettes which appear more complete");
+            mergedState.savedPalettes = currentState.savedPalettes;
+          }
+
+          if (currentState.folders.length > (data.folders?.length || 0)) {
+            console.log("Using local folders which appear more complete");
+            mergedState.folders = currentState.folders;
+          }
+        }
+
+        const finalState = {
+          dimensions: mergedState.dimensions || get().dimensions,
+          selectedDesign: mergedState.selectedDesign || get().selectedDesign,
+          shippingSpeed: mergedState.shippingSpeed || get().shippingSpeed,
+          colorPattern: mergedState.colorPattern || get().colorPattern,
+          orientation: mergedState.orientation || get().orientation,
+          isReversed: mergedState.isReversed ?? get().isReversed,
+          customPalette: mergedState.customPalette || get().customPalette,
+          isRotated: mergedState.isRotated ?? get().isRotated,
+          patternStyle: mergedState.patternStyle || get().patternStyle,
+          style: mergedState.style || get().style,
+          savedPalettes: mergedState.savedPalettes || [],
+          folders: mergedState.folders || [],
+          useMini: mergedState.useMini ?? get().useMini,
           viewSettings: {
             showRuler:
-              data.viewSettings?.showRuler ?? get().viewSettings.showRuler,
+              mergedState.viewSettings?.showRuler ??
+              get().viewSettings.showRuler,
             showWoodGrain:
-              data.viewSettings?.showWoodGrain ??
+              mergedState.viewSettings?.showWoodGrain ??
               get().viewSettings.showWoodGrain,
             showColorInfo:
-              data.viewSettings?.showColorInfo ??
+              mergedState.viewSettings?.showColorInfo ??
               get().viewSettings.showColorInfo,
             showHanger:
-              data.viewSettings?.showHanger ?? get().viewSettings.showHanger,
+              mergedState.viewSettings?.showHanger ??
+              get().viewSettings.showHanger,
             showSplitPanel:
-              data.viewSettings?.showSplitPanel ??
+              mergedState.viewSettings?.showSplitPanel ??
               get().viewSettings.showSplitPanel,
-            showFPS: data.viewSettings?.showFPS ?? get().viewSettings.showFPS,
+            showFPS:
+              mergedState.viewSettings?.showFPS ?? get().viewSettings.showFPS,
           },
-          // Update the current colors based on the custom palette
           currentColors:
-            data.selectedDesign === ItemDesigns.Custom &&
-            data.customPalette?.length > 0
-              ? createColorMap(data.customPalette)
-              : DESIGN_COLORS[data.selectedDesign as ItemDesigns] ||
+            mergedState.selectedDesign === ItemDesigns.Custom &&
+            mergedState.customPalette?.length! > 0
+              ? createColorMap(mergedState.customPalette!)
+              : DESIGN_COLORS[mergedState.selectedDesign as ItemDesigns] ||
                 get().currentColors,
-          // Update pricing based on the dimensions and shipping speed
           pricing: calculatePrice(
-            data.dimensions || get().dimensions,
-            data.shippingSpeed || get().shippingSpeed
+            mergedState.dimensions || get().dimensions,
+            mergedState.shippingSpeed || get().shippingSpeed
           ),
+          dataSyncVersion: Math.max(serverVersion, localVersion),
+        };
+
+        set({
+          ...finalState,
           lastSaved: Date.now(),
         });
 
-        console.log("Store data loaded from database");
+        console.log(
+          `Successfully loaded and merged user data from database (version ${serverVersion})`
+        );
         return true;
       } catch (error) {
-        console.error("Error loading from database:", error);
+        console.error("Unexpected error loading from database:", error);
         return false;
       }
     },
-
-    // Toggle auto-save functionality
     setAutoSaveEnabled: (enabled) => set({ autoSaveEnabled: enabled }),
-
-    // Add the createDraftOrder method
     createDraftOrder: async () => {
       try {
-        // Save the current design state before creating the order
         const state = get();
 
-        // Create the draft order
         const response = await fetch("/api/create-draft-order", {
           method: "POST",
           headers: {
@@ -984,32 +1077,76 @@ export const useCustomStore = create<CustomStore>()(
         };
       }
     },
+    createFolder: (name: string) => {
+      const id = Date.now().toString();
+      const newFolder: Folder = {
+        id,
+        name,
+        createdAt: new Date().toISOString(),
+      };
+
+      set((state) => ({
+        folders: [...state.folders, newFolder],
+        lastSaved: Date.now(),
+      }));
+
+      return id;
+    },
+    updateFolder: (id: string, updates: Partial<Folder>) => {
+      set((state) => ({
+        folders: state.folders.map((folder) =>
+          folder.id === id
+            ? {
+                ...folder,
+                ...updates,
+                updatedAt: new Date().toISOString(),
+              }
+            : folder
+        ),
+        lastSaved: Date.now(),
+      }));
+    },
+    deleteFolder: (id: string) => {
+      set((state) => ({
+        folders: state.folders.filter((folder) => folder.id !== id),
+        savedPalettes: state.savedPalettes.map((palette) =>
+          palette.folderId === id
+            ? { ...palette, folderId: undefined }
+            : palette
+        ),
+        lastSaved: Date.now(),
+      }));
+    },
+    movePaletteToFolder: (paletteId: string, folderId: string | null) => {
+      set((state) => ({
+        savedPalettes: state.savedPalettes.map((palette) =>
+          palette.id === paletteId
+            ? { ...palette, folderId: folderId || undefined }
+            : palette
+        ),
+        lastSaved: Date.now(),
+      }));
+    },
   }))
 );
 
-// Create a debounced save function
 const debouncedSave = debounce(() => {
   useCustomStore.getState().saveToDatabase();
 }, 2000);
 
-// Set up a listener for state changes that should trigger auto-save
 useCustomStore.subscribe(
   (state) => {
-    // Create a selector that picks the tracked properties
     return AUTO_SAVE_TRACKED_PROPERTIES.reduce((acc, key) => {
-      acc[key] = state[key] as any; // Use type assertion to avoid type error
+      acc[key] = state[key] as any;
       return acc;
     }, {} as Partial<CustomState>);
   },
   (newState, prevState) => {
-    // Only proceed if auto-save is enabled
     if (!useCustomStore.getState().autoSaveEnabled) return;
 
-    // Check if any tracked property has changed
     const hasChanged = !shallow(newState, prevState);
 
     if (hasChanged) {
-      // If something changed, trigger a debounced save
       debouncedSave();
     }
   }
