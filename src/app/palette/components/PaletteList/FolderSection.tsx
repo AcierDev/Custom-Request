@@ -33,6 +33,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { ImportCard } from "./ImportCard";
 
 interface FolderItemProps {
   folder: Folder;
@@ -63,7 +64,7 @@ const FolderItem = ({
   const [newFolderName, setNewFolderName] = useState(folder.name);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
-  const { updateFolder, deleteFolder } = useCustomStore();
+  const { updatePaletteFolder, deletePaletteFolder } = useCustomStore();
 
   const handleToggle = () => {
     setIsOpen(!isOpen);
@@ -76,7 +77,7 @@ const FolderItem = ({
 
   const saveRename = () => {
     if (newFolderName.trim()) {
-      updateFolder(folder.id, { name: newFolderName.trim() });
+      updatePaletteFolder(folder.id, { name: newFolderName.trim() });
       toast.success(`Folder renamed to "${newFolderName.trim()}"`);
     }
     setIsEditingFolder(false);
@@ -87,7 +88,7 @@ const FolderItem = ({
   };
 
   const handleDeleteFolder = () => {
-    deleteFolder(folder.id);
+    deletePaletteFolder(folder.id);
     setIsConfirmingDelete(false);
     toast.success(`Folder "${folder.name}" deleted`);
   };
@@ -243,6 +244,7 @@ interface UnorganizedPalettesProps {
     paletteId: string,
     currentFolderId: string | undefined
   ) => void;
+  onImport: () => void;
 }
 
 const UnorganizedPalettes = ({
@@ -253,6 +255,7 @@ const UnorganizedPalettes = ({
   onOrder,
   editingPaletteId,
   onMovePalette,
+  onImport,
 }: UnorganizedPalettesProps) => {
   const [isOpen, setIsOpen] = useState(true);
 
@@ -302,6 +305,12 @@ const UnorganizedPalettes = ({
                   />
                 </div>
               ))}
+
+              {/* Import card */}
+              <div className="h-full">
+                <ImportCard onImport={onImport} />
+              </div>
+
               {palettes.length === 0 && (
                 <div className="col-span-full py-4 text-center text-gray-500 dark:text-gray-400 italic">
                   All your palettes are organized in folders.
@@ -328,7 +337,8 @@ const MovePaletteDialog = ({
   isOpen,
   onClose,
 }: MovePaletteDialogProps) => {
-  const { folders, movePaletteToFolder, savedPalettes } = useCustomStore();
+  const { paletteFolders, movePaletteToFolder, savedPalettes } =
+    useCustomStore();
 
   const handleMove = (folderId: string | null) => {
     if (paletteId) {
@@ -337,7 +347,7 @@ const MovePaletteDialog = ({
       // Find palette name for the toast
       const palette = savedPalettes.find((p) => p.id === paletteId);
       const folderName = folderId
-        ? folders.find((f) => f.id === folderId)?.name
+        ? paletteFolders.find((f) => f.id === folderId)?.name
         : "Uncategorized";
 
       toast.success(`"${palette?.name}" moved to ${folderName}`);
@@ -367,7 +377,7 @@ const MovePaletteDialog = ({
             </span>
           </div>
 
-          {folders.map((folder) => (
+          {paletteFolders.map((folder) => (
             <div
               key={folder.id}
               className="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
@@ -394,6 +404,7 @@ interface FolderSectionProps {
   onDelete: (id: string) => void;
   onVisualize: (palette: SavedPalette) => void;
   onOrder: (palette: SavedPalette) => void;
+  onImport: () => void;
 }
 
 export const FolderSection = ({
@@ -401,9 +412,14 @@ export const FolderSection = ({
   onDelete,
   onVisualize,
   onOrder,
+  onImport,
 }: FolderSectionProps) => {
-  const { folders, savedPalettes, editingPaletteId, createFolder } =
-    useCustomStore();
+  const {
+    paletteFolders,
+    savedPalettes,
+    editingPaletteId,
+    createPaletteFolder,
+  } = useCustomStore();
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [movingPalette, setMovingPalette] = useState<{
@@ -412,7 +428,7 @@ export const FolderSection = ({
   } | null>(null);
 
   // Group palettes by folder
-  const palettesByFolder = folders.map((folder) => ({
+  const palettesByFolder = paletteFolders.map((folder) => ({
     folder,
     palettes: savedPalettes.filter((palette) => palette.folderId === folder.id),
   }));
@@ -429,7 +445,7 @@ export const FolderSection = ({
 
   const saveNewFolder = () => {
     if (newFolderName.trim()) {
-      createFolder(newFolderName.trim());
+      createPaletteFolder(newFolderName.trim());
       toast.success(`Folder "${newFolderName.trim()}" created`);
     }
     setIsCreatingFolder(false);
@@ -479,9 +495,10 @@ export const FolderSection = ({
         onOrder={onOrder}
         editingPaletteId={editingPaletteId}
         onMovePalette={handleMovePalette}
+        onImport={onImport}
       />
 
-      {folders.length === 0 && unorganizedPalettes.length === 0 && (
+      {paletteFolders.length === 0 && unorganizedPalettes.length === 0 && (
         <div className="text-center py-8">
           <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-full inline-block mb-4">
             <FolderIcon className="h-8 w-8 text-gray-400 dark:text-gray-500" />

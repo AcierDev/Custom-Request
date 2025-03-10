@@ -220,16 +220,8 @@ export function PaletteList() {
             onDelete={handleDelete}
             onVisualize={handleVisualize}
             onOrder={handleOrder}
+            onImport={handleOpenImport}
           />
-
-          {/* Import card (outside of folders) */}
-          {savedPalettes.length > 0 && (
-            <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="h-full">
-                <ImportCard onImport={handleOpenImport} />
-              </div>
-            </div>
-          )}
         </div>
       )}
 

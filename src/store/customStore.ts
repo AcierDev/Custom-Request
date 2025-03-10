@@ -4,6 +4,7 @@ import { calculatePrice, PriceBreakdown } from "@/lib/pricing";
 import { mixPaintColors } from "@/lib/colorUtils";
 import { DESIGN_COLORS } from "@/typings/color-maps";
 import { createStore } from "zustand/vanilla";
+import { createWithEqualityFn } from "zustand/traditional";
 import {
   generateShareableUrl,
   extractStateFromUrl,
@@ -109,6 +110,8 @@ interface CustomState {
   isReversed: boolean;
   savedPalettes: SavedPalette[];
   savedDesigns: SavedDesign[];
+  paletteFolders: Folder[];
+  designFolders: Folder[];
   folders: Folder[];
   activeTab: "create" | "saved" | "official";
   editingPaletteId: string | null;
@@ -185,11 +188,15 @@ interface CustomStore extends CustomState {
     error?: string;
     draftOrder?: any;
   }>;
-  createFolder: (name: string) => string;
-  updateFolder: (id: string, updates: Partial<Folder>) => void;
-  deleteFolder: (id: string) => void;
+  createPaletteFolder: (name: string) => string;
+  updatePaletteFolder: (id: string, updates: Partial<Folder>) => void;
+  deletePaletteFolder: (id: string) => void;
   movePaletteToFolder: (paletteId: string, folderId: string | null) => void;
+  createDesignFolder: (name: string) => string;
+  updateDesignFolder: (id: string, updates: Partial<Folder>) => void;
+  deleteDesignFolder: (id: string) => void;
   moveDesignToFolder: (designId: string, folderId: string | null) => void;
+  init: () => void;
 }
 
 interface HoverState {
@@ -236,7 +243,8 @@ interface ShareableState {
 interface PersistentState extends ShareableState {
   savedPalettes: SavedPalette[];
   savedDesigns: SavedDesign[];
-  folders: Folder[];
+  paletteFolders: Folder[];
+  designFolders: Folder[];
   useMini: boolean;
   viewSettings: {
     showRuler: boolean;
@@ -263,37 +271,40 @@ const AUTO_SAVE_TRACKED_PROPERTIES: (keyof CustomState)[] = [
   "style",
   "savedPalettes",
   "savedDesigns",
-  "folders",
+  "paletteFolders",
+  "designFolders",
   "viewSettings",
 ];
 
 // Create the store with the subscribeWithSelector middleware
 export const useCustomStore = create<CustomStore>()(
   subscribeWithSelector((set, get) => ({
-    dimensions: { width: 16, height: 10 },
-    selectedDesign: ItemDesigns.Coastal,
+    dimensions: { width: 24, height: 24 },
+    selectedDesign: ItemDesigns.Custom,
     shippingSpeed: "standard",
-    pricing: calculatePrice({ width: 16, height: 10 }, "standard"),
-    colorPattern: "fade",
+    pricing: { basePrice: 0, shipping: 0, tax: 0, total: 0 },
+    colorPattern: "striped",
     orientation: "horizontal",
-    isReversed: false,
-    currentColors: DESIGN_COLORS[ItemDesigns.Custom],
+    currentColors: null,
     customPalette: [],
     selectedColors: [],
     isRotated: false,
     patternStyle: "tiled",
-    style: "geometric",
+    style: "tiled",
     useMini: false,
+    isReversed: false,
     savedPalettes: [],
     savedDesigns: [],
     folders: [],
+    paletteFolders: [],
+    designFolders: [],
     activeTab: "create",
     editingPaletteId: null,
     editingDesignId: null,
     viewSettings: {
-      showRuler: false,
+      showRuler: true,
       showWoodGrain: true,
-      showColorInfo: false,
+      showColorInfo: true,
       showHanger: true,
       showSplitPanel: false,
       showFPS: false,
@@ -301,6 +312,70 @@ export const useCustomStore = create<CustomStore>()(
     lastSaved: 0,
     autoSaveEnabled: true,
     dataSyncVersion: 1,
+    init: () => {
+      const localState = localStorage.getItem("everwood-custom-design");
+      if (localState) {
+        try {
+          const parsedState = JSON.parse(localState);
+          set(parsedState);
+
+          if (
+            parsedState.folders &&
+            parsedState.folders.length > 0 &&
+            (!parsedState.paletteFolders ||
+              parsedState.paletteFolders.length === 0) &&
+            (!parsedState.designFolders ||
+              parsedState.designFolders.length === 0)
+          ) {
+            const paletteFolderIds = new Set<string>();
+            const designFolderIds = new Set<string>();
+
+            if (parsedState.savedPalettes) {
+              parsedState.savedPalettes.forEach((palette: SavedPalette) => {
+                if (palette.folderId) {
+                  paletteFolderIds.add(palette.folderId);
+                }
+              });
+            }
+
+            if (parsedState.savedDesigns) {
+              parsedState.savedDesigns.forEach((design: SavedDesign) => {
+                if (design.folderId) {
+                  designFolderIds.add(design.folderId);
+                }
+              });
+            }
+
+            const paletteFolders = parsedState.folders.filter(
+              (folder: Folder) => paletteFolderIds.has(folder.id)
+            );
+
+            const designFolders = parsedState.folders.filter((folder: Folder) =>
+              designFolderIds.has(folder.id)
+            );
+
+            const unassignedFolders = parsedState.folders.filter(
+              (folder: Folder) =>
+                !paletteFolderIds.has(folder.id) &&
+                !designFolderIds.has(folder.id)
+            );
+
+            set({
+              paletteFolders: [...paletteFolders, ...unassignedFolders],
+              designFolders,
+            });
+
+            console.log(
+              `Migrated ${paletteFolders.length} palette folders and ${designFolders.length} design folders from ${parsedState.folders.length} total folders.`
+            );
+          }
+
+          console.log("Loaded state from local storage");
+        } catch (e) {
+          console.error("Failed to parse local storage state", e);
+        }
+      }
+    },
     setDimensions: (dimensions) => {
       set({ dimensions });
       set((state) => ({
@@ -370,20 +445,15 @@ export const useCustomStore = create<CustomStore>()(
       }),
     toggleColorSelection: (hex) =>
       set((state) => {
-        // If the color is already selected, remove it
         if (state.selectedColors.includes(hex)) {
           return {
             selectedColors: state.selectedColors.filter((h) => h !== hex),
           };
-        }
-        // If we have less than 2 colors selected, add this one
-        else if (state.selectedColors.length < 2) {
+        } else if (state.selectedColors.length < 2) {
           return {
             selectedColors: [...state.selectedColors, hex],
           };
-        }
-        // If we already have 2 colors selected, replace the first one with this new one
-        else {
+        } else {
           console.log(
             "Already have 2 colors selected, replacing the first one"
           );
@@ -400,15 +470,12 @@ export const useCustomStore = create<CustomStore>()(
       set((state) => {
         if (state.selectedColors.length !== 2) return state;
 
-        // Find the indices of the selected colors in the palette
         const indices = state.selectedColors.map((hex) =>
           state.customPalette.findIndex((color) => color.hex === hex)
         );
 
-        // Sort indices to determine the direction (always blend from lower to higher index)
         const [startIndex, endIndex] = indices.sort((a, b) => a - b);
 
-        // Get the actual colors based on their position in the palette
         const color1 = state.customPalette[startIndex].hex;
         const color2 = state.customPalette[endIndex].hex;
 
@@ -704,7 +771,8 @@ export const useCustomStore = create<CustomStore>()(
             shareableState.selectedDesign === ItemDesigns.Custom &&
             shareableState.customPalette.length > 0
               ? createColorMap(shareableState.customPalette)
-              : DESIGN_COLORS[shareableState.selectedDesign],
+              : DESIGN_COLORS[shareableState.selectedDesign as ItemDesigns] ||
+                get().currentColors,
           pricing: calculatePrice(
             shareableState.dimensions,
             shareableState.shippingSpeed
@@ -750,7 +818,8 @@ export const useCustomStore = create<CustomStore>()(
               set({
                 ...data,
                 viewSettings,
-                folders: data.folders || [],
+                paletteFolders: data.paletteFolders || [],
+                designFolders: data.designFolders || [],
                 currentColors:
                   data.customPalette && data.customPalette.length > 0
                     ? createColorMap(data.customPalette)
@@ -814,7 +883,8 @@ export const useCustomStore = create<CustomStore>()(
           style: get().style,
           savedPalettes: get().savedPalettes,
           savedDesigns: get().savedDesigns,
-          folders: get().folders,
+          paletteFolders: get().paletteFolders,
+          designFolders: get().designFolders,
           useMini: get().useMini,
           viewSettings: get().viewSettings,
           dataSyncVersion: newVersion,
@@ -867,7 +937,8 @@ export const useCustomStore = create<CustomStore>()(
               style: get().style,
               savedPalettes: get().savedPalettes,
               savedDesigns: get().savedDesigns,
-              folders: get().folders,
+              paletteFolders: get().paletteFolders,
+              designFolders: get().designFolders,
               useMini: get().useMini,
               viewSettings: get().viewSettings,
               dataSyncVersion: newVersion,
@@ -876,7 +947,8 @@ export const useCustomStore = create<CustomStore>()(
             const hasNoLocalData =
               stateToSave.savedPalettes.length === 0 &&
               stateToSave.savedDesigns.length === 0 &&
-              stateToSave.folders.length === 0;
+              stateToSave.paletteFolders.length === 0 &&
+              stateToSave.designFolders.length === 0;
             const isKnownFreshStart = get().lastSaved === 0;
 
             if (hasNoLocalData && !isKnownFreshStart) {
@@ -898,11 +970,14 @@ export const useCustomStore = create<CustomStore>()(
                   if (
                     currentData.savedPalettes?.length > 0 ||
                     currentData.savedDesigns?.length > 0 ||
-                    currentData.folders?.length > 0
+                    currentData.paletteFolders?.length > 0 ||
+                    currentData.designFolders?.length > 0
                   ) {
                     stateToSave.savedPalettes = currentData.savedPalettes || [];
                     stateToSave.savedDesigns = currentData.savedDesigns || [];
-                    stateToSave.folders = currentData.folders || [];
+                    stateToSave.paletteFolders =
+                      currentData.paletteFolders || [];
+                    stateToSave.designFolders = currentData.designFolders || [];
                     console.log(
                       "Preserved existing palettes, designs, and folders during save"
                     );
@@ -1009,9 +1084,24 @@ export const useCustomStore = create<CustomStore>()(
             mergedState.savedDesigns = currentState.savedDesigns;
           }
 
-          if (currentState.folders.length > (data.folders?.length || 0)) {
-            console.log("Using local folders which appear more complete");
-            mergedState.folders = currentState.folders;
+          if (
+            currentState.paletteFolders.length >
+            (data.paletteFolders?.length || 0)
+          ) {
+            console.log(
+              "Using local palette folders which appear more complete"
+            );
+            mergedState.paletteFolders = currentState.paletteFolders;
+          }
+
+          if (
+            currentState.designFolders.length >
+            (data.designFolders?.length || 0)
+          ) {
+            console.log(
+              "Using local design folders which appear more complete"
+            );
+            mergedState.designFolders = currentState.designFolders;
           }
         }
 
@@ -1028,7 +1118,8 @@ export const useCustomStore = create<CustomStore>()(
           style: mergedState.style || get().style,
           savedPalettes: mergedState.savedPalettes || [],
           savedDesigns: mergedState.savedDesigns || [],
-          folders: mergedState.folders || [],
+          paletteFolders: mergedState.paletteFolders || [],
+          designFolders: mergedState.designFolders || [],
           useMini: mergedState.useMini ?? get().useMini,
           viewSettings: {
             showRuler:
@@ -1123,7 +1214,7 @@ export const useCustomStore = create<CustomStore>()(
         };
       }
     },
-    createFolder: (name: string) => {
+    createPaletteFolder: (name: string) => {
       const id = Date.now().toString();
       const newFolder: Folder = {
         id,
@@ -1132,15 +1223,15 @@ export const useCustomStore = create<CustomStore>()(
       };
 
       set((state) => ({
-        folders: [...state.folders, newFolder],
+        paletteFolders: [...state.paletteFolders, newFolder],
         lastSaved: Date.now(),
       }));
 
       return id;
     },
-    updateFolder: (id: string, updates: Partial<Folder>) => {
+    updatePaletteFolder: (id: string, updates: Partial<Folder>) => {
       set((state) => ({
-        folders: state.folders.map((folder) =>
+        paletteFolders: state.paletteFolders.map((folder) =>
           folder.id === id
             ? {
                 ...folder,
@@ -1152,9 +1243,11 @@ export const useCustomStore = create<CustomStore>()(
         lastSaved: Date.now(),
       }));
     },
-    deleteFolder: (id: string) => {
+    deletePaletteFolder: (id: string) => {
       set((state) => ({
-        folders: state.folders.filter((folder) => folder.id !== id),
+        paletteFolders: state.paletteFolders.filter(
+          (folder) => folder.id !== id
+        ),
         savedPalettes: state.savedPalettes.map((palette) =>
           palette.folderId === id
             ? { ...palette, folderId: undefined }
@@ -1172,6 +1265,62 @@ export const useCustomStore = create<CustomStore>()(
         ),
         lastSaved: Date.now(),
       }));
+    },
+    createDesignFolder: (name: string) => {
+      const id = Date.now().toString();
+      const newFolder: Folder = {
+        id,
+        name,
+        createdAt: new Date().toISOString(),
+      };
+
+      set((state) => ({
+        designFolders: [...state.designFolders, newFolder],
+        lastSaved: Date.now(),
+      }));
+
+      return id;
+    },
+    updateDesignFolder: (id: string, updates: Partial<Folder>) => {
+      set((state) => ({
+        designFolders: state.designFolders.map((folder) =>
+          folder.id === id
+            ? {
+                ...folder,
+                ...updates,
+                updatedAt: new Date().toISOString(),
+              }
+            : folder
+        ),
+        lastSaved: Date.now(),
+      }));
+    },
+    deleteDesignFolder: (id: string) => {
+      set((state) => ({
+        designFolders: state.designFolders.filter((folder) => folder.id !== id),
+        savedDesigns: state.savedDesigns.map((design) =>
+          design.folderId === id ? { ...design, folderId: undefined } : design
+        ),
+        lastSaved: Date.now(),
+      }));
+    },
+    moveDesignToFolder: (designId: string, folderId: string | null) => {
+      set((state) => ({
+        savedDesigns: state.savedDesigns.map((design) =>
+          design.id === designId
+            ? {
+                ...design,
+                folderId: folderId || undefined,
+                updatedAt: new Date().toISOString(),
+              }
+            : design
+        ),
+        lastSaved: Date.now(),
+      }));
+
+      if (get().autoSaveEnabled) {
+        get().saveToDatabase();
+      }
     },
     saveDesign: (name: string, folderId?: string) => {
       const id = nanoid();
@@ -1200,7 +1349,6 @@ export const useCustomStore = create<CustomStore>()(
         editingDesignId: null,
       }));
 
-      // Auto-save if enabled
       if (get().autoSaveEnabled) {
         get().saveToDatabase();
       }
@@ -1216,7 +1364,6 @@ export const useCustomStore = create<CustomStore>()(
         ),
       }));
 
-      // Auto-save if enabled
       if (get().autoSaveEnabled) {
         get().saveToDatabase();
       }
@@ -1228,7 +1375,6 @@ export const useCustomStore = create<CustomStore>()(
           state.editingDesignId === id ? null : state.editingDesignId,
       }));
 
-      // Auto-save if enabled
       if (get().autoSaveEnabled) {
         get().saveToDatabase();
       }
@@ -1241,7 +1387,6 @@ export const useCustomStore = create<CustomStore>()(
         return;
       }
 
-      // Apply all design properties
       set({
         dimensions: design.dimensions,
         selectedDesign: design.selectedDesign,
@@ -1254,7 +1399,6 @@ export const useCustomStore = create<CustomStore>()(
         patternStyle: design.patternStyle,
         style: design.style,
         useMini: design.useMini,
-        // Update current colors and pricing based on the new design values
         currentColors:
           design.selectedDesign === ItemDesigns.Custom &&
           design.customPalette.length > 0
@@ -1273,7 +1417,6 @@ export const useCustomStore = create<CustomStore>()(
 
       set({
         editingDesignId: designId,
-        // Apply the design properties for editing
         dimensions: design.dimensions,
         selectedDesign: design.selectedDesign,
         shippingSpeed: design.shippingSpeed,
@@ -1285,7 +1428,6 @@ export const useCustomStore = create<CustomStore>()(
         patternStyle: design.patternStyle,
         style: design.style,
         useMini: design.useMini,
-        // Update current colors and pricing based on the design values
         currentColors:
           design.selectedDesign === ItemDesigns.Custom &&
           design.customPalette.length > 0
@@ -1298,24 +1440,6 @@ export const useCustomStore = create<CustomStore>()(
       set({
         editingDesignId: null,
       });
-    },
-    moveDesignToFolder: (designId: string, folderId: string | null) => {
-      set((state) => ({
-        savedDesigns: state.savedDesigns.map((design) =>
-          design.id === designId
-            ? {
-                ...design,
-                folderId: folderId || undefined,
-                updatedAt: new Date().toISOString(),
-              }
-            : design
-        ),
-      }));
-
-      // Auto-save if enabled
-      if (get().autoSaveEnabled) {
-        get().saveToDatabase();
-      }
     },
   }))
 );
@@ -1340,4 +1464,22 @@ useCustomStore.subscribe(
       debouncedSave();
     }
   }
+);
+
+// After the store is created, call the init function to migrate data
+const isStore = "everwood-init";
+if (!(globalThis as any)[isStore]) {
+  useCustomStore.getState().init();
+  (globalThis as any)[isStore] = true;
+}
+
+// For direct access to the hover store
+export const useHoverStore = createWithEqualityFn<HoverState>(
+  (set) => ({
+    hoverInfo: null,
+    pinnedInfo: null,
+    setHoverInfo: (info) => set({ hoverInfo: info }),
+    setPinnedInfo: (info) => set({ pinnedInfo: info }),
+  }),
+  shallow
 );
