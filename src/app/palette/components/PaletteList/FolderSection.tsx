@@ -145,7 +145,7 @@ const FolderItem = ({
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="pl-4"
+            className="pl-4 pr-4"
           >
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {palettes.map((palette) => (
@@ -289,6 +289,7 @@ const UnorganizedPalettes = ({
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3 }}
+            className="pl-4 pr-4"
           >
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {palettes.map((palette) => (

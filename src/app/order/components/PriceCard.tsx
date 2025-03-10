@@ -21,7 +21,7 @@ export function PriceCard() {
           amount === 0 ? "text-green-600 dark:text-green-400" : ""
         )}
       >
-        ${amount.toFixed(2)}
+        ${amount?.toFixed(2)}
       </motion.span>
     );
   };

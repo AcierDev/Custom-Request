@@ -282,7 +282,17 @@ export const useCustomStore = create<CustomStore>()(
     dimensions: { width: 24, height: 24 },
     selectedDesign: ItemDesigns.Custom,
     shippingSpeed: "standard",
-    pricing: { basePrice: 0, shipping: 0, tax: 0, total: 0 },
+    pricing: {
+      basePrice: 0,
+      shipping: { base: 0, additionalHeight: 0, expedited: 0, total: 0 },
+      tax: 0,
+      total: 0,
+      customFee: 0,
+      debug: {
+        dimensions: { height: 0, width: 0 },
+        blocks: { height: 0, width: 0, total: 0 },
+      },
+    },
     colorPattern: "striped",
     orientation: "horizontal",
     currentColors: null,
@@ -313,66 +323,68 @@ export const useCustomStore = create<CustomStore>()(
     autoSaveEnabled: true,
     dataSyncVersion: 1,
     init: () => {
-      const localState = localStorage.getItem("everwood-custom-design");
-      if (localState) {
-        try {
-          const parsedState = JSON.parse(localState);
-          set(parsedState);
+      if (typeof window !== "undefined") {
+        const localState = localStorage.getItem("everwood-custom-design");
+        if (localState) {
+          try {
+            const parsedState = JSON.parse(localState);
+            set(parsedState);
 
-          if (
-            parsedState.folders &&
-            parsedState.folders.length > 0 &&
-            (!parsedState.paletteFolders ||
-              parsedState.paletteFolders.length === 0) &&
-            (!parsedState.designFolders ||
-              parsedState.designFolders.length === 0)
-          ) {
-            const paletteFolderIds = new Set<string>();
-            const designFolderIds = new Set<string>();
+            if (
+              parsedState.folders &&
+              parsedState.folders.length > 0 &&
+              (!parsedState.paletteFolders ||
+                parsedState.paletteFolders.length === 0) &&
+              (!parsedState.designFolders ||
+                parsedState.designFolders.length === 0)
+            ) {
+              const paletteFolderIds = new Set<string>();
+              const designFolderIds = new Set<string>();
 
-            if (parsedState.savedPalettes) {
-              parsedState.savedPalettes.forEach((palette: SavedPalette) => {
-                if (palette.folderId) {
-                  paletteFolderIds.add(palette.folderId);
-                }
+              if (parsedState.savedPalettes) {
+                parsedState.savedPalettes.forEach((palette: SavedPalette) => {
+                  if (palette.folderId) {
+                    paletteFolderIds.add(palette.folderId);
+                  }
+                });
+              }
+
+              if (parsedState.savedDesigns) {
+                parsedState.savedDesigns.forEach((design: SavedDesign) => {
+                  if (design.folderId) {
+                    designFolderIds.add(design.folderId);
+                  }
+                });
+              }
+
+              const paletteFolders = parsedState.folders.filter(
+                (folder: Folder) => paletteFolderIds.has(folder.id)
+              );
+
+              const designFolders = parsedState.folders.filter(
+                (folder: Folder) => designFolderIds.has(folder.id)
+              );
+
+              const unassignedFolders = parsedState.folders.filter(
+                (folder: Folder) =>
+                  !paletteFolderIds.has(folder.id) &&
+                  !designFolderIds.has(folder.id)
+              );
+
+              set({
+                paletteFolders: [...paletteFolders, ...unassignedFolders],
+                designFolders,
               });
+
+              console.log(
+                `Migrated ${paletteFolders.length} palette folders and ${designFolders.length} design folders from ${parsedState.folders.length} total folders.`
+              );
             }
 
-            if (parsedState.savedDesigns) {
-              parsedState.savedDesigns.forEach((design: SavedDesign) => {
-                if (design.folderId) {
-                  designFolderIds.add(design.folderId);
-                }
-              });
-            }
-
-            const paletteFolders = parsedState.folders.filter(
-              (folder: Folder) => paletteFolderIds.has(folder.id)
-            );
-
-            const designFolders = parsedState.folders.filter((folder: Folder) =>
-              designFolderIds.has(folder.id)
-            );
-
-            const unassignedFolders = parsedState.folders.filter(
-              (folder: Folder) =>
-                !paletteFolderIds.has(folder.id) &&
-                !designFolderIds.has(folder.id)
-            );
-
-            set({
-              paletteFolders: [...paletteFolders, ...unassignedFolders],
-              designFolders,
-            });
-
-            console.log(
-              `Migrated ${paletteFolders.length} palette folders and ${designFolders.length} design folders from ${parsedState.folders.length} total folders.`
-            );
+            console.log("Loaded state from local storage");
+          } catch (e) {
+            console.error("Failed to parse local storage state", e);
           }
-
-          console.log("Loaded state from local storage");
-        } catch (e) {
-          console.error("Failed to parse local storage state", e);
         }
       }
     },

@@ -74,7 +74,7 @@ export function DesignPreview({ design, height = "100%" }: DesignPreviewProps) {
       <Canvas shadows className="w-full h-full">
         <PerspectiveCamera
           makeDefault
-          position={[15, 15, 15]}
+          position={[10, 10, 10]}
           fov={45}
           zoom={1.4}
         />

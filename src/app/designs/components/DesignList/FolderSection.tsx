@@ -8,7 +8,7 @@ import {
   ChevronDown,
   FolderIcon,
   MoreHorizontal,
-  Edit2,
+  Edit,
   Trash2,
   FolderPlus,
   FileSymlink,
@@ -18,6 +18,7 @@ import {
   ShoppingCart,
   FolderOpen,
   Upload,
+  Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -76,6 +77,8 @@ import * as THREE from "three";
 import { Group } from "three";
 import { PalettePreview } from "@/app/palette/components/PaletteList/PalettePreview";
 import { ImportCard } from "./ImportCard";
+import { ItemDesigns } from "@/typings/types";
+import { DESIGN_COLORS } from "@/typings/color-maps";
 
 // Animation component that controls the limited rotation
 function LimitedRotation({ children }: { children: React.ReactNode }) {
@@ -129,7 +132,7 @@ function DesignPreview({ design, height }: { design: any; height?: string }) {
           makeDefault
           position={[15, 15, 15]}
           fov={45}
-          zoom={1.4}
+          zoom={2.5}
         />
 
         {/* Lighting based on style */}
@@ -193,112 +196,157 @@ const DesignItem = ({
   onMovePalette,
   inFolder = false,
 }: DesignItemProps) => {
-  const { designFolders, moveDesignToFolder } = useCustomStore();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleExportDesign = () => {
+    setShowExportDialog(true);
+  };
+
+  const handleDownloadDesign = () => {
+    const exportData = JSON.stringify(
+      {
+        version: "1.0.0",
+        format: "evdes",
+        name: design.name,
+        created: new Date().toISOString(),
+        style: design.style,
+        dimensions: design.dimensions,
+        selectedDesign: design.selectedDesign,
+        customPalette: design.customPalette || [],
+        // Include any other necessary design data
+      },
+      null,
+      2
+    );
+
+    // Create a Blob and download link
+    const blob = new Blob([exportData], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${design.name
+      .replace(/\s+/g, "-")
+      .toLowerCase()}-${new Date().toISOString().slice(0, 10)}.evdes`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    setShowExportDialog(false);
+    toast.success("Design downloaded successfully!");
+  };
+
+  const handleCopyToClipboard = () => {
+    const exportData = JSON.stringify(design, null, 2);
+    navigator.clipboard.writeText(exportData);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
-    <Card className="h-full border-2 border-gray-200 dark:border-gray-800 transition-all bg-white dark:bg-gray-900 overflow-hidden">
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-start">
-          <CardTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            {design.name}
-          </CardTitle>
-        </div>
-        <CardDescription>
-          {formatDistanceToNow(new Date(design.createdAt), {
-            addSuffix: true,
-          })}
-        </CardDescription>
-      </CardHeader>
-
-      {/* 3D Preview */}
-      <div className="px-6 mb-4">
-        <div className="h-32">
-          <DesignPreview design={design} height="100%" />
-        </div>
-      </div>
-
-      {/* Palette Preview */}
-      <div className="px-6 mb-4">
-        {design.customPalette && design.customPalette.length > 0 ? (
-          <PalettePreview colors={design.customPalette} />
-        ) : (
-          <div className="h-8 rounded-md bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-xs text-gray-500">
-            No color palette
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.3 }}
+      layout
+    >
+      <Card className="overflow-hidden border h-full flex flex-col border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:shadow-md transition-shadow">
+        <CardHeader className="p-4 pb-2">
+          <div className="flex justify-between items-start">
+            <CardTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              {design.name}
+            </CardTitle>
           </div>
-        )}
-      </div>
+          <CardDescription className="text-xs text-gray-500 dark:text-gray-400">
+            {formatDistanceToNow(new Date(design.createdAt), {
+              addSuffix: true,
+            })}
+          </CardDescription>
+        </CardHeader>
 
-      <CardContent className="pb-2">
-        <div className="space-y-3">
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-600 dark:text-gray-400">Pattern:</span>
-            <span className="text-gray-900 dark:text-gray-100 font-medium">
-              {design.colorPattern.charAt(0).toUpperCase() +
-                design.colorPattern.slice(1)}
-            </span>
+        {/* 3D Preview */}
+        <CardContent className="p-4 pt-2 flex-1 flex flex-col">
+          <div className="mb-3 flex-shrink-0">
+            <DesignPreview design={design} height="150px" />
           </div>
 
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-600 dark:text-gray-400">Style:</span>
-            <span className="text-gray-900 dark:text-gray-100 font-medium">
-              {design.style.charAt(0).toUpperCase() + design.style.slice(1)}
-            </span>
+          {/* Palette Preview */}
+          <div className="mb-3">
+            {design.customPalette && design.customPalette.length > 0 ? (
+              <PalettePreview colors={design.customPalette} />
+            ) : design.selectedDesign !== ItemDesigns.Custom ? (
+              <PalettePreview
+                colors={Object.values(DESIGN_COLORS[design.selectedDesign]).map(
+                  (color) => ({ hex: color.hex, name: color.name })
+                )}
+              />
+            ) : (
+              <div className="h-8 rounded-md bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-xs text-gray-500">
+                No color palette
+              </div>
+            )}
           </div>
 
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-600 dark:text-gray-400">
-              Dimensions:
-            </span>
-            <span className="text-gray-900 dark:text-gray-100 font-medium">
-              {design.dimensions.width}" × {design.dimensions.height}"
-            </span>
+          <div className="space-y-3 mt-auto">
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600 dark:text-gray-400">Style:</span>
+              <span className="text-gray-900 dark:text-gray-100 font-medium">
+                {design.style.charAt(0).toUpperCase() + design.style.slice(1)}
+              </span>
+            </div>
+
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600 dark:text-gray-400">
+                Dimensions:
+              </span>
+              <span className="text-gray-900 dark:text-gray-100 font-medium">
+                {design.dimensions.width * 3}" × {design.dimensions.height * 3}"
+              </span>
+            </div>
           </div>
-        </div>
-      </CardContent>
+        </CardContent>
 
-      <CardFooter className="p-3 pt-1 flex justify-between border-t border-gray-200 dark:border-gray-800">
-        <div className="flex gap-1">
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400"
-                  onClick={() => onEdit(design.id)}
-                >
-                  <PenLine className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>Edit design</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+        <CardFooter className="p-3 pt-0 flex justify-between">
+          <div className="flex gap-1">
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-gray-500 hover:text-purple-600 dark:text-gray-400 dark:hover:text-purple-400"
+                    onClick={() => onEdit(design.id)}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Edit design</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
 
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
-                  onClick={() => onVisualize(design.id)}
-                >
-                  <Eye className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>View in 3D</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400"
+                    onClick={handleExportDesign}
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Export design</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
 
-          <AlertDialog
-            open={isDeleteDialogOpen}
-            onOpenChange={setIsDeleteDialogOpen}
-          >
             <TooltipProvider delayDuration={300}>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -306,9 +354,13 @@ const DesignItem = ({
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
-                    onClick={() => onDelete(design.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      onDelete(design.id);
+                    }}
                   >
-                    <Trash className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
@@ -316,62 +368,135 @@ const DesignItem = ({
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete Design</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Are you sure you want to delete this design? This action
-                  cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  className="bg-red-600 hover:bg-red-700 text-white focus:ring-red-600"
-                  onClick={() => {
-                    onDelete(design.id);
-                    setIsDeleteDialogOpen(false);
-                  }}
-                >
-                  Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
 
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400"
-                  onClick={() => onOrder(design.id)}
-                >
-                  <ShoppingCart className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>Order this design</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
+            {/* Add Move to Folder option */}
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-gray-500 hover:text-amber-600 dark:text-gray-400 dark:hover:text-amber-400"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      onMovePalette(design.id, design.folderId);
+                    }}
+                  >
+                    <FolderIcon className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>
+                    {inFolder ? "Move to another folder" : "Move to folder"}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
 
-        {/* Folder selection - only show if not already in a folder view */}
-        {!inFolder && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="flex items-center text-xs h-8"
-            onClick={() => onMovePalette(design.id, design.folderId)}
+          <div className="flex gap-2">
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs font-medium text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/30 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                    onClick={() => onVisualize(design.id)}
+                  >
+                    <Eye className="h-3 w-3 mr-1" />
+                    Visualize
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>View design in 3D</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs font-medium text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-900/30 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                    onClick={() => onOrder(design.id)}
+                  >
+                    <ShoppingCart className="h-3 w-3 mr-1" />
+                    Order
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Order this design</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        </CardFooter>
+      </Card>
+
+      {/* Export Dialog */}
+      {showExportDialog && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="bg-white dark:bg-gray-900 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl border-2 border-gray-200 dark:border-gray-700"
           >
-            <FolderOpen className="h-3.5 w-3.5 mr-2 text-gray-500" />
-            <span>Move to folder</span>
-          </Button>
-        )}
-      </CardFooter>
-    </Card>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+              Export "{design.name}"
+            </h3>
+
+            <div className="space-y-4">
+              <p className="text-gray-600 dark:text-gray-400">
+                Export your design as an .evdes file that you can share or
+                import later.
+              </p>
+
+              <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-md overflow-auto max-h-48">
+                <pre className="text-xs text-gray-800 dark:text-gray-300 whitespace-pre-wrap">
+                  {JSON.stringify(
+                    {
+                      name: design.name,
+                      style: design.style,
+                      dimensions: design.dimensions,
+                      // Show a preview of the data
+                    },
+                    null,
+                    2
+                  )}
+                </pre>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3 mt-6">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowExportDialog(false)}
+                  className="sm:order-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleCopyToClipboard}
+                  className="bg-blue-600 hover:bg-blue-700 text-white sm:order-2"
+                >
+                  {copied ? "Copied!" : "Copy to Clipboard"}
+                </Button>
+                <Button
+                  onClick={handleDownloadDesign}
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white sm:order-3"
+                >
+                  Download Design
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </motion.div>
   );
 };
 
@@ -457,7 +582,7 @@ const FolderItem = ({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuItem onClick={handleRenameFolder}>
-              <Edit2 className="h-4 w-4 mr-2" />
+              <Edit className="h-4 w-4 mr-2" />
               Rename folder
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -480,7 +605,7 @@ const FolderItem = ({
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="pl-4"
+            className="pl-4 pr-4"
           >
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {designs.map((design) => (
@@ -620,6 +745,7 @@ const UnorganizedDesigns = ({
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3 }}
+            className="pl-4 pr-4"
           >
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {designs.map((design) => (
