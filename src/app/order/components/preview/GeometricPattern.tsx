@@ -32,18 +32,30 @@ const MemoizedBlock = memo(Block);
 export function GeometricPattern({
   showColorInfo = true,
   showWoodGrain = true,
-}: PatternProps) {
+  customDesign = null,
+}: PatternProps & { customDesign?: any }) {
+  const customStore = useCustomStore();
   const {
-    dimensions,
-    selectedDesign,
-    colorPattern,
-    orientation,
-    isReversed,
-    isRotated,
-    useMini,
-    customPalette,
+    dimensions: storeDimensions,
+    selectedDesign: storeSelectedDesign,
+    colorPattern: storeColorPattern,
+    orientation: storeOrientation,
+    isReversed: storeIsReversed,
+    isRotated: storeIsRotated,
+    useMini: storeUseMini,
+    customPalette: storeCustomPalette,
     viewSettings,
-  } = useCustomStore();
+  } = customStore;
+
+  // Use values from customDesign when provided, otherwise use store values
+  const dimensions = customDesign?.dimensions || storeDimensions;
+  const selectedDesign = customDesign?.selectedDesign || storeSelectedDesign;
+  const colorPattern = customDesign?.colorPattern || storeColorPattern;
+  const orientation = customDesign?.orientation || storeOrientation;
+  const isReversed = customDesign?.isReversed || storeIsReversed;
+  const isRotated = customDesign?.isRotated || storeIsRotated;
+  const useMini = customDesign?.useMini || storeUseMini;
+  const customPalette = customDesign?.customPalette || storeCustomPalette;
 
   const { showSplitPanel } = viewSettings;
 

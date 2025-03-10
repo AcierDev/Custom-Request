@@ -17,8 +17,11 @@ import {
   RotateCcw,
   Minimize2,
   Maximize2,
+  Eye,
+  Save,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
@@ -44,9 +47,22 @@ import { ShareDialog } from "@/components/ShareDialog";
 export default function DesignPage() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
-  const { viewSettings, selectedDesign, customPalette, dimensions, style } =
-    useCustomStore();
-  const { showRuler, showWoodGrain, showColorInfo } = viewSettings;
+  const {
+    viewSettings,
+    selectedDesign,
+    customPalette,
+    dimensions,
+    style,
+    setActiveTab,
+  } = useCustomStore();
+  const {
+    showRuler,
+    showWoodGrain,
+    showColorInfo,
+    showHanger,
+    showSplitPanel,
+    showFPS,
+  } = viewSettings;
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
 
   useEffect(() => {
@@ -77,6 +93,25 @@ export default function DesignPage() {
         <h1 className="text-xl font-bold text-gray-900 dark:text-white">
           3D Preview
         </h1>
+        <div className="flex items-center gap-2">
+          <Link href="/designs">
+            <Button
+              variant="outline"
+              className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm flex items-center gap-2 text-sm"
+            >
+              <Eye className="w-4 h-4" />
+              <span className="hidden sm:inline">View Saved Designs</span>
+              <span className="sm:hidden">Designs</span>
+            </Button>
+          </Link>
+          <Link href="/designs">
+            <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white flex items-center gap-2 text-sm">
+              <Save className="w-4 h-4" />
+              <span className="hidden sm:inline">Save Design</span>
+              <span className="sm:hidden">Save</span>
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Enhanced view controls with pattern options */}

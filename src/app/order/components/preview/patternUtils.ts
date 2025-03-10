@@ -10,6 +10,7 @@ import { ItemDesigns } from "@/typings/types";
 export interface PatternProps {
   showColorInfo?: boolean;
   showWoodGrain?: boolean;
+  customDesign?: any; // Allow passing a custom design object
 }
 
 export interface ColorMapRef extends Array<Array<number>> {
