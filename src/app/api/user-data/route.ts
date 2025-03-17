@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { userId, storeData } = body;
+    const { userId, storeData, email } = body;
 
     if (!userId || !storeData) {
       return NextResponse.json(
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const docId = await saveUserData(userId, storeData);
+    const docId = await saveUserData(userId, storeData, email);
     return NextResponse.json({ success: true, docId });
   } catch (error) {
     console.error("API error saving user data:", error);

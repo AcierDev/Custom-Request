@@ -20,10 +20,7 @@ import {
   initializeTextureVariations,
   generateColorMap,
   calculateBlockLayout,
-  generateRotationSeeds,
 } from "./patternUtils";
-import { ColorInfo } from "./colorInfoTypes";
-import { InfoPanel } from "./InfoPanel";
 import { useSpring, animated } from "@react-spring/three";
 
 // Memoized Block component to prevent unnecessary re-renders
@@ -69,28 +66,6 @@ export function GeometricPattern({
   const rotationSeedsRef = useRef<boolean[][]>();
   // Create refs for texture variations
   const textureVariationsRef = useRef<TextureVariation[][]>();
-
-  // Add ref for color distribution tracking
-  const colorCountsRef = useRef<Record<number, number>>({});
-  const debugInfoRef = useRef<{
-    totalBlocks: number;
-    expectedPerColor: number;
-    colorCounts: Record<number, number>;
-    calculationSamples: Array<{
-      x: number;
-      y: number;
-      progress: number;
-      equalizedProgress: number;
-      bandedProgress: number;
-      distributedProgress: number;
-      finalIndex: number;
-    }>;
-  }>({
-    totalBlocks: 0,
-    expectedPerColor: 0,
-    colorCounts: {},
-    calculationSamples: [],
-  });
 
   // Create a pre-calculated color map for perfect distribution
   const colorMapRef = useRef<ColorMapRef>();

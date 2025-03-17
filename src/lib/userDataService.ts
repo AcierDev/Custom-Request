@@ -4,6 +4,7 @@ import { ObjectId } from "mongodb";
 // Define the user data structure
 export interface UserData {
   userId: string;
+  email?: string; // Add optional email field
   storeData: any; // This will store the serialized state from the custom store
   lastUpdated: Date;
 }
@@ -19,7 +20,8 @@ const COLLECTION_NAME = "userData";
  */
 export async function saveUserData(
   userId: string,
-  storeData: any
+  storeData: any,
+  email?: string
 ): Promise<string> {
   try {
     const collection = await getCollection(COLLECTION_NAME);
@@ -34,6 +36,7 @@ export async function saveUserData(
         {
           $set: {
             storeData,
+            email, // Include email in the update
             lastUpdated: new Date(),
           },
         }
@@ -43,6 +46,7 @@ export async function saveUserData(
       // Create new document
       const result = await collection.insertOne({
         userId,
+        email, // Include email in the new document
         storeData,
         lastUpdated: new Date(),
       });

@@ -89,27 +89,24 @@ export function TiledPattern({
   const heightVariation = 0.15;
   const { width: modelWidth, height: modelHeight } = details.blocks;
 
-  // Calculate layout dimensions
+  // Calculate layout dimensions and spacing for the block grid
   const layoutDetails = useMemo(() => {
+    // Calculate the block layout based on model dimensions and spacing
+    const baseLayout = calculateBlockLayout(
+      modelWidth,
+      modelHeight,
+      blockSize,
+      blockSpacing,
+      useMini
+    );
+
+    // Calculate one-third width for split animation effects
+    const oneThirdWidth = Math.floor(baseLayout.adjustedModelWidth / 3);
+
     return {
-      ...calculateBlockLayout(
-        modelWidth,
-        modelHeight,
-        blockSize,
-        blockSpacing,
-        useMini
-      ),
-      // Calculate split points for animation
-      oneThirdWidth: Math.floor(
-        calculateBlockLayout(
-          modelWidth,
-          modelHeight,
-          blockSize,
-          blockSpacing,
-          useMini
-        ).adjustedModelWidth / 3
-      ),
-      driftAmount: blockSize * 2,
+      ...baseLayout,
+      oneThirdWidth,
+      driftAmount: blockSize * 2, // Amount blocks will move during split animations
     };
   }, [modelWidth, modelHeight, blockSize, blockSpacing, useMini]);
 

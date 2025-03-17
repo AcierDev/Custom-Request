@@ -125,7 +125,7 @@ export default function PalettePage() {
             ) {
               resetPaletteEditor();
             }
-            setActiveTab(value);
+            setActiveTab(value as "create" | "saved" | "official");
           }}
         >
           <TabsList className="grid w-full max-w-md grid-cols-3 mb-8">

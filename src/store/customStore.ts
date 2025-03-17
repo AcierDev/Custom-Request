@@ -330,6 +330,19 @@ export const useCustomStore = create<CustomStore>()(
             const parsedState = JSON.parse(localState);
             set(parsedState);
 
+            // Determine initial active tab based on conditions
+            const savedPalettes = parsedState.savedPalettes || [];
+            const customPalette = parsedState.customPalette || [];
+            let initialTab: "create" | "saved" | "official" = "official";
+
+            if (customPalette.length > 0) {
+              initialTab = "create";
+            } else if (savedPalettes.length > 0) {
+              initialTab = "saved";
+            }
+
+            set({ activeTab: initialTab });
+
             if (
               parsedState.folders &&
               parsedState.folders.length > 0 &&

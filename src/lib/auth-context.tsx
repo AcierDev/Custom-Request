@@ -385,6 +385,7 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
         body: JSON.stringify({
           userId: user.id,
           storeData: data,
+          email: user.email,
         }),
       });
 
