@@ -72,3 +72,6 @@ logs
 
 # Generated files
 .contentlayer
+
+public/models
+public/models/*

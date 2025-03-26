@@ -314,7 +314,7 @@ export const useCustomStore = create<CustomStore>()(
     viewSettings: {
       showRuler: true,
       showWoodGrain: true,
-      showColorInfo: true,
+      showColorInfo: false,
       showHanger: true,
       showSplitPanel: false,
       showFPS: false,
