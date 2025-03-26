@@ -280,7 +280,7 @@ const AUTO_SAVE_TRACKED_PROPERTIES: (keyof CustomState)[] = [
 export const useCustomStore = create<CustomStore>()(
   subscribeWithSelector((set, get) => ({
     dimensions: { width: 24, height: 24 },
-    selectedDesign: ItemDesigns.Custom,
+    selectedDesign: ItemDesigns.Coastal,
     shippingSpeed: "standard",
     pricing: {
       basePrice: 0,
@@ -293,7 +293,7 @@ export const useCustomStore = create<CustomStore>()(
         blocks: { height: 0, width: 0, total: 0 },
       },
     },
-    colorPattern: "striped",
+    colorPattern: "fade",
     orientation: "horizontal",
     currentColors: null,
     customPalette: [],

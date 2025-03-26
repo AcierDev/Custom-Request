@@ -10,13 +10,12 @@ import {
   Menu,
   ShoppingCart,
   Palette,
-  Eye,
   LogOut,
   User,
-  ChevronDown,
   Save,
   PencilRuler,
   LogIn,
+  Compass,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
@@ -57,7 +56,8 @@ type NavItem = NavLinkItem | DividerItem;
 const mainNavItems: NavItem[] = [
   { href: "/order", icon: ShoppingCart, label: "Order", hotkey: "1" },
   { href: "/designs", icon: Save, label: "Saved Designs", hotkey: "4" },
-  { href: "/preview", icon: Eye, label: "Preview", hotkey: "2" },
+  // { href: "/viewer", icon: Eye, label: "View Art", hotkey: "6" },
+  { href: "/preview", icon: Compass, label: "Preview", hotkey: "2" },
   { href: "/design", icon: PencilRuler, label: "Design", hotkey: "3" },
   { href: "/palette", icon: Palette, label: "Palette", hotkey: "5" },
 ];

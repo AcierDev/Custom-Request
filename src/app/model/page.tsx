@@ -41,6 +41,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArtDisplay } from "./components/ArtDisplay";
+import { useRouter } from "next/navigation";
 
 // Define light types
 type LightType = "point" | "spot" | "directional";
@@ -58,13 +59,294 @@ interface CustomLight {
   penumbra?: number; // for spotlights
   distance?: number; // for point and spotlights
   decay?: number; // for point and spotlights
-  target?: [number, number, number]; // for directional lights
+  target?: [number, number, number]; // for directional and spotlight lights
+}
+
+// Room configuration interface
+interface RoomObject {
+  modelPath: string;
+  position: [number, number, number];
+  scale: [number, number, number];
+  rotation: [number, number, number];
+  modelId: string;
+}
+
+interface ArtDisplayObject {
+  position: [number, number, number];
+  rotation: [number, number, number];
+  scale: number;
+  displayId: string;
+}
+
+interface RoomConfig {
+  id: string;
+  name: string;
+  roomModel: {
+    modelPath: string;
+    position: [number, number, number];
+    scale: [number, number, number];
+    rotation: [number, number, number];
+  };
+  lights: CustomLight[];
+  objects: RoomObject[];
+  artDisplays: ArtDisplayObject[];
+  ambientIntensity: number;
 }
 
 // Bedroom model path
 const BEDROOM_MODEL_PATH = "/models/bedroom.glb";
 const COUCH_MODEL_PATH = "/models/couch2.glb";
 const LAMP_MODEL_PATH = "/models/lamp.glb";
+const TREE_MODEL_PATH = "/models/tree.glb";
+const PLANT_MODEL_PATH = "/models/plant.glb";
+
+// Room configurations
+const roomConfigurations: RoomConfig[] = [
+  {
+    id: "bedroom",
+    name: "Bedroom",
+    roomModel: {
+      modelPath: "/models/bedroom.glb",
+      position: [0, -1, 0],
+      scale: [1, 1, 1],
+      rotation: [0, 0, 0],
+    },
+    lights: [
+      {
+        id: "point-1",
+        type: "point",
+        position: [-1.5, 0.89, -1.6],
+        intensity: 2.5,
+        distance: 10,
+        decay: 0.5,
+        color: "#ffffff",
+        castShadow: false,
+        enabled: true,
+      },
+      {
+        id: "point-2",
+        type: "point",
+        position: [-4.2, 0.4, -8.5],
+        intensity: 1.5,
+        distance: 10,
+        decay: 0.5,
+        color: "#ffffff",
+        castShadow: false,
+        enabled: true,
+      },
+      {
+        id: "point-3",
+        type: "point",
+        position: [-4.2, 0.4, -4.5],
+        intensity: 1.5,
+        distance: 10,
+        decay: 0.5,
+        color: "#ffffff",
+        castShadow: false,
+        enabled: true,
+      },
+      {
+        id: "point-4",
+        type: "point",
+        position: [3.47458, -0.3297, 8.73249],
+        intensity: 13.8,
+        distance: 20.0,
+        decay: 0.1,
+        color: "#ffffff",
+        castShadow: true,
+        enabled: false,
+      },
+      {
+        id: "spot-1",
+        type: "spot",
+        position: [2.45371, 0.94481, 5.45786],
+        intensity: 5.0,
+        angle: Math.PI / 6,
+        penumbra: 0.5,
+        distance: 10,
+        decay: 2,
+        color: "#ffffff",
+        castShadow: false,
+        enabled: false,
+        target: [-2.6275, 0.50961, 0.70908],
+      },
+      {
+        id: "directional-1",
+        type: "directional",
+        position: [5.25455, 3.12047, 9.40658],
+        intensity: 29.4,
+        color: "#ffffff",
+        castShadow: true,
+        enabled: false,
+        target: [-4.8457, 0.30806, 0.70333],
+      },
+      {
+        id: "point-5",
+        type: "point",
+        position: [0.1, 0.2, -9],
+        intensity: 2,
+        distance: 10,
+        decay: 0.5,
+        color: "#ffffff",
+        castShadow: false,
+        enabled: true,
+      },
+    ],
+    objects: [
+      {
+        modelPath: COUCH_MODEL_PATH,
+        position: [-4.2, -1, -7.5],
+        scale: [0.01, 0.01, 0.01],
+        rotation: [0, Math.PI / 2, 0],
+        modelId: "couch",
+      },
+      {
+        modelPath: TREE_MODEL_PATH,
+        position: [1, -5, 5],
+        scale: [1, 1, 1],
+        rotation: [0, 0, 0],
+        modelId: "tree",
+      },
+      {
+        modelPath: PLANT_MODEL_PATH,
+        position: [-4, -1, -9.5],
+        scale: [0.7, 0.7, 0.7],
+        rotation: [0, 0, 0],
+        modelId: "plant",
+      },
+    ],
+    artDisplays: [
+      {
+        position: [-3.3, 1.15, -6.9],
+        rotation: [0, Math.PI / 2, 0],
+        scale: 0.7,
+        displayId: "art-1",
+      },
+    ],
+    ambientIntensity: 0.7,
+  },
+  {
+    id: "room2",
+    name: "New Room",
+    roomModel: {
+      modelPath: "/models/room2.glb",
+      position: [0, -1, 0],
+      scale: [1, 1, 1],
+      rotation: [0, 0, 0],
+    },
+    lights: [
+      {
+        id: "point-1",
+        type: "point",
+        position: [3.7, 0.8, 0.4],
+        intensity: 5,
+        distance: 20,
+        decay: 1.3,
+        color: "#ffffff",
+        castShadow: false,
+        enabled: false,
+      },
+      {
+        id: "point-2",
+        type: "point",
+        position: [3.8, 0.8, -4.9],
+        intensity: 5,
+        distance: 20,
+        decay: 1.3,
+        color: "#ffffff",
+        castShadow: false,
+        enabled: false,
+      },
+      {
+        id: "point-3",
+        type: "point",
+        position: [-0.3706, 0.635, 4.836],
+        intensity: 0.8,
+        distance: 10,
+        decay: 0.5,
+        color: "#ffffff",
+        castShadow: false,
+        enabled: true,
+      },
+      {
+        id: "point-4",
+        type: "point",
+        position: [-0.88, 0.635, 4.836],
+        intensity: 0.8,
+        distance: 10,
+        decay: 0.5,
+        color: "#ffffff",
+        castShadow: false,
+        enabled: true,
+      },
+      {
+        id: "point-5",
+        type: "point",
+        position: [-1.39, 0.635, 4.836],
+        intensity: 0.8,
+        distance: 10,
+        decay: 0.5,
+        color: "#ffffff",
+        castShadow: false,
+        enabled: true,
+      },
+      {
+        id: "point-6",
+        type: "point",
+        position: [-5.71, 0.02, -6.55],
+        intensity: 0.9,
+        distance: 10,
+        decay: 0.5,
+        color: "#ffffff",
+        castShadow: false,
+        enabled: true,
+      },
+      {
+        id: "point-7",
+        type: "point",
+        position: [0.89964, 0.37905, -6.0276],
+        intensity: 1,
+        distance: 10.0,
+        decay: 0.5,
+        color: "#ffffff",
+        castShadow: false,
+        enabled: true,
+      },
+      {
+        id: "point-8",
+        type: "point",
+        position: [-3.0464, 1.30455, -4.432],
+        intensity: 1.6,
+        distance: 10.0,
+        decay: 1.0,
+        color: "#ffffff",
+        castShadow: false,
+        enabled: true,
+      },
+      {
+        id: "point-9",
+        type: "point",
+        position: [-3.2967, 1.14111, -3.2537],
+        intensity: 1.5,
+        distance: 10.0,
+        decay: 1.1,
+        color: "#ffffff",
+        castShadow: false,
+        enabled: true,
+      },
+    ],
+    objects: [],
+    artDisplays: [
+      {
+        position: [-2.7, 1.6, -5.2],
+        rotation: [0, 0, 0],
+        scale: 0.6,
+        displayId: "art-2",
+      },
+    ],
+    ambientIntensity: 1,
+  },
+];
 
 // Custom light component
 function CustomLightComponent({
@@ -104,9 +386,9 @@ function CustomLightComponent({
         ref.current.position.z,
       ];
 
-      // If we're transforming the target for a directional light
+      // If we're transforming the target for a directional or spotlight
       if (
-        light.type === "directional" &&
+        (light.type === "directional" || light.type === "spot") &&
         transformMode === "translate" &&
         targetRef.current
       ) {
@@ -125,8 +407,8 @@ function CustomLightComponent({
   // Set up directional light target
   useEffect(() => {
     if (
-      light.type === "directional" &&
-      directionalLightRef.current &&
+      (light.type === "directional" || light.type === "spot") &&
+      (directionalLightRef.current || spotLightRef.current) &&
       targetRef.current
     ) {
       // Set the target position
@@ -142,7 +424,11 @@ function CustomLightComponent({
       }
 
       // Connect the light to its target
-      directionalLightRef.current.target = targetRef.current;
+      if (light.type === "directional" && directionalLightRef.current) {
+        directionalLightRef.current.target = targetRef.current;
+      } else if (light.type === "spot" && spotLightRef.current) {
+        spotLightRef.current.target = targetRef.current;
+      }
     }
   }, [light]);
 
@@ -168,7 +454,11 @@ function CustomLightComponent({
 
   // Helper to visualize directional light target
   const DirectionalTargetHelper = () => {
-    if (!selected || light.type !== "directional" || !light.enabled)
+    if (
+      !selected ||
+      (light.type !== "directional" && light.type !== "spot") ||
+      !light.enabled
+    )
       return null;
 
     const targetPos = light.target || [
@@ -232,18 +522,30 @@ function CustomLightComponent({
       );
     } else if (light.type === "spot") {
       return (
-        <spotLight
-          ref={spotLightRef}
-          position={light.position}
-          intensity={light.intensity}
-          color={light.color}
-          castShadow={light.castShadow}
-          angle={light.angle || Math.PI / 6}
-          penumbra={light.penumbra || 0.5}
-          distance={light.distance || 0}
-          decay={light.decay || 2}
-          onClick={onSelect}
-        />
+        <>
+          <spotLight
+            ref={spotLightRef}
+            position={light.position}
+            intensity={light.intensity}
+            color={light.color}
+            castShadow={light.castShadow}
+            angle={light.angle || Math.PI / 6}
+            penumbra={light.penumbra || 0.5}
+            distance={light.distance || 0}
+            decay={light.decay || 2}
+            onClick={onSelect}
+          />
+          <object3D
+            ref={targetRef}
+            position={
+              light.target || [
+                light.position[0],
+                light.position[1] - 1,
+                light.position[2],
+              ]
+            }
+          />
+        </>
       );
     } else {
       return (
@@ -277,9 +579,11 @@ function CustomLightComponent({
     <>
       {renderLight()}
       {selected && light.enabled && <LightHelper />}
-      {selected && light.enabled && light.type === "directional" && (
-        <DirectionalTargetHelper />
-      )}
+      {selected &&
+        light.enabled &&
+        (light.type === "directional" || light.type === "spot") && (
+          <DirectionalTargetHelper />
+        )}
       {selected && light.enabled && getLightRef().current && (
         <TransformControls
           object={getLightRef().current as THREE.Object3D}
@@ -300,7 +604,7 @@ function CustomLightComponent({
       )}
       {selected &&
         light.enabled &&
-        light.type === "directional" &&
+        (light.type === "directional" || light.type === "spot") &&
         targetRef.current &&
         transformMode === "translate" && (
           <TransformControls
@@ -429,6 +733,7 @@ function Model({
       removeObject("Window_3");
       removeObject("Cube011");
       removeObject("Cylinder001");
+      removeObject("Painting_03");
     }
 
     // Extract all objects from the model
@@ -584,46 +889,155 @@ function CameraControls() {
   );
 }
 
+// FPS counter component (inside the Canvas)
+function CanvasFpsCounter() {
+  const [fps, setFps] = useState(0);
+  const frameCountRef = useRef(0);
+  const lastUpdateTimeRef = useRef(0);
+  const updateIntervalMs = 500; // Update every 500ms
+
+  useFrame((_, delta) => {
+    frameCountRef.current += 1;
+    const currentTime = performance.now();
+
+    // Only update the display every updateIntervalMs
+    if (currentTime - lastUpdateTimeRef.current > updateIntervalMs) {
+      // Calculate average FPS over the update interval
+      const elapsedSeconds = (currentTime - lastUpdateTimeRef.current) / 1000;
+      const smoothedFps = Math.round(frameCountRef.current / elapsedSeconds);
+
+      setFps(smoothedFps);
+      frameCountRef.current = 0;
+      lastUpdateTimeRef.current = currentTime;
+    }
+  });
+
+  // Use Dom Overlay to display HTML outside the Canvas
+  useThree(({ gl }) => {
+    const container = gl.domElement.parentNode;
+
+    if (container) {
+      // Check if the FPS counter already exists
+      let fpsCounter = document.getElementById("fps-counter");
+
+      if (!fpsCounter) {
+        // Create the FPS counter element if it doesn't exist
+        fpsCounter = document.createElement("div");
+        fpsCounter.id = "fps-counter";
+        fpsCounter.className = "absolute bottom-4 right-4 z-10";
+        fpsCounter.innerHTML = `
+          <div class="py-1 px-3 bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg dark:bg-background/90 rounded-md">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-medium">FPS:</span>
+              <span id="fps-value" class="text-xs">0</span>
+            </div>
+          </div>
+        `;
+        container.appendChild(fpsCounter);
+      }
+
+      // Update the FPS value
+      const fpsValue = document.getElementById("fps-value");
+      if (fpsValue) {
+        fpsValue.textContent = fps.toString();
+      }
+    }
+  });
+
+  return null;
+}
+
+// Camera info display component
+function ModelCameraInfo() {
+  const [posInfo, setPosInfo] = useState({
+    position: [0, 0, 0],
+    rotation: [0, 0, 0],
+  });
+  const { camera } = useThree();
+
+  // Convert radians to degrees
+  const radiansToDegrees = (radians) => {
+    return radians * (180 / Math.PI);
+  };
+
+  useFrame(() => {
+    if (camera) {
+      // Update position and rotation values
+      setPosInfo({
+        position: [
+          camera.position.x.toFixed(2),
+          camera.position.y.toFixed(2),
+          camera.position.z.toFixed(2),
+        ],
+        rotation: [
+          radiansToDegrees(camera.rotation.x).toFixed(1),
+          radiansToDegrees(camera.rotation.y).toFixed(1),
+          radiansToDegrees(camera.rotation.z).toFixed(1),
+        ],
+      });
+    }
+  });
+
+  // Render the camera info display using DOM overlay
+  useThree(({ gl }) => {
+    const container = gl.domElement.parentNode;
+
+    if (container) {
+      let cameraInfoEl = document.getElementById("model-camera-info");
+
+      if (!cameraInfoEl) {
+        cameraInfoEl = document.createElement("div");
+        cameraInfoEl.id = "model-camera-info";
+        cameraInfoEl.className = "absolute bottom-4 right-4 z-10";
+        cameraInfoEl.innerHTML = `
+          <div class="py-2 px-3 bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg dark:bg-background/90 rounded-md">
+            <div class="space-y-1">
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-medium">Position:</span>
+                <span id="model-camera-position" class="text-xs text-muted-foreground"></span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-medium">Rotation:</span>
+                <span id="model-camera-rotation" class="text-xs text-muted-foreground"></span>
+              </div>
+            </div>
+          </div>
+        `;
+        container.appendChild(cameraInfoEl);
+      }
+
+      // Update values
+      const positionEl = document.getElementById("model-camera-position");
+      const rotationEl = document.getElementById("model-camera-rotation");
+
+      if (positionEl && rotationEl) {
+        positionEl.textContent = `X: ${posInfo.position[0]}, Y: ${posInfo.position[1]}, Z: ${posInfo.position[2]}`;
+        rotationEl.textContent = `X: ${posInfo.rotation[0]}°, Y: ${posInfo.rotation[1]}°, Z: ${posInfo.rotation[2]}°`;
+      }
+    }
+  });
+
+  return null;
+}
+
 export default function Viewer() {
+  const [selectedRoomId, setSelectedRoomId] = useState<string>("bedroom");
   const [showLightingControls, setShowLightingControls] = useState(false);
-  const [ambientIntensity, setAmbientIntensity] = useState(0.5);
+  const router = useRouter();
+
+  // Get the current room configuration
+  const currentRoomConfig =
+    roomConfigurations.find((room) => room.id === selectedRoomId) ||
+    roomConfigurations[2];
+
+  const [ambientIntensity, setAmbientIntensity] = useState(
+    currentRoomConfig.ambientIntensity
+  );
 
   // Custom lights state
-  const [customLights, setCustomLights] = useState<CustomLight[]>([
-    {
-      id: "point-1",
-      type: "point",
-      position: [-1.5, 0.89, -1.6],
-      intensity: 5,
-      distance: 10,
-      decay: 0.5,
-      color: "#ffffff",
-      castShadow: false,
-      enabled: true,
-    },
-    {
-      id: "point-2",
-      type: "point",
-      position: [-4.2, 0.4, -8.5],
-      intensity: 2,
-      distance: 10,
-      decay: 0.5,
-      color: "#ffffff",
-      castShadow: false,
-      enabled: true,
-    },
-    {
-      id: "point-3",
-      type: "point",
-      position: [-4.2, 0.4, -4.5],
-      intensity: 2,
-      distance: 10,
-      decay: 0.5,
-      color: "#ffffff",
-      castShadow: false,
-      enabled: true,
-    },
-  ]);
+  const [customLights, setCustomLights] = useState<CustomLight[]>(
+    currentRoomConfig.lights
+  );
 
   // Object visibility state
   const [bedroomObjects, setBedroomObjects] = useState<
@@ -643,6 +1057,34 @@ export default function Viewer() {
     name: string;
     modelId: string;
   } | null>(null);
+
+  // Art display state management
+  const [artDisplays, setArtDisplays] = useState<ArtDisplayObject[]>(
+    currentRoomConfig.artDisplays || []
+  );
+  const [selectedArtDisplay, setSelectedArtDisplay] = useState<string | null>(
+    null
+  );
+  const [transformArtMode, setTransformArtMode] = useState<
+    "translate" | "rotate"
+  >("translate");
+
+  // Update room configuration when room selection changes
+  useEffect(() => {
+    const selectedRoom = roomConfigurations.find(
+      (room) => room.id === selectedRoomId
+    );
+    if (selectedRoom) {
+      setCustomLights(selectedRoom.lights);
+      setAmbientIntensity(selectedRoom.ambientIntensity);
+      setArtDisplays(selectedRoom.artDisplays || []);
+      // Reset selection states
+      setSelectedLightId(null);
+      setSelectedObject(null);
+      setSelectedArtDisplay(null);
+      setHiddenObjects([]);
+    }
+  }, [selectedRoomId]);
 
   // Handle objects loaded from models
   const handleBedroomObjectsLoaded = useCallback(
@@ -788,6 +1230,8 @@ export default function Viewer() {
       newLight.penumbra = 0.5;
       newLight.distance = 10;
       newLight.decay = 2;
+      // Set default target for spotlight
+      newLight.target = [0, 0, 0];
     } else if (placementMode === "point") {
       newLight.distance = 10;
       newLight.decay = 2;
@@ -865,10 +1309,116 @@ export default function Viewer() {
     );
   };
 
+  // Handle adding a new art display
+  const handleAddArtDisplay = () => {
+    const newArtDisplay: ArtDisplayObject = {
+      position: [0, 1, 0],
+      rotation: [0, 0, 0],
+      scale: 0.7,
+      displayId: `art-${Date.now()}`,
+    };
+
+    setArtDisplays((prev) => [...prev, newArtDisplay]);
+    setSelectedArtDisplay(newArtDisplay.displayId);
+    setSelectedLightId(null);
+    setSelectedObject(null);
+  };
+
+  // Handle deleting an art display
+  const handleDeleteArtDisplay = () => {
+    if (!selectedArtDisplay) return;
+
+    setArtDisplays((displays) =>
+      displays.filter((display) => display.displayId !== selectedArtDisplay)
+    );
+    setSelectedArtDisplay(null);
+  };
+
+  // Update art display position
+  const updateArtDisplayPosition = (axis: "x" | "y" | "z", value: number) => {
+    if (!selectedArtDisplay) return;
+
+    setArtDisplays((displays) =>
+      displays.map((display) => {
+        if (display.displayId === selectedArtDisplay) {
+          const newPosition: [number, number, number] = [...display.position];
+          if (axis === "x") newPosition[0] = value;
+          if (axis === "y") newPosition[1] = value;
+          if (axis === "z") newPosition[2] = value;
+          return { ...display, position: newPosition };
+        }
+        return display;
+      })
+    );
+  };
+
+  // Update art display rotation
+  const updateArtDisplayRotation = (axis: "x" | "y" | "z", value: number) => {
+    if (!selectedArtDisplay) return;
+
+    setArtDisplays((displays) =>
+      displays.map((display) => {
+        if (display.displayId === selectedArtDisplay) {
+          const newRotation: [number, number, number] = [...display.rotation];
+          if (axis === "x") newRotation[0] = value;
+          if (axis === "y") newRotation[1] = value;
+          if (axis === "z") newRotation[2] = value;
+          return { ...display, rotation: newRotation };
+        }
+        return display;
+      })
+    );
+  };
+
+  // Update art display scale
+  const updateArtDisplayScale = (value: number) => {
+    if (!selectedArtDisplay) return;
+
+    setArtDisplays((displays) =>
+      displays.map((display) => {
+        if (display.displayId === selectedArtDisplay) {
+          return { ...display, scale: value };
+        }
+        return display;
+      })
+    );
+  };
+
   return (
     <div className="relative w-full h-screen bg-background">
+      {/* Room Selector */}
+      <Card className="absolute top-4 left-4 p-2 z-20 bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg dark:bg-background/90">
+        <div className="flex items-center gap-2">
+          <Label className="text-xs">Room:</Label>
+          <div className="flex gap-1">
+            {roomConfigurations.map((room) => (
+              <Button
+                key={room.id}
+                variant={selectedRoomId === room.id ? "default" : "outline"}
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => setSelectedRoomId(room.id)}
+              >
+                {room.name}
+              </Button>
+            ))}
+          </div>
+        </div>
+      </Card>
+
+      {/* View Art Button */}
+      <Button
+        variant="secondary"
+        size="sm"
+        className="absolute top-4 right-4 z-20 bg-background/80 backdrop-blur-sm"
+        onClick={() => router.push("/viewer")}
+      >
+        <Eye className="h-4 w-4 mr-2" />
+        View Art
+      </Button>
+
       {/* Controls Info Card */}
-      <Card className="absolute top-4 right-4 p-4 z-10 bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg dark:bg-background/90">
+      <Card className="absolute top-20 right-4 p-4 z-10 bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg dark:bg-background/90">
         <div className="flex items-start gap-3">
           <Info className="w-5 h-5 mt-0.5 text-muted-foreground" />
           <div className="space-y-2">
@@ -894,7 +1444,7 @@ export default function Viewer() {
       <Button
         variant="outline"
         size="icon"
-        className="absolute top-4 left-4 z-10"
+        className="absolute top-20 left-4 z-10"
         onClick={() => setShowLightingControls(!showLightingControls)}
       >
         {showLightingControls ? (
@@ -911,15 +1461,16 @@ export default function Viewer() {
           opacity: showLightingControls ? 1 : 0,
           x: showLightingControls ? 0 : -20,
         }}
-        className={`absolute top-20 left-4 z-10 w-80 ${
+        className={`absolute top-36 left-4 z-10 w-80 ${
           !showLightingControls && "pointer-events-none"
         }`}
       >
         <Card className="p-4 bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg dark:bg-background/90">
           <Tabs defaultValue="lights" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="lights">Lights</TabsTrigger>
               <TabsTrigger value="objects">Objects</TabsTrigger>
+              <TabsTrigger value="art">Art</TabsTrigger>
               <TabsTrigger value="settings">Settings</TabsTrigger>
             </TabsList>
 
@@ -1213,11 +1764,14 @@ export default function Viewer() {
                       </div>
                     </div>
 
-                    {/* Target Controls for Directional Lights */}
-                    {selectedLight.type === "directional" && (
+                    {/* Target Controls for Directional and Spot Lights */}
+                    {(selectedLight.type === "directional" ||
+                      selectedLight.type === "spot") && (
                       <div className="space-y-2">
                         <Label className="text-xs font-medium">
-                          Direction Target
+                          {selectedLight.type === "directional"
+                            ? "Direction Target"
+                            : "Spotlight Target"}
                         </Label>
                         <div className="grid grid-cols-3 gap-2">
                           <div className="space-y-1">
@@ -1340,7 +1894,7 @@ export default function Viewer() {
                         onValueChange={([value]) =>
                           updateLightProperty("intensity", value)
                         }
-                        max={5}
+                        max={100}
                         step={0.1}
                       />
                     </div>
@@ -1551,6 +2105,361 @@ export default function Viewer() {
               </div>
             </TabsContent>
 
+            <TabsContent value="art" className="space-y-4 mt-2">
+              <div className="flex justify-between items-center">
+                <h3 className="text-sm font-medium">Art Displays</h3>
+                <div className="flex gap-1">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={handleAddArtDisplay}
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Add Art Display</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+
+                  {selectedArtDisplay && (
+                    <>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant={
+                                transformArtMode === "translate"
+                                  ? "default"
+                                  : "outline"
+                              }
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => setTransformArtMode("translate")}
+                            >
+                              <Move className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Move Art Display</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant={
+                                transformArtMode === "rotate"
+                                  ? "default"
+                                  : "outline"
+                              }
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => setTransformArtMode("rotate")}
+                            >
+                              <ArrowDown className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Rotate Art Display</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={handleDeleteArtDisplay}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Delete Selected Art Display</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                {artDisplays.map((art) => (
+                  <Button
+                    key={art.displayId}
+                    variant={
+                      selectedArtDisplay === art.displayId
+                        ? "default"
+                        : "outline"
+                    }
+                    className="w-full justify-start text-left h-auto py-2"
+                    onClick={() => {
+                      setSelectedArtDisplay(art.displayId);
+                      setSelectedLightId(null);
+                      setSelectedObject(null);
+                    }}
+                  >
+                    <div className="flex items-center gap-2 w-full">
+                      <div className="flex items-center gap-2 flex-1">
+                        <div>
+                          <div className="font-medium">Art Display</div>
+                          <div className="text-xs text-muted-foreground">
+                            [{art.position[0].toFixed(1)},{" "}
+                            {art.position[1].toFixed(1)},{" "}
+                            {art.position[2].toFixed(1)}]
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </Button>
+                ))}
+              </div>
+
+              {selectedArtDisplay && (
+                <div className="space-y-3 pt-2 border-t">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-sm font-medium">
+                      Art Display Properties
+                    </h3>
+                  </div>
+
+                  <div className="space-y-2">
+                    {/* Position Controls */}
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Position</Label>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="space-y-1">
+                          <div className="flex justify-between">
+                            <Label htmlFor="art-position-x" className="text-xs">
+                              X
+                            </Label>
+                            <span className="text-xs text-muted-foreground">
+                              {artDisplays
+                                .find((a) => a.displayId === selectedArtDisplay)
+                                ?.position[0].toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Input
+                              type="number"
+                              value={
+                                artDisplays.find(
+                                  (a) => a.displayId === selectedArtDisplay
+                                )?.position[0]
+                              }
+                              onChange={(e) =>
+                                updateArtDisplayPosition(
+                                  "x",
+                                  parseFloat(e.target.value) || 0
+                                )
+                              }
+                              className="w-full h-7 text-xs"
+                              step={0.1}
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex justify-between">
+                            <Label htmlFor="art-position-y" className="text-xs">
+                              Y
+                            </Label>
+                            <span className="text-xs text-muted-foreground">
+                              {artDisplays
+                                .find((a) => a.displayId === selectedArtDisplay)
+                                ?.position[1].toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Input
+                              type="number"
+                              value={
+                                artDisplays.find(
+                                  (a) => a.displayId === selectedArtDisplay
+                                )?.position[1]
+                              }
+                              onChange={(e) =>
+                                updateArtDisplayPosition(
+                                  "y",
+                                  parseFloat(e.target.value) || 0
+                                )
+                              }
+                              className="w-full h-7 text-xs"
+                              step={0.1}
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex justify-between">
+                            <Label htmlFor="art-position-z" className="text-xs">
+                              Z
+                            </Label>
+                            <span className="text-xs text-muted-foreground">
+                              {artDisplays
+                                .find((a) => a.displayId === selectedArtDisplay)
+                                ?.position[2].toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Input
+                              type="number"
+                              value={
+                                artDisplays.find(
+                                  (a) => a.displayId === selectedArtDisplay
+                                )?.position[2]
+                              }
+                              onChange={(e) =>
+                                updateArtDisplayPosition(
+                                  "z",
+                                  parseFloat(e.target.value) || 0
+                                )
+                              }
+                              className="w-full h-7 text-xs"
+                              step={0.1}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Rotation Controls */}
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Rotation</Label>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="space-y-1">
+                          <div className="flex justify-between">
+                            <Label htmlFor="art-rotation-x" className="text-xs">
+                              X
+                            </Label>
+                            <span className="text-xs text-muted-foreground">
+                              {artDisplays
+                                .find((a) => a.displayId === selectedArtDisplay)
+                                ?.rotation[0].toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Input
+                              type="number"
+                              value={
+                                artDisplays.find(
+                                  (a) => a.displayId === selectedArtDisplay
+                                )?.rotation[0]
+                              }
+                              onChange={(e) =>
+                                updateArtDisplayRotation(
+                                  "x",
+                                  parseFloat(e.target.value) || 0
+                                )
+                              }
+                              className="w-full h-7 text-xs"
+                              step={0.1}
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex justify-between">
+                            <Label htmlFor="art-rotation-y" className="text-xs">
+                              Y
+                            </Label>
+                            <span className="text-xs text-muted-foreground">
+                              {artDisplays
+                                .find((a) => a.displayId === selectedArtDisplay)
+                                ?.rotation[1].toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Input
+                              type="number"
+                              value={
+                                artDisplays.find(
+                                  (a) => a.displayId === selectedArtDisplay
+                                )?.rotation[1]
+                              }
+                              onChange={(e) =>
+                                updateArtDisplayRotation(
+                                  "y",
+                                  parseFloat(e.target.value) || 0
+                                )
+                              }
+                              className="w-full h-7 text-xs"
+                              step={0.1}
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex justify-between">
+                            <Label htmlFor="art-rotation-z" className="text-xs">
+                              Z
+                            </Label>
+                            <span className="text-xs text-muted-foreground">
+                              {artDisplays
+                                .find((a) => a.displayId === selectedArtDisplay)
+                                ?.rotation[2].toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Input
+                              type="number"
+                              value={
+                                artDisplays.find(
+                                  (a) => a.displayId === selectedArtDisplay
+                                )?.rotation[2]
+                              }
+                              onChange={(e) =>
+                                updateArtDisplayRotation(
+                                  "z",
+                                  parseFloat(e.target.value) || 0
+                                )
+                              }
+                              className="w-full h-7 text-xs"
+                              step={0.1}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Scale Control */}
+                    <div className="space-y-1">
+                      <div className="flex justify-between">
+                        <Label htmlFor="art-scale">Scale</Label>
+                        <span className="text-xs text-muted-foreground">
+                          {artDisplays
+                            .find((a) => a.displayId === selectedArtDisplay)
+                            ?.scale.toFixed(1)}
+                        </span>
+                      </div>
+                      <Slider
+                        id="art-scale"
+                        value={[
+                          artDisplays.find(
+                            (a) => a.displayId === selectedArtDisplay
+                          )?.scale || 0.7,
+                        ]}
+                        onValueChange={([value]) =>
+                          updateArtDisplayScale(value)
+                        }
+                        min={0.1}
+                        max={2}
+                        step={0.1}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </TabsContent>
+
             <TabsContent value="settings" className="space-y-4 mt-2">
               <div className="space-y-2">
                 <h3 className="text-sm font-medium">Ambient Light</h3>
@@ -1588,7 +2497,6 @@ export default function Viewer() {
           camera.userData.controls = null;
         }}
       >
-        <color attach="background" args={["hsl(var(--background))"]} />
         <Lights
           ambientIntensity={ambientIntensity}
           customLights={customLights}
@@ -1598,68 +2506,73 @@ export default function Viewer() {
           transformMode={transformMode}
         />
         <Suspense fallback={null}>
+          {/* Main Room Model */}
           <Model
-            filePath={BEDROOM_MODEL_PATH}
+            filePath={currentRoomConfig.roomModel.modelPath}
+            position={currentRoomConfig.roomModel.position}
+            scale={currentRoomConfig.roomModel.scale}
+            rotation={currentRoomConfig.roomModel.rotation}
             hiddenObjects={hiddenObjects}
             onObjectsLoaded={handleBedroomObjectsLoaded}
-            modelId="bedroom"
-          />
-          <Model
-            filePath={COUCH_MODEL_PATH}
-            position={[-4.2, -1, -7.5]}
-            scale={[0.01, 0.01, 0.01]}
-            rotation={[0, Math.PI / 2, 0]}
-            hiddenObjects={hiddenObjects}
-            onObjectsLoaded={handleCouchObjectsLoaded}
-            modelId="couch"
-          />
-          <Model
-            filePath={LAMP_MODEL_PATH}
-            position={[-4.539, 0.5, -8.5]}
-            rotation={[0, Math.PI / 2, 0]}
-            scale={[2, 2, 2]}
-            hiddenObjects={hiddenObjects}
-            onObjectsLoaded={(objects) => {
-              // Use a unique handler for lamp1
-              const uniqueObjects = objects.map((obj) => ({
-                ...obj,
-                modelId: "lamp1", // Ensure modelId is set correctly
-              }));
-              setAdditionalObjects((prev) => [
-                ...prev.filter((o) => o.modelId !== "lamp1"),
-                ...uniqueObjects,
-              ]);
-            }}
-            modelId="lamp1"
-          />
-          <Model
-            filePath={LAMP_MODEL_PATH}
-            position={[-4.539, 0.5, -4.5]}
-            rotation={[0, Math.PI / 2, 0]}
-            scale={[2, 2, 2]}
-            hiddenObjects={hiddenObjects}
-            onObjectsLoaded={(objects) => {
-              // Use a unique handler for lamp2
-              const uniqueObjects = objects.map((obj) => ({
-                ...obj,
-                modelId: "lamp2", // Ensure modelId is set correctly
-              }));
-              setAdditionalObjects((prev) => [
-                ...prev.filter((o) => o.modelId !== "lamp2"),
-                ...uniqueObjects,
-              ]);
-            }}
-            modelId="lamp2"
+            modelId="room"
           />
 
-          {/* Art Display on Wall */}
-          <ArtDisplay
-            position={[-3.3, 1.15, -6.9]}
-            rotation={[0, Math.PI / 2, 0]}
-            scale={0.7}
-          />
+          {/* Room-specific objects */}
+          {currentRoomConfig.objects.map((obj, index) => (
+            <Model
+              key={`${obj.modelId}-${index}`}
+              filePath={obj.modelPath}
+              position={obj.position}
+              scale={obj.scale}
+              rotation={obj.rotation}
+              hiddenObjects={hiddenObjects}
+              onObjectsLoaded={(objects) => {
+                // Use a unique handler for each object
+                const uniqueObjects = objects.map((o) => ({
+                  ...o,
+                  modelId: obj.modelId,
+                }));
+                setAdditionalObjects((prev) => [
+                  ...prev.filter((o) => o.modelId !== obj.modelId),
+                  ...uniqueObjects,
+                ]);
+              }}
+              modelId={obj.modelId}
+            />
+          ))}
+
+          {/* Art Displays */}
+          {artDisplays.map((art) => (
+            <group key={art.displayId}>
+              <ArtDisplay
+                position={art.position}
+                rotation={art.rotation}
+                scale={art.scale}
+                displayId={art.displayId}
+                isSelected={selectedArtDisplay === art.displayId}
+                onSelect={() => {
+                  setSelectedArtDisplay(art.displayId);
+                  setSelectedLightId(null);
+                  setSelectedObject(null);
+                }}
+                transformMode={transformArtMode}
+                onTransform={(newPosition) => {
+                  setArtDisplays((displays) =>
+                    displays.map((display) =>
+                      display.displayId === art.displayId
+                        ? { ...display, position: newPosition }
+                        : display
+                    )
+                  );
+                }}
+              />
+            </group>
+          ))}
         </Suspense>
         <CameraControls />
+        {/* Add FPS Counter inside Canvas */}
+        <CanvasFpsCounter />
+        <ModelCameraInfo />
       </Canvas>
     </div>
   );
@@ -1669,3 +2582,7 @@ export default function Viewer() {
 useGLTF.preload(BEDROOM_MODEL_PATH);
 useGLTF.preload(COUCH_MODEL_PATH);
 useGLTF.preload(LAMP_MODEL_PATH);
+useGLTF.preload(TREE_MODEL_PATH);
+useGLTF.preload(PLANT_MODEL_PATH);
+useGLTF.preload("/models/room.glb");
+useGLTF.preload("/models/room2.glb");
