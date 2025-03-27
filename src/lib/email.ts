@@ -41,7 +41,7 @@ export async function sendEmail({
     const payload = {
       from: {
         address: "no-reply@everwoodus.com",
-        name: "noreply",
+        name: "Everwood",
       },
       to: [
         {
