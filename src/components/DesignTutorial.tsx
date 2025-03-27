@@ -114,7 +114,7 @@ export function DesignTutorial() {
           break;
       }
 
-      setTooltipPosition({ x, y });
+      setTooltipPosition({ x: x, y: y + 50 });
 
       // Add highlight class to the element
       targetElement.classList.add("tutorial-highlight");
@@ -271,7 +271,7 @@ export function DesignTutorial() {
           position: relative;
           z-index: 45;
           box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.5);
-          border-radius: 0.375rem;
+          border-radius: 0.8rem;
         }
       `}</style>
     </>

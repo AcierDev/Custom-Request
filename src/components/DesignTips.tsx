@@ -138,9 +138,9 @@ export function DesignTips() {
         initial={{ opacity: 0, y: 50 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 50 }}
-        className="fixed bottom-4 right-4 z-50 max-w-sm"
+        className="fixed top-20 left-72 z-50 max-w-sm"
       >
-        <Card className="border-muted/30 shadow-lg overflow-hidden bg-background/95 backdrop-blur-sm dark:bg-gray-900/90">
+        <Card className="dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200 dark:border-gray-700 shadow-lg">
           <Button
             variant="ghost"
             size="icon"

@@ -87,49 +87,6 @@ export function Navbar({ onOpenSettings }: NavbarProps) {
     setActiveTab(pathname);
   }, [pathname]);
 
-  const isInputElement = (element: Element | null): boolean => {
-    if (!element) return false;
-    const tagName = element.tagName.toLowerCase();
-    return (
-      tagName === "input" ||
-      tagName === "textarea" ||
-      element.getAttribute("contenteditable") === "true"
-    );
-  };
-
-  const handleHotkey = useCallback(
-    (key: string) => {
-      const navItem = mainNavItems.find((item) => item.hotkey === key);
-      if (navItem && "href" in navItem) {
-        router.push(navItem.href);
-      }
-    },
-    [router]
-  );
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (isInputElement(document.activeElement)) {
-        return;
-      }
-
-      if (event.ctrlKey || event.altKey || event.metaKey) {
-        return;
-      }
-
-      const key = event.key;
-      if (/^[1-9]$/.test(key)) {
-        event.preventDefault();
-        handleHotkey(key);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [handleHotkey]);
-
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   // Get user initials for avatar fallback

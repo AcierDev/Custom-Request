@@ -95,7 +95,7 @@ export default function WelcomePage() {
       description: "See your design from every angle with our 3D viewer.",
       icon: <SquareStack className="h-8 w-8" />,
       color: "bg-gradient-to-r from-purple-500 to-pink-500",
-      link: "/viewer",
+      link: "/preview",
     },
     {
       title: "Profile & Favorites",
