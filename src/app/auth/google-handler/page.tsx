@@ -32,7 +32,7 @@ function GoogleAuthHandlerContent() {
       localStorage.setItem("everwood_user", JSON.stringify(userData));
 
       // Redirect to the app
-      router.push("/order");
+      router.push("/sign-in?onboarding=true");
     } catch (error) {
       console.error("Error processing authentication:", error);
       router.push("/sign-in?error=processing");

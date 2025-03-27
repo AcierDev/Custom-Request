@@ -41,7 +41,7 @@ export default function EmailAuthComplete() {
           router.push(redirectUrl);
         } else {
           // Default redirect to order page
-          router.push("/order");
+          router.push("/sign-in?onboarding=true");
         }
       } catch (error) {
         console.error("Error completing email authentication:", error);
