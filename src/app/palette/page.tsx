@@ -6,6 +6,8 @@ import { useCustomStore } from "@/store/customStore";
 import { PaletteManager } from "./components/PaletteManager";
 import { PaletteList } from "./components/PaletteList";
 import { OfficialPalettes } from "./components/OfficialPalettes";
+import { PaletteOnboarding } from "./components/PaletteOnboarding";
+import { OnboardingButton } from "./components/OnboardingButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,6 +45,7 @@ export default function PalettePage() {
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   const [paletteName, setPaletteName] = useState("");
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   const handleSavePalette = () => {
     if (editingPaletteId) {
@@ -91,24 +94,36 @@ export default function PalettePage() {
     <div className="w-full min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950 p-6 md:p-8">
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
-        <div className="space-y-2">
-          <motion.h1
-            className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
+        <div className="space-y-2 flex flex-col md:flex-row md:items-center md:justify-between">
+          <div>
+            <motion.h1
+              className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              Color Palette Studio
+            </motion.h1>
+            <motion.p
+              className="text-gray-600 dark:text-gray-400 max-w-3xl"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              Create, save, and manage your custom color palettes. Design
+              harmonious color schemes for your projects with our intuitive
+              tools.
+            </motion.p>
+          </div>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
           >
-            Color Palette Studio
-          </motion.h1>
-          <motion.p
-            className="text-gray-600 dark:text-gray-400 max-w-3xl"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            Create, save, and manage your custom color palettes. Design
-            harmonious color schemes for your projects with our intuitive tools.
-          </motion.p>
+            <OnboardingButton
+              onShowOnboarding={() => setShowOnboarding(true)}
+            />
+          </motion.div>
         </div>
 
         {/* Main Content */}
@@ -317,6 +332,12 @@ export default function PalettePage() {
             </motion.div>
           </TabsContent>
         </Tabs>
+
+        {/* Add the Palette Onboarding */}
+        <PaletteOnboarding
+          forceShow={showOnboarding}
+          onClose={() => setShowOnboarding(false)}
+        />
       </div>
     </div>
   );

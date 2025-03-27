@@ -137,36 +137,88 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
     }
   }, [user, isLoading, isGuest, pathname, router, searchParams]);
 
-  // Initialize Google One Tap
+  // Initialize Google One Tap - make sure this only runs client-side
   useEffect(() => {
-    if (
-      typeof window === "undefined" ||
-      !window.google ||
-      user ||
-      !GOOGLE_CLIENT_ID
-    )
-      return;
+    // Only run this effect in the browser
+    if (typeof window === "undefined") return;
 
-    try {
-      window.google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: handleGoogleCallback,
-        auto_select: false,
-        cancel_on_tap_outside: true,
-      });
+    // Skip if Google SDK is not loaded, user is already signed in, or no client ID
+    if (!window.google || user || !GOOGLE_CLIENT_ID) return;
 
-      // Display the One Tap UI if on sign-in page
-      if (pathname === "/sign-in") {
-        window.google.accounts.id.prompt((notification: any) => {
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            console.log("Google One Tap not displayed or skipped");
-          }
+    // Add a small delay to ensure DOM is fully rendered to prevent hydration errors
+    const initTimer = setTimeout(() => {
+      try {
+        // Check again that google is defined before using (for TypeScript)
+        if (!window.google) return;
+
+        window.google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: handleGoogleCallback,
+          auto_select: false,
+          cancel_on_tap_outside: true,
         });
+
+        // Display the One Tap UI if on sign-in page
+        if (pathname === "/sign-in") {
+          // Double check google is defined before using
+          if (!window.google) return;
+
+          window.google.accounts.id.prompt((notification: any) => {
+            if (
+              notification.isNotDisplayed() ||
+              notification.isSkippedMoment()
+            ) {
+              console.log("Google One Tap not displayed or skipped");
+            }
+          });
+        }
+      } catch (error) {
+        console.error("Error initializing Google One Tap:", error);
       }
-    } catch (error) {
-      console.error("Error initializing Google One Tap:", error);
-    }
+    }, 500); // Delay to prevent hydration issues
+
+    return () => clearTimeout(initTimer);
   }, [pathname, user]);
+
+  // New useEffect to handle redirection after authentication
+  useEffect(() => {
+    // Skip if not in browser or no user
+    if (typeof window === "undefined" || !user) return;
+
+    // Add a flag to prevent double redirects with Google sign-in
+    const googleRedirectInProgress = sessionStorage.getItem(
+      "google_redirect_in_progress"
+    );
+
+    // Check if we're on the sign-in page and should be redirected
+    if (pathname === "/sign-in" && !googleRedirectInProgress) {
+      const redirectUrl = localStorage.getItem(
+        "everwood_redirect_after_signin"
+      );
+      const onboardingStatus = localStorage.getItem("onboardingCompleted");
+
+      console.log("Auth redirect check - User authenticated on sign-in page");
+      console.log("Onboarding status:", onboardingStatus);
+
+      // Set flag to prevent double redirects
+      sessionStorage.setItem("google_redirect_in_progress", "true");
+
+      // Use a timeout to ensure state has settled
+      setTimeout(() => {
+        if (redirectUrl) {
+          console.log("Redirecting to saved URL:", redirectUrl);
+          localStorage.removeItem("everwood_redirect_after_signin");
+          window.location.href = redirectUrl;
+        } else if (onboardingStatus === "true") {
+          // If onboarding is completed, redirect to welcome page
+          console.log("Onboarding completed, redirecting to welcome page");
+          window.location.href = "/welcome";
+        }
+        // Clear redirect flag after redirect is done
+        sessionStorage.removeItem("google_redirect_in_progress");
+      }, 500);
+    }
+  }, [user, pathname]);
 
   // Function to continue as guest
   const continueAsGuest = () => {
@@ -238,6 +290,10 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
         provider: "google",
       };
 
+      // Log user data for debugging
+      console.log("Loading user data");
+      console.log("User:", googleUser);
+
       // Check if this is a new user by looking for previous login data
       const existingUserData = localStorage.getItem("everwood_user");
       const isNewUser =
@@ -249,23 +305,32 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
         localStorage.removeItem("onboardingCompleted");
       }
 
+      // Update state and localStorage
       setUser(googleUser);
-      setIsGuest(false); // Exit guest mode when signing in
-      localStorage.removeItem("everwood_guest_mode"); // Remove guest mode flag
+      setIsGuest(false);
+      localStorage.removeItem("everwood_guest_mode");
       localStorage.setItem("everwood_user", JSON.stringify(googleUser));
 
-      // Check if there's a redirect URL saved
+      // Get redirection info
       const redirectUrl = localStorage.getItem(
         "everwood_redirect_after_signin"
       );
+      const onboardingStatus = localStorage.getItem("onboardingCompleted");
 
-      if (redirectUrl) {
-        localStorage.removeItem("everwood_redirect_after_signin");
-        router.push(redirectUrl);
-      } else if (pathname === "/sign-in") {
-        // Always redirect to welcome page first, regardless of onboarding status
-        // We'll let the sign-in component handle onboarding before redirecting
+      console.log("Google auth - Checking where to redirect");
+      console.log("onboardingStatus:", onboardingStatus);
+      console.log("pathname:", pathname);
+      console.log("redirectUrl:", redirectUrl);
+
+      // Force welcome page redirect after google sign-in if user already completed onboarding
+      if (onboardingStatus === "true") {
+        console.log("Google auth - Redirecting directly to welcome page");
+        // Small delay to ensure state is updated
+        setTimeout(() => {
+          window.location.href = "/welcome";
+        }, 300);
       }
+      // Else let the sign-in component handle showing onboarding
     } catch (error) {
       console.error("Google callback error:", error);
     } finally {
@@ -318,9 +383,21 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
           if (!email) throw new Error("Email is required for email login");
 
           try {
-            // In a real app, this would call an API endpoint to send a magic link
-            console.log(`Sending magic link to ${email}`);
-            // Mock successful email login for demo purposes
+            // Call our email authentication API to send a magic link
+            const response = await fetch("/api/auth/email", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ email }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+              throw new Error(data.error || "Failed to send magic link");
+            }
+
             return Promise.resolve();
           } catch (error) {
             console.error("Email auth error:", error);

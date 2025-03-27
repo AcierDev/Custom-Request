@@ -78,21 +78,35 @@ function SignInContent() {
 
   // Check for successful login and show onboarding
   useEffect(() => {
-    if (user) {
-      console.log("User authenticated:", user);
-      const onboardingCompleted = localStorage.getItem("onboardingCompleted");
-      console.log("Onboarding completed:", onboardingCompleted);
-
-      if (onboardingCompleted !== "true") {
-        console.log("Showing onboarding to user");
-        setShowOnboarding(true);
-      } else {
-        // Always redirect to welcome page, regardless of onboarding status
-        console.log("Redirecting user to welcome page");
-        window.location.href = "/welcome";
-      }
-    } else {
+    if (!user) {
       console.log("No authenticated user yet");
+      return;
+    }
+
+    console.log("User authenticated in sign-in page:", user);
+    const onboardingCompleted = localStorage.getItem("onboardingCompleted");
+    console.log("Onboarding completed:", onboardingCompleted);
+
+    // If a redirect is already in progress, don't start another one
+    if (sessionStorage.getItem("redirect_in_progress") === "true") {
+      console.log("Redirect already in progress, skipping");
+      return;
+    }
+
+    // This is a fresh authentication
+    if (onboardingCompleted !== "true") {
+      // New user - show onboarding
+      console.log("New user - showing onboarding");
+      setShowOnboarding(true);
+    } else {
+      // User has completed onboarding - redirect to welcome page
+      console.log(
+        "User already completed onboarding - redirecting to welcome page"
+      );
+      sessionStorage.setItem("redirect_in_progress", "true");
+
+      // Force navigation to welcome page
+      window.location.href = "/welcome";
     }
   }, [user]);
 
@@ -100,12 +114,16 @@ function SignInContent() {
     try {
       setError(null);
       setIsLoading({ ...isLoading, [provider]: true });
+
+      // Set a flag that we're initiating sign-in
+      sessionStorage.setItem("signin_initiated", provider);
+
       await signIn(provider);
-      // We need to let the useEffect handle showing onboarding
-      // This is already in place but we're missing proper flags for Google auth
+      // The rest will be handled by the auth context and the useEffect above
     } catch (error) {
       console.error(`Error signing in with ${provider}:`, error);
       setError(`Failed to sign in with ${provider}. Please try again.`);
+      sessionStorage.removeItem("signin_initiated");
     } finally {
       setIsLoading({ ...isLoading, [provider]: false });
     }

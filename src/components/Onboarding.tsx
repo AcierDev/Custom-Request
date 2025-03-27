@@ -99,6 +99,8 @@ export function Onboarding() {
 
   const completeOnboarding = () => {
     console.log("Completing onboarding");
+
+    // First mark onboarding as completed
     localStorage.setItem("onboardingCompleted", "true");
     setIsVisible(false);
 
@@ -111,14 +113,16 @@ export function Onboarding() {
 
     // Add a small delay to ensure all state is updated before navigation
     setTimeout(() => {
-      console.log("Redirecting to welcome page");
-      // Use window.location.replace to ensure proper navigation
-      window.location.replace("/welcome");
-    }, 200);
+      console.log("Redirecting to welcome page directly");
+      // Use direct navigation for most reliable redirection
+      window.location.href = "/welcome";
+    }, 300);
   };
 
   const skipOnboarding = () => {
     console.log("Skipping onboarding");
+
+    // First mark onboarding as completed
     localStorage.setItem("onboardingCompleted", "true");
     setIsVisible(false);
 
@@ -131,10 +135,10 @@ export function Onboarding() {
 
     // Add a small delay to ensure all state is updated before navigation
     setTimeout(() => {
-      console.log("Redirecting to welcome page");
-      // Use window.location.replace to ensure proper navigation
-      window.location.replace("/welcome");
-    }, 200);
+      console.log("Redirecting to welcome page directly");
+      // Use direct navigation for most reliable redirection
+      window.location.href = "/welcome";
+    }, 300);
   };
 
   if (hasSeenOnboarding) return null;

@@ -26,19 +26,37 @@ export default function WelcomePage() {
 
   useEffect(() => {
     setMounted(true);
-    console.log("Welcome page mounted");
+    console.log("Welcome page mounted at:", new Date().toISOString());
 
     // Check if user is coming from onboarding
     const fromOnboarding = sessionStorage.getItem("fromOnboarding");
     console.log("fromOnboarding flag:", fromOnboarding);
 
-    // If coming from onboarding, just clear the flag and stay on the page
+    // Debug user auth state
+    const user = localStorage.getItem("everwood_user");
+    const isGuest = localStorage.getItem("everwood_guest_mode");
+    const onboardingCompleted = localStorage.getItem("onboardingCompleted");
+
+    console.log("User Authentication Debug in welcome page:");
+    console.log("- User data:", user ? "exists" : "none");
+    console.log("- Guest mode:", isGuest === "true" ? "true" : "false");
+    console.log(
+      "- Onboarding completed:",
+      onboardingCompleted === "true" ? "true" : "false"
+    );
+
+    // Clear ALL potential redirect flags to ensure clean state
+    sessionStorage.removeItem("redirect_pending");
+    sessionStorage.removeItem("redirect_in_progress");
+    sessionStorage.removeItem("google_redirect_in_progress");
+    sessionStorage.removeItem("signin_initiated");
+
+    // If coming from onboarding, clear those flags too
     if (fromOnboarding === "true") {
-      console.log("Coming from onboarding, staying on welcome page");
+      console.log("Coming from onboarding, clearing flags");
       sessionStorage.removeItem("fromOnboarding");
       sessionStorage.removeItem("welcome_initial_render");
     }
-    // Removed auto-redirect logic to improve UX and allow revisiting
   }, []);
 
   if (!mounted) return null;
