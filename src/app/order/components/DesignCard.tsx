@@ -125,69 +125,8 @@ export function DesignCard({
     <Card
       className={`h-1/3 dark:bg-gray-800/50 backdrop-blur-sm border-2 border-gray-200 dark:border-gray-700 relative group ${className}`}
     >
-      <CardHeader className="pb-2">
-        <CardTitle className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent flex justify-between items-center">
-          <span>Design</span>
-          <span className="text-sm text-gray-500 dark:text-gray-400 font-normal">
-            {getDesignName(selectedDesign)}
-          </span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="relative h-[calc(100%-4rem)]">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={selectedDesign}
-            initial={{ opacity: 0, x: 10 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -10 }}
-            className="relative w-full h-full"
-          >
-            <div className="absolute inset-0 rounded-lg overflow-hidden">
-              {selectedDesign === ItemDesigns.Custom ? (
-                customPalette.length > 0 ? (
-                  <div className="w-full h-full grid grid-cols-6 gap-1 p-2 bg-gray-100 dark:bg-gray-800">
-                    {customPalette.map((color, index) => (
-                      <div
-                        key={index}
-                        className="aspect-square rounded-md"
-                        style={{ backgroundColor: color.hex }}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <EmptyCustomPaletteInfo />
-                )
-              ) : (
-                <Image
-                  src={DESIGN_IMAGES[selectedDesign]}
-                  alt={selectedDesign}
-                  fill
-                  className="object-cover"
-                  priority
-                />
-              )}
-            </div>
-          </motion.div>
-        </AnimatePresence>
-
-        <div className="absolute inset-0 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 rounded-full bg-black/50 hover:bg-black/70 text-white"
-            onClick={previousDesign}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 rounded-full bg-black/50 hover:bg-black/70 text-white"
-            onClick={nextDesign}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
+      <CardContent className="relative h-full">
+        <EmptyCustomPaletteInfo />
       </CardContent>
     </Card>
   );

@@ -90,7 +90,6 @@ export default function PreviewPage() {
             zoom: 1.4,
           }}
         >
-          <Stats />
           {/* Use the RotatableLighting component instead of direct lighting components */}
           <RotatableLighting timeOfDay={timeOfDay} style={style} />
 

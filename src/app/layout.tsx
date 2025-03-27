@@ -32,7 +32,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
       <Navbar onOpenSettings={() => {}} />
       <div className="flex-1 flex flex-col">
         <div className="lg:ml-64 mt-14 lg:mt-0 transition-[margin] duration-300 flex flex-col h-full">
-          <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 overflow-y-auto pb-16">
+          <main className="flex-1 w-full overflow-y-auto pb-16">
             {children}
           </main>
         </div>

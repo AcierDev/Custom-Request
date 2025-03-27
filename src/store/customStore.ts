@@ -279,7 +279,7 @@ const AUTO_SAVE_TRACKED_PROPERTIES: (keyof CustomState)[] = [
 // Create the store with the subscribeWithSelector middleware
 export const useCustomStore = create<CustomStore>()(
   subscribeWithSelector((set, get) => ({
-    dimensions: { width: 20, height: 10 },
+    dimensions: { width: 24, height: 12 },
     selectedDesign: ItemDesigns.Coastal,
     shippingSpeed: "standard",
     pricing: {

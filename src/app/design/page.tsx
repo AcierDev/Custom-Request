@@ -43,6 +43,8 @@ import { SizeCard } from "../order/components/SizeCard";
 import { StyleCard } from "../order/components/StyleCard";
 import { DesignCard } from "../order/components/DesignCard";
 import { ShareDialog } from "@/components/ShareDialog";
+import { DesignTips } from "@/components/DesignTips";
+import { DesignTutorial } from "@/components/DesignTutorial";
 
 export default function DesignPage() {
   const router = useRouter();
@@ -105,7 +107,7 @@ export default function DesignPage() {
             </Button>
           </Link>
           <Link href="/designs">
-            <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white flex items-center gap-2 text-sm">
+            <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white flex items-center gap-2 text-sm save-button">
               <Save className="w-4 h-4" />
               <span className="hidden sm:inline">Save Design</span>
               <span className="sm:hidden">Save</span>
@@ -117,18 +119,26 @@ export default function DesignPage() {
       {/* Enhanced view controls with pattern options */}
       <div className="absolute top-4 right-4 z-50 flex flex-col gap-3">
         <ViewControls />
-        <DesignCard compact />
-        <SizeCard compact />
-        <StyleCard compact />
+        <div className="design-card">
+          <DesignCard compact />
+        </div>
+        <div className="size-card">
+          <SizeCard compact />
+        </div>
+        <div className="style-card">
+          <StyleCard compact />
+        </div>
         <MiniCard compact />
-        <PatternControls />
+        <div className="pattern-controls">
+          <PatternControls />
+        </div>
       </div>
 
       {/* Color info hint */}
       {showColorInfo && <ColorInfoHint />}
 
       {/* Main canvas */}
-      <div className="w-full h-full">
+      <div className="w-full h-full canvas-container">
         <Canvas
           shadows
           className={cn("w-full h-full", showEmptyCustomInfo && "opacity-25")}
@@ -233,6 +243,12 @@ export default function DesignPage() {
         isOpen={isShareDialogOpen}
         onClose={() => setIsShareDialogOpen(false)}
       />
+
+      {/* Design tips */}
+      <DesignTips />
+
+      {/* Design tutorial */}
+      <DesignTutorial />
     </div>
   );
 }

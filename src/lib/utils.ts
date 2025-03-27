@@ -43,3 +43,26 @@ export const sizeToDimensions = (size: ItemSizes) => {
   const [width, height] = size.split(" x ").map(Number);
   return { width, height };
 };
+
+/**
+ * Helper function to reset onboarding state
+ * Can be called in the browser console for testing the onboarding flow
+ */
+export function resetOnboarding() {
+  console.log("Resetting onboarding state");
+  localStorage.removeItem("onboardingCompleted");
+  sessionStorage.removeItem("fromOnboarding");
+  sessionStorage.removeItem("redirectingFromSignIn");
+
+  // Also offer option to reset guest state
+  const resetGuest = confirm("Do you also want to reset guest login state?");
+  if (resetGuest) {
+    localStorage.removeItem("everwood_guest_mode");
+    localStorage.removeItem("everwood_is_guest");
+    console.log("Guest state reset");
+  }
+
+  console.log("Onboarding state reset");
+  console.log("You can now refresh the page to see the onboarding flow");
+  return true;
+}
