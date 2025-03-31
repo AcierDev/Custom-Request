@@ -67,7 +67,6 @@ export type SavedDesign = {
   isReversed: boolean;
   customPalette: CustomColor[];
   isRotated: boolean;
-  patternStyle: PatternType;
   style: StyleType;
   useMini: boolean;
   createdAt: string;
@@ -104,7 +103,6 @@ interface CustomState {
   customPalette: CustomColor[];
   selectedColors: string[];
   isRotated: boolean;
-  patternStyle: PatternType;
   style: StyleType;
   useMini: boolean;
   isReversed: boolean;
@@ -148,7 +146,6 @@ interface CustomStore extends CustomState {
   moveColorLeft: (index: number) => void;
   moveColorRight: (index: number) => void;
   setIsRotated: (value: boolean) => void;
-  setPatternType: (type: PatternType) => void;
   setStyle: (style: StyleType) => void;
   setUseMini: (value: boolean) => void;
   setShowRuler: (value: boolean) => void;
@@ -234,7 +231,6 @@ interface ShareableState {
   isReversed: boolean;
   customPalette: CustomColor[];
   isRotated: boolean;
-  patternStyle: PatternType;
   style: StyleType;
   useMini: boolean;
 }
@@ -267,7 +263,6 @@ const AUTO_SAVE_TRACKED_PROPERTIES: (keyof CustomState)[] = [
   "isReversed",
   "customPalette",
   "isRotated",
-  "patternStyle",
   "style",
   "savedPalettes",
   "savedDesigns",
@@ -299,7 +294,6 @@ export const useCustomStore = create<CustomStore>()(
     customPalette: [],
     selectedColors: [],
     isRotated: false,
-    patternStyle: "geometric",
     style: "geometric",
     useMini: false,
     isReversed: false,
@@ -555,7 +549,6 @@ export const useCustomStore = create<CustomStore>()(
         };
       }),
     setIsRotated: (value) => set({ isRotated: value }),
-    setPatternType: (type) => set({ patternStyle: type }),
     setStyle: (style) => set({ style }),
     setShowRuler: (value) =>
       set((state) => ({
@@ -737,7 +730,6 @@ export const useCustomStore = create<CustomStore>()(
         isReversed: state.isReversed,
         customPalette: state.customPalette,
         isRotated: state.isRotated,
-        patternStyle: state.patternStyle,
         style: state.style,
         useMini: state.useMini,
       };
@@ -756,7 +748,6 @@ export const useCustomStore = create<CustomStore>()(
         isReversed: state.isReversed,
         customPalette: state.customPalette,
         isRotated: state.isRotated,
-        patternStyle: state.patternStyle,
         style: state.style,
         useMini: state.useMini,
       };
@@ -790,7 +781,6 @@ export const useCustomStore = create<CustomStore>()(
           isReversed: shareableState.isReversed,
           customPalette: shareableState.customPalette,
           isRotated: shareableState.isRotated,
-          patternStyle: shareableState.patternStyle,
           style: shareableState.style,
           currentColors:
             shareableState.selectedDesign === ItemDesigns.Custom &&
@@ -904,7 +894,6 @@ export const useCustomStore = create<CustomStore>()(
           isReversed: get().isReversed,
           customPalette: get().customPalette,
           isRotated: get().isRotated,
-          patternStyle: get().patternStyle,
           style: get().style,
           savedPalettes: get().savedPalettes,
           savedDesigns: get().savedDesigns,
@@ -958,7 +947,6 @@ export const useCustomStore = create<CustomStore>()(
               isReversed: get().isReversed,
               customPalette: get().customPalette,
               isRotated: get().isRotated,
-              patternStyle: get().patternStyle,
               style: get().style,
               savedPalettes: get().savedPalettes,
               savedDesigns: get().savedDesigns,
@@ -1139,7 +1127,6 @@ export const useCustomStore = create<CustomStore>()(
           isReversed: mergedState.isReversed ?? get().isReversed,
           customPalette: mergedState.customPalette || get().customPalette,
           isRotated: mergedState.isRotated ?? get().isRotated,
-          patternStyle: mergedState.patternStyle || get().patternStyle,
           style: mergedState.style || get().style,
           savedPalettes: mergedState.savedPalettes || [],
           savedDesigns: mergedState.savedDesigns || [],
@@ -1211,7 +1198,6 @@ export const useCustomStore = create<CustomStore>()(
             customPalette: state.customPalette,
             pricing: state.pricing,
             isReversed: state.isReversed,
-            patternStyle: state.patternStyle,
             style: state.style,
           }),
         });
@@ -1362,7 +1348,6 @@ export const useCustomStore = create<CustomStore>()(
         isReversed: get().isReversed,
         customPalette: get().customPalette,
         isRotated: get().isRotated,
-        patternStyle: get().patternStyle,
         style: get().style,
         useMini: get().useMini,
         createdAt: now,
@@ -1421,7 +1406,6 @@ export const useCustomStore = create<CustomStore>()(
         isReversed: design.isReversed,
         customPalette: design.customPalette,
         isRotated: design.isRotated,
-        patternStyle: design.patternStyle,
         style: design.style,
         useMini: design.useMini,
         currentColors:
@@ -1450,7 +1434,6 @@ export const useCustomStore = create<CustomStore>()(
         isReversed: design.isReversed,
         customPalette: design.customPalette,
         isRotated: design.isRotated,
-        patternStyle: design.patternStyle,
         style: design.style,
         useMini: design.useMini,
         currentColors:

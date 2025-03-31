@@ -35,6 +35,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useCustomStore } from "@/store/customStore";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 type NavItemBase = {
   hotkey?: string;
@@ -131,20 +132,26 @@ export function Navbar({ onOpenSettings }: NavbarProps) {
       router.push(href); // Normal navigation if sequence doesn't match
     };
 
+    const isActive = activeTab === href;
+
     return (
       <Link
         href={href}
-        className={`flex items-center rounded-lg px-3 py-4 text-sm font-medium ${
-          activeTab === href
-            ? "bg-secondary text-secondary-foreground"
-            : "text-muted-foreground hover:bg-muted hover:text-primary"
-        } ${!isSidebarOpen ? "justify-center" : ""}`}
+        className={cn(
+          "flex items-center rounded-lg px-3 py-4 text-sm font-medium transition-all duration-200 ease-in-out group",
+          isActive
+            ? "bg-gradient-to-r from-blue-500/90 to-violet-500/90 text-white shadow-sm"
+            : "text-muted-foreground hover:bg-muted hover:text-primary",
+          !isSidebarOpen ? "justify-center" : ""
+        )}
         onClick={handleClick}
       >
         <Icon
-          className={`h-5 w-5 flex-shrink-0 ${
+          className={cn(
+            "h-5 w-5 flex-shrink-0 transition-transform duration-200 ease-in-out",
+            isActive ? "scale-110" : "group-hover:scale-105",
             !isSidebarOpen ? "mr-0" : "mr-3"
-          }`}
+          )}
         />
         {isSidebarOpen && <span>{label}</span>}
       </Link>
@@ -155,13 +162,17 @@ export function Navbar({ onOpenSettings }: NavbarProps) {
     <>
       {/* Desktop Sidebar */}
       <aside
-        className={`${
+        className={cn(
+          "fixed h-screen transition-all duration-300 ease-in-out border-r dark:border-gray-800/50 border-gray-200/80 bg-white/95 dark:bg-gradient-to-b dark:from-gray-950/95 dark:via-gray-900/90 dark:to-gray-800/80 dark:backdrop-blur-sm hidden lg:block z-30",
           isSidebarOpen ? "w-64" : "w-16"
-        } fixed h-screen transition-all duration-300 ease-in-out border-r dark:border-gray-800 border-gray-200 bg-white dark:bg-gradient-to-b dark:from-gray-800 dark:to-gray-600 hidden lg:block z-30`}
+        )}
       >
-        <div className="h-16 flex items-center justify-between px-4 bg-gray-50 dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800">
+        <div className="h-16 flex items-center justify-between px-4 bg-white/80 dark:bg-gray-950/80 border-b border-gray-200/80 dark:border-gray-800/50">
           {isSidebarOpen && (
-            <span className="text-lg font-bold cursor-pointer text-gray-900 dark:text-white hover:text-primary transition-colors">
+            <span
+              className="text-lg font-bold cursor-pointer text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-violet-600 hover:opacity-80 transition-opacity"
+              onClick={() => router.push("/welcome")}
+            >
               Everwood
             </span>
           )}
@@ -169,9 +180,10 @@ export function Navbar({ onOpenSettings }: NavbarProps) {
             variant="ghost"
             size="icon"
             onClick={toggleSidebar}
-            className={`${
+            className={cn(
+              "hover:bg-muted/80 dark:hover:bg-gray-800/60",
               isSidebarOpen ? "" : "mx-auto"
-            } hover:bg-gray-200 dark:hover:bg-gray-800`}
+            )}
           >
             {isSidebarOpen ? (
               <ChevronLeft className="h-4 w-4" />
@@ -181,14 +193,14 @@ export function Navbar({ onOpenSettings }: NavbarProps) {
             <span className="sr-only">Toggle sidebar</span>
           </Button>
         </div>
-        <div className="h-[calc(100vh-4rem)] flex flex-col bg-gray-50/50 dark:bg-gradient-to-b dark:from-gray-950/90 dark:to-gray-950/70">
+        <div className="h-[calc(100vh-4rem)] flex flex-col">
           <div className="flex-1 overflow-y-auto no-scrollbar px-3">
             <div className="flex flex-col space-y-1 py-2">
               {mainNavItems.map((item, index) =>
                 item.type === "divider" ? (
                   <Separator
                     key={index}
-                    className="my-2 bg-gray-200 dark:bg-gray-600"
+                    className="my-2 bg-gray-200/80 dark:bg-gray-700/50"
                     decorative
                   />
                 ) : (
@@ -202,17 +214,13 @@ export function Navbar({ onOpenSettings }: NavbarProps) {
               )}
             </div>
           </div>
-          <div className="p-3 border-t border-gray-200 dark:border-gray-600 bg-gray-50/80 dark:bg-gray-900/50">
-            <div
-              className={`${
-                isSidebarOpen ? "flex gap-2" : "flex flex-col gap-2"
-              }`}
-            >
+          <div className="p-3 border-t border-gray-200/80 dark:border-gray-700/50 bg-white/80 dark:bg-gray-950/60">
+            <div className={cn("flex gap-2", !isSidebarOpen && "flex-col")}>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                className="flex-shrink-0 hover:bg-gray-200 dark:hover:bg-gray-800"
+                className="flex-shrink-0 hover:bg-muted/80 dark:hover:bg-gray-800/60"
               >
                 {theme === "dark" ? (
                   <Sun className="h-5 w-5" />
@@ -226,9 +234,10 @@ export function Navbar({ onOpenSettings }: NavbarProps) {
                 </span>
               </Button>
               <Button
-                className={`flex items-center justify-center bg-primary text-primary-foreground hover:bg-primary/90 ${
+                className={cn(
+                  "flex items-center justify-center bg-white text-black hover:opacity-90 transition-opacity shadow-sm",
                   isSidebarOpen ? "flex-1" : ""
-                }`}
+                )}
                 onClick={onOpenSettings}
               >
                 <Settings className="h-5 w-5 flex-shrink-0" />
@@ -240,31 +249,34 @@ export function Navbar({ onOpenSettings }: NavbarProps) {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="flex-shrink-0 p-0 h-9 w-9 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800"
+                      className="flex-shrink-0 p-0 h-9 w-9 rounded-full hover:bg-muted/80 dark:hover:bg-gray-800/60"
                     >
                       <Avatar className="h-8 w-8">
                         <AvatarImage
                           src={user.image || ""}
                           alt={user.name || user.email}
                         />
-                        <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                        <AvatarFallback className="text-xs bg-gradient-to-br from-blue-100 to-violet-100 dark:from-blue-900/50 dark:to-violet-900/50 text-primary dark:text-blue-300">
                           {getUserInitials()}
                         </AvatarFallback>
                       </Avatar>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuContent
+                    align="end"
+                    className="w-56 bg-background/95 backdrop-blur-sm border-border/50"
+                  >
                     <DropdownMenuLabel>My Account</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      className="cursor-pointer"
+                      className="cursor-pointer focus:bg-muted/80"
                       onClick={() => router.push("/profile")}
                     >
                       <User className="mr-2 h-4 w-4" />
                       <span>Profile</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      className="cursor-pointer"
+                      className="cursor-pointer focus:bg-muted/80"
                       onClick={handleSaveData}
                       disabled={isSaving}
                     >
@@ -273,7 +285,7 @@ export function Navbar({ onOpenSettings }: NavbarProps) {
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      className="cursor-pointer text-destructive focus:text-destructive"
+                      className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
                       onClick={signOut}
                     >
                       <LogOut className="mr-2 h-4 w-4" />
@@ -287,27 +299,30 @@ export function Navbar({ onOpenSettings }: NavbarProps) {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="flex-shrink-0 p-0 h-9 w-9 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800"
+                      className="flex-shrink-0 p-0 h-9 w-9 rounded-full hover:bg-muted/80 dark:hover:bg-gray-800/60"
                     >
                       <Avatar className="h-8 w-8">
-                        <AvatarFallback className="text-xs bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300">
+                        <AvatarFallback className="text-xs bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-300">
                           G
                         </AvatarFallback>
                       </Avatar>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuContent
+                    align="end"
+                    className="w-56 bg-background/95 backdrop-blur-sm border-border/50"
+                  >
                     <DropdownMenuLabel>Guest User</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      className="cursor-pointer"
+                      className="cursor-pointer focus:bg-muted/80"
                       onClick={() => router.push("/profile")}
                     >
                       <User className="mr-2 h-4 w-4" />
                       <span>Profile</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      className="cursor-pointer"
+                      className="cursor-pointer focus:bg-muted/80"
                       onClick={handleSaveData}
                       disabled={isSaving}
                     >
@@ -316,7 +331,7 @@ export function Navbar({ onOpenSettings }: NavbarProps) {
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      className="cursor-pointer text-primary focus:text-primary"
+                      className="cursor-pointer text-primary focus:text-primary focus:bg-primary/10"
                       onClick={() => router.push("/sign-in")}
                     >
                       <LogIn className="mr-2 h-4 w-4" />
@@ -329,7 +344,7 @@ export function Navbar({ onOpenSettings }: NavbarProps) {
                   variant="outline"
                   size="icon"
                   onClick={() => router.push("/sign-in")}
-                  className="flex-shrink-0 hover:bg-gray-200 dark:hover:bg-gray-800"
+                  className="flex-shrink-0 hover:bg-muted/80 dark:hover:bg-gray-800/60 border-border/50"
                 >
                   <LogIn className="h-5 w-5" />
                   <span className="sr-only">Sign in</span>
@@ -341,21 +356,21 @@ export function Navbar({ onOpenSettings }: NavbarProps) {
       </aside>
 
       {/* Mobile Navbar */}
-      <nav className="lg:hidden fixed top-0 left-0 right-0 z-40 border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-950/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <nav className="lg:hidden fixed top-0 left-0 right-0 z-40 border-b border-gray-200/80 dark:border-gray-800/50 bg-white/90 dark:bg-gray-950/90 backdrop-blur-sm">
         <div className="w-full flex h-14 items-center px-4">
           <Sheet>
             <SheetTrigger asChild>
               <Button
                 size="icon"
                 variant="ghost"
-                className="hover:bg-gray-200 dark:hover:bg-gray-800"
+                className="hover:bg-muted/80 dark:hover:bg-gray-800/60"
               >
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Toggle menu</span>
               </Button>
             </SheetTrigger>
             <span
-              className="text-xl font-bold mr-auto cursor-pointer text-gray-900 dark:text-white hover:text-primary transition-colors"
+              className="text-xl font-bold mr-auto cursor-pointer text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-violet-600 hover:opacity-80 transition-opacity ml-2"
               onClick={() => router.push("/order")}
             >
               Everwood
@@ -367,31 +382,34 @@ export function Navbar({ onOpenSettings }: NavbarProps) {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="ml-auto mr-2 p-0 h-9 w-9 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800"
+                    className="ml-auto mr-2 p-0 h-9 w-9 rounded-full hover:bg-muted/80 dark:hover:bg-gray-800/60"
                   >
                     <Avatar className="h-8 w-8">
                       <AvatarImage
                         src={user.image || ""}
                         alt={user.name || user.email}
                       />
-                      <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                      <AvatarFallback className="text-xs bg-gradient-to-br from-blue-100 to-violet-100 dark:from-blue-900/50 dark:to-violet-900/50 text-primary dark:text-blue-300">
                         {getUserInitials()}
                       </AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuContent
+                  align="end"
+                  className="w-56 bg-background/95 backdrop-blur-sm border-border/50"
+                >
                   <DropdownMenuLabel>My Account</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    className="cursor-pointer"
+                    className="cursor-pointer focus:bg-muted/80"
                     onClick={() => router.push("/profile")}
                   >
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    className="cursor-pointer"
+                    className="cursor-pointer focus:bg-muted/80"
                     onClick={handleSaveData}
                     disabled={isSaving}
                   >
@@ -400,7 +418,7 @@ export function Navbar({ onOpenSettings }: NavbarProps) {
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    className="cursor-pointer text-destructive focus:text-destructive"
+                    className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
                     onClick={signOut}
                   >
                     <LogOut className="mr-2 h-4 w-4" />
@@ -414,29 +432,39 @@ export function Navbar({ onOpenSettings }: NavbarProps) {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="ml-auto mr-2 p-0 h-9 w-9 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800"
+                    className="ml-auto mr-2 p-0 h-9 w-9 rounded-full hover:bg-muted/80 dark:hover:bg-gray-800/60"
                   >
                     <Avatar className="h-8 w-8">
-                      <AvatarFallback className="text-xs bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300">
+                      <AvatarFallback className="text-xs bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-300">
                         G
                       </AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuContent
+                  align="end"
+                  className="w-56 bg-background/95 backdrop-blur-sm border-border/50"
+                >
                   <DropdownMenuLabel>Guest User</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    className="cursor-pointer"
+                    className="cursor-pointer focus:bg-muted/80"
                     onClick={handleSaveData}
                     disabled={isSaving}
                   >
                     <Save className="mr-2 h-4 w-4" />
                     <span>{isSaving ? "Saving..." : "Save My Designs"}</span>
                   </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="cursor-pointer focus:bg-muted/80"
+                    onClick={() => router.push("/profile")}
+                  >
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    className="cursor-pointer text-primary focus:text-primary"
+                    className="cursor-pointer text-primary focus:text-primary focus:bg-primary/10"
                     onClick={() => router.push("/sign-in")}
                   >
                     <LogIn className="mr-2 h-4 w-4" />
@@ -449,7 +477,7 @@ export function Navbar({ onOpenSettings }: NavbarProps) {
                 variant="outline"
                 size="sm"
                 onClick={() => router.push("/sign-in")}
-                className="ml-auto"
+                className="ml-auto border-border/50 hover:bg-muted/80"
               >
                 <LogIn className="mr-2 h-4 w-4" />
                 Sign in
@@ -458,15 +486,20 @@ export function Navbar({ onOpenSettings }: NavbarProps) {
 
             <SheetContent
               side="left"
-              className="w-64 p-0 bg-white dark:bg-gradient-to-b dark:from-gray-800 dark:to-gray-600"
+              className="w-64 p-0 bg-white/95 dark:bg-gradient-to-b dark:from-gray-950/95 dark:via-gray-900/90 dark:to-gray-850/95 dark:backdrop-blur-sm border-r dark:border-gray-800/50"
             >
-              <div className="flex flex-col h-[100dvh] bg-gray-50/50 dark:bg-gradient-to-b dark:from-gray-950/90 dark:to-gray-950/70">
-                <div className="flex-1 flex flex-col space-y-1 py-2 overflow-y-auto no-scrollbar">
+              <div className="h-16 flex items-center px-4 border-b border-gray-200/80 dark:border-gray-800/50 bg-white/80 dark:bg-gray-950/80">
+                <span className="text-lg font-bold cursor-pointer text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-violet-600">
+                  Everwood
+                </span>
+              </div>
+              <div className="flex flex-col h-[calc(100dvh-4rem)]">
+                <div className="flex-1 flex flex-col space-y-1 py-2 px-3 overflow-y-auto no-scrollbar">
                   {mainNavItems.map((item, index) =>
                     item.type === "divider" ? (
                       <Separator
                         key={index}
-                        className="my-2 bg-gray-200 dark:bg-gray-600"
+                        className="my-2 bg-gray-200/80 dark:bg-gray-700/50"
                       />
                     ) : (
                       <NavLink
@@ -478,10 +511,10 @@ export function Navbar({ onOpenSettings }: NavbarProps) {
                     )
                   )}
                 </div>
-                <div className="p-4 border-t border-gray-200 dark:border-gray-600 bg-gray-50/80 dark:bg-gray-900/50">
+                <div className="p-4 border-t border-gray-200/80 dark:border-gray-700/50 bg-white/80 dark:bg-gray-950/60">
                   <div className="flex gap-2">
                     <Button
-                      className="flex-1 flex items-center justify-center bg-primary text-primary-foreground hover:bg-primary/90"
+                      className="flex-1 flex items-center justify-center bg-gradient-to-r from-blue-600 to-violet-600 text-white hover:opacity-90 transition-opacity shadow-sm"
                       onClick={onOpenSettings}
                     >
                       <Settings className="mr-2 h-5 w-5" />
@@ -493,7 +526,7 @@ export function Navbar({ onOpenSettings }: NavbarProps) {
                       onClick={() => {
                         setTheme(theme === "dark" ? "light" : "dark");
                       }}
-                      className="flex-shrink-0 hover:bg-gray-200 dark:hover:bg-gray-800"
+                      className="flex-shrink-0 hover:bg-muted/80 dark:hover:bg-gray-800/60"
                     >
                       {theme === "dark" ? (
                         <Sun className="h-5 w-5" />
