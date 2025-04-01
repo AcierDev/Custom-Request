@@ -22,9 +22,9 @@ export default function DesignsPage() {
     setRefreshCounter((prev) => prev + 1);
   };
 
-  // Use the activeTab as the default, otherwise "saved"
-  // This maintains the user's last selected tab
-  const defaultTab = activeTab === "official" ? "official" : "saved";
+  // Use the activeTab as the default, otherwise "official"
+  // This maintains the user's last selected tab but defaults to official
+  const defaultTab = activeTab === "saved" ? "saved" : "official";
 
   return (
     <div className="w-full min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950 p-6 md:p-8">

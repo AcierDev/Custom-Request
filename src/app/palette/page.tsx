@@ -57,11 +57,11 @@ export default function PalettePage() {
   const [paletteName, setPaletteName] = useState("");
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // Use activeTab if set, otherwise default to 'create' to focus on creation first
+  // Use activeTab if set, otherwise default to 'official' to focus on inspiration first
   const defaultTab =
     activeTab === "create" || activeTab === "saved" || activeTab === "official"
       ? activeTab
-      : "create";
+      : "official";
 
   const handleSavePalette = () => {
     if (editingPaletteId) {
