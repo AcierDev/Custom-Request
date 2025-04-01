@@ -121,6 +121,7 @@ interface CustomState {
     showHanger: boolean;
     showSplitPanel: boolean;
     showFPS: boolean;
+    showUIControls: boolean;
   };
   lastSaved: number;
   autoSaveEnabled: boolean;
@@ -154,6 +155,7 @@ interface CustomStore extends CustomState {
   setShowHanger: (value: boolean) => void;
   setShowSplitPanel: (value: boolean) => void;
   setShowFPS: (value: boolean) => void;
+  setShowUIControls: (value: boolean) => void;
   savePalette: (name: string, folderId?: string) => void;
   updatePalette: (id: string, updates: Partial<SavedPalette>) => void;
   deletePalette: (id: string) => void;
@@ -249,6 +251,7 @@ interface PersistentState extends ShareableState {
     showHanger: boolean;
     showSplitPanel: boolean;
     showFPS: boolean;
+    showUIControls: boolean;
   };
   dataSyncVersion?: number;
 }
@@ -312,6 +315,7 @@ export const useCustomStore = create<CustomStore>()(
       showHanger: true,
       showSplitPanel: false,
       showFPS: false,
+      showUIControls: true,
     },
     lastSaved: 0,
     autoSaveEnabled: true,
@@ -574,6 +578,10 @@ export const useCustomStore = create<CustomStore>()(
       set((state) => ({
         viewSettings: { ...state.viewSettings, showFPS: value },
       })),
+    setShowUIControls: (value) =>
+      set((state) => ({
+        viewSettings: { ...state.viewSettings, showUIControls: value },
+      })),
     savePalette: (name: string, folderId?: string) => {
       const { customPalette } = get();
       if (customPalette.length === 0) {
@@ -824,6 +832,7 @@ export const useCustomStore = create<CustomStore>()(
               showHanger: data.viewSettings?.showHanger ?? true,
               showSplitPanel: data.viewSettings?.showSplitPanel ?? false,
               showFPS: data.viewSettings?.showFPS ?? false,
+              showUIControls: data.viewSettings?.showUIControls ?? true,
             };
 
             const localVersion = get().dataSyncVersion;
@@ -1151,6 +1160,9 @@ export const useCustomStore = create<CustomStore>()(
               get().viewSettings.showSplitPanel,
             showFPS:
               mergedState.viewSettings?.showFPS ?? get().viewSettings.showFPS,
+            showUIControls:
+              mergedState.viewSettings?.showUIControls ??
+              get().viewSettings.showUIControls,
           },
           currentColors:
             mergedState.selectedDesign === ItemDesigns.Custom &&

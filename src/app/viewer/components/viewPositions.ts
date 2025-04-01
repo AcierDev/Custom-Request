@@ -31,7 +31,7 @@ export const roomConfigurations: RoomViewConfig[] = [
   {
     id: "bedroom",
     name: "Bedroom",
-    modelPath: "/models/bedroom.glb",
+    modelPath: "/models/room/bedroom.glb",
     position: [0, -1, 0],
     scale: [1, 1, 1],
     rotation: [0, 0, 0],
@@ -74,7 +74,7 @@ export const roomConfigurations: RoomViewConfig[] = [
   {
     id: "room2",
     name: "New Room",
-    modelPath: "/models/room2.glb",
+    modelPath: "/models/room/room2.glb",
     position: [0, -1, 0],
     scale: [1, 1, 1],
     rotation: [0, 0, 0],

@@ -157,7 +157,7 @@ function RoomModel({
 
   // Special handling for the bedroom model
   useEffect(() => {
-    if (filePath === "/models/bedroom.glb") {
+    if (filePath === "/models/room/bedroom.glb") {
       const carpet = clonedScene.getObjectByName("rug");
       if (carpet) {
         carpet.position.y += 0.001; // Raise the carpet slightly
@@ -219,18 +219,18 @@ function RoomObjects({ roomId }: { roomId: string }) {
     return (
       <>
         <primitive
-          object={useGLTF("/models/couch2.glb").scene.clone()}
+          object={useGLTF("/models/room/couch2.glb").scene.clone()}
           position={[-4.2, -1, -7.5]}
           rotation={[0, Math.PI / 2, 0]}
           scale={[0.01, 0.01, 0.01]}
         />
         <primitive
-          object={useGLTF("/models/tree.glb").scene.clone()}
+          object={useGLTF("/models/room/tree.glb").scene.clone()}
           position={[1, -5, 5]}
           scale={[1, 1, 1]}
         />
         <primitive
-          object={useGLTF("/models/plant.glb").scene.clone()}
+          object={useGLTF("/models/room/plant.glb").scene.clone()}
           position={[-4, -1, -9.5]}
           scale={[0.7, 0.7, 0.7]}
         />
@@ -305,8 +305,8 @@ export function RoomScene({
 }
 
 // Preload models
-useGLTF.preload("/models/bedroom.glb");
-useGLTF.preload("/models/room2.glb");
-useGLTF.preload("/models/couch2.glb");
-useGLTF.preload("/models/plant.glb");
-useGLTF.preload("/models/tree.glb");
+useGLTF.preload("/models/room/bedroom.glb");
+useGLTF.preload("/models/room/room2.glb");
+useGLTF.preload("/models/room/couch2.glb");
+useGLTF.preload("/models/room/plant.glb");
+useGLTF.preload("/models/room/tree.glb");

@@ -18,6 +18,7 @@ import {
   Minimize2,
   Maximize2,
   Eye,
+  EyeOff,
   Save,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -45,6 +46,12 @@ import { DesignCard } from "../order/components/DesignCard";
 import { ShareDialog } from "@/components/ShareDialog";
 import { DesignTips } from "@/components/DesignTips";
 import { DesignTutorial } from "@/components/DesignTutorial";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export default function DesignPage() {
   const router = useRouter();
@@ -56,6 +63,7 @@ export default function DesignPage() {
     dimensions,
     style,
     setActiveTab,
+    setShowUIControls,
   } = useCustomStore();
   const {
     showRuler,
@@ -64,6 +72,7 @@ export default function DesignPage() {
     showHanger,
     showSplitPanel,
     showFPS,
+    showUIControls,
   } = viewSettings;
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
 
@@ -73,7 +82,19 @@ export default function DesignPage() {
     // Trigger resize event to ensure canvas renders correctly
     const resizeEvent = new Event("resize");
     window.dispatchEvent(resizeEvent);
-  }, []);
+
+    // Add keyboard shortcut to toggle UI controls
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "h" || e.key === "H") {
+        setShowUIControls(!showUIControls);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [showUIControls, setShowUIControls]);
 
   const showEmptyCustomInfo =
     selectedDesign === ItemDesigns.Custom && customPalette.length === 0;
@@ -96,46 +117,74 @@ export default function DesignPage() {
           3D Preview
         </h1>
         <div className="flex items-center gap-2">
-          <Link href="/designs">
-            <Button
-              variant="outline"
-              className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm flex items-center gap-2 text-sm"
-            >
-              <Eye className="w-4 h-4" />
-              <span className="hidden sm:inline">View Saved Designs</span>
-              <span className="sm:hidden">Designs</span>
-            </Button>
-          </Link>
-          <Link href="/designs">
-            <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white flex items-center gap-2 text-sm save-button">
-              <Save className="w-4 h-4" />
-              <span className="hidden sm:inline">Save Design</span>
-              <span className="sm:hidden">Save</span>
-            </Button>
-          </Link>
+          {/* Toggle UI Controls Button */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-full w-9 h-9 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 hover:bg-white/90 dark:hover:bg-gray-700/90 transition-colors"
+                  onClick={() => setShowUIControls(!showUIControls)}
+                >
+                  {showUIControls ? (
+                    <EyeOff className="w-4 h-4 text-gray-700 dark:text-gray-300" />
+                  ) : (
+                    <Eye className="w-4 h-4 text-gray-700 dark:text-gray-300" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{showUIControls ? "Hide UI" : "Show UI"} (press h)</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          {showUIControls && (
+            <>
+              <Link href="/designs">
+                <Button
+                  variant="outline"
+                  className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm flex items-center gap-2 text-sm"
+                >
+                  <Eye className="w-4 h-4" />
+                  <span className="hidden sm:inline">View Saved Designs</span>
+                  <span className="sm:hidden">Designs</span>
+                </Button>
+              </Link>
+              <Link href="/designs">
+                <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white flex items-center gap-2 text-sm save-button">
+                  <Save className="w-4 h-4" />
+                  <span className="hidden sm:inline">Save Design</span>
+                  <span className="sm:hidden">Save</span>
+                </Button>
+              </Link>
+            </>
+          )}
         </div>
       </div>
 
       {/* Enhanced view controls with pattern options */}
-      <div className="absolute top-4 right-4 z-50 flex flex-col gap-3">
-        <ViewControls />
-        <div className="design-card">
-          <DesignCard compact />
+      {showUIControls && (
+        <div className="absolute top-4 right-4 z-50 flex flex-col gap-3">
+          <ViewControls />
+          <div className="design-card">
+            <DesignCard compact />
+          </div>
+          <div className="size-card">
+            <SizeCard compact />
+          </div>
+          <div className="style-card">
+            <StyleCard compact />
+          </div>
+          <MiniCard compact />
+          <div className="pattern-controls">
+            <PatternControls />
+          </div>
         </div>
-        <div className="size-card">
-          <SizeCard compact />
-        </div>
-        <div className="style-card">
-          <StyleCard compact />
-        </div>
-        <MiniCard compact />
-        <div className="pattern-controls">
-          <PatternControls />
-        </div>
-      </div>
+      )}
 
       {/* Color info hint */}
-      {showColorInfo && <ColorInfoHint />}
+      {showColorInfo && showUIControls && <ColorInfoHint />}
 
       {/* Main canvas */}
       <div className="w-full h-full canvas-container">
@@ -193,50 +242,55 @@ export default function DesignPage() {
       </div>
 
       {/* Info card */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
-        className="absolute bottom-6 left-6 max-w-md"
-      >
-        <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200 dark:border-gray-700 shadow-lg p-4">
-          <div className="flex gap-3">
-            <div className="shrink-0">
-              <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-full">
-                <Info className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+      {showUIControls && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="absolute bottom-6 left-6 max-w-md"
+        >
+          <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200 dark:border-gray-700 shadow-lg p-4">
+            <div className="flex gap-3">
+              <div className="shrink-0">
+                <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-full">
+                  <Info className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                </div>
+              </div>
+              <div className="space-y-1 flex-1">
+                <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  Full-Screen Preview Mode
+                </h4>
+                <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+                  Explore your design from any angle. Use the controls in the
+                  top right to customize the view. Natural light variations will
+                  create dynamic shadows and highlight the unique grain
+                  patterns.
+                </p>
               </div>
             </div>
-            <div className="space-y-1 flex-1">
-              <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                Full-Screen Preview Mode
-              </h4>
-              <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
-                Explore your design from any angle. Use the controls in the top
-                right to customize the view. Natural light variations will
-                create dynamic shadows and highlight the unique grain patterns.
-              </p>
-            </div>
-          </div>
-        </Card>
-      </motion.div>
+          </Card>
+        </motion.div>
+      )}
 
       {/* Action buttons */}
-      <div className="absolute bottom-6 right-6 flex gap-3">
-        <Button
-          variant="outline"
-          className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm"
-        >
-          <Download className="w-4 h-4 mr-2" />
-          Save Image
-        </Button>
-        <Button
-          className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
-          onClick={() => setIsShareDialogOpen(true)}
-        >
-          <Share className="w-4 h-4 mr-2" />
-          Share Design
-        </Button>
-      </div>
+      {showUIControls && (
+        <div className="absolute bottom-6 right-6 flex gap-3">
+          <Button
+            variant="outline"
+            className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Save Image
+          </Button>
+          <Button
+            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+            onClick={() => setIsShareDialogOpen(true)}
+          >
+            <Share className="w-4 h-4 mr-2" />
+            Share Design
+          </Button>
+        </div>
+      )}
 
       {/* Share Dialog */}
       <ShareDialog
@@ -245,10 +299,10 @@ export default function DesignPage() {
       />
 
       {/* Design tips */}
-      <DesignTips />
+      {showUIControls && <DesignTips />}
 
       {/* Design tutorial */}
-      <DesignTutorial />
+      {showUIControls && <DesignTutorial />}
     </div>
   );
 }

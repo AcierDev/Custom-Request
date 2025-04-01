@@ -94,11 +94,11 @@ interface RoomConfig {
 }
 
 // Bedroom model path
-const BEDROOM_MODEL_PATH = "/models/bedroom.glb";
-const COUCH_MODEL_PATH = "/models/couch2.glb";
-const LAMP_MODEL_PATH = "/models/lamp.glb";
-const TREE_MODEL_PATH = "/models/tree.glb";
-const PLANT_MODEL_PATH = "/models/plant.glb";
+const BEDROOM_MODEL_PATH = "/models/room/bedroom.glb";
+const COUCH_MODEL_PATH = "/models/room/couch2.glb";
+const LAMP_MODEL_PATH = "/models/room/lamp.glb";
+const TREE_MODEL_PATH = "/models/room/tree.glb";
+const PLANT_MODEL_PATH = "/models/room/plant.glb";
 
 // Room configurations
 const roomConfigurations: RoomConfig[] = [
@@ -106,7 +106,7 @@ const roomConfigurations: RoomConfig[] = [
     id: "bedroom",
     name: "Bedroom",
     roomModel: {
-      modelPath: "/models/bedroom.glb",
+      modelPath: "/models/room/bedroom.glb",
       position: [0, -1, 0],
       scale: [1, 1, 1],
       rotation: [0, 0, 0],
@@ -956,7 +956,7 @@ function ModelCameraInfo() {
   const { camera } = useThree();
 
   // Convert radians to degrees
-  const radiansToDegrees = (radians) => {
+  const radiansToDegrees = (radians: number) => {
     return radians * (180 / Math.PI);
   };
 
