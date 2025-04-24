@@ -22,6 +22,7 @@ export interface RoomViewConfig {
   rotation: [number, number, number];
   ambientIntensity: number;
   viewPositions: ViewPosition[];
+  objectsToRemove?: string[]; // Array of object names to remove from the room model
 }
 
 /**
@@ -36,6 +37,14 @@ export const roomConfigurations: RoomViewConfig[] = [
     scale: [1, 1, 1],
     rotation: [0, 0, 0],
     ambientIntensity: 0.7,
+    objectsToRemove: [
+      "CTRL_Hole",
+      "Window_3",
+      "Cube011",
+      "Cylinder001",
+      "lamp_desk",
+      "lamp_ceiling",
+    ],
     viewPositions: [
       {
         id: "bed-view",
@@ -79,6 +88,7 @@ export const roomConfigurations: RoomViewConfig[] = [
     scale: [1, 1, 1],
     rotation: [0, 0, 0],
     ambientIntensity: 0.7,
+    objectsToRemove: ["Painting_03"],
     viewPositions: [
       {
         id: "position-1",
@@ -123,8 +133,8 @@ export const roomConfigurations: RoomViewConfig[] = [
       {
         id: "sitting-area",
         name: "Sitting Area",
-        cameraPosition: [-3, 0.9, -1],
-        rotation: [11, 6, 0],
+        cameraPosition: [-3.23, 0.86, -3.9],
+        rotation: [0, 1, 0],
         fov: 60,
         description: "View from the sitting area",
       },

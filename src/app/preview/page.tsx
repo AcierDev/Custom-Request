@@ -87,8 +87,11 @@ export default function PreviewPage() {
         <h1 className="text-xl font-bold text-gray-900 dark:text-white">
           Preview Mode
         </h1>
+      </div>
 
-        {/* Toggle UI Controls Button */}
+      {/* View controls and Lighting controls stacked */}
+      <div className="absolute top-4 right-4 z-50 flex items-start gap-3">
+        {/* UI Toggle button next to controls */}
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -110,21 +113,20 @@ export default function PreviewPage() {
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
-      </div>
 
-      {/* View controls and Lighting controls stacked */}
-      {showUIControls && (
-        <div className="absolute top-4 right-4 z-50 flex flex-col gap-3">
-          <ViewControls />
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            <LightingControls value={timeOfDay} onChange={setTimeOfDay} />
-          </motion.div>
-        </div>
-      )}
+        {showUIControls && (
+          <div className="flex flex-col gap-3">
+            <ViewControls />
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <LightingControls value={timeOfDay} onChange={setTimeOfDay} />
+            </motion.div>
+          </div>
+        )}
+      </div>
 
       {/* Color info hint */}
       {showColorInfo && showUIControls && <ColorInfoHint />}

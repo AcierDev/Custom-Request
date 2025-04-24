@@ -1,19 +1,17 @@
 "use client";
 
-import { Suspense, useEffect, useMemo } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useGLTF } from "@react-three/drei";
 import { StaticArtDisplay } from "./StaticArtDisplay";
-import { RoomViewConfig, ViewPosition } from "./viewPositions";
+import { RoomViewConfig } from "./viewPositions";
 
 // Custom lighting setup for each view position
 function ViewerLighting({
   ambientIntensity,
   roomId,
-  position,
 }: {
   ambientIntensity: number;
   roomId: string;
-  position: ViewPosition;
 }) {
   // Setup different lighting based on room and view position
   return (
@@ -138,57 +136,97 @@ function ViewerLighting({
   );
 }
 
+// Debug function to list all objects in the scene
+function listAllObjects(scene: any, prefix = "", debug = false) {
+  const objectNames: string[] = [];
+
+  scene.traverse((object: any) => {
+    if (object.name) {
+      objectNames.push(object.name);
+      if (debug) {
+        console.log(`${prefix}${object.name} (${object.type})`);
+      }
+    }
+  });
+
+  return objectNames;
+}
+
 // The Model component for rendering the room
 function RoomModel({
   filePath,
   position = [0, -1, 0],
   scale = [1, 1, 1],
   rotation = [0, 0, 0],
+  objectsToRemove = [],
 }: {
   filePath: string;
   position?: [number, number, number];
   scale?: [number, number, number];
   rotation?: [number, number, number];
+  objectsToRemove?: string[];
 }) {
   const gltfModel = useGLTF(filePath);
+  const [debugMode] = useState(() => {
+    // Check if we're in development and allow debug through URL params
+    return (
+      typeof window !== "undefined" &&
+      process.env.NODE_ENV === "development" &&
+      window.location.search.includes("debug=true")
+    );
+  });
 
   // Clone the scene to ensure each instance is unique
   const clonedScene = useMemo(() => gltfModel.scene.clone(), [gltfModel.scene]);
 
-  // Special handling for the bedroom model
+  // Handle room model adjustments and removing objects
   useEffect(() => {
+    // Debug mode: list all objects in the scene
+    if (debugMode) {
+      console.log(`--- Objects in ${filePath} ---`);
+      listAllObjects(clonedScene, "  ", true);
+      console.log("----------------------------");
+    }
+
+    // Special handling for the bedroom model
     if (filePath === "/models/room/bedroom.glb") {
       const carpet = clonedScene.getObjectByName("rug");
       if (carpet) {
         carpet.position.y += 0.001; // Raise the carpet slightly
       }
+    }
 
-      const removeObject = (objectName: string) => {
-        const object = clonedScene.getObjectByName(objectName);
-        if (object) {
-          object.traverse((child: any) => {
-            if (child.isMesh) {
-              child.geometry.dispose();
-              if (child.material) {
-                if (Array.isArray(child.material)) {
-                  child.material.forEach((mat: any) => mat.dispose());
-                } else {
-                  child.material.dispose();
-                }
+    const removeObject = (objectName: string) => {
+      const object = clonedScene.getObjectByName(objectName);
+      if (object) {
+        if (debugMode) {
+          console.log(`Removing object: ${objectName}`);
+        }
+        object.traverse((child: any) => {
+          if (child.isMesh) {
+            child.geometry.dispose();
+            if (child.material) {
+              if (Array.isArray(child.material)) {
+                child.material.forEach((mat: any) => mat.dispose());
+              } else {
+                child.material.dispose();
               }
             }
-          });
-          object.parent?.remove(object);
-        }
-      };
+          }
+        });
+        object.parent?.remove(object);
+      } else if (debugMode) {
+        console.warn(`Object not found: ${objectName}`);
+      }
+    };
 
-      // Remove objects that shouldn't be visible
-      removeObject("CTRL_Hole");
-      removeObject("Window_3");
-      removeObject("Cube011");
-      removeObject("Cylinder001");
+    // Remove objects specified in objectsToRemove array
+    if (objectsToRemove && objectsToRemove.length > 0) {
+      objectsToRemove.forEach((objectName) => {
+        removeObject(objectName);
+      });
     }
-  }, [clonedScene, filePath]);
+  }, [clonedScene, filePath, objectsToRemove, debugMode]);
 
   // Apply materials and shadows
   clonedScene.traverse((child: any) => {
@@ -242,13 +280,7 @@ function RoomObjects({ roomId }: { roomId: string }) {
 }
 
 // Main RoomScene component
-export function RoomScene({
-  roomConfig,
-  viewPosition,
-}: {
-  roomConfig: RoomViewConfig;
-  viewPosition: ViewPosition;
-}) {
+export function RoomScene({ roomConfig }: { roomConfig: RoomViewConfig }) {
   // Get art display position based on room
   const artDisplayPosition = useMemo(() => {
     if (roomConfig.id === "bedroom") {
@@ -280,7 +312,6 @@ export function RoomScene({
       <ViewerLighting
         ambientIntensity={roomConfig.ambientIntensity}
         roomId={roomConfig.id}
-        position={viewPosition}
       />
 
       {/* Main room model */}
@@ -289,6 +320,7 @@ export function RoomScene({
         position={roomConfig.position}
         scale={roomConfig.scale}
         rotation={roomConfig.rotation}
+        objectsToRemove={roomConfig.objectsToRemove}
       />
 
       {/* Additional room objects */}

@@ -5,6 +5,17 @@ import { motion, AnimatePresence } from "framer-motion";
 import { HexColorPicker } from "react-colorful";
 import { useCustomStore } from "@/store/customStore";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -45,7 +56,6 @@ export function PaletteManager() {
     updateColorHex,
     editingPaletteId,
     resetPaletteEditor,
-    clearSelectedColors,
   } = useCustomStore();
 
   const [blendCount, setBlendCount] = useState(3);
@@ -331,6 +341,44 @@ export function PaletteManager() {
                   <TooltipContent side="bottom">
                     <p>Generate color harmonies</p>
                   </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="h-8 px-3 ml-2"
+                      >
+                        Reset Palette
+                      </Button>
+                    </AlertDialogTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Reset your entire palette</p>
+                    </TooltipContent>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Reset Palette?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will remove all colors from your palette. This
+                          action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => {
+                            handleResetEditor();
+                            toast.success("Palette reset!");
+                          }}
+                        >
+                          Yes, Reset
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </Tooltip>
               </TooltipProvider>
 

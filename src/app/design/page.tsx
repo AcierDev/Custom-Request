@@ -117,28 +117,6 @@ export default function DesignPage() {
           3D Preview
         </h1>
         <div className="flex items-center gap-2">
-          {/* Toggle UI Controls Button */}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="rounded-full w-9 h-9 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 hover:bg-white/90 dark:hover:bg-gray-700/90 transition-colors"
-                  onClick={() => setShowUIControls(!showUIControls)}
-                >
-                  {showUIControls ? (
-                    <EyeOff className="w-4 h-4 text-gray-700 dark:text-gray-300" />
-                  ) : (
-                    <Eye className="w-4 h-4 text-gray-700 dark:text-gray-300" />
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{showUIControls ? "Hide UI" : "Show UI"} (press h)</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
           {showUIControls && (
             <>
               <Link href="/designs">
@@ -164,24 +142,49 @@ export default function DesignPage() {
       </div>
 
       {/* Enhanced view controls with pattern options */}
-      {showUIControls && (
-        <div className="absolute top-4 right-4 z-50 flex flex-col gap-3">
-          <ViewControls />
-          <div className="design-card">
-            <DesignCard compact />
+      <div className="absolute top-4 right-4 z-50 flex items-start gap-3">
+        {/* UI Toggle button next to controls */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-full w-9 h-9 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 hover:bg-white/90 dark:hover:bg-gray-700/90 transition-colors"
+                onClick={() => setShowUIControls(!showUIControls)}
+              >
+                {showUIControls ? (
+                  <EyeOff className="w-4 h-4 text-gray-700 dark:text-gray-300" />
+                ) : (
+                  <Eye className="w-4 h-4 text-gray-700 dark:text-gray-300" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{showUIControls ? "Hide UI" : "Show UI"} (press h)</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        {showUIControls && (
+          <div className="flex flex-col gap-3">
+            <ViewControls />
+            <div className="design-card">
+              <DesignCard compact />
+            </div>
+            <div className="size-card">
+              <SizeCard compact />
+            </div>
+            <div className="style-card">
+              <StyleCard compact />
+            </div>
+            <MiniCard compact />
+            <div className="pattern-controls">
+              <PatternControls />
+            </div>
           </div>
-          <div className="size-card">
-            <SizeCard compact />
-          </div>
-          <div className="style-card">
-            <StyleCard compact />
-          </div>
-          <MiniCard compact />
-          <div className="pattern-controls">
-            <PatternControls />
-          </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Color info hint */}
       {showColorInfo && showUIControls && <ColorInfoHint />}

@@ -229,7 +229,7 @@ const roomConfigurations: RoomConfig[] = [
     id: "room2",
     name: "New Room",
     roomModel: {
-      modelPath: "/models/room2.glb",
+      modelPath: "/models/room/room2.glb",
       position: [0, -1, 0],
       scale: [1, 1, 1],
       rotation: [0, 0, 0],
@@ -2584,5 +2584,5 @@ useGLTF.preload(COUCH_MODEL_PATH);
 useGLTF.preload(LAMP_MODEL_PATH);
 useGLTF.preload(TREE_MODEL_PATH);
 useGLTF.preload(PLANT_MODEL_PATH);
-useGLTF.preload("/models/room.glb");
-useGLTF.preload("/models/room2.glb");
+useGLTF.preload("/models/room/room.glb");
+useGLTF.preload("/models/room/room2.glb");

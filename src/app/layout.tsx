@@ -4,12 +4,10 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { Navbar } from "@/components/navbar";
 import { ThemeProvider } from "@/components/theme-provider";
-import { useState } from "react";
 import { MobileWarning } from "@/components/mobile-warning";
 import { Toaster } from "sonner";
 import { AuthProvider } from "@/lib/auth-context";
 import { AuthContextProvider } from "@/components/AuthContextProvider";
-import { Footer } from "@/components/footer";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const geistSans = localFont({
