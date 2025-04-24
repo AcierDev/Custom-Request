@@ -98,3 +98,13 @@ body {
 .animate-facebook-btn {
   animation: facebook-btn 1s ease-in-out;
 }
+
+@keyframes custom-pulse {
+  50% {
+    opacity: 0.75;
+  }
+}
+
+.custom-pulse {
+  animation: custom-pulse 0.5s ease-in-out infinite;
+}

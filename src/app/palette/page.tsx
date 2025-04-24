@@ -37,7 +37,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import Link from "next/link";
 import { toast } from "sonner";
 import { ImportCard } from "./components/PaletteList/ImportCard";
 
