@@ -87,10 +87,19 @@ export function PaletteList() {
     try {
       let importData;
       try {
+        // First try to parse as JSON
         importData = JSON.parse(importText);
       } catch (e) {
-        setImportError("Invalid JSON format. Please check your input.");
-        return;
+        // If not JSON, try to parse as TryColors format
+        const tryColorsPalette = parseTryColorsFormat(importText);
+        if (tryColorsPalette) {
+          importData = { colors: tryColorsPalette };
+        } else {
+          setImportError(
+            "Invalid format. Please provide valid JSON or TryColors format."
+          );
+          return;
+        }
       }
 
       // Check if it's a direct array of colors or a palette object with a colors property
@@ -138,6 +147,52 @@ export function PaletteList() {
     } catch (error) {
       setImportError("An error occurred while importing the palette.");
       console.error("Import error:", error);
+    }
+  };
+
+  // Helper function to parse TryColors format
+  const parseTryColorsFormat = (text: string) => {
+    try {
+      // Split the text into lines
+      const lines = text.split("\n");
+      const colors: { hex: string; name: string }[] = [];
+      let currentColor: { hex: string; name: string } | null = null;
+
+      for (const line of lines) {
+        // Skip empty lines and section headers
+        if (!line.trim() || line.startsWith("—") || line.includes("palette")) {
+          continue;
+        }
+
+        // Check for color line with hex code
+        const hexMatch = line.match(/#([0-9A-F]{6})/i);
+        if (hexMatch) {
+          const hex = hexMatch[0];
+          // Extract color name (everything before the hex code)
+          const name = hex;
+
+          // If we have a previous color, add it to the array
+          if (currentColor) {
+            colors.push(currentColor);
+          }
+
+          // Start a new color
+          currentColor = {
+            hex,
+            name: name || hex,
+          };
+        }
+      }
+
+      // Add the last color if exists
+      if (currentColor) {
+        colors.push(currentColor);
+      }
+
+      return colors.length > 0 ? colors : null;
+    } catch (error) {
+      console.error("Error parsing TryColors format:", error);
+      return null;
     }
   };
 
@@ -279,7 +334,7 @@ export function PaletteList() {
               <div className="space-y-2">
                 <textarea
                   className="w-full h-40 p-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  placeholder='Paste JSON here, e.g. [{"hex":"#ff0000","name":"Red"},{"hex":"#00ff00","name":"Green"}]'
+                  placeholder='Paste JSON here, e.g. [{"hex":"#ff0000","name":"Red"},{"hex":"#00ff00","name":"Green"}] or TryColors format'
                   value={importText}
                   onChange={(e) => setImportText(e.target.value)}
                 />
