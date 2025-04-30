@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, SlidersHorizontal, Palette, Upload } from "lucide-react";
 import { PaletteCard } from "./PaletteCard";
-import { ImportCard } from "./ImportCard";
 import { FolderSection } from "./FolderSection";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -328,7 +327,8 @@ export function PaletteList() {
 
             <div className="space-y-4">
               <p className="text-gray-600 dark:text-gray-400">
-                Paste JSON data or upload a palette file (.evpal or .json)
+                Paste JSON data or upload a palette file (.evpal or .json or
+                .palette)
               </p>
 
               <div className="space-y-2">
@@ -355,14 +355,14 @@ export function PaletteList() {
                       drag and drop
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                      JSON or EVPAL files
+                      JSON or EVPAL or Palette files
                     </p>
                   </div>
                   <input
                     id="dropzone-file"
                     type="file"
                     className="hidden"
-                    accept=".json,.evpal"
+                    accept=".json,.palette,.evpal"
                     onChange={handleFileUpload}
                   />
                 </label>

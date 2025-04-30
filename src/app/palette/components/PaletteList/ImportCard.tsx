@@ -40,7 +40,7 @@ export const ImportCard = ({ onImport }: ImportCardProps) => {
             Import Palette
           </CardTitle>
           <CardDescription className="text-xs text-gray-500 dark:text-gray-400">
-            Import from JSON or .evpal file
+            Import from JSON or .palette file
           </CardDescription>
         </CardHeader>
         <CardContent className="p-4 pt-2 flex-1 flex flex-col">

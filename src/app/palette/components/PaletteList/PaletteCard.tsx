@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Edit,
   Trash2,
@@ -42,6 +42,7 @@ export const PaletteCard = ({
 }: PaletteCardProps) => {
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copyTrycolors, setCopyTrycolors] = useState(false);
 
   const handleExportPalette = () => {
     setShowExportDialog(true);
@@ -61,11 +62,22 @@ export const PaletteCard = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleCopyTrycolorsFormat = () => {
+    // Create Trycolors CSV format: #RRGGBB, Name
+    const trycolorsData = palette.colors
+      .map((color) => `${color.hex}, ${color.name || color.hex}`)
+      .join("\n");
+
+    navigator.clipboard.writeText(trycolorsData);
+    setCopyTrycolors(true);
+    setTimeout(() => setCopyTrycolors(false), 2000);
+  };
+
   const handleDownloadPalette = () => {
     const exportData = JSON.stringify(
       {
         version: "1.0.0",
-        format: "evpal",
+        format: "palette",
         name: palette.name,
         created: new Date().toISOString(),
         colors: palette.colors.map((color) => ({
@@ -76,7 +88,6 @@ export const PaletteCard = ({
       null,
       2
     );
-
     // Create a Blob and download link
     const blob = new Blob([exportData], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -84,7 +95,7 @@ export const PaletteCard = ({
     link.href = url;
     link.download = `${palette.name
       .replace(/\s+/g, "-")
-      .toLowerCase()}-${new Date().toISOString().slice(0, 10)}.evpal`;
+      .toLowerCase()}.palette`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -305,52 +316,108 @@ export const PaletteCard = ({
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="bg-white dark:bg-gray-900 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl border-2 border-gray-200 dark:border-gray-700"
+            className="bg-white dark:bg-gray-900 rounded-lg max-w-md w-full mx-4 shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden"
           >
-            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-              Export "{palette.name}"
-            </h3>
-
-            <div className="space-y-4">
-              <p className="text-gray-600 dark:text-gray-400">
-                This palette contains {palette.colors.length} colors. You can
-                copy the palette data or download it as a file.
+            <div className="p-5 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                Export "{palette.name}"
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                {palette.colors.length} colors in this palette
               </p>
+            </div>
 
-              <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-md overflow-auto max-h-48">
-                <pre className="text-xs text-gray-800 dark:text-gray-300 whitespace-pre-wrap">
-                  {JSON.stringify(
-                    palette.colors.map((color) => ({
-                      hex: color.hex,
-                      name: color.name || "",
-                    })),
-                    null,
-                    2
-                  )}
-                </pre>
+            <div className="p-5 space-y-5">
+              {/* Format tabs */}
+              <div className="flex space-x-2 border-b border-gray-200 dark:border-gray-700">
+                <button className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-gray-100 border-b-2 border-purple-500 dark:border-purple-400">
+                  Export Options
+                </button>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-3 mt-6">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowExportDialog(false)}
-                  className="sm:order-1"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleCopyToClipboard}
-                  className="bg-blue-600 hover:bg-blue-700 text-white sm:order-2"
-                >
-                  {copied ? "Copied!" : "Copy to Clipboard"}
-                </Button>
-                <Button
-                  onClick={handleDownloadPalette}
-                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white sm:order-3"
-                >
-                  Download Palette
-                </Button>
+              {/* JSON Format */}
+              <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-md space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center">
+                    <span className="inline-block w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
+                    JSON Format
+                  </h4>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCopyToClipboard}
+                    className="h-7 text-xs px-3 border-blue-200 dark:border-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                  >
+                    {copied ? "Copied!" : "Copy JSON"}
+                  </Button>
+                </div>
+                <div className="p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 overflow-auto max-h-24">
+                  <pre className="text-xs text-gray-800 dark:text-gray-300 whitespace-pre-wrap">
+                    {JSON.stringify(
+                      palette.colors.map((color) => ({
+                        hex: color.hex,
+                        name: color.name || "",
+                      })),
+                      null,
+                      2
+                    )}
+                  </pre>
+                </div>
               </div>
+
+              {/* Trycolors Format */}
+              <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-md space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center">
+                    <span className="inline-block w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+                    Trycolors CSV
+                  </h4>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCopyTrycolorsFormat}
+                    className="h-7 text-xs px-3 border-green-200 dark:border-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20"
+                  >
+                    {copyTrycolors ? "Copied!" : "Copy CSV"}
+                  </Button>
+                </div>
+                <div className="p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 overflow-auto max-h-24">
+                  <pre className="text-xs text-gray-800 dark:text-gray-300 whitespace-pre-wrap">
+                    {palette.colors
+                      .map(
+                        (color) => `${color.hex}, ${color.name || color.hex}`
+                      )
+                      .join("\n")}
+                  </pre>
+                </div>
+              </div>
+
+              {/* File Download */}
+              <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-md">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center">
+                    <span className="inline-block w-3 h-3 bg-purple-500 rounded-full mr-2"></span>
+                    File Download
+                  </h4>
+                  <Button
+                    onClick={handleDownloadPalette}
+                    size="sm"
+                    className="h-7 text-xs px-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+                  >
+                    Download .palette
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-gray-50 dark:bg-gray-800 flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowExportDialog(false)}
+              >
+                Close
+              </Button>
             </div>
           </motion.div>
         </div>
