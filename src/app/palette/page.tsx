@@ -18,6 +18,7 @@ import {
   FolderIcon,
   Upload,
   Lightbulb,
+  Loader2,
 } from "lucide-react";
 import {
   Card,
@@ -39,6 +40,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { ImportCard } from "./components/PaletteList/ImportCard";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export default function PalettePage() {
   const {
@@ -56,11 +58,116 @@ export default function PalettePage() {
   const [paletteName, setPaletteName] = useState("");
   const [saveSuccess, setSaveSuccess] = useState(false);
 
+  // For import functionality
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const [importLoading, setImportLoading] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+
   // Use activeTab if set, otherwise default to 'official' to focus on inspiration first
   const defaultTab =
     activeTab === "create" || activeTab === "saved" || activeTab === "official"
       ? activeTab
       : "official";
+
+  // Handle import from URL parameters
+  useEffect(() => {
+    const paletteId = searchParams?.get("id");
+
+    if (paletteId) {
+      setImportLoading(true);
+      setShowImportDialog(true);
+
+      // Import palette logic
+      async function importPalette() {
+        try {
+          // First check if the palette exists in the user's own saved palettes
+          const localPalette = savedPalettes.find(
+            (palette) => palette.id === paletteId
+          );
+
+          if (localPalette) {
+            useCustomStore.setState({
+              customPalette: localPalette.colors.map((color) => ({
+                hex: color.hex,
+                name: color.name || "",
+              })),
+              selectedColors: [],
+            });
+
+            setImportLoading(false);
+
+            // Switch to the Create tab programmatically
+            setActiveTab("create");
+
+            // Clear the URL parameter
+            router.replace("/palette", { scroll: false });
+
+            toast.success(`Imported "${localPalette.name}" successfully!`);
+            setTimeout(() => setShowImportDialog(false), 1500);
+            return;
+          }
+
+          // If not found locally, try to fetch from the API
+          const response = await fetch(`/api/palettes/${paletteId}`);
+
+          if (!response.ok) {
+            if (response.status === 404) {
+              setImportError("Palette not found. Check the ID and try again.");
+            } else if (response.status === 403) {
+              setImportError("This palette is not shared publicly.");
+            } else {
+              setImportError("Failed to import palette. Please try again.");
+            }
+            setImportLoading(false);
+            return;
+          }
+
+          const data = await response.json();
+
+          if (
+            !data.palette ||
+            !data.palette.colors ||
+            data.palette.colors.length === 0
+          ) {
+            setImportError("Invalid palette data received.");
+            setImportLoading(false);
+            return;
+          }
+
+          // Set the palette in the editor
+          useCustomStore.setState({
+            customPalette: data.palette.colors.map(
+              (color: { hex: string; name?: string }) => ({
+                hex: color.hex,
+                name: color.name || "",
+              })
+            ),
+            selectedColors: [],
+          });
+
+          // Switch to the Create tab
+          setActiveTab("create");
+
+          // Clear the URL parameter
+          router.replace("/palette", { scroll: false });
+
+          setImportLoading(false);
+          toast.success(`Imported "${data.palette.name}" successfully!`);
+          setTimeout(() => setShowImportDialog(false), 1500);
+        } catch (error) {
+          console.error("Error importing palette:", error);
+          setImportError(
+            "An unexpected error occurred. Please try again later."
+          );
+          setImportLoading(false);
+        }
+      }
+
+      importPalette();
+    }
+  }, [searchParams, savedPalettes, setActiveTab, router]);
 
   const handleSavePalette = () => {
     if (editingPaletteId) {
@@ -112,6 +219,65 @@ export default function PalettePage() {
 
   return (
     <div className="w-full min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950 p-6 md:p-8">
+      {/* Import Dialog */}
+      <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {importLoading
+                ? "Importing Palette..."
+                : importError
+                ? "Import Failed"
+                : "Palette Imported!"}
+            </DialogTitle>
+            <DialogDescription>
+              {importLoading
+                ? "Please wait while we import your palette..."
+                : importError
+                ? importError
+                : "Your palette has been successfully imported and is ready to use."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex justify-center py-6">
+            {importLoading ? (
+              <div className="flex flex-col items-center space-y-4">
+                <Loader2 className="w-16 h-16 text-purple-600 dark:text-purple-400 animate-spin" />
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Loading palette data...
+                </p>
+              </div>
+            ) : importError ? (
+              <Button
+                onClick={() => setShowImportDialog(false)}
+                className="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 px-8 py-2"
+              >
+                Close
+              </Button>
+            ) : (
+              <div className="flex flex-col items-center space-y-4">
+                <div className="w-16 h-16 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-10 w-10 text-white"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="space-y-2">
