@@ -10,6 +10,9 @@ import {
   Eye,
   ShoppingCart,
   FolderIcon,
+  Share2,
+  Lock,
+  Unlock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,6 +32,7 @@ import {
 import { PaletteCardProps } from "./types";
 import { PalettePreview } from "./PalettePreview";
 import { toast } from "sonner";
+import { useCustomStore } from "@/store/customStore";
 
 export const PaletteCard = ({
   palette,
@@ -43,6 +47,9 @@ export const PaletteCard = ({
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [copied, setCopied] = useState(false);
   const [copyTrycolors, setCopyTrycolors] = useState(false);
+  const [copiedId, setCopiedId] = useState(false);
+  const [activeTab, setActiveTab] = useState<"export" | "share">("export");
+  const { togglePalettePublic } = useCustomStore();
 
   const handleExportPalette = () => {
     setShowExportDialog(true);
@@ -103,6 +110,17 @@ export const PaletteCard = ({
 
     setShowExportDialog(false);
     toast.success("Palette downloaded successfully!");
+  };
+
+  const handleCopyPaletteId = () => {
+    navigator.clipboard.writeText(palette.id);
+    setCopiedId(true);
+    setTimeout(() => setCopiedId(false), 2000);
+  };
+
+  const handleTogglePublic = () => {
+    togglePalettePublic(palette.id);
+    toast.success(`Palette is now ${palette.isPublic ? "private" : "public"}`);
   };
 
   return (
@@ -225,6 +243,27 @@ export const PaletteCard = ({
                   <Button
                     variant="ghost"
                     size="icon"
+                    className="h-8 w-8 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
+                    onClick={() => {
+                      setActiveTab("share");
+                      setShowExportDialog(true);
+                    }}
+                  >
+                    <Share2 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Share palette</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     className="h-8 w-8 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -320,7 +359,7 @@ export const PaletteCard = ({
           >
             <div className="p-5 border-b border-gray-200 dark:border-gray-700">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                Export "{palette.name}"
+                {activeTab === "export" ? "Export" : "Share"} "{palette.name}"
               </h3>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                 {palette.colors.length} colors in this palette
@@ -330,84 +369,174 @@ export const PaletteCard = ({
             <div className="p-5 space-y-5">
               {/* Format tabs */}
               <div className="flex space-x-2 border-b border-gray-200 dark:border-gray-700">
-                <button className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-gray-100 border-b-2 border-purple-500 dark:border-purple-400">
+                <button
+                  className={`px-4 py-2 text-sm font-medium ${
+                    activeTab === "export"
+                      ? "text-gray-900 dark:text-gray-100 border-b-2 border-purple-500 dark:border-purple-400"
+                      : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                  }`}
+                  onClick={() => setActiveTab("export")}
+                >
                   Export Options
+                </button>
+                <button
+                  className={`px-4 py-2 text-sm font-medium ${
+                    activeTab === "share"
+                      ? "text-gray-900 dark:text-gray-100 border-b-2 border-purple-500 dark:border-purple-400"
+                      : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                  }`}
+                  onClick={() => setActiveTab("share")}
+                >
+                  Share
                 </button>
               </div>
 
-              {/* JSON Format */}
-              <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-md space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center">
-                    <span className="inline-block w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
-                    JSON Format
-                  </h4>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleCopyToClipboard}
-                    className="h-7 text-xs px-3 border-blue-200 dark:border-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                  >
-                    {copied ? "Copied!" : "Copy JSON"}
-                  </Button>
-                </div>
-                <div className="p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 overflow-auto max-h-24">
-                  <pre className="text-xs text-gray-800 dark:text-gray-300 whitespace-pre-wrap">
-                    {JSON.stringify(
-                      palette.colors.map((color) => ({
-                        hex: color.hex,
-                        name: color.name || "",
-                      })),
-                      null,
-                      2
-                    )}
-                  </pre>
-                </div>
-              </div>
+              {activeTab === "export" ? (
+                <>
+                  {/* JSON Format */}
+                  <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-md space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center">
+                        <span className="inline-block w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
+                        JSON Format
+                      </h4>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleCopyToClipboard}
+                        className="h-7 text-xs px-3 border-blue-200 dark:border-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                      >
+                        {copied ? "Copied!" : "Copy JSON"}
+                      </Button>
+                    </div>
+                    <div className="p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 overflow-auto max-h-24">
+                      <pre className="text-xs text-gray-800 dark:text-gray-300 whitespace-pre-wrap">
+                        {JSON.stringify(
+                          palette.colors.map((color) => ({
+                            hex: color.hex,
+                            name: color.name || "",
+                          })),
+                          null,
+                          2
+                        )}
+                      </pre>
+                    </div>
+                  </div>
 
-              {/* Trycolors Format */}
-              <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-md space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center">
-                    <span className="inline-block w-3 h-3 bg-green-500 rounded-full mr-2"></span>
-                    Trycolors CSV
-                  </h4>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleCopyTrycolorsFormat}
-                    className="h-7 text-xs px-3 border-green-200 dark:border-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20"
-                  >
-                    {copyTrycolors ? "Copied!" : "Copy CSV"}
-                  </Button>
-                </div>
-                <div className="p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 overflow-auto max-h-24">
-                  <pre className="text-xs text-gray-800 dark:text-gray-300 whitespace-pre-wrap">
-                    {palette.colors
-                      .map(
-                        (color) => `${color.hex}, ${color.name || color.hex}`
-                      )
-                      .join("\n")}
-                  </pre>
-                </div>
-              </div>
+                  {/* Trycolors Format */}
+                  <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-md space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center">
+                        <span className="inline-block w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+                        Trycolors CSV
+                      </h4>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleCopyTrycolorsFormat}
+                        className="h-7 text-xs px-3 border-green-200 dark:border-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20"
+                      >
+                        {copyTrycolors ? "Copied!" : "Copy CSV"}
+                      </Button>
+                    </div>
+                    <div className="p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 overflow-auto max-h-24">
+                      <pre className="text-xs text-gray-800 dark:text-gray-300 whitespace-pre-wrap">
+                        {palette.colors
+                          .map(
+                            (color) =>
+                              `${color.hex}, ${color.name || color.hex}`
+                          )
+                          .join("\n")}
+                      </pre>
+                    </div>
+                  </div>
 
-              {/* File Download */}
-              <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-md">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center">
-                    <span className="inline-block w-3 h-3 bg-purple-500 rounded-full mr-2"></span>
-                    File Download
-                  </h4>
-                  <Button
-                    onClick={handleDownloadPalette}
-                    size="sm"
-                    className="h-7 text-xs px-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
-                  >
-                    Download .palette
-                  </Button>
-                </div>
-              </div>
+                  {/* File Download */}
+                  <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-md">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center">
+                        <span className="inline-block w-3 h-3 bg-purple-500 rounded-full mr-2"></span>
+                        File Download
+                      </h4>
+                      <Button
+                        onClick={handleDownloadPalette}
+                        size="sm"
+                        className="h-7 text-xs px-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+                      >
+                        Download .palette
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Palette ID sharing */}
+                  <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-md space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center">
+                        <span className="inline-block w-3 h-3 bg-purple-500 rounded-full mr-2"></span>
+                        Palette ID
+                      </h4>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleCopyPaletteId}
+                        className="h-7 text-xs px-3 border-purple-200 dark:border-purple-900/30 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                      >
+                        {copiedId ? "Copied!" : "Copy ID"}
+                      </Button>
+                    </div>
+                    <div className="p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 overflow-auto">
+                      <p className="text-xs text-gray-800 dark:text-gray-300 font-mono break-all">
+                        {palette.id}
+                      </p>
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Share this ID with others to let them import your exact
+                      palette.
+                    </p>
+                  </div>
+
+                  {/* Visibility Toggle */}
+                  <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-md">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center">
+                          <span className="inline-block w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
+                          Visibility
+                        </h4>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {palette.isPublic
+                            ? "Anyone with the ID can import this palette"
+                            : "Only you can see this palette"}
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleTogglePublic}
+                        className={`h-8 text-xs px-3 flex items-center gap-1 ${
+                          palette.isPublic
+                            ? "text-green-600 dark:text-green-400 border-green-200 dark:border-green-900/30"
+                            : "text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-900/30"
+                        }`}
+                      >
+                        {palette.isPublic ? (
+                          <>
+                            <Unlock className="h-3.5 w-3.5 mr-1" />
+                            Public
+                          </>
+                        ) : (
+                          <>
+                            <Lock className="h-3.5 w-3.5 mr-1" />
+                            Private
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="p-4 bg-gray-50 dark:bg-gray-800 flex justify-end">

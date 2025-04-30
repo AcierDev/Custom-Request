@@ -47,14 +47,15 @@ export type CustomColor = {
   name?: string;
 };
 
-export type SavedPalette = {
+export interface SavedPalette {
   id: string;
   name: string;
   colors: CustomColor[];
   createdAt: string;
   updatedAt?: string;
   folderId?: string;
-};
+  isPublic?: boolean;
+}
 
 export type SavedDesign = {
   id: string;
@@ -196,6 +197,7 @@ interface CustomStore extends CustomState {
   deleteDesignFolder: (id: string) => void;
   moveDesignToFolder: (designId: string, folderId: string | null) => void;
   init: () => void;
+  togglePalettePublic: (id: string) => void;
 }
 
 interface HoverState {
@@ -1461,6 +1463,18 @@ export const useCustomStore = create<CustomStore>()(
         editingDesignId: null,
       });
     },
+    togglePalettePublic: (id: string) =>
+      set((state) => ({
+        savedPalettes: state.savedPalettes.map((palette) =>
+          palette.id === id
+            ? {
+                ...palette,
+                isPublic: !palette.isPublic,
+                updatedAt: new Date().toISOString(),
+              }
+            : palette
+        ),
+      })),
   }))
 );
 

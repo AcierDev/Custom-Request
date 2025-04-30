@@ -245,6 +245,7 @@ interface UnorganizedPalettesProps {
     currentFolderId: string | undefined
   ) => void;
   onImport: () => void;
+  onIdImport?: (id: string) => void;
 }
 
 const UnorganizedPalettes = ({
@@ -256,6 +257,7 @@ const UnorganizedPalettes = ({
   editingPaletteId,
   onMovePalette,
   onImport,
+  onIdImport,
 }: UnorganizedPalettesProps) => {
   const [isOpen, setIsOpen] = useState(true);
 
@@ -309,7 +311,7 @@ const UnorganizedPalettes = ({
 
               {/* Import card */}
               <div className="h-full">
-                <ImportCard onImport={onImport} />
+                <ImportCard onImport={onImport} onIdImport={onIdImport} />
               </div>
 
               {palettes.length === 0 && (
@@ -400,12 +402,13 @@ const MovePaletteDialog = ({
   );
 };
 
-interface FolderSectionProps {
+export interface FolderSectionProps {
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onVisualize: (palette: SavedPalette) => void;
   onOrder: (palette: SavedPalette) => void;
   onImport: () => void;
+  onIdImport?: (id: string) => void;
 }
 
 export const FolderSection = ({
@@ -414,6 +417,7 @@ export const FolderSection = ({
   onVisualize,
   onOrder,
   onImport,
+  onIdImport,
 }: FolderSectionProps) => {
   const {
     paletteFolders,
@@ -497,6 +501,7 @@ export const FolderSection = ({
         editingPaletteId={editingPaletteId}
         onMovePalette={handleMovePalette}
         onImport={onImport}
+        onIdImport={onIdImport}
       />
 
       {paletteFolders.length === 0 && unorganizedPalettes.length === 0 && (

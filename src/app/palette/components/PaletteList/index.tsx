@@ -24,6 +24,9 @@ export function PaletteList() {
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [importText, setImportText] = useState("");
   const [importError, setImportError] = useState("");
+  const [loadingImport, setLoadingImport] = useState(false);
+  const [importById, setImportById] = useState(false);
+  const [importIdValue, setImportIdValue] = useState("");
   const router = useRouter();
 
   // For navigation to the Create tab
@@ -80,6 +83,125 @@ export function PaletteList() {
     setShowImportDialog(true);
     setImportText("");
     setImportError("");
+  };
+
+  const handleImportById = async (id: string) => {
+    try {
+      setLoadingImport(true);
+      // Check if the palette exists in the user's own saved palettes
+      const localPalette = savedPalettes.find((palette) => palette.id === id);
+
+      if (localPalette) {
+        useCustomStore.setState({
+          customPalette: localPalette.colors.map((color) => ({
+            hex: color.hex,
+            name: color.name || "",
+          })),
+          selectedColors: [],
+        });
+
+        // Switch to the Create tab
+        setActiveTab("create");
+        toast.success(`Imported "${localPalette.name}" from your palettes!`);
+        return;
+      }
+
+      // If not found locally, try to fetch from the API
+      try {
+        const response = await fetch(`/api/palettes/${id}`);
+
+        if (!response.ok) {
+          if (response.status === 404) {
+            toast.error("Palette not found. Check the ID and try again.");
+          } else if (response.status === 403) {
+            toast.error("This palette is not shared publicly.");
+          } else {
+            toast.error("Failed to import palette. Please try again.");
+          }
+          return;
+        }
+
+        const data = await response.json();
+
+        if (
+          !data.palette ||
+          !data.palette.colors ||
+          data.palette.colors.length === 0
+        ) {
+          toast.error("Invalid palette data received.");
+          return;
+        }
+
+        // Set the palette in the editor
+        useCustomStore.setState({
+          customPalette: data.palette.colors.map(
+            (color: { hex: string; name?: string }) => ({
+              hex: color.hex,
+              name: color.name || "",
+            })
+          ),
+          selectedColors: [],
+        });
+
+        // Switch to the Create tab
+        setActiveTab("create");
+        toast.success(`Imported "${data.palette.name}" successfully!`);
+      } catch (error) {
+        console.error("Error fetching palette from API:", error);
+        toast.error("Failed to connect to the server. Please try again later.");
+      }
+    } catch (error) {
+      console.error("Error importing palette by ID:", error);
+      toast.error("Failed to import palette. Please try again.");
+    } finally {
+      setLoadingImport(false);
+    }
+  };
+
+  // Helper function to parse TryColors format
+  const parseTryColorsFormat = (text: string) => {
+    try {
+      // Split the text into lines
+      const lines = text.split("\n");
+      const colors: { hex: string; name: string }[] = [];
+      let currentColor: { hex: string; name: string } | null = null;
+
+      for (const line of lines) {
+        // Skip empty lines and section headers
+        if (!line.trim() || line.startsWith("—") || line.includes("palette")) {
+          continue;
+        }
+
+        // Check for color line with hex code
+        const hexMatch = line.match(/#([0-9A-F]{6})/i);
+        if (hexMatch) {
+          const hex = hexMatch[0];
+          // Extract color name (everything before the hex code)
+          const name = hex;
+
+          // If we have a previous color, add it to the array
+          if (currentColor) {
+            colors.push(currentColor);
+          }
+
+          // Start a new color
+          currentColor = {
+            hex,
+            name: name || hex,
+          };
+        }
+      }
+
+      // Add the last color if exists
+      if (currentColor) {
+        colors.push(currentColor);
+      }
+
+      return colors.length > 0 ? colors : null;
+    } catch (error) {
+      console.error("Error parsing TryColors format:", error);
+      return null;
+    }
   };
 
   const handleImportPalette = () => {
@@ -149,52 +271,6 @@ export function PaletteList() {
     }
   };
 
-  // Helper function to parse TryColors format
-  const parseTryColorsFormat = (text: string) => {
-    try {
-      // Split the text into lines
-      const lines = text.split("\n");
-      const colors: { hex: string; name: string }[] = [];
-      let currentColor: { hex: string; name: string } | null = null;
-
-      for (const line of lines) {
-        // Skip empty lines and section headers
-        if (!line.trim() || line.startsWith("—") || line.includes("palette")) {
-          continue;
-        }
-
-        // Check for color line with hex code
-        const hexMatch = line.match(/#([0-9A-F]{6})/i);
-        if (hexMatch) {
-          const hex = hexMatch[0];
-          // Extract color name (everything before the hex code)
-          const name = hex;
-
-          // If we have a previous color, add it to the array
-          if (currentColor) {
-            colors.push(currentColor);
-          }
-
-          // Start a new color
-          currentColor = {
-            hex,
-            name: name || hex,
-          };
-        }
-      }
-
-      // Add the last color if exists
-      if (currentColor) {
-        colors.push(currentColor);
-      }
-
-      return colors.length > 0 ? colors : null;
-    } catch (error) {
-      console.error("Error parsing TryColors format:", error);
-      return null;
-    }
-  };
-
   // Handle file upload for import
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -212,6 +288,15 @@ export function PaletteList() {
       }
     };
     reader.readAsText(file);
+  };
+
+  // Add a function to handle importing by ID from the dialog
+  const handleImportIdFromDialog = () => {
+    if (importIdValue.trim()) {
+      handleImportById(importIdValue.trim());
+      setImportIdValue("");
+      setShowImportDialog(false);
+    }
   };
 
   return (
@@ -275,6 +360,7 @@ export function PaletteList() {
             onVisualize={handleVisualize}
             onOrder={handleOrder}
             onImport={handleOpenImport}
+            onIdImport={handleImportById}
           />
         </div>
       )}
@@ -321,52 +407,104 @@ export function PaletteList() {
             exit={{ opacity: 0, scale: 0.9 }}
             className="bg-white dark:bg-gray-900 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl border-2 border-gray-200 dark:border-gray-700"
           >
-            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
               Import Palette
             </h3>
 
+            {/* Tab navigation */}
+            <div className="flex mb-4 border-b border-gray-200 dark:border-gray-700">
+              <button
+                className={`px-4 py-2 font-medium text-sm ${
+                  !importById
+                    ? "border-b-2 border-purple-500 text-gray-900 dark:text-gray-100"
+                    : "text-gray-500 dark:text-gray-400"
+                }`}
+                onClick={() => setImportById(false)}
+              >
+                File/JSON
+              </button>
+              <button
+                className={`px-4 py-2 font-medium text-sm ${
+                  importById
+                    ? "border-b-2 border-purple-500 text-gray-900 dark:text-gray-100"
+                    : "text-gray-500 dark:text-gray-400"
+                }`}
+                onClick={() => setImportById(true)}
+              >
+                Import by ID
+              </button>
+            </div>
+
             <div className="space-y-4">
-              <p className="text-gray-600 dark:text-gray-400">
-                Paste JSON data or upload a palette file (.evpal or .json or
-                .palette)
-              </p>
-
-              <div className="space-y-2">
-                <textarea
-                  className="w-full h-40 p-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  placeholder='Paste JSON here, e.g. [{"hex":"#ff0000","name":"Red"},{"hex":"#00ff00","name":"Green"}] or TryColors format'
-                  value={importText}
-                  onChange={(e) => setImportText(e.target.value)}
-                />
-                {importError && (
-                  <p className="text-sm text-red-500">{importError}</p>
-                )}
-              </div>
-
-              <div className="flex items-center justify-center w-full">
-                <label
-                  htmlFor="dropzone-file"
-                  className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
-                >
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <Upload className="w-8 h-8 mb-2 text-gray-500 dark:text-gray-400" />
-                    <p className="mb-1 text-sm text-gray-500 dark:text-gray-400">
-                      <span className="font-semibold">Click to upload</span> or
-                      drag and drop
-                    </p>
+              {importById ? (
+                <div className="space-y-4">
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Enter a palette ID that was shared with you to import it
+                    directly.
+                  </p>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Palette ID
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={importIdValue}
+                        onChange={(e) => setImportIdValue(e.target.value)}
+                        placeholder="Enter palette ID"
+                        className="flex-1 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      />
+                    </div>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                      JSON or EVPAL or Palette files
+                      IDs are unique identifiers for shared palettes.
                     </p>
                   </div>
-                  <input
-                    id="dropzone-file"
-                    type="file"
-                    className="hidden"
-                    accept=".json,.palette,.evpal"
-                    onChange={handleFileUpload}
-                  />
-                </label>
-              </div>
+                </div>
+              ) : (
+                <>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Paste JSON data or upload a palette file (.evpal or .json or
+                    .palette)
+                  </p>
+
+                  <div className="space-y-2">
+                    <textarea
+                      className="w-full h-40 p-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      placeholder='Paste JSON here, e.g. [{"hex":"#ff0000","name":"Red"},{"hex":"#00ff00","name":"Green"}] or TryColors format'
+                      value={importText}
+                      onChange={(e) => setImportText(e.target.value)}
+                    />
+                    {importError && (
+                      <p className="text-sm text-red-500">{importError}</p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-center w-full">
+                    <label
+                      htmlFor="dropzone-file"
+                      className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                        <Upload className="w-8 h-8 mb-2 text-gray-500 dark:text-gray-400" />
+                        <p className="mb-1 text-sm text-gray-500 dark:text-gray-400">
+                          <span className="font-semibold">Click to upload</span>{" "}
+                          or drag and drop
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          JSON or EVPAL or Palette files
+                        </p>
+                      </div>
+                      <input
+                        id="dropzone-file"
+                        type="file"
+                        className="hidden"
+                        accept=".json,.palette,.evpal"
+                        onChange={handleFileUpload}
+                      />
+                    </label>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 mt-6">
@@ -378,11 +516,17 @@ export function PaletteList() {
                 Cancel
               </Button>
               <Button
-                onClick={handleImportPalette}
-                disabled={!importText.trim()}
+                onClick={
+                  importById ? handleImportIdFromDialog : handleImportPalette
+                }
+                disabled={
+                  importById
+                    ? !importIdValue.trim()
+                    : !importText.trim() || loadingImport
+                }
                 className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white sm:order-2"
               >
-                Import Palette
+                {loadingImport ? "Importing..." : "Import Palette"}
               </Button>
             </div>
           </motion.div>
