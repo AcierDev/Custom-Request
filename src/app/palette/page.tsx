@@ -6,6 +6,7 @@ import { useCustomStore } from "@/store/customStore";
 import { PaletteManager } from "./components/PaletteManager";
 import { PaletteList } from "./components/PaletteList";
 import { OfficialPalettes } from "./components/OfficialPalettes";
+import { ImageColorExtractor } from "./components/ImageColorExtractor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +20,7 @@ import {
   Upload,
   Lightbulb,
   Loader2,
+  Image as ImageIcon,
 } from "lucide-react";
 import {
   Card,
@@ -67,7 +69,10 @@ export default function PalettePage() {
 
   // Use activeTab if set, otherwise default to 'official' to focus on inspiration first
   const defaultTab =
-    activeTab === "create" || activeTab === "saved" || activeTab === "official"
+    activeTab === "create" ||
+    activeTab === "saved" ||
+    activeTab === "official" ||
+    activeTab === "extract"
       ? activeTab
       : "official";
 
@@ -315,20 +320,27 @@ export default function PalettePage() {
             ) {
               resetPaletteEditor();
             }
-            setActiveTab(value as "create" | "saved" | "official");
+            setActiveTab(value as "create" | "saved" | "official" | "extract");
           }}
         >
           <div className="flex items-center justify-between mb-6">
-            <TabsList className="grid w-full max-w-md grid-cols-3">
+            <TabsList className="grid w-full max-w-md grid-cols-4">
               <TabsTrigger
                 value="create"
                 className="data-[state=active]:bg-purple-100 dark:data-[state=active]:bg-purple-900/30"
               >
                 <div className="flex items-center gap-2">
                   <Plus className="h-4 w-4" />
-                  <span>
-                    {editingPaletteId ? "Edit Palette" : "Create Palette"}
-                  </span>
+                  <span>{editingPaletteId ? "Edit" : "Create"}</span>
+                </div>
+              </TabsTrigger>
+              <TabsTrigger
+                value="extract"
+                className="data-[state=active]:bg-purple-100 dark:data-[state=active]:bg-purple-900/30"
+              >
+                <div className="flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4" />
+                  <span>Extract</span>
                 </div>
               </TabsTrigger>
               <TabsTrigger
@@ -337,7 +349,7 @@ export default function PalettePage() {
               >
                 <div className="flex items-center gap-2">
                   <Palette className="h-4 w-4" />
-                  <span>Saved Palettes</span>
+                  <span>Saved</span>
                 </div>
               </TabsTrigger>
               <TabsTrigger
@@ -370,7 +382,7 @@ export default function PalettePage() {
                     whileHover={{ scale: 1.03 }}
                     transition={{ type: "spring", stiffness: 400, damping: 17 }}
                   >
-                    Official Palettes
+                    Official
                   </motion.span>
                   {activeTab !== "official" && (
                     <motion.div
@@ -423,6 +435,25 @@ export default function PalettePage() {
                   Create Palette
                 </Button>
               </div>
+            ) : activeTab === "extract" ? (
+              <div className="hidden md:flex gap-2">
+                <Button
+                  onClick={() => setActiveTab("create")}
+                  className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white"
+                  size="sm"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Create Palette
+                </Button>
+                <Button
+                  onClick={() => setActiveTab("official")}
+                  className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                  size="sm"
+                >
+                  <Lightbulb className="h-3.5 w-3.5" />
+                  Get Inspired
+                </Button>
+              </div>
             ) : (
               <Button
                 onClick={() => setActiveTab("create")}
@@ -439,12 +470,20 @@ export default function PalettePage() {
             {/* Optional mobile inspiration button */}
             <div className="flex md:hidden justify-end mb-2">
               <Button
+                onClick={() => setActiveTab("extract")}
+                className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white mr-2"
+                size="sm"
+              >
+                <ImageIcon className="h-3.5 w-3.5" />
+                Extract
+              </Button>
+              <Button
                 onClick={() => setActiveTab("official")}
                 className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
                 size="sm"
               >
                 <Lightbulb className="h-3.5 w-3.5" />
-                Get Inspired
+                Inspire
               </Button>
             </div>
 
@@ -560,6 +599,36 @@ export default function PalettePage() {
             </motion.div>
           </TabsContent>
 
+          <TabsContent value="extract" className="mt-0">
+            <div className="flex md:hidden justify-end mb-2">
+              <Button
+                onClick={() => setActiveTab("create")}
+                className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white mr-2"
+                size="sm"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Create
+              </Button>
+              <Button
+                onClick={() => setActiveTab("official")}
+                className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                size="sm"
+              >
+                <Lightbulb className="h-3.5 w-3.5" />
+                Inspire
+              </Button>
+            </div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              transition={{ duration: 0.4 }}
+            >
+              <ImageColorExtractor />
+            </motion.div>
+          </TabsContent>
+
           <TabsContent value="saved" className="mt-0">
             {/* Mobile action buttons */}
             <div className="flex md:hidden justify-end gap-2 mb-2">
@@ -570,6 +639,14 @@ export default function PalettePage() {
               >
                 <Plus className="h-3.5 w-3.5" />
                 Create
+              </Button>
+              <Button
+                onClick={() => setActiveTab("extract")}
+                className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white"
+                size="sm"
+              >
+                <ImageIcon className="h-3.5 w-3.5" />
+                Extract
               </Button>
               <Button
                 onClick={() => setActiveTab("official")}
@@ -648,14 +725,22 @@ export default function PalettePage() {
 
           <TabsContent value="official" className="mt-0">
             {/* Mobile creation button */}
-            <div className="flex md:hidden justify-end mb-2">
+            <div className="flex md:hidden justify-end gap-2 mb-2">
               <Button
                 onClick={() => setActiveTab("create")}
                 className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white"
                 size="sm"
               >
                 <Plus className="h-3.5 w-3.5" />
-                Create Palette
+                Create
+              </Button>
+              <Button
+                onClick={() => setActiveTab("extract")}
+                className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white"
+                size="sm"
+              >
+                <ImageIcon className="h-3.5 w-3.5" />
+                Extract
               </Button>
             </div>
 

@@ -112,7 +112,7 @@ interface CustomState {
   paletteFolders: Folder[];
   designFolders: Folder[];
   folders: Folder[];
-  activeTab: "create" | "saved" | "official";
+  activeTab: "create" | "saved" | "official" | "extract";
   editingPaletteId: string | null;
   editingDesignId: string | null;
   viewSettings: {
@@ -167,7 +167,7 @@ interface CustomStore extends CustomState {
   deleteDesign: (id: string) => void;
   applyDesign: (designId: string) => void;
   loadDesignForEditing: (designId: string) => void;
-  setActiveTab: (tab: "create" | "saved" | "official") => void;
+  setActiveTab: (tab: "create" | "saved" | "official" | "extract") => void;
   updateColorName: (index: number, name: string) => void;
   updateColorHex: (index: number, hex: string) => void;
   resetPaletteEditor: () => void;
@@ -333,7 +333,8 @@ export const useCustomStore = create<CustomStore>()(
             // Determine initial active tab based on conditions
             const savedPalettes = parsedState.savedPalettes || [];
             const customPalette = parsedState.customPalette || [];
-            let initialTab: "create" | "saved" | "official" = "official";
+            let initialTab: "create" | "saved" | "official" | "extract" =
+              "official";
 
             if (customPalette.length > 0) {
               initialTab = "create";
@@ -697,8 +698,8 @@ export const useCustomStore = create<CustomStore>()(
           ),
         };
       }),
-    setActiveTab: (tab: "create" | "saved" | "official") =>
-      set({ activeTab: tab as "create" | "saved" | "official" }),
+    setActiveTab: (tab: "create" | "saved" | "official" | "extract") =>
+      set({ activeTab: tab }),
     resetPaletteEditor: () =>
       set({
         customPalette: [],
