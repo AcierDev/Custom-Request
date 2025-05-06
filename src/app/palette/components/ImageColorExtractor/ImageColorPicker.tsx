@@ -4,6 +4,7 @@ import type React from "react";
 
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
+import { Crosshair } from "lucide-react";
 
 interface ImageColorPickerProps {
   imageUrl: string;
@@ -181,7 +182,7 @@ export function ImageColorPicker({
     <div className="space-y-2">
       <div
         ref={containerRef}
-        className="relative rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden cursor-crosshair"
+        className="relative rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden cursor-none"
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
         onClick={handleClick}
@@ -201,24 +202,38 @@ export function ImageColorPicker({
             style={{
               left: position.x,
               top: position.y,
-              transform: "translate(-50%, -50%)",
             }}
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.2 }}
           >
-            <div className="relative">
-              {hoveredColor && (
+            <Crosshair
+              className="w-6 h-6 text-white stroke-[2] drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
+              style={{
+                position: "absolute",
+                left: "-12px",
+                top: "-12px",
+              }}
+            />
+
+            {hoveredColor && (
+              <div
+                className="absolute -top-8 left-1/2 transform -translate-x-1/2 whitespace-nowrap bg-gray-900/80 dark:bg-black/80 text-white px-2 py-1 rounded shadow-lg text-xs font-mono flex items-center gap-1.5"
+                style={
+                  {
+                    // Removed borderBottom style as it's part of the tooltip now
+                  }
+                }
+              >
+                {/* Color Swatch */}
                 <div
-                  className="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-white dark:bg-gray-800 px-2 py-1 rounded shadow-lg text-xs font-mono"
-                  style={{
-                    borderBottom: `3px solid ${hoveredColor}`,
-                  }}
-                >
-                  {hoveredColor}
-                </div>
-              )}
-            </div>
+                  className="w-3 h-3 rounded-sm border border-gray-400/50"
+                  style={{ backgroundColor: hoveredColor }}
+                />
+                {/* Hex Value */}
+                {hoveredColor}
+              </div>
+            )}
           </motion.div>
         )}
       </div>
