@@ -93,6 +93,13 @@ export interface HoverInfo {
   colorName?: string;
 }
 
+// Add PatternCell type definition here for the store
+// This avoids needing to import it from the page component
+export type PatternCell = {
+  color: string | null;
+  colorName?: string;
+};
+
 interface CustomState {
   dimensions: Dimensions;
   selectedDesign: ItemDesigns;
@@ -127,6 +134,10 @@ interface CustomState {
   lastSaved: number;
   autoSaveEnabled: boolean;
   dataSyncVersion: number;
+
+  // State for directly drawn patterns
+  drawnPatternGrid: PatternCell[][] | null;
+  drawnPatternGridSize: { width: number; height: number } | null;
 }
 
 interface CustomStore extends CustomState {
@@ -198,6 +209,13 @@ interface CustomStore extends CustomState {
   moveDesignToFolder: (designId: string, folderId: string | null) => void;
   init: () => void;
   togglePalettePublic: (id: string) => void;
+
+  // Action for setting a directly drawn pattern
+  setDrawnPattern: (
+    grid: PatternCell[][],
+    size: { width: number; height: number },
+    keepCustomPalette?: boolean
+  ) => void;
 }
 
 interface HoverState {
@@ -322,6 +340,8 @@ export const useCustomStore = create<CustomStore>()(
     lastSaved: 0,
     autoSaveEnabled: true,
     dataSyncVersion: 1,
+    drawnPatternGrid: null,
+    drawnPatternGridSize: null,
     init: () => {
       if (typeof window !== "undefined") {
         const localState = localStorage.getItem("everwood-custom-design");
@@ -1476,6 +1496,24 @@ export const useCustomStore = create<CustomStore>()(
             : palette
         ),
       })),
+    setDrawnPattern: (
+      grid: PatternCell[][],
+      size: { width: number; height: number },
+      keepCustomPalette?: boolean
+    ) => {
+      set((state) => ({
+        drawnPatternGrid: grid,
+        drawnPatternGridSize: size,
+        selectedDesign: ItemDesigns.Custom, // Ensure design type is Custom
+        customPalette: keepCustomPalette ? state.customPalette : [], // Keep customPalette if specified
+        currentColors: null, // Clear currentColors as well
+        // Potentially reset other design-specific states if needed
+        // colorPattern: initialCustomState.colorPattern,
+        // orientation: initialCustomState.orientation,
+        // isReversed: initialCustomState.isReversed,
+        // isRotated: initialCustomState.isRotated,
+      }));
+    },
   }))
 );
 

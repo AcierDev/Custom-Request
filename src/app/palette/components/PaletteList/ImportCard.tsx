@@ -5,12 +5,6 @@ import { motion } from "framer-motion";
 import { Upload, FileUp, Hash, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
   Card,
   CardContent,
   CardDescription,

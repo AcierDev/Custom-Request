@@ -1,0 +1,281 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Framer Motion Patterns
+
+## Standard Animations
+
+- Use consistent animation properties for similar UI elements:
+  ```tsx
+  // Standard fade-in and scale animation
+  <motion.div
+    initial={{ opacity: 0, scale: 0.95 }}
+    animate={{ opacity: 1, scale: 1 }}
+    exit={{ opacity: 0, scale: 0.95 }}
+    transition={{
+      type: "spring",
+      stiffness: 500, 
+      damping: 30,
+      opacity: { duration: 0.2 }
+    }}
+  >
+    {/* Content */}
+  </motion.div>
+  ```
+
+## List Animations
+
+- Use `AnimatePresence` and `layout` for smooth list animations:
+  ```tsx
+  <AnimatePresence>
+    {items.map((item) => (
+      <motion.div
+        key={item.id}
+        layout
+        initial={{ opacity: 0, y: 20, scale: 0.8 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.8, y: 20 }}
+        transition={{
+          type: "spring",
+          stiffness: 500,
+          damping: 30,
+          opacity: { duration: 0.2 },
+        }}
+      >
+        {/* Item content */}
+      </motion.div>
+    ))}
+  </AnimatePresence>
+  ```
+
+## Hover and Tap Animations
+
+- Use `whileHover` and `whileTap` for interactive elements:
+  ```tsx
+  <motion.button
+    whileHover={{ scale: 1.05 }}
+    whileTap={{ scale: 0.95 }}
+    transition={{ type: "spring", stiffness: 400, damping: 17 }}
+  >
+    Click me
+  </motion.button>
+  ```
+
+## Staggered Animations
+
+- Use staggered children for lists to create a cascading effect:
+  ```tsx
+  <motion.div
+    initial="hidden"
+    animate="visible"
+    variants={{
+      hidden: { opacity: 0 },
+      visible: {
+        opacity: 1,
+        transition: {
+          staggerChildren: 0.1
+        }
+      }
+    }}
+  >
+    {items.map((item) => (
+      <motion.div
+        key={item.id}
+        variants={{
+          hidden: { opacity: 0, y: 20 },
+          visible: { opacity: 1, y: 0 }
+        }}
+      >
+        {/* Item content */}
+      </motion.div>
+    ))}
+  </motion.div>
+  ```
+
+## Loading Animations
+
+- Create standard loading animations for consistent UX:
+  ```tsx
+  // Spinner animation
+  <motion.div
+    animate={{ rotate: 360 }}
+    transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+  >
+    <Loader2 className="h-5 w-5" />
+  </motion.div>
+
+  // Pulsing animation for loading states
+  <motion.div
+    animate={{ 
+      opacity: [0.5, 1, 0.5],
+      scale: [0.98, 1, 0.98]
+    }}
+    transition={{ 
+      repeat: Infinity, 
+      duration: 1.5, 
+      ease: "easeInOut" 
+    }}
+  >
+    Loading...
+  </motion.div>
+  ```
+
+## Transition Presets
+
+- Maintain consistent transition presets for different types of animations:
+  ```tsx
+  // Transition presets for different use cases
+  const transitions = {
+    // For regular UI elements
+    spring: {
+      type: "spring",
+      stiffness: 500,
+      damping: 30
+    },
+    
+    // For subtle animations
+    gentle: {
+      type: "spring", 
+      stiffness: 200, 
+      damping: 20
+    },
+    
+    // For quick micro-interactions
+    quick: {
+      type: "tween",
+      duration: 0.2,
+      ease: "easeOut"
+    }
+  };
+
+  // Usage
+  <motion.div
+    animate={{ scale: 1 }}
+    transition={transitions.spring}
+  >
+    {/* Content */}
+  </motion.div>
+  ```
+
+## Page Transitions
+
+- Implement standard page transition patterns:
+  ```tsx
+  // Page transition
+  const pageVariants = {
+    initial: {
+      opacity: 0,
+      y: 20
+    },
+    enter: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.4,
+        ease: [0.61, 1, 0.88, 1]
+      }
+    },
+    exit: {
+      opacity: 0,
+      y: 20,
+      transition: {
+        duration: 0.2,
+        ease: [0.61, 1, 0.88, 1]
+      }
+    }
+  };
+
+  // Usage
+  <motion.div
+    initial="initial"
+    animate="enter"
+    exit="exit"
+    variants={pageVariants}
+  >
+    {/* Page content */}
+  </motion.div>
+  ```
+
+## Modal Animations
+
+- Standard animation for modal dialogs:
+  ```tsx
+  // Overlay animation
+  const overlayVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1 }
+  };
+
+  // Modal content animation
+  const modalVariants = {
+    hidden: { 
+      opacity: 0, 
+      scale: 0.9,
+      y: 20
+    },
+    visible: { 
+      opacity: 1, 
+      scale: 1,
+      y: 0,
+      transition: {
+        type: "spring",
+        stiffness: 500,
+        damping: 25
+      }
+    },
+    exit: { 
+      opacity: 0, 
+      scale: 0.9,
+      y: 20,
+      transition: { 
+        duration: 0.2 
+      }
+    }
+  };
+
+  // Usage
+  <AnimatePresence>
+    {isOpen && (
+      <motion.div
+        className="fixed inset-0 bg-black/40 flex items-center justify-center"
+        initial="hidden"
+        animate="visible"
+        exit="hidden"
+        variants={overlayVariants}
+      >
+        <motion.div
+          className="bg-white rounded-lg p-6"
+          variants={modalVariants}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
+        >
+          {/* Modal content */}
+        </motion.div>
+      </motion.div>
+    )}
+  </AnimatePresence>
+  ```
+
+## Scroll Animations
+
+- Animate elements as they enter the viewport:
+  ```tsx
+  // Requires the use of framer-motion's useInView hook or similar
+  const sectionRef = useRef(null);
+  const isInView = useInView(sectionRef, { once: true, amount: 0.3 });
+
+  <motion.section
+    ref={sectionRef}
+    initial={{ opacity: 0, y: 50 }}
+    animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
+    transition={{
+      duration: 0.5,
+      delay: 0.2
+    }}
+  >
+    {/* Section content */}
+  </motion.section>
+  ```

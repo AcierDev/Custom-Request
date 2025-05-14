@@ -1,6 +1,6 @@
 "use client";
 
-import { ColorPattern, useCustomStore } from "@/store/customStore";
+import { ColorPattern, useCustomStore, PatternCell } from "@/store/customStore";
 import { getDimensionsDetails } from "@/lib/utils";
 import { useRef, useEffect, useState, useMemo, memo, useCallback } from "react";
 import { Html } from "@react-three/drei";
@@ -42,6 +42,8 @@ export function GeometricPattern({
     useMini: storeUseMini,
     customPalette: storeCustomPalette,
     viewSettings,
+    drawnPatternGrid,
+    drawnPatternGridSize,
   } = customStore;
 
   // Use values from customDesign when provided, otherwise use store values
@@ -84,12 +86,28 @@ export function GeometricPattern({
     }
   }, [selectedDesign, customPalette.length]);
 
+  // Check if we have a drawn pattern available
+  const hasDrawnPattern: boolean =
+    selectedDesign === ItemDesigns.Custom &&
+    !!drawnPatternGrid &&
+    !!drawnPatternGridSize;
+
   if (!details) return null;
 
   // Get the appropriate color map
   const colorEntries = getColorEntries(selectedDesign, customPalette);
 
-  const { width: modelWidth, height: modelHeight } = details.blocks;
+  // Determine the dimensions based on whether a drawn pattern is available
+  const { width: originalModelWidth, height: originalModelHeight } =
+    details.blocks;
+
+  // If drawn pattern is available, use its dimensions instead
+  const modelWidth = hasDrawnPattern
+    ? drawnPatternGridSize!.width
+    : originalModelWidth;
+  const modelHeight = hasDrawnPattern
+    ? drawnPatternGridSize!.height
+    : originalModelHeight;
 
   // Use memoization for layout calculations to prevent recalculation on every render
   const layoutDetails = useMemo(() => {
@@ -290,10 +308,28 @@ export function GeometricPattern({
         if (shouldLimitBlocks && (x % skipFactor !== 0 || y % skipFactor !== 0))
           continue;
 
-        const colorIndex = getColorIndexDebug(x, y);
-        const colorEntry = colorEntries[colorIndex];
-        const color = colorEntry?.[1].hex || "#8B5E3B";
-        const colorName = colorEntry?.[1].name;
+        // Get color information based on whether we have a drawn pattern
+        let color, colorName;
+
+        if (
+          hasDrawnPattern &&
+          drawnPatternGrid![y] &&
+          drawnPatternGrid![y][x]
+        ) {
+          // Use the directly drawn pattern color
+          const cell = drawnPatternGrid![y][x];
+          color = cell.color || "#FFFFFF00"; // Transparent if no color
+          colorName = cell.colorName || "No Color";
+
+          // Skip rendering completely transparent blocks
+          if (color === "#FFFFFF00") continue;
+        } else {
+          // Use the procedurally generated color
+          const colorIndex = getColorIndexDebug(x, y);
+          const colorEntry = colorEntries[colorIndex];
+          color = colorEntry?.[1].hex || "#8B5E3B";
+          colorName = colorEntry?.[1].name;
+        }
 
         // Calculate base position without drift
         const baseXPos = x * blockSpacing * blockSize + offsetX + blockSize / 2;
@@ -319,37 +355,40 @@ export function GeometricPattern({
           pinnedInfo.position[0] === x &&
           pinnedInfo.position[1] === y;
 
-        blocks.push(
-          <animated.group
-            key={`block-${x}-${y}`}
-            position={driftFactor.to((d) => [
-              baseXPos + calculateDrift(x, d),
-              yPos,
-              zPos,
-            ])}
-          >
-            <MemoizedBlock
-              position={[0, 0, 0]} // Position is handled by the parent group
-              size={blockSize}
-              height={blockSize}
-              color={color}
-              isHovered={isBlockHovered || isPinned}
-              showWoodGrain={showWoodGrain}
-              showColorInfo={showColorInfo}
-              isGeometric={true}
-              rotation={rotation}
-              textureVariation={textureVariation}
-              onHover={(isHovering) => {
-                if (isHovering) {
-                  handleBlockHover(x, y, color, colorName);
-                } else {
-                  handleBlockUnhover();
-                }
-              }}
-              onClick={() => handleBlockClick(x, y, color, colorName)}
-            />
-          </animated.group>
-        );
+        // Only render if color is not null
+        if (color && color !== "null") {
+          blocks.push(
+            <animated.group
+              key={`block-${x}-${y}`}
+              position={driftFactor.to((d) => [
+                baseXPos + calculateDrift(x, d),
+                yPos,
+                zPos,
+              ])}
+            >
+              <MemoizedBlock
+                position={[0, 0, 0]} // Position is handled by the parent group
+                size={blockSize}
+                height={blockSize}
+                color={color}
+                isHovered={!!(isBlockHovered || isPinned)} // Convert to boolean to fix type error
+                showWoodGrain={showWoodGrain}
+                showColorInfo={showColorInfo}
+                isGeometric={true}
+                rotation={rotation}
+                textureVariation={textureVariation}
+                onHover={(isHovering) => {
+                  if (isHovering) {
+                    handleBlockHover(x, y, color, colorName);
+                  } else {
+                    handleBlockUnhover();
+                  }
+                }}
+                onClick={() => handleBlockClick(x, y, color, colorName)}
+              />
+            </animated.group>
+          );
+        }
       }
     }
     return blocks;
@@ -374,11 +413,13 @@ export function GeometricPattern({
     handleBlockHover,
     handleBlockUnhover,
     handleBlockClick,
+    hasDrawnPattern,
+    drawnPatternGrid,
   ]);
 
   // Handle group click outside of render to prevent unnecessary recreations
   const handleGroupClick = useCallback(
-    (e) => {
+    (e: { object: { type: string } }) => {
       if (e.object.type === "Group") {
         setPinnedInfo(null);
       }

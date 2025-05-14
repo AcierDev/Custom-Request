@@ -164,37 +164,56 @@ export function PaletteList() {
       // Split the text into lines
       const lines = text.split("\n");
       const colors: { hex: string; name: string }[] = [];
-      let currentColor: { hex: string; name: string } | null = null;
+
+      // Flag to identify when we're in the palette details section
+      let inPaletteDetails = false;
 
       for (const line of lines) {
-        // Skip empty lines and section headers
-        if (!line.trim() || line.startsWith("—") || line.includes("palette")) {
+        // Skip empty lines
+        const trimmedLine = line.trim();
+        if (!trimmedLine) {
           continue;
         }
 
-        // Check for color line with hex code
-        const hexMatch = line.match(/#([0-9A-F]{6})/i);
-        if (hexMatch) {
-          const hex = hexMatch[0];
-          // Extract color name (everything before the hex code)
-          const name = hex;
-
-          // If we have a previous color, add it to the array
-          if (currentColor) {
-            colors.push(currentColor);
-          }
-
-          // Start a new color
-          currentColor = {
-            hex,
-            name: name || hex,
-          };
+        // Check if we're entering palette details section
+        if (trimmedLine === "— Palette details:") {
+          inPaletteDetails = true;
+          continue;
         }
-      }
 
-      // Add the last color if exists
-      if (currentColor) {
-        colors.push(currentColor);
+        // If we're in palette details, look for color entries
+        if (inPaletteDetails) {
+          // Format: ColorName (#XXXXXX):
+          const colorMatch = trimmedLine.match(/^(.+?)\s*\(#([0-9A-F]{6})\):/i);
+          if (colorMatch) {
+            const name = colorMatch[1].trim();
+            const hex = `#${colorMatch[2].toUpperCase()}`;
+
+            // Add if not already in the array
+            if (!colors.some((color) => color.hex === hex)) {
+              colors.push({
+                hex,
+                name,
+              });
+            }
+          }
+        }
+        // If not in palette details yet, look for color hex codes in the "Used colors:" section
+        else if (trimmedLine.includes("#")) {
+          const hexMatches = trimmedLine.match(/#([0-9A-F]{6})/gi);
+          if (hexMatches) {
+            for (const hex of hexMatches) {
+              const formattedHex = hex.toUpperCase();
+              // Avoid duplicates
+              if (!colors.some((color) => color.hex === formattedHex)) {
+                colors.push({
+                  hex: formattedHex,
+                  name: formattedHex,
+                });
+              }
+            }
+          }
+        }
       }
 
       return colors.length > 0 ? colors : null;

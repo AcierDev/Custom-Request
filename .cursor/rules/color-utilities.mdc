@@ -1,0 +1,184 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Color Utilities
+
+## Color Contrast Functions
+
+- Use this utility function to determine optimal text color (black or white) based on background color:
+  ```tsx
+  /**
+   * Calculates whether black or white text should be used on a given background color
+   * using YIQ color space for optimal contrast
+   * @param hexcolor - Hex color code (with or without # prefix)
+   * @returns CSS class name for appropriate text color
+   */
+  const getContrastYIQ = (hexcolor: string) => {
+    // Remove the # if it exists
+    hexcolor = hexcolor.replace("#", "");
+
+    // Convert to RGB
+    const r = parseInt(hexcolor.substr(0, 2), 16);
+    const g = parseInt(hexcolor.substr(2, 2), 16);
+    const b = parseInt(hexcolor.substr(4, 2), 16);
+
+    // Calculate YIQ ratio (brightness perception formula)
+    const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+
+    // Return black or white depending on YIQ ratio
+    return yiq >= 128 ? "text-gray-900" : "text-white";
+  };
+  ```
+
+## Dark Mode Support
+
+- Implement dark mode variants for all color-based styles:
+  ```tsx
+  // Example of light/dark mode conditional styling
+  className={cn(
+    "bg-white dark:bg-gray-800",
+    "text-gray-900 dark:text-gray-100",
+    "border-gray-200 dark:border-gray-700"
+  )}
+  ```
+
+- For color accents, ensure both light and dark variants:
+  ```tsx
+  // Example of accent color with dark mode variant
+  className="ring-purple-500 dark:ring-purple-400 bg-purple-100 dark:bg-purple-900"
+  ```
+
+## Color Transparency and Overlays
+
+- Use alpha transparency for overlays and hover states:
+  ```tsx
+  // For overlays on selected items
+  className="bg-purple-500/10 dark:bg-purple-400/10"
+  
+  // For hover effects
+  className="hover:bg-white/20"
+  
+  // For backdrop blur effects
+  className="bg-white/20 backdrop-blur-sm"
+  ```
+
+## CSS Custom Properties
+
+- For dynamic colors that need to be changed at runtime, use CSS custom properties:
+  ```tsx
+  // In your global CSS
+  :root {
+    --primary-color: #5a67d8;
+    --primary-color-dark: #4c51bf;
+  }
+  
+  // In your component
+  style={{ backgroundColor: 'var(--primary-color)' }}
+  ```
+
+## Color Palette Utilities
+
+- Implement color palette conversion between formats (hex, rgb, hsl):
+  ```tsx
+  /**
+   * Converts a hex color to RGB format
+   * @param hex - Hex color code (with or without # prefix)
+   * @returns RGB object with r, g, b properties
+   */
+  const hexToRGB = (hex: string): { r: number; g: number; b: number } => {
+    // Remove the # if it exists
+    hex = hex.replace('#', '');
+    
+    // Parse the hex values
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    
+    return { r, g, b };
+  };
+
+  /**
+   * Converts an RGB color to hex format
+   * @param r - Red component (0-255)
+   * @param g - Green component (0-255)
+   * @param b - Blue component (0-255)
+   * @returns Hex color code with # prefix
+   */
+  const rgbToHex = (r: number, g: number, b: number): string => {
+    return '#' + [r, g, b]
+      .map(x => {
+        const hex = x.toString(16);
+        return hex.length === 1 ? '0' + hex : hex;
+      })
+      .join('');
+  };
+  ```
+
+## Color Blending Functions
+
+- Implement color blending utilities:
+  ```tsx
+  /**
+   * Blends two colors together with specified weight
+   * @param color1 - First hex color
+   * @param color2 - Second hex color
+   * @param weight - Weight between 0 and 1 (0 = all color1, 1 = all color2)
+   * @returns Blended hex color
+   */
+  const blendColors = (color1: string, color2: string, weight: number): string => {
+    const rgb1 = hexToRGB(color1);
+    const rgb2 = hexToRGB(color2);
+    
+    // Blend the colors
+    const r = Math.round(rgb1.r * (1 - weight) + rgb2.r * weight);
+    const g = Math.round(rgb1.g * (1 - weight) + rgb2.g * weight);
+    const b = Math.round(rgb1.b * (1 - weight) + rgb2.b * weight);
+    
+    return rgbToHex(r, g, b);
+  };
+  ```
+
+## Color Accessibility
+
+- Include checks for color contrast accessibility:
+  ```tsx
+  /**
+   * Checks if a color combination meets WCAG accessibility standards
+   * @param foreground - Foreground color in hex
+   * @param background - Background color in hex
+   * @param level - 'AA' or 'AAA' standard
+   * @returns Boolean indicating if the contrast is sufficient
+   */
+  const meetsContrastStandard = (
+    foreground: string,
+    background: string,
+    level: 'AA' | 'AAA' = 'AA'
+  ): boolean => {
+    const rgb1 = hexToRGB(foreground);
+    const rgb2 = hexToRGB(background);
+    
+    // Calculate relative luminance
+    const getLuminance = (rgb: { r: number; g: number; b: number }): number => {
+      const { r, g, b } = rgb;
+      const [rs, gs, bs] = [r / 255, g / 255, b / 255].map(val => {
+        return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
+      });
+      return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+    };
+    
+    const l1 = getLuminance(rgb1);
+    const l2 = getLuminance(rgb2);
+    
+    // Calculate contrast ratio
+    const contrastRatio = (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+    
+    // Check against standards
+    if (level === 'AA') {
+      return contrastRatio >= 4.5;
+    } else {
+      return contrastRatio >= 7;
+    }
+  };
+  ```

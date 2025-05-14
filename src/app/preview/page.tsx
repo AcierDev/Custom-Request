@@ -8,7 +8,7 @@ import { ArrowLeft, Info, Download, Share, Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, Stats } from "@react-three/drei";
+import { OrbitControls } from "@react-three/drei";
 import { GeometricPattern } from "../order/components/preview/GeometricPattern";
 import { TiledPattern } from "../order/components/preview/TiledPattern";
 import { RotatableLighting } from "../order/components/preview/RotatableLighting";
@@ -19,6 +19,7 @@ import { ItemDesigns } from "@/typings/types";
 import { cn } from "@/lib/utils";
 import { ShareDialog } from "@/components/ShareDialog";
 import { LightingControls } from "../order/components/preview/LightingControls";
+import { EmptyPaletteWarning } from "@/components/EmptyPaletteWarning";
 import {
   Tooltip,
   TooltipContent,
@@ -177,7 +178,7 @@ export default function PreviewPage() {
           <OrbitControls
             enablePan={true}
             minDistance={4}
-            maxDistance={35}
+            maxDistance={50}
             target={[0, 0, 0]}
             makeDefault
           />
@@ -239,6 +240,9 @@ export default function PreviewPage() {
         isOpen={isShareDialogOpen}
         onClose={() => setIsShareDialogOpen(false)}
       />
+
+      {/* Empty palette warning */}
+      <EmptyPaletteWarning />
     </div>
   );
 }

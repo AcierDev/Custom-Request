@@ -16,6 +16,7 @@ import {
   PencilRuler,
   LogIn,
   Eye,
+  Pencil,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
@@ -60,6 +61,7 @@ const mainNavItems: NavItem[] = [
   // { href: "/viewer", icon: Eye, label: "View Art", hotkey: "6" },
   { href: "/preview", icon: Eye, label: "Preview", hotkey: "2" },
   { href: "/design", icon: PencilRuler, label: "Design", hotkey: "3" },
+  { href: "/draw-pattern", icon: Pencil, label: "Draw Pattern", hotkey: "6" },
   { href: "/palette", icon: Palette, label: "Palette", hotkey: "5" },
 ];
 

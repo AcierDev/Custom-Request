@@ -1,0 +1,190 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Component Patterns
+
+## Interactive Cards
+
+- Create consistent card patterns with header, content, and footer sections:
+  ```tsx
+  <Card>
+    <CardHeader>
+      <CardTitle>Title</CardTitle>
+      <CardDescription>Description text</CardDescription>
+    </CardHeader>
+    <CardContent>
+      {/* Main content */}
+    </CardContent>
+    <CardFooter>
+      {/* Action buttons */}
+    </CardFooter>
+  </Card>
+  ```
+
+- For color swatches or selectable items, implement consistent selection patterns:
+  ```tsx
+  <div
+    className={cn(
+      "relative rounded-lg overflow-hidden shadow-md",
+      isSelected ? "ring-4 ring-purple-500 dark:ring-purple-400" : "",
+      "transition-all duration-300"
+    )}
+    onClick={onSelect}
+  >
+    {/* Item content */}
+    
+    {/* Selection indicator */}
+    {isSelected && (
+      <div className="absolute inset-0 bg-purple-500/10 dark:bg-purple-400/10" />
+    )}
+  </div>
+  ```
+
+## Modal Dialogs
+
+- Use shadcn Dialog components for modal interactions:
+  ```tsx
+  <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <DialogTrigger asChild>
+      <Button>Open Dialog</Button>
+    </DialogTrigger>
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>Dialog Title</DialogTitle>
+        <DialogDescription>Dialog description text</DialogDescription>
+      </DialogHeader>
+      
+      {/* Dialog content */}
+      
+      <DialogFooter>
+        <Button onClick={handleAction}>Confirm</Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+  ```
+
+- For confirmation dialogs, use the AlertDialog component:
+  ```tsx
+  <AlertDialog>
+    <AlertDialogTrigger asChild>
+      <Button variant="destructive">Delete</Button>
+    </AlertDialogTrigger>
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+        <AlertDialogDescription>
+          This action cannot be undone.
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel>Cancel</AlertDialogCancel>
+        <AlertDialogAction onClick={handleConfirm}>Continue</AlertDialogAction>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
+  ```
+
+## Tab Navigation
+
+- Implement tab interfaces using shadcn Tabs:
+  ```tsx
+  <Tabs defaultValue={defaultTab} onValueChange={setActiveTab}>
+    <TabsList>
+      <TabsTrigger value="tab1">Tab 1</TabsTrigger>
+      <TabsTrigger value="tab2">Tab 2</TabsTrigger>
+    </TabsList>
+    <TabsContent value="tab1">
+      {/* Tab 1 content */}
+    </TabsContent>
+    <TabsContent value="tab2">
+      {/* Tab 2 content */}
+    </TabsContent>
+  </Tabs>
+  ```
+
+## Input Controls
+
+- Group input fields with labels for better accessibility:
+  ```tsx
+  <div className="space-y-2">
+    <Label htmlFor="fieldName">Field Label</Label>
+    <Input 
+      id="fieldName"
+      value={fieldValue}
+      onChange={(e) => setFieldValue(e.target.value)} 
+    />
+  </div>
+  ```
+
+- Use sliders for numeric range input:
+  ```tsx
+  <div className="space-y-2">
+    <Label>Slider Label: {value}</Label>
+    <Slider
+      value={[value]}
+      min={0}
+      max={10}
+      step={1}
+      onValueChange={(vals) => setValue(vals[0])}
+    />
+  </div>
+  ```
+
+## Animation Patterns
+
+- Use framer-motion AnimatePresence for list items that can be added/removed:
+  ```tsx
+  <AnimatePresence>
+    {items.map((item, index) => (
+      <motion.div
+        key={item.id}
+        layout
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.8 }}
+        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+      >
+        {/* Item content */}
+      </motion.div>
+    ))}
+  </AnimatePresence>
+  ```
+
+- Implement loading states with animation:
+  ```tsx
+  {isLoading ? (
+    <motion.div
+      animate={{ rotate: 360 }}
+      transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+    >
+      <Loader2 className="h-5 w-5" />
+    </motion.div>
+  ) : (
+    <SaveIcon className="h-5 w-5" />
+  )}
+  ```
+
+## Responsive Design
+
+- Structure components to adapt to different screen sizes:
+  ```tsx
+  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+    {/* Content */}
+  </div>
+  ```
+
+- Use responsive text sizes:
+  ```tsx
+  <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Heading</h1>
+  ```
+
+## Hover Effects
+
+- Implement consistent hover effects for interactive elements:
+  ```tsx
+  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+    {/* Content that appears on hover */}
+  </div>
+  ```

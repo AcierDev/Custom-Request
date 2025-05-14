@@ -1,0 +1,134 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Design System Guidelines
+
+## Animation and Transitions
+
+- Use Framer Motion for smooth animations with consistent spring-type animations:
+  ```tsx
+  <motion.div
+    layout
+    initial={{ opacity: 0, scale: 0.8 }}
+    animate={{ opacity: 1, scale: 1 }}
+    exit={{ opacity: 0, scale: 0.8, y: 20 }}
+    transition={{
+      type: "spring",
+      stiffness: 500,
+      damping: 30,
+      opacity: { duration: 0.2 },
+    }}
+  >
+  ```
+
+- For subtle hover effects, use tailwind transition classes:
+  ```tsx
+  className="transition-all duration-300 hover:shadow-lg"
+  ```
+
+## Component Design
+
+- Use rounded corners consistently:
+  ```tsx
+  className="rounded-lg overflow-hidden"
+  ```
+
+- For interactive elements, implement clear hover and active states:
+  ```tsx
+  className="hover:bg-white/30 active:scale-95"
+  ```
+
+- Use shadows to create depth hierarchy:
+  ```tsx
+  className="shadow-md hover:shadow-lg"
+  ```
+
+## Color Management
+
+- Determine text color contrast automatically based on background:
+  ```tsx
+  // Calculate text color based on background brightness
+  const getContrastYIQ = (hexcolor: string) => {
+    hexcolor = hexcolor.replace("#", "");
+    const r = parseInt(hexcolor.substr(0, 2), 16);
+    const g = parseInt(hexcolor.substr(2, 2), 16);
+    const b = parseInt(hexcolor.substr(4, 2), 16);
+    const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+    return yiq >= 128 ? "text-gray-900" : "text-white";
+  };
+  ```
+
+- Support both light and dark modes with appropriate color transitions:
+  ```tsx
+  className="ring-purple-500 dark:ring-purple-400"
+  ```
+
+## Layout Structure
+
+- Use responsive height and width values:
+  ```tsx
+  className="h-24 sm:h-28 w-full"
+  ```
+
+- Implement flexible layouts with flexbox:
+  ```tsx
+  className="flex flex-col justify-between"
+  ```
+
+- Group related controls with consistent spacing:
+  ```tsx
+  className="flex justify-end gap-1"
+  ```
+
+## Feedback and Interaction
+
+- Provide tooltips for actions using shadcn components:
+  ```tsx
+  <TooltipProvider delayDuration={300}>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button>...</Button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom">
+        <p>Action description</p>
+      </TooltipContent>
+    </Tooltip>
+  </TooltipProvider>
+  ```
+
+- Use toast notifications for user feedback:
+  ```tsx
+  toast.success("Action completed successfully");
+  ```
+
+## Buttons and Controls
+
+- Create small icon buttons with consistent styling:
+  ```tsx
+  <Button
+    size="icon"
+    variant="ghost"
+    className="h-7 w-7 rounded-full bg-white/20 backdrop-blur-sm"
+  >
+    <Icon className="h-3.5 w-3.5" />
+  </Button>
+  ```
+
+- Add subtle backdrop blur for overlaid controls:
+  ```tsx
+  className="bg-white/20 backdrop-blur-sm"
+  ```
+
+## Selection States
+
+- Use purple accent for selected items:
+  ```tsx
+  className="ring-4 ring-purple-500 dark:ring-purple-400"
+  ```
+
+- Add subtle overlay to indicate selection:
+  ```tsx
+  className="bg-purple-500/10 dark:bg-purple-400/10"
+  ```

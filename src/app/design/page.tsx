@@ -46,6 +46,7 @@ import { DesignCard } from "../order/components/DesignCard";
 import { ShareDialog } from "@/components/ShareDialog";
 import { DesignTips } from "@/components/DesignTips";
 import { DesignTutorial } from "@/components/DesignTutorial";
+import { EmptyPaletteWarning } from "@/components/EmptyPaletteWarning";
 import {
   Tooltip,
   TooltipContent,
@@ -306,6 +307,9 @@ export default function DesignPage() {
 
       {/* Design tutorial */}
       {showUIControls && <DesignTutorial />}
+
+      {/* Empty palette warning */}
+      <EmptyPaletteWarning />
     </div>
   );
 }
