@@ -21,6 +21,8 @@ import {
   Lightbulb,
   Loader2,
   Image as ImageIcon,
+  Undo2,
+  Redo2,
 } from "lucide-react";
 import {
   Card,
@@ -54,6 +56,10 @@ export default function PalettePage() {
     updatePalette,
     resetPaletteEditor,
     savedPalettes,
+    undoPaletteAction,
+    redoPaletteAction,
+    paletteHistory,
+    paletteHistoryIndex,
   } = useCustomStore();
 
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
@@ -174,6 +180,49 @@ export default function PalettePage() {
     }
   }, [searchParams, savedPalettes, setActiveTab, router]);
 
+  // Add keyboard shortcut handlers
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      // Only apply keyboard shortcuts when on the create tab
+      if (activeTab !== "create") return;
+
+      // Handle Ctrl+Z / Command+Z for undo
+      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        const success = undoPaletteAction();
+        if (success) {
+          toast.info("Undo successful", {
+            duration: 1500,
+            position: "bottom-right",
+          });
+        }
+      }
+
+      // Handle Ctrl+Y / Command+Y or Ctrl+Shift+Z / Command+Shift+Z for redo
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        (e.key === "y" || (e.key === "z" && e.shiftKey))
+      ) {
+        e.preventDefault();
+        const success = redoPaletteAction();
+        if (success) {
+          toast.info("Redo successful", {
+            duration: 1500,
+            position: "bottom-right",
+          });
+        }
+      }
+    }
+
+    // Add event listener
+    window.addEventListener("keydown", handleKeyDown);
+
+    // Clean up
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [activeTab, undoPaletteAction, redoPaletteAction]);
+
   const handleSavePalette = () => {
     if (editingPaletteId) {
       // If we're editing an existing palette, update it
@@ -220,6 +269,26 @@ export default function PalettePage() {
   const handleImport = () => {
     toast.info("Import functionality would be triggered here");
     // Actual import logic would be here
+  };
+
+  const handleUndoAction = () => {
+    const success = undoPaletteAction();
+    if (success) {
+      toast.info("Undo successful", {
+        duration: 1500,
+        position: "bottom-right",
+      });
+    }
+  };
+
+  const handleRedoAction = () => {
+    const success = redoPaletteAction();
+    if (success) {
+      toast.info("Redo successful", {
+        duration: 1500,
+        position: "bottom-right",
+      });
+    }
   };
 
   return (
@@ -509,7 +578,38 @@ export default function PalettePage() {
                 <CardContent>
                   <PaletteManager />
                 </CardContent>
-                <CardFooter className="flex justify-end border-t border-gray-200 dark:border-gray-800 pt-4">
+                <CardFooter className="flex justify-between border-t border-gray-200 dark:border-gray-800 pt-4">
+                  <div className="flex items-center gap-2">
+                    <motion.div whileTap={{ scale: 0.9 }}>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={handleUndoAction}
+                        disabled={paletteHistoryIndex <= 0}
+                        title="Undo (Ctrl+Z)"
+                      >
+                        <Undo2 className="h-4 w-4" />
+                      </Button>
+                    </motion.div>
+                    <motion.div whileTap={{ scale: 0.9 }}>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={handleRedoAction}
+                        disabled={
+                          paletteHistoryIndex >= paletteHistory.length - 1
+                        }
+                        title="Redo (Ctrl+Y)"
+                      >
+                        <Redo2 className="h-4 w-4" />
+                      </Button>
+                    </motion.div>
+                    <span className="text-xs text-gray-500 dark:text-gray-400 ml-1 hidden sm:inline-block">
+                      Keyboard shortcuts: Ctrl+Z (Undo), Ctrl+Y (Redo)
+                    </span>
+                  </div>
                   {editingPaletteId ? (
                     <div className="flex items-center gap-4">
                       {saveSuccess && (

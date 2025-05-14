@@ -138,6 +138,9 @@ interface CustomState {
   // State for directly drawn patterns
   drawnPatternGrid: PatternCell[][] | null;
   drawnPatternGridSize: { width: number; height: number } | null;
+
+  paletteHistory: Array<Array<CustomColor>>;
+  paletteHistoryIndex: number;
 }
 
 interface CustomStore extends CustomState {
@@ -216,6 +219,9 @@ interface CustomStore extends CustomState {
     size: { width: number; height: number },
     keepCustomPalette?: boolean
   ) => void;
+
+  undoPaletteAction: () => boolean;
+  redoPaletteAction: () => boolean;
 }
 
 interface HoverState {
@@ -292,6 +298,8 @@ const AUTO_SAVE_TRACKED_PROPERTIES: (keyof CustomState)[] = [
   "paletteFolders",
   "designFolders",
   "viewSettings",
+  "paletteHistory",
+  "paletteHistoryIndex",
 ];
 
 // Create the store with the subscribeWithSelector middleware
@@ -342,6 +350,8 @@ export const useCustomStore = create<CustomStore>()(
     dataSyncVersion: 1,
     drawnPatternGrid: null,
     drawnPatternGridSize: null,
+    paletteHistory: [],
+    paletteHistoryIndex: -1,
     init: () => {
       if (typeof window !== "undefined") {
         const localState = localStorage.getItem("everwood-custom-design");
@@ -467,16 +477,32 @@ export const useCustomStore = create<CustomStore>()(
     },
     addCustomColor: (hex) =>
       set((state) => {
-        const newPalette = [...state.customPalette, { hex }];
+        const newPalette = [...state.customPalette, { hex, name: "" }];
+
+        const newHistory = state.paletteHistory.slice(
+          0,
+          state.paletteHistoryIndex + 1
+        );
+        newHistory.push(newPalette);
+
         return {
           customPalette: newPalette,
-          selectedDesign: ItemDesigns.Custom,
           currentColors: createColorMap(newPalette),
+          selectedDesign: ItemDesigns.Custom,
+          paletteHistory: newHistory,
+          paletteHistoryIndex: newHistory.length - 1,
         };
       }),
     removeCustomColor: (index) =>
       set((state) => {
         const newPalette = state.customPalette.filter((_, i) => i !== index);
+
+        const newHistory = state.paletteHistory.slice(
+          0,
+          state.paletteHistoryIndex + 1
+        );
+        newHistory.push(newPalette);
+
         return {
           customPalette: newPalette,
           selectedColors: state.selectedColors.filter(
@@ -487,6 +513,8 @@ export const useCustomStore = create<CustomStore>()(
               ? createColorMap(newPalette)
               : DESIGN_COLORS[ItemDesigns.Custom],
           selectedDesign: ItemDesigns.Custom,
+          paletteHistory: newHistory,
+          paletteHistoryIndex: newHistory.length - 1,
         };
       }),
     toggleColorSelection: (hex) =>
@@ -556,9 +584,17 @@ export const useCustomStore = create<CustomStore>()(
         newPalette[index] = newPalette[index - 1];
         newPalette[index - 1] = temp;
 
+        const newHistory = state.paletteHistory.slice(
+          0,
+          state.paletteHistoryIndex + 1
+        );
+        newHistory.push(newPalette);
+
         return {
           customPalette: newPalette,
           currentColors: createColorMap(newPalette),
+          paletteHistory: newHistory,
+          paletteHistoryIndex: newHistory.length - 1,
         };
       }),
     moveColorRight: (index) =>
@@ -570,9 +606,17 @@ export const useCustomStore = create<CustomStore>()(
         newPalette[index] = newPalette[index + 1];
         newPalette[index + 1] = temp;
 
+        const newHistory = state.paletteHistory.slice(
+          0,
+          state.paletteHistoryIndex + 1
+        );
+        newHistory.push(newPalette);
+
         return {
           customPalette: newPalette,
           currentColors: createColorMap(newPalette),
+          paletteHistory: newHistory,
+          paletteHistoryIndex: newHistory.length - 1,
         };
       }),
     setIsRotated: (value) => set({ isRotated: value }),
@@ -679,11 +723,17 @@ export const useCustomStore = create<CustomStore>()(
         const palette = state.savedPalettes.find((p) => p.id === paletteId);
         if (!palette) return state;
 
+        // Initialize history with the loaded palette
+        const newHistory = [[...palette.colors]];
+
         return {
           customPalette: [...palette.colors],
           selectedDesign: ItemDesigns.Custom,
           currentColors: createColorMap(palette.colors),
           selectedColors: [],
+          editingPaletteId: paletteId,
+          paletteHistory: newHistory,
+          paletteHistoryIndex: 0,
         };
       }),
     updateColorName: (index, name) =>
@@ -693,9 +743,17 @@ export const useCustomStore = create<CustomStore>()(
         const newPalette = [...state.customPalette];
         newPalette[index] = { ...newPalette[index], name };
 
+        const newHistory = state.paletteHistory.slice(
+          0,
+          state.paletteHistoryIndex + 1
+        );
+        newHistory.push(newPalette);
+
         return {
           customPalette: newPalette,
           currentColors: createColorMap(newPalette),
+          paletteHistory: newHistory,
+          paletteHistoryIndex: newHistory.length - 1,
         };
       }),
     updateColorHex: (index, hex) =>
@@ -710,12 +768,20 @@ export const useCustomStore = create<CustomStore>()(
         const newPalette = [...state.customPalette];
         newPalette[index] = { ...newPalette[index], hex };
 
+        const newHistory = state.paletteHistory.slice(
+          0,
+          state.paletteHistoryIndex + 1
+        );
+        newHistory.push(newPalette);
+
         return {
           customPalette: newPalette,
           currentColors: createColorMap(newPalette),
           selectedColors: state.selectedColors.map((color) =>
             color === state.customPalette[index].hex ? hex : color
           ),
+          paletteHistory: newHistory,
+          paletteHistoryIndex: newHistory.length - 1,
         };
       }),
     setActiveTab: (tab: "create" | "saved" | "official" | "extract") =>
@@ -725,6 +791,8 @@ export const useCustomStore = create<CustomStore>()(
         customPalette: [],
         selectedColors: [],
         editingPaletteId: null,
+        paletteHistory: [],
+        paletteHistoryIndex: -1,
       }),
     loadOfficialPalette: (design: ItemDesigns) =>
       set((state) => {
@@ -736,18 +804,33 @@ export const useCustomStore = create<CustomStore>()(
           })
         );
 
+        // Initialize history with the new palette
+        const newHistory = [...state.paletteHistory, customColors];
+
         return {
           customPalette: customColors,
           selectedDesign: ItemDesigns.Custom,
           currentColors: createColorMap(customColors),
           selectedColors: [],
           activeTab: "create",
+          paletteHistory: newHistory,
+          paletteHistoryIndex: newHistory.length - 1,
         };
       }),
     setCustomPalette: (palette: CustomColor[]) =>
-      set({
-        customPalette: palette,
-        currentColors: createColorMap(palette),
+      set((state) => {
+        const newHistory = state.paletteHistory.slice(
+          0,
+          state.paletteHistoryIndex + 1
+        );
+        newHistory.push(palette);
+
+        return {
+          customPalette: palette,
+          currentColors: createColorMap(palette),
+          paletteHistory: newHistory,
+          paletteHistoryIndex: newHistory.length - 1,
+        };
       }),
     generateShareableLink: () => {
       const state = get();
@@ -1513,6 +1596,37 @@ export const useCustomStore = create<CustomStore>()(
         // isReversed: initialCustomState.isReversed,
         // isRotated: initialCustomState.isRotated,
       }));
+    },
+    undoPaletteAction: () => {
+      const state = get();
+      if (state.paletteHistoryIndex <= 0) return false;
+
+      const newIndex = state.paletteHistoryIndex - 1;
+      const previousPalette = state.paletteHistory[newIndex];
+
+      set({
+        customPalette: previousPalette,
+        currentColors: createColorMap(previousPalette),
+        paletteHistoryIndex: newIndex,
+      });
+
+      return true;
+    },
+    redoPaletteAction: () => {
+      const state = get();
+      if (state.paletteHistoryIndex >= state.paletteHistory.length - 1)
+        return false;
+
+      const newIndex = state.paletteHistoryIndex + 1;
+      const nextPalette = state.paletteHistory[newIndex];
+
+      set({
+        customPalette: nextPalette,
+        currentColors: createColorMap(nextPalette),
+        paletteHistoryIndex: newIndex,
+      });
+
+      return true;
     },
   }))
 );
