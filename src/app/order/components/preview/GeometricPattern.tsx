@@ -294,40 +294,65 @@ export function GeometricPattern({
 
     // Limit the maximum number of blocks to render based on device capability
     const maxBlocks = 2500; // Adjust this threshold based on testing
-    const totalBlocks = adjustedModelWidth * adjustedModelHeight;
+    // Ensure modelWidth and modelHeight (derived from drawnPatternGridSize if hasDrawnPattern) are used for totalBlocks
+    const currentGridWidth =
+      hasDrawnPattern && drawnPatternGridSize
+        ? drawnPatternGridSize.width
+        : adjustedModelWidth;
+    const currentGridHeight =
+      hasDrawnPattern && drawnPatternGridSize
+        ? drawnPatternGridSize.height
+        : adjustedModelHeight;
+
+    const totalBlocks = currentGridWidth * currentGridHeight;
     const shouldLimitBlocks = totalBlocks > maxBlocks;
 
     // If there are too many blocks, skip rendering some in a grid pattern
     const skipFactor = shouldLimitBlocks
-      ? Math.ceil(totalBlocks / maxBlocks)
+      ? Math.ceil(Math.sqrt(totalBlocks / maxBlocks)) // Use Math.sqrt for more even skipping
       : 1;
 
-    for (let x = 0; x < adjustedModelWidth; x++) {
-      for (let y = 0; y < adjustedModelHeight; y++) {
+    for (let x = 0; x < currentGridWidth; x++) {
+      for (let y = 0; y < currentGridHeight; y++) {
         // Skip blocks in a grid pattern for performance if necessary
         if (shouldLimitBlocks && (x % skipFactor !== 0 || y % skipFactor !== 0))
           continue;
 
         // Get color information based on whether we have a drawn pattern
-        let color, colorName;
+        let color: string | null = null;
+        let colorName: string | undefined = undefined;
 
-        if (
-          hasDrawnPattern &&
-          drawnPatternGrid![y] &&
-          drawnPatternGrid![y][x]
-        ) {
-          // Use the directly drawn pattern color
-          const cell = drawnPatternGrid![y][x];
-          color = cell.color || "#FFFFFF00"; // Transparent if no color
-          colorName = cell.colorName || "No Color";
+        if (hasDrawnPattern && drawnPatternGrid && drawnPatternGridSize) {
+          // Y-axis is flipped: drawn pattern's bottom row is preview's top row.
+          // Rendering loop for y goes from 0 (top of preview) to currentGridHeight - 1 (bottom of preview).
+          // drawnPatternGridSize.height is the actual height of the stored grid.
+          const accessY = drawnPatternGridSize.height - 1 - y;
 
-          // Skip rendering completely transparent blocks
+          if (
+            accessY >= 0 &&
+            accessY < drawnPatternGrid.length &&
+            drawnPatternGrid[accessY] &&
+            x >= 0 &&
+            x < drawnPatternGrid[accessY].length
+          ) {
+            const cell = drawnPatternGrid[accessY][x];
+            color = cell.color || "#FFFFFF00"; // Use transparent if no color
+            colorName = cell.colorName;
+          } else {
+            // This case means x or y (after flipping) is out of bounds for drawnPatternGrid
+            // This might happen if drawnPatternGridSize doesn't match currentGridWidth/Height exactly,
+            // or if the grid is sparse. Render as transparent or a default color.
+            color = "#FFFFFF00"; // Transparent for out-of-bounds
+            colorName = "Error: Out of Bounds";
+          }
+
+          // Skip rendering completely transparent blocks from the drawn pattern
           if (color === "#FFFFFF00") continue;
         } else {
-          // Use the procedurally generated color
+          // Use the procedurally generated color (existing logic)
           const colorIndex = getColorIndexDebug(x, y);
           const colorEntry = colorEntries[colorIndex];
-          color = colorEntry?.[1].hex || "#8B5E3B";
+          color = colorEntry?.[1].hex || "#8B5E3B"; // Default procedural color
           colorName = colorEntry?.[1].name;
         }
 
@@ -415,6 +440,7 @@ export function GeometricPattern({
     handleBlockClick,
     hasDrawnPattern,
     drawnPatternGrid,
+    drawnPatternGridSize,
   ]);
 
   // Handle group click outside of render to prevent unnecessary recreations

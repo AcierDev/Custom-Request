@@ -52,7 +52,7 @@ function LimitedRotation({ children }: { children: ReactNode }) {
 }
 
 // Update the PreviewCard component
-export function PreviewCard() {
+export function PreviewCard({ zoom = 1.4 }: { zoom?: number }) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -118,7 +118,7 @@ export function PreviewCard() {
                 makeDefault
                 position={[15, 15, 15]}
                 fov={45}
-                zoom={1.4}
+                zoom={zoom}
               />
 
               {/* Lighting based on style */}

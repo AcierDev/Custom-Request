@@ -44,6 +44,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { usePaletteLoadConfirm } from "@/hooks/usePaletteLoadConfirm";
+import { PaletteLoadConfirmDialog } from "@/components/PaletteLoadConfirmDialog";
 
 // Define palette categories
 type PaletteCategory =
@@ -301,6 +303,15 @@ export function OfficialPalettes() {
   const [appliedDesign, setAppliedDesign] = useState<ItemDesigns | null>(null);
   const router = useRouter();
 
+  // Use the confirmation dialog hook
+  const {
+    isConfirmDialogOpen,
+    paletteToLoad,
+    requestPaletteLoad,
+    handleConfirm,
+    handleCancel,
+  } = usePaletteLoadConfirm();
+
   // Get all designs except Custom
   const officialDesigns = Object.values(ItemDesigns).filter(
     (design) => design !== ItemDesigns.Custom
@@ -344,12 +355,19 @@ export function OfficialPalettes() {
   };
 
   const handleCustomizeOfficialPalette = (design: ItemDesigns) => {
-    loadOfficialPalette(design);
+    const designName = design.replace(/_/g, " ");
 
-    // Show success toast
-    toast.success(`${design} palette ready for customization!`, {
-      description: "You can now edit this palette in the Create Palette tab.",
-    });
+    requestPaletteLoad(
+      { name: designName, type: "official", design: design },
+      () => {
+        loadOfficialPalette(design);
+        // Show success toast
+        toast.success(`${designName} palette ready for customization!`, {
+          description:
+            "You can now edit this palette in the Create Palette tab.",
+        });
+      }
+    );
   };
 
   // Get all available categories
@@ -437,6 +455,16 @@ export function OfficialPalettes() {
             search terms or category filter.
           </p>
         </div>
+      )}
+
+      {/* Confirmation Dialog */}
+      {paletteToLoad && (
+        <PaletteLoadConfirmDialog
+          isOpen={isConfirmDialogOpen}
+          onClose={handleCancel}
+          onConfirm={handleConfirm}
+          paletteToLoad={paletteToLoad}
+        />
       )}
     </div>
   );

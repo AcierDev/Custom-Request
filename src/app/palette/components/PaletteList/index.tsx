@@ -10,6 +10,8 @@ import { PaletteCard } from "./PaletteCard";
 import { FolderSection } from "./FolderSection";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { usePaletteLoadConfirm } from "@/hooks/usePaletteLoadConfirm";
+import { PaletteLoadConfirmDialog } from "@/components/PaletteLoadConfirmDialog";
 
 export function PaletteList() {
   const {
@@ -32,6 +34,15 @@ export function PaletteList() {
   // For navigation to the Create tab
   const setActiveTab = useCustomStore((state) => state.setActiveTab);
 
+  // Use the confirmation dialog hook
+  const {
+    isConfirmDialogOpen,
+    paletteToLoad,
+    requestPaletteLoad,
+    handleConfirm,
+    handleCancel,
+  } = usePaletteLoadConfirm();
+
   // Filter palettes based on search query
   const filteredPalettes = savedPalettes.filter(
     (palette) =>
@@ -42,14 +53,19 @@ export function PaletteList() {
   );
 
   const handleEdit = (id: string) => {
-    // Load the palette into the editor
-    loadPaletteForEditing(id);
+    const palette = savedPalettes.find((p) => p.id === id);
+    if (!palette) return;
 
-    // Switch to the Create tab
-    setActiveTab("create");
+    requestPaletteLoad({ name: palette.name, type: "saved", id: id }, () => {
+      // Load the palette into the editor
+      loadPaletteForEditing(id);
 
-    // Store the palette ID for later saving
-    useCustomStore.setState({ editingPaletteId: id });
+      // Switch to the Create tab
+      setActiveTab("create");
+
+      // Store the palette ID for later saving
+      useCustomStore.setState({ editingPaletteId: id });
+    });
   };
 
   const handleDelete = (id: string) => {
@@ -92,17 +108,25 @@ export function PaletteList() {
       const localPalette = savedPalettes.find((palette) => palette.id === id);
 
       if (localPalette) {
-        useCustomStore.setState({
-          customPalette: localPalette.colors.map((color) => ({
-            hex: color.hex,
-            name: color.name || "",
-          })),
-          selectedColors: [],
-        });
+        requestPaletteLoad(
+          { name: localPalette.name, type: "saved", id: localPalette.id },
+          () => {
+            useCustomStore.setState({
+              customPalette: localPalette.colors.map((color) => ({
+                hex: color.hex,
+                name: color.name || "",
+              })),
+              selectedColors: [],
+            });
 
-        // Switch to the Create tab
-        setActiveTab("create");
-        toast.success(`Imported "${localPalette.name}" from your palettes!`);
+            // Switch to the Create tab
+            setActiveTab("create");
+            toast.success(
+              `Imported "${localPalette.name}" from your palettes!`
+            );
+          }
+        );
+        setLoadingImport(false);
         return;
       }
 
@@ -132,20 +156,22 @@ export function PaletteList() {
           return;
         }
 
-        // Set the palette in the editor
-        useCustomStore.setState({
-          customPalette: data.palette.colors.map(
-            (color: { hex: string; name?: string }) => ({
-              hex: color.hex,
-              name: color.name || "",
-            })
-          ),
-          selectedColors: [],
-        });
+        requestPaletteLoad({ name: data.palette.name, type: "saved" }, () => {
+          // Set the palette in the editor
+          useCustomStore.setState({
+            customPalette: data.palette.colors.map(
+              (color: { hex: string; name?: string }) => ({
+                hex: color.hex,
+                name: color.name || "",
+              })
+            ),
+            selectedColors: [],
+          });
 
-        // Switch to the Create tab
-        setActiveTab("create");
-        toast.success(`Imported "${data.palette.name}" successfully!`);
+          // Switch to the Create tab
+          setActiveTab("create");
+          toast.success(`Imported "${data.palette.name}" successfully!`);
+        });
       } catch (error) {
         console.error("Error fetching palette from API:", error);
         toast.error("Failed to connect to the server. Please try again later.");
@@ -268,22 +294,28 @@ export function PaletteList() {
         return;
       }
 
-      // Clear current palette and add imported colors
-      useCustomStore.setState({
-        customPalette: validColors.map((color) => ({
-          hex: color.hex,
-          name: color.name || "",
-        })),
-        selectedColors: [],
+      const paletteName =
+        importData.name ||
+        `Imported Palette ${new Date().toLocaleDateString()}`;
+
+      requestPaletteLoad({ name: paletteName, type: "saved" }, () => {
+        // Clear current palette and add imported colors
+        useCustomStore.setState({
+          customPalette: validColors.map((color) => ({
+            hex: color.hex,
+            name: color.name || "",
+          })),
+          selectedColors: [],
+        });
+
+        setShowImportDialog(false);
+        setImportText("");
+        setImportError("");
+        toast.success(`Imported ${validColors.length} colors successfully!`);
+
+        // Switch to the Create tab to show the imported palette
+        setActiveTab("create");
       });
-
-      setShowImportDialog(false);
-      setImportText("");
-      setImportError("");
-      toast.success(`Imported ${validColors.length} colors successfully!`);
-
-      // Switch to the Create tab to show the imported palette
-      setActiveTab("create");
     } catch (error) {
       setImportError("An error occurred while importing the palette.");
       console.error("Import error:", error);
@@ -550,6 +582,16 @@ export function PaletteList() {
             </div>
           </motion.div>
         </div>
+      )}
+
+      {/* Confirmation Dialog */}
+      {paletteToLoad && (
+        <PaletteLoadConfirmDialog
+          isOpen={isConfirmDialogOpen}
+          onClose={handleCancel}
+          onConfirm={handleConfirm}
+          paletteToLoad={paletteToLoad}
+        />
       )}
     </div>
   );

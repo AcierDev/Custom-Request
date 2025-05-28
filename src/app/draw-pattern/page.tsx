@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { useCustomStore } from "@/store/customStore";
 import type { PatternCell } from "@/store/customStore";
 import { ItemDesigns } from "@/typings/types";
+import { DESIGN_COLORS } from "@/typings/color-maps";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -68,6 +68,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { PreviewCard } from "@/app/order/components/PreviewCard";
+import { usePaletteLoadConfirm } from "@/hooks/usePaletteLoadConfirm";
+import { PaletteLoadConfirmDialog } from "@/components/PaletteLoadConfirmDialog";
 
 // Define the PatternData interface for import/export
 interface PatternData {
@@ -97,6 +100,15 @@ export default function DrawPatternPage() {
     setSelectedDesign,
     setDrawnPattern,
   } = useCustomStore();
+
+  // Use the confirmation dialog hook
+  const {
+    isConfirmDialogOpen,
+    paletteToLoad,
+    requestPaletteLoad,
+    handleConfirm,
+    handleCancel,
+  } = usePaletteLoadConfirm();
 
   // State for grid dimensions - while we use store for the pattern itself
   const [gridSize, setGridSize] = useState({
@@ -367,16 +379,31 @@ export default function DrawPatternPage() {
 
   // Handle applying a saved palette
   const handleSelectSavedPalette = (paletteId: string) => {
-    applyPalette(paletteId);
-    setSelectedDesign(ItemDesigns.Custom);
-    setActiveTab("custom");
+    const palette = savedPalettes.find((p) => p.id === paletteId);
+    if (!palette) return;
+
+    requestPaletteLoad(
+      { name: palette.name, type: "saved", id: paletteId },
+      () => {
+        applyPalette(paletteId);
+        setSelectedDesign(ItemDesigns.Custom);
+        setActiveTab("custom");
+      }
+    );
   };
 
   // Handle selecting an official palette
   const handleSelectOfficialPalette = (design: ItemDesigns) => {
-    loadOfficialPalette(design);
-    setSelectedDesign(design);
-    setActiveTab("custom");
+    const designName = design.replace(/_/g, " ");
+
+    requestPaletteLoad(
+      { name: designName, type: "official", design: design },
+      () => {
+        loadOfficialPalette(design);
+        setSelectedDesign(design);
+        setActiveTab("custom");
+      }
+    );
   };
 
   // Update grid dimensions
@@ -518,9 +545,6 @@ export default function DrawPatternPage() {
   // Helper function to visualize mirror axes on the grid
   const renderMirrorLines = () => {
     if (!mirrorHorizontal && !mirrorVertical) return null;
-
-    const centerX = (gridSize.width - 1) / 2;
-    const centerY = (gridSize.height - 1) / 2;
 
     return (
       <>
@@ -700,8 +724,16 @@ export default function DrawPatternPage() {
                             className="w-full justify-start h-auto py-2 px-3"
                           >
                             <div className="flex items-center gap-3 w-full">
-                              <div className="w-6 h-6 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                                <Palette className="w-3 h-3 text-white" />
+                              <div className="flex h-6 w-20 rounded-sm overflow-hidden">
+                                {Object.values(DESIGN_COLORS[design]).map(
+                                  (color, i) => (
+                                    <div
+                                      key={i}
+                                      className="flex-1 h-full"
+                                      style={{ backgroundColor: color.hex }}
+                                    />
+                                  )
+                                )}
                               </div>
                               <span className="text-sm font-medium">
                                 {design.replace(/_/g, " ")}
@@ -738,8 +770,8 @@ export default function DrawPatternPage() {
                             className="w-full justify-start h-auto py-2 px-3"
                           >
                             <div className="flex items-center gap-3 w-full">
-                              <div className="flex h-6 w-12 rounded-sm overflow-hidden">
-                                {palette.colors.slice(0, 5).map((color, i) => (
+                              <div className="flex h-6 w-20 rounded-sm overflow-hidden">
+                                {palette.colors.map((color, i) => (
                                   <div
                                     key={i}
                                     className="flex-1 h-full"
@@ -759,8 +791,12 @@ export default function DrawPatternPage() {
 
                   <TabsContent value="custom" className="space-y-4">
                     <div className="flex flex-wrap gap-2 mb-4">
-                      {(selectedDesign === ItemDesigns.Custom
+                      {(customPalette.length > 0
                         ? customPalette
+                        : selectedDesign !== ItemDesigns.Custom
+                        ? Object.values(
+                            useCustomStore.getState().currentColors || {}
+                          )
                         : []
                       ).length === 0 ? (
                         <div className="text-center py-8 w-full">
@@ -776,11 +812,13 @@ export default function DrawPatternPage() {
                         </div>
                       ) : (
                         <>
-                          {(selectedDesign === ItemDesigns.Custom
+                          {(customPalette.length > 0
                             ? customPalette
-                            : Object.values(
+                            : selectedDesign !== ItemDesigns.Custom
+                            ? Object.values(
                                 useCustomStore.getState().currentColors || {}
                               )
+                            : []
                           ).map((color, index) => (
                             <Toggle
                               key={`${color.hex}-${index}`}
@@ -802,46 +840,6 @@ export default function DrawPatternPage() {
                           ))}
                         </>
                       )}
-                    </div>
-                    <div className="flex items-center justify-between mt-4">
-                      <Button
-                        variant={activeTool === "erase" ? "default" : "outline"}
-                        onClick={handleSelectErase}
-                        className={cn(
-                          "flex-1 mr-2",
-                          activeTool === "erase"
-                            ? "bg-red-500 hover:bg-red-600"
-                            : ""
-                        )}
-                      >
-                        <Eraser className="w-4 h-4 mr-2" />
-                        Eraser
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="outline" className="flex-1 ml-2">
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Clear All
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>
-                              Clear the entire pattern?
-                            </AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This will remove all colors from your pattern.
-                              This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleClearGrid}>
-                              Clear All
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
                     </div>
                   </TabsContent>
                 </Tabs>
@@ -865,6 +863,45 @@ export default function DrawPatternPage() {
                     <Redo className="w-4 h-4 mr-2" />
                     Redo
                   </Button>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    variant={activeTool === "erase" ? "default" : "outline"}
+                    onClick={handleSelectErase}
+                    className={cn(
+                      activeTool === "erase"
+                        ? "bg-red-500 hover:bg-red-600"
+                        : ""
+                    )}
+                  >
+                    <Eraser className="w-4 h-4 mr-2" />
+                    Eraser
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="outline">
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Clear All
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>
+                          Clear the entire pattern?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will remove all colors from your pattern. This
+                          action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleClearGrid}>
+                          Clear All
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </CardFooter>
             </Card>
@@ -972,7 +1009,10 @@ export default function DrawPatternPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="relative">
-                <div className="w-full overflow-auto p-1">
+                <div
+                  className="w-full overflow-auto p-1"
+                  style={{ maxHeight: "calc(100vh - 300px)" }}
+                >
                   <div
                     className="mx-auto bg-gray-50 dark:bg-gray-900 rounded-md p-2 relative"
                     style={{
@@ -982,7 +1022,6 @@ export default function DrawPatternPage() {
                         ? "calc(100vw - 450px)"
                         : "calc(100vw - 100px)",
                       height: "auto",
-                      maxHeight: "calc(100vh - 300px)",
                       aspectRatio: `${gridSize.width}/${gridSize.height}`,
                     }}
                   >
@@ -1028,6 +1067,16 @@ export default function DrawPatternPage() {
 
       {/* Empty Palette Warning */}
       <EmptyPaletteWarning />
+
+      {/* Confirmation Dialog */}
+      {paletteToLoad && (
+        <PaletteLoadConfirmDialog
+          isOpen={isConfirmDialogOpen}
+          onClose={handleCancel}
+          onConfirm={handleConfirm}
+          paletteToLoad={paletteToLoad}
+        />
+      )}
     </div>
   );
 }
