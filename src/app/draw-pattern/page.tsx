@@ -39,20 +39,18 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Download,
   Upload,
-  Save,
   Undo,
   Redo,
-  ArrowLeft,
   Palette,
   Eraser,
   Trash2,
   Eye,
-  PanelLeftClose,
-  PanelLeftOpen,
   FileUp,
   ClipboardPaste,
   FlipHorizontal,
   FlipVertical,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Toggle } from "@/components/ui/toggle";
@@ -645,31 +643,11 @@ export default function DrawPatternPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => router.back()}
-            className="bg-white dark:bg-gray-800"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
             Draw Pattern
           </h1>
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setIsPaletteVisible(!isPaletteVisible)}
-            className="bg-white dark:bg-gray-800"
-          >
-            {isPaletteVisible ? (
-              <PanelLeftClose className="w-4 h-4 mr-2" />
-            ) : (
-              <PanelLeftOpen className="w-4 h-4 mr-2" />
-            )}
-            {isPaletteVisible ? "Hide Palette" : "Show Palette"}
-          </Button>
           <Button onClick={handlePreview}>
             <Eye className="w-4 h-4 mr-2" />
             Preview Design
@@ -686,15 +664,41 @@ export default function DrawPatternPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-7 gap-6">
+        {/* Show Palette Button (when hidden) */}
+        {!isPaletteVisible && (
+          <div className="fixed left-4 lg:left-72 top-1/2 transform -translate-y-1/2 z-40 transition-all duration-300">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setIsPaletteVisible(true)}
+              className="h-12 w-12 bg-white dark:bg-gray-800 shadow-lg border-2 hover:shadow-xl transition-all"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </Button>
+          </div>
+        )}
+
         {/* Left column - Palette selector */}
         {isPaletteVisible && (
           <div className="lg:col-span-2">
             <Card className="bg-white dark:bg-gray-800 shadow-sm">
               <CardHeader className="pb-3">
-                <CardTitle className="text-xl">Color Palette</CardTitle>
-                <CardDescription>
-                  Select a palette to use for your design
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-xl">Color Palette</CardTitle>
+                    <CardDescription>
+                      Select a palette to use for your design
+                    </CardDescription>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setIsPaletteVisible(!isPaletteVisible)}
+                    className="h-8 w-8 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <Tabs
@@ -910,7 +914,10 @@ export default function DrawPatternPage() {
 
         {/* Right column - Drawing grid */}
         <div
-          className={cn(isPaletteVisible ? "lg:col-span-5" : "lg:col-span-7")}
+          className={cn(
+            isPaletteVisible ? "lg:col-span-5" : "lg:col-span-7",
+            !isPaletteVisible && "lg:ml-20" // Add left margin when palette is hidden to make room for chevron
+          )}
         >
           <div className="grid grid-cols-1 gap-6">
             {/* Drawing Grid */}

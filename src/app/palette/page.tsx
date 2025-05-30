@@ -403,15 +403,7 @@ export default function PalettePage() {
                   <span>{editingPaletteId ? "Edit" : "Create"}</span>
                 </div>
               </TabsTrigger>
-              <TabsTrigger
-                value="extract"
-                className="data-[state=active]:bg-purple-100 dark:data-[state=active]:bg-purple-900/30"
-              >
-                <div className="flex items-center gap-2">
-                  <ImageIcon className="h-4 w-4" />
-                  <span>Extract</span>
-                </div>
-              </TabsTrigger>
+
               <TabsTrigger
                 value="saved"
                 className="data-[state=active]:bg-purple-100 dark:data-[state=active]:bg-purple-900/30"
@@ -471,6 +463,15 @@ export default function PalettePage() {
                       <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-gradient-to-r from-purple-500 to-pink-500"></span>
                     </motion.div>
                   )}
+                </div>
+              </TabsTrigger>
+              <TabsTrigger
+                value="extract"
+                className="data-[state=active]:bg-purple-100 dark:data-[state=active]:bg-purple-900/30"
+              >
+                <div className="flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4" />
+                  <span>Extract</span>
                 </div>
               </TabsTrigger>
             </TabsList>

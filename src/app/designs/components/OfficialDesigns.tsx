@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCustomStore } from "@/store/customStore";
 import { ItemDesigns } from "@/typings/types";
-import { DESIGN_COLORS } from "@/typings/color-maps";
+import { DESIGN_COLORS, DESIGN_IMAGES } from "@/typings/color-maps";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -41,14 +41,6 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { Canvas } from "@react-three/fiber";
-import { OrbitControls, PerspectiveCamera } from "@react-three/drei";
-import { Group } from "three";
-import { useRef } from "react";
-import * as THREE from "three";
-import { useFrame } from "@react-three/fiber";
-import { GeometricPattern } from "@/app/order/components/preview/GeometricPattern";
-import { GeometricLighting } from "@/app/order/components/preview/LightingSetups";
 
 // Define design categories
 type DesignCategory =
@@ -96,104 +88,6 @@ const PalettePreview = ({ design }: { design: ItemDesigns }) => {
   );
 };
 
-// Animation component that controls the limited rotation
-function LimitedRotation({ children }: { children: React.ReactNode }) {
-  const groupRef = useRef<Group>(null);
-  const [direction, setDirection] = useState(1);
-  const rotationRef = useRef(0);
-
-  useFrame(() => {
-    if (!groupRef.current) return;
-
-    // Update rotation
-    rotationRef.current += 0.001 * direction;
-
-    // Convert degrees to radians
-    const maxRotation = THREE.MathUtils.degToRad(90);
-    const minRotation = THREE.MathUtils.degToRad(0);
-
-    // Check bounds and change direction
-    if (rotationRef.current >= maxRotation) {
-      rotationRef.current = maxRotation;
-      setDirection(-1);
-    } else if (rotationRef.current <= minRotation) {
-      rotationRef.current = minRotation;
-      setDirection(1);
-    }
-
-    // Apply rotation
-    groupRef.current.rotation.y = rotationRef.current;
-  });
-
-  return <group ref={groupRef}>{children}</group>;
-}
-
-// Design Preview component
-function DesignPreview({ design }: { design: ItemDesigns }) {
-  const { viewSettings } = useCustomStore();
-  const { showWoodGrain, showColorInfo } = viewSettings;
-
-  // Define default design parameters
-  const defaultDesign = {
-    dimensions: { width: 22, height: 10 },
-    selectedDesign: design,
-    colorPattern: "fade",
-    orientation: "horizontal",
-    isReversed: false,
-    customPalette: Object.values(DESIGN_COLORS[design]).map((color) => ({
-      hex: color.hex,
-      name: color.name,
-    })),
-    isRotated: false,
-    style: "geometric",
-    useMini: false,
-  };
-
-  const handleCanvasClick = (e: React.MouseEvent) => {
-    // Prevent the click from bubbling up to parent elements
-    e.stopPropagation();
-  };
-
-  return (
-    <div
-      className="w-full h-48 rounded-md overflow-hidden"
-      onClick={handleCanvasClick}
-    >
-      <Canvas shadows className="w-full h-full">
-        <PerspectiveCamera
-          makeDefault
-          position={[15, 15, 15]}
-          fov={45}
-          zoom={2.5}
-        />
-
-        {/* Lighting based on style */}
-        <GeometricLighting />
-
-        {/* Limited rotation wrapper around patterns */}
-        <LimitedRotation>
-          {/* Apply the design */}
-          <group>
-            <GeometricPattern
-              showWoodGrain={showWoodGrain}
-              showColorInfo={showColorInfo}
-              customDesign={defaultDesign}
-            />
-          </group>
-        </LimitedRotation>
-
-        {/* Orbit controls for manual interaction, but without autoRotate */}
-        <OrbitControls
-          enablePan={false}
-          enableZoom={false}
-          minPolarAngle={Math.PI / 4}
-          maxPolarAngle={Math.PI / 2}
-        />
-      </Canvas>
-    </div>
-  );
-}
-
 // Official Design Card component
 const OfficialDesignCard = ({
   design,
@@ -221,7 +115,14 @@ const OfficialDesignCard = ({
     >
       <Card className="overflow-hidden border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:shadow-lg transition-all h-full flex flex-col">
         <div className="h-48 w-full overflow-hidden bg-gray-100 dark:bg-gray-800 relative">
-          <DesignPreview design={design} />
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{
+              backgroundImage: `url(${DESIGN_IMAGES[design]})`,
+              opacity: 0.8,
+            }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-white/90 dark:from-gray-900/90 to-transparent" />
           <div className="absolute bottom-0 left-0 right-0 p-3">
             <PalettePreview design={design} />
           </div>

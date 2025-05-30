@@ -66,15 +66,8 @@ export default function DesignPage() {
     setActiveTab,
     setShowUIControls,
   } = useCustomStore();
-  const {
-    showRuler,
-    showWoodGrain,
-    showColorInfo,
-    showHanger,
-    showSplitPanel,
-    showFPS,
-    showUIControls,
-  } = viewSettings;
+  const { showRuler, showWoodGrain, showColorInfo, showUIControls } =
+    viewSettings;
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
 
   useEffect(() => {
