@@ -58,7 +58,6 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { EmptyPaletteWarning } from "@/components/EmptyPaletteWarning";
 import { Input } from "@/components/ui/input";
 import {
   Tooltip,
@@ -1071,9 +1070,6 @@ export default function DrawPatternPage() {
           </div>
         </div>
       </div>
-
-      {/* Empty Palette Warning */}
-      <EmptyPaletteWarning />
 
       {/* Confirmation Dialog */}
       {paletteToLoad && (

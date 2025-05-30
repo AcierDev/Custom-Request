@@ -47,6 +47,8 @@ import { ShareDialog } from "@/components/ShareDialog";
 import { DesignTips } from "@/components/DesignTips";
 import { DesignTutorial } from "@/components/DesignTutorial";
 import { EmptyPaletteWarning } from "@/components/EmptyPaletteWarning";
+import { CustomChoiceDialog } from "@/components/CustomChoiceDialog";
+import { useCustomChoiceDialog } from "@/hooks/useCustomChoiceDialog";
 import {
   Tooltip,
   TooltipContent,
@@ -65,10 +67,27 @@ export default function DesignPage() {
     style,
     setActiveTab,
     setShowUIControls,
+    drawnPatternGrid,
+    drawnPatternGridSize,
+    activeCustomMode,
   } = useCustomStore();
-  const { showRuler, showWoodGrain, showColorInfo, showUIControls } =
-    viewSettings;
+  const {
+    showRuler,
+    showWoodGrain,
+    showColorInfo,
+    showHanger,
+    showSplitPanel,
+    showFPS,
+    showUIControls,
+  } = viewSettings;
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+
+  // Custom choice dialog hook
+  const {
+    isDialogOpen: isCustomChoiceDialogOpen,
+    handleChoiceMade,
+    handleDialogClose: handleCustomChoiceDialogClose,
+  } = useCustomChoiceDialog();
 
   useEffect(() => {
     setMounted(true);
@@ -91,7 +110,10 @@ export default function DesignPage() {
   }, [showUIControls, setShowUIControls]);
 
   const showEmptyCustomInfo =
-    selectedDesign === ItemDesigns.Custom && customPalette.length === 0;
+    selectedDesign === ItemDesigns.Custom &&
+    ((activeCustomMode === "palette" && customPalette.length === 0) ||
+      (activeCustomMode === "pattern" &&
+        (!drawnPatternGrid || !drawnPatternGridSize)));
 
   if (!mounted) return null;
 
@@ -303,6 +325,13 @@ export default function DesignPage() {
 
       {/* Empty palette warning */}
       <EmptyPaletteWarning />
+
+      {/* Custom Choice Dialog */}
+      <CustomChoiceDialog
+        isOpen={isCustomChoiceDialogOpen}
+        onClose={handleCustomChoiceDialogClose}
+        onChoiceMade={handleChoiceMade}
+      />
     </div>
   );
 }
@@ -355,11 +384,17 @@ function PatternControls() {
     setIsRotated,
     selectedDesign,
     customPalette,
+    drawnPatternGrid,
+    drawnPatternGridSize,
+    activeCustomMode,
   } = useCustomStore();
 
-  // Hide controls if custom is selected with no colors
+  // Hide controls if custom is selected but we don't have the appropriate data for the active mode
   const showControls = !(
-    selectedDesign === ItemDesigns.Custom && customPalette.length === 0
+    selectedDesign === ItemDesigns.Custom &&
+    ((activeCustomMode === "palette" && customPalette.length === 0) ||
+      (activeCustomMode === "pattern" &&
+        (!drawnPatternGrid || !drawnPatternGridSize)))
   );
 
   if (!showControls) return null;

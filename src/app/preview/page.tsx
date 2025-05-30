@@ -20,6 +20,8 @@ import { cn } from "@/lib/utils";
 import { ShareDialog } from "@/components/ShareDialog";
 import { LightingControls } from "../order/components/preview/LightingControls";
 import { EmptyPaletteWarning } from "@/components/EmptyPaletteWarning";
+import { CustomChoiceDialog } from "@/components/CustomChoiceDialog";
+import { useCustomChoiceDialog } from "@/hooks/useCustomChoiceDialog";
 import {
   Tooltip,
   TooltipContent,
@@ -40,6 +42,9 @@ export default function PreviewPage() {
     dimensions,
     style,
     setShowUIControls,
+    drawnPatternGrid,
+    drawnPatternGridSize,
+    activeCustomMode,
   } = useCustomStore();
   const { showRuler, showWoodGrain, showColorInfo, showUIControls } =
     viewSettings;
@@ -47,6 +52,13 @@ export default function PreviewPage() {
 
   // State for time of day lighting control
   const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>("morning");
+
+  // Custom choice dialog hook
+  const {
+    isDialogOpen: isCustomChoiceDialogOpen,
+    handleChoiceMade,
+    handleDialogClose: handleCustomChoiceDialogClose,
+  } = useCustomChoiceDialog();
 
   useEffect(() => {
     setMounted(true);
@@ -69,7 +81,10 @@ export default function PreviewPage() {
   }, [showUIControls, setShowUIControls]);
 
   const showEmptyCustomInfo =
-    selectedDesign === ItemDesigns.Custom && customPalette.length === 0;
+    selectedDesign === ItemDesigns.Custom &&
+    ((activeCustomMode === "palette" && customPalette.length === 0) ||
+      (activeCustomMode === "pattern" &&
+        (!drawnPatternGrid || !drawnPatternGridSize)));
 
   if (!mounted) return null;
 
@@ -243,6 +258,13 @@ export default function PreviewPage() {
 
       {/* Empty palette warning */}
       <EmptyPaletteWarning />
+
+      {/* Custom Choice Dialog */}
+      <CustomChoiceDialog
+        isOpen={isCustomChoiceDialogOpen}
+        onClose={handleCustomChoiceDialogClose}
+        onChoiceMade={handleChoiceMade}
+      />
     </div>
   );
 }

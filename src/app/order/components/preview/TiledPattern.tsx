@@ -40,6 +40,9 @@ export function TiledPattern({
     useMini: storeUseMini,
     customPalette: storeCustomPalette,
     viewSettings,
+    drawnPatternGrid,
+    drawnPatternGridSize,
+    activeCustomMode,
   } = customStore;
 
   // Use values from customDesign when provided, otherwise use store values
@@ -69,6 +72,13 @@ export function TiledPattern({
   // Create a ref for texture variations
   const textureVariationsRef = useRef<TextureVariation[][]>();
 
+  // Check if we should use the drawn pattern for rendering
+  const hasDrawnPattern: boolean =
+    selectedDesign === ItemDesigns.Custom &&
+    !!drawnPatternGrid &&
+    !!drawnPatternGridSize &&
+    activeCustomMode === "pattern";
+
   if (!details) {
     return null;
   }
@@ -87,7 +97,18 @@ export function TiledPattern({
   const blockHeight = 0.1;
   // Reduce height variation to prevent blocks from going below the plywood base
   const heightVariation = 0.15;
-  const { width: modelWidth, height: modelHeight } = details.blocks;
+
+  // Determine the dimensions based on whether a drawn pattern is available
+  const { width: originalModelWidth, height: originalModelHeight } =
+    details.blocks;
+
+  // If drawn pattern is available, use its dimensions instead
+  const modelWidth = hasDrawnPattern
+    ? drawnPatternGridSize!.width
+    : originalModelWidth;
+  const modelHeight = hasDrawnPattern
+    ? drawnPatternGridSize!.height
+    : originalModelHeight;
 
   // Calculate layout dimensions and spacing for the block grid
   const layoutDetails = useMemo(() => {
@@ -203,16 +224,66 @@ export function TiledPattern({
   const blocks = useMemo(() => {
     const blockElements = [];
 
-    for (let x = 0; x < adjustedModelWidth; x++) {
-      for (let y = 0; y < adjustedModelHeight; y++) {
-        const randomHeight = heightsRef.current![x][y];
-        const colorIndex = getColorIndex(x, y);
-        const colorEntry = colorEntries[colorIndex];
-        const color = colorEntry?.[1].hex || "#8B5E3B";
-        const colorName = colorEntry?.[1].name;
+    // Determine current grid dimensions based on whether we have a drawn pattern
+    const currentGridWidth = hasDrawnPattern
+      ? drawnPatternGridSize!.width
+      : adjustedModelWidth;
+    const currentGridHeight = hasDrawnPattern
+      ? drawnPatternGridSize!.height
+      : adjustedModelHeight;
 
-        // Get the texture variation for this block
-        const textureVariation = textureVariationsRef.current![x][y];
+    for (let x = 0; x < currentGridWidth; x++) {
+      for (let y = 0; y < currentGridHeight; y++) {
+        // Get color information based on whether we have a drawn pattern
+        let color: string | null = null;
+        let colorName: string | undefined = undefined;
+
+        if (hasDrawnPattern && drawnPatternGrid && drawnPatternGridSize) {
+          // Y-axis is flipped: drawn pattern's bottom row is preview's top row.
+          const accessY = drawnPatternGridSize.height - 1 - y;
+
+          if (
+            accessY >= 0 &&
+            accessY < drawnPatternGrid.length &&
+            drawnPatternGrid[accessY] &&
+            x >= 0 &&
+            x < drawnPatternGrid[accessY].length
+          ) {
+            const cell = drawnPatternGrid[accessY][x];
+            color = cell.color || "#FFFFFF00"; // Use transparent if no color
+            colorName = cell.colorName;
+          } else {
+            // Out of bounds - use transparent
+            color = "#FFFFFF00";
+            colorName = "Error: Out of Bounds";
+          }
+
+          // Skip rendering completely transparent blocks from the drawn pattern
+          if (color === "#FFFFFF00") continue;
+        } else {
+          // Use the procedurally generated color (existing logic)
+          const colorIndex = getColorIndex(x, y);
+          const colorEntry = colorEntries[colorIndex];
+          color = colorEntry?.[1].hex || "#8B5E3B"; // Default procedural color
+          colorName = colorEntry?.[1].name;
+        }
+
+        // Get random height and texture variation
+        const randomHeight =
+          heightsRef.current![x] && heightsRef.current![x][y]
+            ? heightsRef.current![x][y]
+            : blockHeight + Math.random() * heightVariation;
+
+        const textureVariation =
+          textureVariationsRef.current![x] &&
+          textureVariationsRef.current![x][y]
+            ? textureVariationsRef.current![x][y]
+            : {
+                scale: 0.15 + Math.abs(Math.sin(x * y * 3.14)) * 0.2,
+                offsetX: Math.abs((Math.sin(x * 2.5) * Math.cos(y * 1.7)) % 1),
+                offsetY: Math.abs((Math.cos(x * 1.8) * Math.sin(y * 2.2)) % 1),
+                rotation: (Math.sin(x * y) * Math.PI) / 6,
+              };
 
         // Calculate base position without drift
         const baseXPos = x * blockSpacing * blockSize + offsetX + blockSize / 2;
@@ -225,51 +296,54 @@ export function TiledPattern({
         const isBlockPinned =
           pinnedInfo?.position[0] === x && pinnedInfo?.position[1] === y;
 
-        blockElements.push(
-          <animated.group
-            key={`block-${x}-${y}`}
-            position={driftFactor.to((d) => [
-              baseXPos + calculateDrift(x, d),
-              yPos,
-              zPos + 0.27, // Adjust z-position to align with plywood base
-            ])}
-          >
-            <MemoizedBlock
-              position={[0, 0, 0]} // Position is handled by the parent group
-              size={blockSize}
-              height={randomHeight}
-              color={color}
-              showWoodGrain={showWoodGrain}
-              showColorInfo={showColorInfo}
-              isHovered={isBlockHovered || isBlockPinned}
-              textureVariation={textureVariation}
-              onHover={(isHovering) => {
-                if (showColorInfo) {
-                  if (isHovering) {
-                    setHoverInfo({ position: [x, y], color, colorName });
-                  } else if (
-                    hoverInfo?.position[0] === x &&
-                    hoverInfo?.position[1] === y
-                  ) {
-                    setHoverInfo(null);
+        // Only render if color is not null
+        if (color && color !== "null") {
+          blockElements.push(
+            <animated.group
+              key={`block-${x}-${y}`}
+              position={driftFactor.to((d) => [
+                baseXPos + calculateDrift(x, d),
+                yPos,
+                zPos + 0.27, // Adjust z-position to align with plywood base
+              ])}
+            >
+              <MemoizedBlock
+                position={[0, 0, 0]} // Position is handled by the parent group
+                size={blockSize}
+                height={randomHeight}
+                color={color}
+                showWoodGrain={showWoodGrain}
+                showColorInfo={showColorInfo}
+                isHovered={isBlockHovered || isBlockPinned}
+                textureVariation={textureVariation}
+                onHover={(isHovering) => {
+                  if (showColorInfo) {
+                    if (isHovering) {
+                      setHoverInfo({ position: [x, y], color, colorName });
+                    } else if (
+                      hoverInfo?.position[0] === x &&
+                      hoverInfo?.position[1] === y
+                    ) {
+                      setHoverInfo(null);
+                    }
                   }
-                }
-              }}
-              onClick={() => {
-                if (showColorInfo) {
-                  if (
-                    pinnedInfo?.position[0] === x &&
-                    pinnedInfo?.position[1] === y
-                  ) {
-                    setPinnedInfo(null);
-                  } else {
-                    setPinnedInfo({ position: [x, y], color, colorName });
+                }}
+                onClick={() => {
+                  if (showColorInfo) {
+                    if (
+                      pinnedInfo?.position[0] === x &&
+                      pinnedInfo?.position[1] === y
+                    ) {
+                      setPinnedInfo(null);
+                    } else {
+                      setPinnedInfo({ position: [x, y], color, colorName });
+                    }
                   }
-                }
-              }}
-            />
-          </animated.group>
-        );
+                }}
+              />
+            </animated.group>
+          );
+        }
       }
     }
 
@@ -291,6 +365,9 @@ export function TiledPattern({
     setPinnedInfo,
     driftFactor,
     calculateDrift,
+    hasDrawnPattern,
+    drawnPatternGrid,
+    drawnPatternGridSize,
   ]);
 
   // Handle group click to clear pinned info

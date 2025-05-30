@@ -18,52 +18,6 @@ function ViewerLighting({
     <>
       <ambientLight intensity={ambientIntensity} />
 
-      {/* Bedroom room lighting */}
-      {roomId === "bedroom" && (
-        <>
-          <pointLight
-            position={[-1.5, 0.89, -1.6]}
-            intensity={2.5}
-            distance={10}
-            decay={0.5}
-            color="#ffffff"
-          />
-          <pointLight
-            position={[-4.2, 0.4, -8.5]}
-            intensity={1.5}
-            distance={10}
-            decay={0.5}
-            color="#ffffff"
-          />
-          <pointLight
-            position={[-4.2, 0.4, -4.5]}
-            intensity={1.5}
-            distance={10}
-            decay={0.5}
-            color="#ffffff"
-          />
-          <pointLight
-            position={[0.1, 0.2, -9]}
-            intensity={2}
-            distance={10}
-            decay={0.5}
-            color="#ffffff"
-          />
-          {/* Art spotlight */}
-          <spotLight
-            position={[-2.5, 2.5, -6.5]}
-            intensity={2}
-            angle={Math.PI / 8}
-            penumbra={0.8}
-            distance={4}
-            decay={2}
-            color="#ffffff"
-            castShadow
-            target-position={[-3.3, 1.15, -6.9]}
-          />
-        </>
-      )}
-
       {/* Room2 lighting */}
       {roomId === "room2" && (
         <>
@@ -188,14 +142,6 @@ function RoomModel({
       console.log("----------------------------");
     }
 
-    // Special handling for the bedroom model
-    if (filePath === "/models/room/bedroom.glb") {
-      const carpet = clonedScene.getObjectByName("rug");
-      if (carpet) {
-        carpet.position.y += 0.001; // Raise the carpet slightly
-      }
-    }
-
     const removeObject = (objectName: string) => {
       const object = clonedScene.getObjectByName(objectName);
       if (object) {
@@ -250,61 +196,8 @@ function RoomModel({
   );
 }
 
-// Additional objects for the room
-function RoomObjects({ roomId }: { roomId: string }) {
-  // Define the objects specific to each room
-  if (roomId === "bedroom") {
-    return (
-      <>
-        <primitive
-          object={useGLTF("/models/room/couch2.glb").scene.clone()}
-          position={[-4.2, -1, -7.5]}
-          rotation={[0, Math.PI / 2, 0]}
-          scale={[0.01, 0.01, 0.01]}
-        />
-        <primitive
-          object={useGLTF("/models/room/tree.glb").scene.clone()}
-          position={[1, -5, 5]}
-          scale={[1, 1, 1]}
-        />
-        <primitive
-          object={useGLTF("/models/room/plant.glb").scene.clone()}
-          position={[-4, -1, -9.5]}
-          scale={[0.7, 0.7, 0.7]}
-        />
-      </>
-    );
-  }
-
-  return null;
-}
-
 // Main RoomScene component
 export function RoomScene({ roomConfig }: { roomConfig: RoomViewConfig }) {
-  // Get art display position based on room
-  const artDisplayPosition = useMemo(() => {
-    if (roomConfig.id === "bedroom") {
-      return {
-        position: [-3.3, 1.15, -6.9] as [number, number, number],
-        rotation: [0, Math.PI / 2, 0] as [number, number, number],
-        scale: 0.7,
-      };
-    } else if (roomConfig.id === "room2") {
-      return {
-        position: [-2.7, 1.6, -5.2] as [number, number, number],
-        rotation: [0, 0, 0] as [number, number, number],
-        scale: 0.6,
-      };
-    }
-
-    // Default fallback
-    return {
-      position: [0, 0, 0] as [number, number, number],
-      rotation: [0, 0, 0] as [number, number, number],
-      scale: 0.7,
-    };
-  }, [roomConfig.id]);
-
   return (
     <Suspense fallback={null}>
       {/* Environment & lighting */}
@@ -323,22 +216,20 @@ export function RoomScene({ roomConfig }: { roomConfig: RoomViewConfig }) {
         objectsToRemove={roomConfig.objectsToRemove}
       />
 
-      {/* Additional room objects */}
-      <RoomObjects roomId={roomConfig.id} />
-
-      {/* Art display */}
-      <StaticArtDisplay
-        position={artDisplayPosition.position}
-        rotation={artDisplayPosition.rotation}
-        scale={artDisplayPosition.scale}
-      />
+      {/* Art displays */}
+      {roomConfig.artDisplays.map((artDisplay) => (
+        <group
+          key={artDisplay.id}
+          position={artDisplay.position}
+          rotation={artDisplay.rotation}
+          scale={artDisplay.scale}
+        >
+          <StaticArtDisplay />
+        </group>
+      ))}
     </Suspense>
   );
 }
 
 // Preload models
-useGLTF.preload("/models/room/bedroom.glb");
 useGLTF.preload("/models/room/room2.glb");
-useGLTF.preload("/models/room/couch2.glb");
-useGLTF.preload("/models/room/plant.glb");
-useGLTF.preload("/models/room/tree.glb");

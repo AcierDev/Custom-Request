@@ -47,6 +47,9 @@ export type CustomColor = {
   name?: string;
 };
 
+// Add a new type for custom modes
+export type CustomMode = "palette" | "pattern";
+
 export interface SavedPalette {
   id: string;
   name: string;
@@ -139,6 +142,9 @@ interface CustomState {
   drawnPatternGrid: PatternCell[][] | null;
   drawnPatternGridSize: { width: number; height: number } | null;
 
+  // New property to track which custom mode is active
+  activeCustomMode: CustomMode;
+
   paletteHistory: Array<Array<CustomColor>>;
   paletteHistoryIndex: number;
 }
@@ -213,12 +219,18 @@ interface CustomStore extends CustomState {
   init: () => void;
   togglePalettePublic: (id: string) => void;
 
+  // New action to set the active custom mode
+  setActiveCustomMode: (mode: CustomMode) => void;
+
   // Action for setting a directly drawn pattern
   setDrawnPattern: (
     grid: PatternCell[][],
     size: { width: number; height: number },
     keepCustomPalette?: boolean
   ) => void;
+
+  // Action for clearing a drawn pattern
+  clearDrawnPattern: (keepCustomPalette?: boolean) => void;
 
   undoPaletteAction: () => boolean;
   redoPaletteAction: () => boolean;
@@ -261,6 +273,7 @@ interface ShareableState {
   isRotated: boolean;
   style: StyleType;
   useMini: boolean;
+  activeCustomMode: CustomMode;
 }
 
 // Define what we want to persist in the database
@@ -300,6 +313,7 @@ const AUTO_SAVE_TRACKED_PROPERTIES: (keyof CustomState)[] = [
   "viewSettings",
   "paletteHistory",
   "paletteHistoryIndex",
+  "activeCustomMode",
 ];
 
 // Create the store with the subscribeWithSelector middleware
@@ -352,6 +366,7 @@ export const useCustomStore = create<CustomStore>()(
     drawnPatternGridSize: null,
     paletteHistory: [],
     paletteHistoryIndex: -1,
+    activeCustomMode: "palette",
     init: () => {
       if (typeof window !== "undefined") {
         const localState = localStorage.getItem("everwood-custom-design");
@@ -846,6 +861,7 @@ export const useCustomStore = create<CustomStore>()(
         isRotated: state.isRotated,
         style: state.style,
         useMini: state.useMini,
+        activeCustomMode: state.activeCustomMode,
       };
 
       return generateShareableUrl(shareableState);
@@ -864,6 +880,7 @@ export const useCustomStore = create<CustomStore>()(
         isRotated: state.isRotated,
         style: state.style,
         useMini: state.useMini,
+        activeCustomMode: state.activeCustomMode,
       };
 
       return generateShortShareableUrl(shareableState);
@@ -896,6 +913,7 @@ export const useCustomStore = create<CustomStore>()(
           customPalette: shareableState.customPalette,
           isRotated: shareableState.isRotated,
           style: shareableState.style,
+          activeCustomMode: shareableState.activeCustomMode || "palette",
           currentColors:
             shareableState.selectedDesign === ItemDesigns.Custom &&
             shareableState.customPalette.length > 0
@@ -1016,6 +1034,7 @@ export const useCustomStore = create<CustomStore>()(
           designFolders: get().designFolders,
           useMini: get().useMini,
           viewSettings: get().viewSettings,
+          activeCustomMode: get().activeCustomMode,
           dataSyncVersion: newVersion,
         };
 
@@ -1069,6 +1088,7 @@ export const useCustomStore = create<CustomStore>()(
               designFolders: get().designFolders,
               useMini: get().useMini,
               viewSettings: get().viewSettings,
+              activeCustomMode: get().activeCustomMode,
               dataSyncVersion: newVersion,
             };
 
@@ -1243,6 +1263,8 @@ export const useCustomStore = create<CustomStore>()(
           customPalette: mergedState.customPalette || get().customPalette,
           isRotated: mergedState.isRotated ?? get().isRotated,
           style: mergedState.style || get().style,
+          activeCustomMode:
+            mergedState.activeCustomMode || get().activeCustomMode,
           savedPalettes: mergedState.savedPalettes || [],
           savedDesigns: mergedState.savedDesigns || [],
           paletteFolders: mergedState.paletteFolders || [],
@@ -1588,13 +1610,26 @@ export const useCustomStore = create<CustomStore>()(
         drawnPatternGrid: grid,
         drawnPatternGridSize: size,
         selectedDesign: ItemDesigns.Custom, // Ensure design type is Custom
-        customPalette: keepCustomPalette ? state.customPalette : [], // Keep customPalette if specified
-        currentColors: null, // Clear currentColors as well
-        // Potentially reset other design-specific states if needed
-        // colorPattern: initialCustomState.colorPattern,
-        // orientation: initialCustomState.orientation,
-        // isReversed: initialCustomState.isReversed,
-        // isRotated: initialCustomState.isRotated,
+        activeCustomMode: "pattern", // Set to pattern mode
+        // Keep both custom palette and current colors - don't clear anything
+        currentColors: null, // Clear currentColors as the pattern has embedded colors
+      }));
+    },
+    clearDrawnPattern: (keepCustomPalette?: boolean) => {
+      set((state) => ({
+        drawnPatternGrid: null,
+        drawnPatternGridSize: null,
+        // If we still have a custom palette, stay in Custom mode but switch to palette mode
+        selectedDesign:
+          state.customPalette.length > 0
+            ? ItemDesigns.Custom
+            : ItemDesigns.Coastal,
+        activeCustomMode:
+          state.customPalette.length > 0 ? "palette" : "palette",
+        currentColors:
+          state.customPalette.length > 0
+            ? createColorMap(state.customPalette)
+            : DESIGN_COLORS[ItemDesigns.Coastal],
       }));
     },
     undoPaletteAction: () => {
@@ -1628,6 +1663,7 @@ export const useCustomStore = create<CustomStore>()(
 
       return true;
     },
+    setActiveCustomMode: (mode: CustomMode) => set({ activeCustomMode: mode }),
   }))
 );
 

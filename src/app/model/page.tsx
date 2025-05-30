@@ -93,138 +93,8 @@ interface RoomConfig {
   ambientIntensity: number;
 }
 
-// Bedroom model path
-const BEDROOM_MODEL_PATH = "/models/room/bedroom.glb";
-const COUCH_MODEL_PATH = "/models/room/couch2.glb";
-const LAMP_MODEL_PATH = "/models/room/lamp.glb";
-const TREE_MODEL_PATH = "/models/room/tree.glb";
-const PLANT_MODEL_PATH = "/models/room/plant.glb";
-
 // Room configurations
 const roomConfigurations: RoomConfig[] = [
-  {
-    id: "bedroom",
-    name: "Bedroom",
-    roomModel: {
-      modelPath: "/models/room/bedroom.glb",
-      position: [0, -1, 0],
-      scale: [1, 1, 1],
-      rotation: [0, 0, 0],
-    },
-    lights: [
-      {
-        id: "point-1",
-        type: "point",
-        position: [-1.5, 0.89, -1.6],
-        intensity: 2.5,
-        distance: 10,
-        decay: 0.5,
-        color: "#ffffff",
-        castShadow: false,
-        enabled: true,
-      },
-      {
-        id: "point-2",
-        type: "point",
-        position: [-4.2, 0.4, -8.5],
-        intensity: 1.5,
-        distance: 10,
-        decay: 0.5,
-        color: "#ffffff",
-        castShadow: false,
-        enabled: true,
-      },
-      {
-        id: "point-3",
-        type: "point",
-        position: [-4.2, 0.4, -4.5],
-        intensity: 1.5,
-        distance: 10,
-        decay: 0.5,
-        color: "#ffffff",
-        castShadow: false,
-        enabled: true,
-      },
-      {
-        id: "point-4",
-        type: "point",
-        position: [3.47458, -0.3297, 8.73249],
-        intensity: 13.8,
-        distance: 20.0,
-        decay: 0.1,
-        color: "#ffffff",
-        castShadow: true,
-        enabled: false,
-      },
-      {
-        id: "spot-1",
-        type: "spot",
-        position: [2.45371, 0.94481, 5.45786],
-        intensity: 5.0,
-        angle: Math.PI / 6,
-        penumbra: 0.5,
-        distance: 10,
-        decay: 2,
-        color: "#ffffff",
-        castShadow: false,
-        enabled: false,
-        target: [-2.6275, 0.50961, 0.70908],
-      },
-      {
-        id: "directional-1",
-        type: "directional",
-        position: [5.25455, 3.12047, 9.40658],
-        intensity: 29.4,
-        color: "#ffffff",
-        castShadow: true,
-        enabled: false,
-        target: [-4.8457, 0.30806, 0.70333],
-      },
-      {
-        id: "point-5",
-        type: "point",
-        position: [0.1, 0.2, -9],
-        intensity: 2,
-        distance: 10,
-        decay: 0.5,
-        color: "#ffffff",
-        castShadow: false,
-        enabled: true,
-      },
-    ],
-    objects: [
-      {
-        modelPath: COUCH_MODEL_PATH,
-        position: [-4.2, -1, -7.5],
-        scale: [0.01, 0.01, 0.01],
-        rotation: [0, Math.PI / 2, 0],
-        modelId: "couch",
-      },
-      {
-        modelPath: TREE_MODEL_PATH,
-        position: [1, -5, 5],
-        scale: [1, 1, 1],
-        rotation: [0, 0, 0],
-        modelId: "tree",
-      },
-      {
-        modelPath: PLANT_MODEL_PATH,
-        position: [-4, -1, -9.5],
-        scale: [0.7, 0.7, 0.7],
-        rotation: [0, 0, 0],
-        modelId: "plant",
-      },
-    ],
-    artDisplays: [
-      {
-        position: [-3.3, 1.15, -6.9],
-        rotation: [0, Math.PI / 2, 0],
-        scale: 0.7,
-        displayId: "art-1",
-      },
-    ],
-    ambientIntensity: 0.7,
-  },
   {
     id: "room2",
     name: "New Room",
@@ -690,52 +560,6 @@ function Model({
 
   // Use useEffect to ensure this only happens once
   useEffect(() => {
-    // console.log(gltfModel);
-
-    if (filePath === BEDROOM_MODEL_PATH) {
-      const carpet = clonedScene.getObjectByName("rug");
-      if (carpet) {
-        carpet.position.y += 0.001; // Raise the carpet slightly
-      }
-
-      const light = clonedScene.getObjectByName("Sphere");
-      if (light) {
-        light.traverse((child: any) => {
-          if (child.isMesh) {
-            // child.material.opacity = 0.9; // Half-transparent
-            // child.material.transparent = true;
-          }
-        });
-      }
-
-      const removeObject = (objectName: string) => {
-        const object = clonedScene.getObjectByName(objectName);
-        if (object) {
-          object.traverse((child: any) => {
-            if (child.isMesh) {
-              child.geometry.dispose();
-              if (child.material) {
-                if (Array.isArray(child.material)) {
-                  child.material.forEach((mat: any) => mat.dispose());
-                } else {
-                  child.material.dispose();
-                }
-              }
-            }
-          });
-
-          // Remove object and its children
-          object.parent?.remove(object);
-        }
-      };
-
-      removeObject("CTRL_Hole");
-      removeObject("Window_3");
-      removeObject("Cube011");
-      removeObject("Cylinder001");
-      removeObject("Painting_03");
-    }
-
     // Extract all objects from the model
     const objects: { name: string; type: string; modelId: string }[] = [];
     clonedScene.traverse((child: any) => {
@@ -1021,7 +845,7 @@ function ModelCameraInfo() {
 }
 
 export default function Viewer() {
-  const [selectedRoomId, setSelectedRoomId] = useState<string>("bedroom");
+  const [selectedRoomId, setSelectedRoomId] = useState<string>("room2");
   const [showLightingControls, setShowLightingControls] = useState(false);
   const router = useRouter();
 
@@ -1040,9 +864,6 @@ export default function Viewer() {
   );
 
   // Object visibility state
-  const [bedroomObjects, setBedroomObjects] = useState<
-    { name: string; type: string; modelId: string }[]
-  >([]);
   const [additionalObjects, setAdditionalObjects] = useState<
     { name: string; type: string; modelId: string }[]
   >([]);
@@ -1085,23 +906,6 @@ export default function Viewer() {
       setHiddenObjects([]);
     }
   }, [selectedRoomId]);
-
-  // Handle objects loaded from models
-  const handleBedroomObjectsLoaded = useCallback(
-    (objects: { name: string; type: string; modelId: string }[]) => {
-      setBedroomObjects(objects);
-      updateExpandedCategories(objects);
-    },
-    []
-  );
-
-  const handleCouchObjectsLoaded = useCallback(
-    (objects: { name: string; type: string; modelId: string }[]) => {
-      setAdditionalObjects(objects);
-      updateExpandedCategories(objects);
-    },
-    []
-  );
 
   // Handle object selection
   const handleObjectSelect = useCallback(
@@ -1154,7 +958,7 @@ export default function Viewer() {
     const categories: {
       [key: string]: { name: string; type: string; modelId: string }[];
     } = {};
-    const allObjects = [...bedroomObjects, ...additionalObjects];
+    const allObjects = [...additionalObjects];
 
     allObjects.forEach((obj) => {
       // Skip objects that don't match the filter
@@ -2513,7 +2317,7 @@ export default function Viewer() {
             scale={currentRoomConfig.roomModel.scale}
             rotation={currentRoomConfig.roomModel.rotation}
             hiddenObjects={hiddenObjects}
-            onObjectsLoaded={handleBedroomObjectsLoaded}
+            onObjectsLoaded={() => {}}
             modelId="room"
           />
 
@@ -2579,10 +2383,4 @@ export default function Viewer() {
 }
 
 // Important: Preload the models to prevent memory leaks
-useGLTF.preload(BEDROOM_MODEL_PATH);
-useGLTF.preload(COUCH_MODEL_PATH);
-useGLTF.preload(LAMP_MODEL_PATH);
-useGLTF.preload(TREE_MODEL_PATH);
-useGLTF.preload(PLANT_MODEL_PATH);
-useGLTF.preload("/models/room/room.glb");
 useGLTF.preload("/models/room/room2.glb");

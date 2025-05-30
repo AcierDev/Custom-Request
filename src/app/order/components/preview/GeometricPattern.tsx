@@ -44,6 +44,7 @@ export function GeometricPattern({
     viewSettings,
     drawnPatternGrid,
     drawnPatternGridSize,
+    activeCustomMode,
   } = customStore;
 
   // Use values from customDesign when provided, otherwise use store values
@@ -86,11 +87,12 @@ export function GeometricPattern({
     }
   }, [selectedDesign, customPalette.length]);
 
-  // Check if we have a drawn pattern available
+  // Check if we should use the drawn pattern for rendering
   const hasDrawnPattern: boolean =
     selectedDesign === ItemDesigns.Custom &&
     !!drawnPatternGrid &&
-    !!drawnPatternGridSize;
+    !!drawnPatternGridSize &&
+    activeCustomMode === "pattern";
 
   if (!details) return null;
 
