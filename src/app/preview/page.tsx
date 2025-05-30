@@ -4,7 +4,15 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useCustomStore } from "@/store/customStore";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Info, Download, Share, Eye, EyeOff } from "lucide-react";
+import {
+  ArrowLeft,
+  Info,
+  Download,
+  Share,
+  Eye,
+  EyeOff,
+  ChevronRight,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Canvas } from "@react-three/fiber";
@@ -200,34 +208,50 @@ export default function PreviewPage() {
         </Canvas>
       </div>
 
-      {/* Info card */}
+      {/* Info card and transition card */}
       {showUIControls && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="absolute bottom-6 left-6 max-w-md"
-        >
-          <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200 dark:border-gray-700 shadow-lg p-4">
-            <div className="flex gap-3">
-              <div className="shrink-0">
-                <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-full">
-                  <Info className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+        <div className="absolute bottom-6 left-6 max-w-md space-y-4">
+          {/* Transition card to viewer */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7 }}
+            whileHover={{ scale: 1.02, y: -2 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Card
+              className="bg-gradient-to-br from-blue-50/90 to-indigo-100/90 dark:from-blue-900/30 dark:to-indigo-900/40 border border-blue-200/70 dark:border-blue-700/50 shadow-lg overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:shadow-blue-200/20 dark:hover:shadow-blue-900/20 backdrop-blur-sm"
+              onClick={() => router.push("/viewer")}
+            >
+              <div className="p-4 relative">
+                {/* Subtle background pattern */}
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-400/5 to-indigo-600/10 dark:from-blue-300/5 dark:to-indigo-400/10"></div>
+
+                <div className="flex items-center gap-3 relative">
+                  <div className="shrink-0">
+                    <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full shadow-md">
+                      <Eye className="w-4 h-4 text-white" />
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
+                      See it in a room
+                    </h4>
+                    <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                      Experience your design in a realistic room setting with
+                      multiple viewing angles
+                    </p>
+                  </div>
+                  <div className="shrink-0">
+                    <div className="w-7 h-7 rounded-full bg-blue-100/80 dark:bg-blue-800/80 flex items-center justify-center shadow-sm">
+                      <ChevronRight className="w-3.5 h-3.5 text-blue-600 dark:text-blue-300" />
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="space-y-1 flex-1">
-                <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                  Preview Mode
-                </h4>
-                <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
-                  This is a simplified preview of your design. Use the view
-                  controls to customize how you see your design. You can toggle
-                  the ruler, wood grain, and color information.
-                </p>
-              </div>
-            </div>
-          </Card>
-        </motion.div>
+            </Card>
+          </motion.div>
+        </div>
       )}
 
       {/* Action buttons */}

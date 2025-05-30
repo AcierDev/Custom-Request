@@ -5,11 +5,18 @@ import { Canvas } from "@react-three/fiber";
 import { PerspectiveCamera } from "@react-three/drei";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight, Home } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Home,
+  Edit3,
+  ArrowLeft,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { RoomScene } from "./components/RoomScene";
 import { roomConfigurations } from "./components/viewPositions";
 import * as THREE from "three";
+import { motion } from "framer-motion";
 
 // Camera controller component
 function CameraController({
@@ -151,16 +158,48 @@ export default function ViewerPage() {
         </Button>
       </div>
 
-      {/* Return to home */}
-      <Button
-        variant="outline"
-        size="sm"
-        className="absolute top-4 left-4 z-20 bg-background/80 backdrop-blur-sm"
-        onClick={() => router.push("/")}
-      >
-        <Home className="h-4 w-4 mr-2" />
-        Home
-      </Button>
+      {/* Return to home and transition card */}
+      <div className="absolute top-4 left-4 z-20 flex flex-col gap-3">
+        {/* Transition card to preview */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.3 }}
+          whileHover={{ scale: 1.02, x: 2 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <Card
+            className="bg-gradient-to-br from-emerald-50/90 to-teal-100/90 dark:from-emerald-900/30 dark:to-teal-900/40 border border-emerald-200/70 dark:border-emerald-700/50 shadow-lg overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:shadow-emerald-200/20 dark:hover:shadow-emerald-900/20 max-w-xs backdrop-blur-sm"
+            onClick={() => router.push("/preview")}
+          >
+            <div className="p-4 relative">
+              {/* Subtle background pattern */}
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-400/5 to-teal-600/10 dark:from-emerald-300/5 dark:to-teal-400/10"></div>
+
+              <div className="flex items-center gap-3 relative">
+                <div className="shrink-0">
+                  <div className="p-2 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full shadow-md">
+                    <Edit3 className="w-4 h-4 text-white" />
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
+                    3D Preview
+                  </h4>
+                  <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                    Return to interactive preview
+                  </p>
+                </div>
+                <div className="shrink-0">
+                  <div className="w-7 h-7 rounded-full bg-emerald-100/80 dark:bg-emerald-800/80 flex items-center justify-center shadow-sm">
+                    <ArrowLeft className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-300" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+      </div>
 
       {/* Canvas with the 3D room scene */}
       <div className="w-full h-full">
