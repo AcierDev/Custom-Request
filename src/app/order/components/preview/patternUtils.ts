@@ -140,52 +140,6 @@ export function shuffleArray(array: number[], seed: number = 12345): number[] {
 }
 
 /**
- * Calculate position index for color mapping in fade patterns
- */
-export function getPositionIndex(
-  x: number,
-  y: number,
-  adjustedModelWidth: number,
-  adjustedModelHeight: number,
-  orientation: "horizontal" | "vertical",
-  colorPattern: ColorPattern,
-  isReversed: boolean,
-  shuffledColors: number[]
-): number {
-  if (colorPattern === "center-fade") {
-    // Calculate progress from edge to center
-    const progress =
-      orientation === "horizontal"
-        ? x / (adjustedModelWidth - 1) // Use width-1 to include the last position
-        : y / (adjustedModelHeight - 1); // Use height-1 to include the last position
-
-    // Transform progress to create center fade effect
-    // This will make progress go from 0->1 for first half, and 1->0 for second half
-    const centerProgress =
-      progress <= 0.5
-        ? progress * 2 // First half: 0->1
-        : (1 - progress) * 2; // Second half: 1->0
-
-    // Apply reversal if needed
-    const adjustedProgress = isReversed ? 1 - centerProgress : centerProgress;
-
-    // Calculate the index in the color array
-    return Math.floor(adjustedProgress * (shuffledColors.length - 1));
-  } else {
-    // Regular fade pattern
-    if (orientation === "horizontal") {
-      return isReversed
-        ? (adjustedModelWidth - 1 - x) * adjustedModelHeight + y
-        : x * adjustedModelHeight + y;
-    } else {
-      return isReversed
-        ? x * adjustedModelHeight + (adjustedModelHeight - 1 - y)
-        : x * adjustedModelHeight + y;
-    }
-  }
-}
-
-/**
  * Generate a color map for the pattern
  */
 export function generateColorMap(
@@ -231,58 +185,134 @@ export function generateColorMap(
     // Sort the colors to maintain gradient-like appearance
     shuffledColors.sort((a, b) => a - b);
 
+    // Determine effective orientation based on rotation
+    const effectiveOrientation = isRotated
+      ? orientation === "horizontal"
+        ? "vertical"
+        : "horizontal"
+      : orientation;
+
     // Fill the color map based on position
     for (let x = 0; x < adjustedModelWidth; x++) {
       for (let y = 0; y < adjustedModelHeight; y++) {
-        const index = getPositionIndex(
-          x,
-          y,
-          adjustedModelWidth,
-          adjustedModelHeight,
-          orientation,
-          colorPattern,
-          isReversed,
-          shuffledColors
-        );
-        colorMap[x][y] = shuffledColors[index % shuffledColors.length];
+        let colorIndex: number;
+
+        if (colorPattern === "center-fade") {
+          // Calculate progress from edge to center based on effective orientation
+          const progress =
+            effectiveOrientation === "horizontal"
+              ? x / (adjustedModelWidth - 1)
+              : y / (adjustedModelHeight - 1);
+
+          // Transform progress to create center fade effect
+          const centerProgress =
+            progress <= 0.5
+              ? progress * 2 // First half: 0->1
+              : (1 - progress) * 2; // Second half: 1->0
+
+          // Apply reversal if needed
+          const adjustedProgress = isReversed
+            ? 1 - centerProgress
+            : centerProgress;
+
+          // Calculate the index in the color array
+          colorIndex = Math.floor(
+            adjustedProgress * (shuffledColors.length - 1)
+          );
+        } else {
+          // Regular fade pattern
+          if (effectiveOrientation === "horizontal") {
+            // Fade horizontally: divide width into color zones
+            const progress = x / (adjustedModelWidth - 1);
+            const adjustedProgress = isReversed ? 1 - progress : progress;
+            colorIndex = Math.floor(
+              adjustedProgress * (shuffledColors.length - 1)
+            );
+          } else {
+            // Fade vertically: divide height into color zones
+            const progress = y / (adjustedModelHeight - 1);
+            const adjustedProgress = isReversed ? 1 - progress : progress;
+            colorIndex = Math.floor(
+              adjustedProgress * (shuffledColors.length - 1)
+            );
+          }
+        }
+
+        colorMap[x][y] = shuffledColors[colorIndex % shuffledColors.length];
       }
     }
 
-    // Post-process: Randomize blocks within columns that have more than one color
+    // Post-process: Randomize blocks within columns/rows that have more than one color
     // Only do this for regular fade, not center-fade
     if (colorPattern === "fade") {
-      for (let x = 0; x < adjustedModelWidth; x++) {
-        // Check if this column has more than one color
-        const colorsInColumn = new Set<number>();
-        for (let y = 0; y < adjustedModelHeight; y++) {
-          colorsInColumn.add(colorMap[x][y]);
-        }
-
-        // If column has more than one color, randomize the blocks in this column
-        if (colorsInColumn.size > 1) {
-          // Collect all colors in this column
-          const columnColors: number[] = [];
+      if (effectiveOrientation === "horizontal") {
+        // For horizontal fade, randomize within columns (x-axis)
+        for (let x = 0; x < adjustedModelWidth; x++) {
+          // Check if this column has more than one color
+          const colorsInColumn = new Set<number>();
           for (let y = 0; y < adjustedModelHeight; y++) {
-            columnColors.push(colorMap[x][y]);
+            colorsInColumn.add(colorMap[x][y]);
           }
 
-          // Shuffle the colors within this column
-          const shuffledColumnColors = shuffleArray([...columnColors]);
+          // If column has more than one color, randomize the blocks in this column
+          if (colorsInColumn.size > 1) {
+            // Collect all colors in this column
+            const columnColors: number[] = [];
+            for (let y = 0; y < adjustedModelHeight; y++) {
+              columnColors.push(colorMap[x][y]);
+            }
 
-          // Apply the shuffled colors back to the column
-          for (let y = 0; y < adjustedModelHeight; y++) {
-            colorMap[x][y] = shuffledColumnColors[y];
+            // Shuffle the colors within this column
+            const shuffledColumnColors = shuffleArray([...columnColors]);
+
+            // Apply the shuffled colors back to the column
+            for (let y = 0; y < adjustedModelHeight; y++) {
+              colorMap[x][y] = shuffledColumnColors[y];
+            }
+          }
+        }
+      } else {
+        // For vertical fade, randomize within rows (y-axis)
+        for (let y = 0; y < adjustedModelHeight; y++) {
+          // Check if this row has more than one color
+          const colorsInRow = new Set<number>();
+          for (let x = 0; x < adjustedModelWidth; x++) {
+            colorsInRow.add(colorMap[x][y]);
+          }
+
+          // If row has more than one color, randomize the blocks in this row
+          if (colorsInRow.size > 1) {
+            // Collect all colors in this row
+            const rowColors: number[] = [];
+            for (let x = 0; x < adjustedModelWidth; x++) {
+              rowColors.push(colorMap[x][y]);
+            }
+
+            // Shuffle the colors within this row
+            const shuffledRowColors = shuffleArray([...rowColors]);
+
+            // Apply the shuffled colors back to the row
+            for (let x = 0; x < adjustedModelWidth; x++) {
+              colorMap[x][y] = shuffledRowColors[x];
+            }
           }
         }
       }
     }
   } else {
-    // For other patterns, distribute with respect to isReversed
+    // For other patterns (random), distribute with respect to isReversed and isRotated
+    // Determine effective orientation based on rotation
+    const effectiveOrientation = isRotated
+      ? orientation === "horizontal"
+        ? "vertical"
+        : "horizontal"
+      : orientation;
+
     let index = 0;
 
     if (isReversed) {
       // If reversed, we'll fill the array in reverse order
-      if (orientation === "horizontal") {
+      if (effectiveOrientation === "horizontal") {
         // Reverse the x direction
         for (let x = adjustedModelWidth - 1; x >= 0; x--) {
           for (let y = 0; y < adjustedModelHeight; y++) {
