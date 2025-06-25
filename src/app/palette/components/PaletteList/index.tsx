@@ -215,24 +215,33 @@ export function PaletteList() {
             const name = colorMatch[1].trim();
             const hex = `#${colorMatch[2].toUpperCase()}`;
 
-            // Add if not already in the array
-            if (!colors.some((color) => color.hex === hex)) {
-              colors.push({
-                hex,
-                name,
-              });
-            }
+            // Always add the color, even if there are duplicates
+            // This preserves the order and allows for duplicate names with different hex codes
+            colors.push({
+              hex,
+              name,
+            });
           }
         }
-        // If not in palette details yet, look for color hex codes in the "Used colors:" section
-        else if (trimmedLine.includes("#")) {
+      }
+
+      // If we found colors in palette details, return them
+      if (colors.length > 0) {
+        return colors;
+      }
+
+      // Fallback: If no palette details section found, try to parse "Used colors" section
+      const fallbackColors: { hex: string; name: string }[] = [];
+      for (const line of lines) {
+        const trimmedLine = line.trim();
+        if (trimmedLine.includes("#") && !trimmedLine.startsWith("—")) {
           const hexMatches = trimmedLine.match(/#([0-9A-F]{6})/gi);
           if (hexMatches) {
             for (const hex of hexMatches) {
               const formattedHex = hex.toUpperCase();
-              // Avoid duplicates
-              if (!colors.some((color) => color.hex === formattedHex)) {
-                colors.push({
+              // Avoid duplicates in fallback mode
+              if (!fallbackColors.some((color) => color.hex === formattedHex)) {
+                fallbackColors.push({
                   hex: formattedHex,
                   name: formattedHex,
                 });
@@ -242,7 +251,7 @@ export function PaletteList() {
         }
       }
 
-      return colors.length > 0 ? colors : null;
+      return fallbackColors.length > 0 ? fallbackColors : null;
     } catch (error) {
       console.error("Error parsing TryColors format:", error);
       return null;
