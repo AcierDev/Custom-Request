@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Edit, Trash2, Sparkles } from "lucide-react";
+import { Edit, Trash2, Sparkles, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -21,6 +21,7 @@ export function ColorSwatch({
   onSelect,
   onRemove,
   onEdit,
+  onDuplicate,
 }: ColorSwatchProps) {
   const [isHovering, setIsHovering] = useState(false);
 
@@ -106,6 +107,30 @@ export function ColorSwatch({
               </TooltipTrigger>
               <TooltipContent side="bottom">
                 <p>Generate harmonies from this color</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className={cn(
+                    "h-7 w-7 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30",
+                    textColorClass
+                  )}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDuplicate();
+                  }}
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p>Duplicate color</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

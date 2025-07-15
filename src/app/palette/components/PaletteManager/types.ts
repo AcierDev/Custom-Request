@@ -17,6 +17,7 @@ export interface ColorSwatchProps {
   onSelect: () => void;
   onRemove: () => void;
   onEdit: () => void;
+  onDuplicate: () => void;
 }
 
 // Add color button component props

@@ -162,6 +162,7 @@ interface CustomStore extends CustomState {
   updateCurrentColors: (design: ItemDesigns) => void;
   addCustomColor: (hex: string) => void;
   removeCustomColor: (index: number) => void;
+  duplicateCustomColor: (index: number) => void;
   toggleColorSelection: (hex: string) => void;
   clearSelectedColors: () => void;
   addBlendedColors: (count: number) => void;
@@ -527,6 +528,29 @@ export const useCustomStore = create<CustomStore>()(
             newPalette.length > 0
               ? createColorMap(newPalette)
               : DESIGN_COLORS[ItemDesigns.Custom],
+          selectedDesign: ItemDesigns.Custom,
+          paletteHistory: newHistory,
+          paletteHistoryIndex: newHistory.length - 1,
+        };
+      }),
+    duplicateCustomColor: (index) =>
+      set((state) => {
+        // Bounds checking
+        if (index < 0 || index >= state.customPalette.length) return state;
+
+        const newPalette = [...state.customPalette];
+        const newColor = { ...newPalette[index] };
+        newPalette.splice(index + 1, 0, newColor);
+
+        const newHistory = state.paletteHistory.slice(
+          0,
+          state.paletteHistoryIndex + 1
+        );
+        newHistory.push(newPalette);
+
+        return {
+          customPalette: newPalette,
+          currentColors: createColorMap(newPalette),
           selectedDesign: ItemDesigns.Custom,
           paletteHistory: newHistory,
           paletteHistoryIndex: newHistory.length - 1,

@@ -156,183 +156,145 @@ export function generateColorMap(
   // Total number of blocks
   const totalBlocks = adjustedModelWidth * adjustedModelHeight;
 
-  // Calculate how many blocks each color should get
-  const blocksPerColor = Math.floor(totalBlocks / colorEntries.length);
-  const extraBlocks = totalBlocks % colorEntries.length;
-
-  // Create an array with the right number of each color index
-  const allColorIndices: number[] = [];
-
-  for (let i = 0; i < colorEntries.length; i++) {
-    // Add the base number of blocks for this color
-    const blockCount = blocksPerColor + (i < extraBlocks ? 1 : 0);
-    for (let j = 0; j < blockCount; j++) {
-      allColorIndices.push(i);
-    }
-  }
-
-  // Shuffle the colors
-  const shuffledColors = shuffleArray([...allColorIndices]);
-
   // Create the 2D color map
   const colorMap: ColorMapRef = Array(adjustedModelWidth)
     .fill(0)
     .map(() => Array(adjustedModelHeight).fill(0));
 
-  // Distribute colors in a visually pleasing pattern
-  // For fade patterns, we want to maintain some spatial coherence
+  // Determine effective orientation based on rotation
+  const effectiveOrientation = isRotated
+    ? orientation === "horizontal"
+      ? "vertical"
+      : "horizontal"
+    : orientation;
+
   if (colorPattern === "fade" || colorPattern === "center-fade") {
-    // Sort the colors to maintain gradient-like appearance
-    shuffledColors.sort((a, b) => a - b);
-
-    // Determine effective orientation based on rotation
-    const effectiveOrientation = isRotated
-      ? orientation === "horizontal"
-        ? "vertical"
-        : "horizontal"
-      : orientation;
-
-    // Fill the color map based on position
+    // For fade patterns, create smooth transitions between colors
     for (let x = 0; x < adjustedModelWidth; x++) {
       for (let y = 0; y < adjustedModelHeight; y++) {
-        let colorIndex: number;
+        let progress: number;
 
         if (colorPattern === "center-fade") {
-          // Calculate progress from edge to center based on effective orientation
-          const progress =
+          // Calculate progress from edge to center
+          const rawProgress =
             effectiveOrientation === "horizontal"
               ? x / (adjustedModelWidth - 1)
               : y / (adjustedModelHeight - 1);
 
           // Transform progress to create center fade effect
-          const centerProgress =
-            progress <= 0.5
-              ? progress * 2 // First half: 0->1
-              : (1 - progress) * 2; // Second half: 1->0
-
-          // Apply reversal if needed
-          const adjustedProgress = isReversed
-            ? 1 - centerProgress
-            : centerProgress;
-
-          // Calculate the index in the color array
-          colorIndex = Math.floor(
-            adjustedProgress * (shuffledColors.length - 1)
-          );
+          progress =
+            rawProgress <= 0.5
+              ? rawProgress * 2 // First half: 0->1
+              : (1 - rawProgress) * 2; // Second half: 1->0
         } else {
           // Regular fade pattern
-          if (effectiveOrientation === "horizontal") {
-            // Fade horizontally: divide width into color zones
-            const progress = x / (adjustedModelWidth - 1);
-            const adjustedProgress = isReversed ? 1 - progress : progress;
-            colorIndex = Math.floor(
-              adjustedProgress * (shuffledColors.length - 1)
-            );
-          } else {
-            // Fade vertically: divide height into color zones
-            const progress = y / (adjustedModelHeight - 1);
-            const adjustedProgress = isReversed ? 1 - progress : progress;
-            colorIndex = Math.floor(
-              adjustedProgress * (shuffledColors.length - 1)
-            );
-          }
+          progress =
+            effectiveOrientation === "horizontal"
+              ? x / (adjustedModelWidth - 1)
+              : y / (adjustedModelHeight - 1);
         }
 
-        colorMap[x][y] = shuffledColors[colorIndex % shuffledColors.length];
+        // Apply reversal if needed
+        const adjustedProgress = isReversed ? 1 - progress : progress;
+
+        // Calculate the exact position in the color sequence
+        const exactColorPosition = adjustedProgress * (colorEntries.length - 1);
+        const baseColorIndex = Math.floor(exactColorPosition);
+        const nextColorIndex = Math.min(
+          baseColorIndex + 1,
+          colorEntries.length - 1
+        );
+        const blendRatio = exactColorPosition - baseColorIndex;
+
+        // Entire area is a blend zone - continuous mixing between adjacent colors
+        let chosenColorIndex: number;
+
+        // Add spatial variation for natural look
+        const spatialSeed = (x * 7 + y * 11) % 100;
+        const spatialNoise = (Math.sin(spatialSeed * 0.1) + 1) / 2; // 0 to 1
+
+        // Combine blend progress with spatial variation
+        const finalBlendFactor = blendRatio * 0.8 + spatialNoise * 0.2;
+
+        // Choose color based on blend factor - only adjacent colors
+        chosenColorIndex =
+          finalBlendFactor > 0.5 ? nextColorIndex : baseColorIndex;
+
+        // Ensure we don't exceed array bounds
+        colorMap[x][y] = Math.min(chosenColorIndex, colorEntries.length - 1);
+      }
+    }
+  } else if (colorPattern === "random") {
+    // For random pattern, distribute colors evenly but randomly
+    const blocksPerColor = Math.floor(totalBlocks / colorEntries.length);
+    const extraBlocks = totalBlocks % colorEntries.length;
+
+    // Create an array with the right number of each color index
+    const allColorIndices: number[] = [];
+    for (let i = 0; i < colorEntries.length; i++) {
+      const blockCount = blocksPerColor + (i < extraBlocks ? 1 : 0);
+      for (let j = 0; j < blockCount; j++) {
+        allColorIndices.push(i);
       }
     }
 
-    // Post-process: Randomize blocks within columns/rows that have more than one color
-    // Only do this for regular fade, not center-fade
-    if (colorPattern === "fade") {
-      if (effectiveOrientation === "horizontal") {
-        // For horizontal fade, randomize within columns (x-axis)
-        for (let x = 0; x < adjustedModelWidth; x++) {
-          // Check if this column has more than one color
-          const colorsInColumn = new Set<number>();
-          for (let y = 0; y < adjustedModelHeight; y++) {
-            colorsInColumn.add(colorMap[x][y]);
-          }
+    // Shuffle the colors
+    const shuffledColors = shuffleArray([...allColorIndices]);
 
-          // If column has more than one color, randomize the blocks in this column
-          if (colorsInColumn.size > 1) {
-            // Collect all colors in this column
-            const columnColors: number[] = [];
-            for (let y = 0; y < adjustedModelHeight; y++) {
-              columnColors.push(colorMap[x][y]);
-            }
-
-            // Shuffle the colors within this column
-            const shuffledColumnColors = shuffleArray([...columnColors]);
-
-            // Apply the shuffled colors back to the column
-            for (let y = 0; y < adjustedModelHeight; y++) {
-              colorMap[x][y] = shuffledColumnColors[y];
-            }
-          }
-        }
-      } else {
-        // For vertical fade, randomize within rows (y-axis)
-        for (let y = 0; y < adjustedModelHeight; y++) {
-          // Check if this row has more than one color
-          const colorsInRow = new Set<number>();
-          for (let x = 0; x < adjustedModelWidth; x++) {
-            colorsInRow.add(colorMap[x][y]);
-          }
-
-          // If row has more than one color, randomize the blocks in this row
-          if (colorsInRow.size > 1) {
-            // Collect all colors in this row
-            const rowColors: number[] = [];
-            for (let x = 0; x < adjustedModelWidth; x++) {
-              rowColors.push(colorMap[x][y]);
-            }
-
-            // Shuffle the colors within this row
-            const shuffledRowColors = shuffleArray([...rowColors]);
-
-            // Apply the shuffled colors back to the row
-            for (let x = 0; x < adjustedModelWidth; x++) {
-              colorMap[x][y] = shuffledRowColors[x];
-            }
-          }
-        }
+    // Distribute randomly
+    let index = 0;
+    for (let x = 0; x < adjustedModelWidth; x++) {
+      for (let y = 0; y < adjustedModelHeight; y++) {
+        colorMap[x][y] = shuffledColors[index++ % shuffledColors.length];
       }
     }
   } else {
-    // For other patterns (random), distribute with respect to isReversed and isRotated
-    // Determine effective orientation based on rotation
-    const effectiveOrientation = isRotated
-      ? orientation === "horizontal"
-        ? "vertical"
-        : "horizontal"
-      : orientation;
+    // For other patterns (striped, gradient, checkerboard), create more structured patterns
+    for (let x = 0; x < adjustedModelWidth; x++) {
+      for (let y = 0; y < adjustedModelHeight; y++) {
+        let colorIndex: number;
 
-    let index = 0;
+        switch (colorPattern) {
+          case "striped":
+            // Create stripes based on effective orientation
+            if (effectiveOrientation === "horizontal") {
+              colorIndex = x % colorEntries.length;
+            } else {
+              colorIndex = y % colorEntries.length;
+            }
+            break;
 
-    if (isReversed) {
-      // If reversed, we'll fill the array in reverse order
-      if (effectiveOrientation === "horizontal") {
-        // Reverse the x direction
-        for (let x = adjustedModelWidth - 1; x >= 0; x--) {
-          for (let y = 0; y < adjustedModelHeight; y++) {
-            colorMap[x][y] = shuffledColors[index++ % shuffledColors.length];
-          }
+          case "gradient":
+            // Similar to fade but with more defined transitions
+            const gradientProgress =
+              effectiveOrientation === "horizontal"
+                ? x / (adjustedModelWidth - 1)
+                : y / (adjustedModelHeight - 1);
+
+            const adjustedGradientProgress = isReversed
+              ? 1 - gradientProgress
+              : gradientProgress;
+            colorIndex = Math.floor(
+              adjustedGradientProgress * colorEntries.length
+            );
+            break;
+
+          case "checkerboard":
+            // Checkerboard pattern
+            colorIndex = (x + y) % colorEntries.length;
+            break;
+
+          default:
+            // Fallback to random
+            colorIndex = Math.floor(Math.random() * colorEntries.length);
         }
-      } else {
-        // Reverse the y direction
-        for (let x = 0; x < adjustedModelWidth; x++) {
-          for (let y = adjustedModelHeight - 1; y >= 0; y--) {
-            colorMap[x][y] = shuffledColors[index++ % shuffledColors.length];
-          }
+
+        // Apply reversal if needed
+        if (isReversed) {
+          colorIndex = colorEntries.length - 1 - colorIndex;
         }
-      }
-    } else {
-      // Normal order
-      for (let x = 0; x < adjustedModelWidth; x++) {
-        for (let y = 0; y < adjustedModelHeight; y++) {
-          colorMap[x][y] = shuffledColors[index++ % shuffledColors.length];
-        }
+
+        colorMap[x][y] = Math.min(colorIndex, colorEntries.length - 1);
       }
     }
   }

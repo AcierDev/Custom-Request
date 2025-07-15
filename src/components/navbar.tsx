@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import {
   Moon,
   Sun,
@@ -17,6 +17,7 @@ import {
   LogIn,
   Eye,
   Pencil,
+  Paintbrush,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
@@ -63,6 +64,12 @@ const mainNavItems: NavItem[] = [
   { href: "/design", icon: PencilRuler, label: "Design", hotkey: "3" },
   { href: "/draw-pattern", icon: Pencil, label: "Draw Pattern", hotkey: "6" },
   { href: "/palette", icon: Palette, label: "Palette", hotkey: "5" },
+  {
+    href: "/paint-selector",
+    icon: Paintbrush,
+    label: "Paint Colors",
+    hotkey: "7",
+  },
 ];
 
 interface NavbarProps {

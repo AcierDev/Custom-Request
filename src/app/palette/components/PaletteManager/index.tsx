@@ -48,6 +48,7 @@ export function PaletteManager() {
     selectedColors,
     addCustomColor,
     removeCustomColor,
+    duplicateCustomColor,
     toggleColorSelection,
     addBlendedColors,
     moveColorLeft,
@@ -179,6 +180,15 @@ export function PaletteManager() {
     setEditingColor(index);
     setEditColorHex(color.hex);
     setEditColorName(color.name || "");
+  };
+
+  const handleDuplicateColor = (index: number) => {
+    const color = customPalette[index];
+    duplicateCustomColor(index);
+    toast.success(`Duplicated color ${color.name || color.hex}`, {
+      duration: 2000,
+      position: "bottom-right",
+    });
   };
 
   const handleSaveEdit = () => {
@@ -465,6 +475,7 @@ export function PaletteManager() {
                 onSelect={() => toggleColorSelection(color.hex)}
                 onRemove={() => removeCustomColor(index)}
                 onEdit={() => handleEditColor(index)}
+                onDuplicate={() => handleDuplicateColor(index)}
                 showBlendHint={selectedColors.length === 1}
               />
             ))}
