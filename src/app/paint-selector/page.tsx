@@ -1163,6 +1163,49 @@ export default function PaintSelectorPage() {
                                 Δ{color.distance.toFixed(1)}
                               </div>
                             )}
+                            {/* Original color comparison */}
+                            <div className="absolute top-2 left-2 flex">
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="flex rounded overflow-hidden border-2 border-white/70 shadow-sm">
+                                      <div
+                                        className="w-6 h-6"
+                                        style={{
+                                          backgroundColor: similarToHex,
+                                        }}
+                                        title="Original color"
+                                      />
+                                      <div
+                                        className="w-6 h-6"
+                                        style={{ backgroundColor: color.hex }}
+                                        title="Similar color"
+                                      />
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <div className="text-xs">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <div
+                                          className="w-4 h-4 rounded border border-gray-300"
+                                          style={{
+                                            backgroundColor: similarToHex,
+                                          }}
+                                        />
+                                        <span>Original: {similarToHex}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <div
+                                          className="w-4 h-4 rounded border border-gray-300"
+                                          style={{ backgroundColor: color.hex }}
+                                        />
+                                        <span>Similar: {color.hex}</span>
+                                      </div>
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </div>
                           </div>
                         ))}
                       </div>
