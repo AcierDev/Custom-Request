@@ -34,6 +34,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { ImportCard } from "./ImportCard";
+import { useFolderCollapse } from "@/hooks/useFolderCollapse";
 
 interface FolderItemProps {
   folder: Folder;
@@ -59,15 +60,17 @@ const FolderItem = ({
   editingPaletteId,
   onMovePalette,
 }: FolderItemProps) => {
-  const [isOpen, setIsOpen] = useState(true);
   const [isEditingFolder, setIsEditingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState(folder.name);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
   const { updatePaletteFolder, deletePaletteFolder } = useCustomStore();
+  const { isFolderCollapsed, toggleFolder } = useFolderCollapse();
+
+  const isOpen = !isFolderCollapsed(folder.id);
 
   const handleToggle = () => {
-    setIsOpen(!isOpen);
+    toggleFolder(folder.id);
   };
 
   const handleRenameFolder = () => {
@@ -259,10 +262,12 @@ const UnorganizedPalettes = ({
   onImport,
   onIdImport,
 }: UnorganizedPalettesProps) => {
-  const [isOpen, setIsOpen] = useState(true);
+  const { isUncategorizedCollapsed, toggleUncategorized } = useFolderCollapse();
+
+  const isOpen = !isUncategorizedCollapsed;
 
   const handleToggle = () => {
-    setIsOpen(!isOpen);
+    toggleUncategorized();
   };
 
   return (
