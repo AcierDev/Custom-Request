@@ -55,6 +55,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { PatternEditor } from "./components/PatternEditor";
 
 export default function DesignPage() {
   const router = useRouter();
@@ -120,7 +121,10 @@ export default function DesignPage() {
   return (
     <div className="w-full h-screen relative">
       {/* Header controls */}
-      <div className="absolute top-4 left-4 z-50 flex items-center gap-4">
+      <div
+        className="absolute top-4 left-4 z-50 flex items-center gap-4"
+        style={{ marginLeft: showUIControls ? "336px" : "0px" }}
+      >
         <Button
           onClick={() => router.back()}
           variant="outline"
@@ -204,6 +208,13 @@ export default function DesignPage() {
 
       {/* Color info hint */}
       {showColorInfo && showUIControls && <ColorInfoHint />}
+
+      {/* Pattern Editor on the left */}
+      {showUIControls && (
+        <div className="absolute top-4 left-4 z-40 w-80">
+          <PatternEditor />
+        </div>
+      )}
 
       {/* Main canvas */}
       <div className="w-full h-full canvas-container">

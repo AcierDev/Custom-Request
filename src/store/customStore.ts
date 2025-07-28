@@ -145,6 +145,13 @@ interface CustomState {
   // New property to track which custom mode is active
   activeCustomMode: CustomMode;
 
+  // Pattern override functionality for individual block editing
+  patternOverride: Record<string, number>;
+  patternEditingMode: {
+    selectedColorIndex: number;
+    isErasing: boolean;
+  };
+
   paletteHistory: Array<Array<CustomColor>>;
   paletteHistoryIndex: number;
 }
@@ -222,6 +229,12 @@ interface CustomStore extends CustomState {
 
   // New action to set the active custom mode
   setActiveCustomMode: (mode: CustomMode) => void;
+  setPatternOverride: (overrides: Record<string, number>) => void;
+  clearPatternOverride: () => void;
+  setPatternEditingMode: (mode: {
+    selectedColorIndex: number;
+    isErasing: boolean;
+  }) => void;
 
   // Action for setting a directly drawn pattern
   setDrawnPattern: (
@@ -368,6 +381,11 @@ export const useCustomStore = create<CustomStore>()(
     paletteHistory: [],
     paletteHistoryIndex: -1,
     activeCustomMode: "palette",
+    patternOverride: {},
+    patternEditingMode: {
+      selectedColorIndex: 0,
+      isErasing: false,
+    },
     init: () => {
       if (typeof window !== "undefined") {
         const localState = localStorage.getItem("everwood-custom-design");
@@ -1688,6 +1706,13 @@ export const useCustomStore = create<CustomStore>()(
       return true;
     },
     setActiveCustomMode: (mode: CustomMode) => set({ activeCustomMode: mode }),
+    setPatternOverride: (overrides: Record<string, number>) =>
+      set({ patternOverride: overrides }),
+    clearPatternOverride: () => set({ patternOverride: {} }),
+    setPatternEditingMode: (mode: {
+      selectedColorIndex: number;
+      isErasing: boolean;
+    }) => set({ patternEditingMode: mode }),
   }))
 );
 

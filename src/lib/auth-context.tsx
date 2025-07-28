@@ -291,8 +291,8 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
       };
 
       // Log user data for debugging
-      console.log("Loading user data");
-      console.log("User:", googleUser);
+      // console.log("Loading user data");
+      // console.log("User:", googleUser);
 
       // Check if this is a new user by looking for previous login data
       const existingUserData = localStorage.getItem("everwood_user");
@@ -473,12 +473,12 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
 
   // Function to load user data from MongoDB
   const loadUserData = async (): Promise<any | null> => {
-    console.log("Loading user data");
-    console.log("User:", user);
+    // console.log("Loading user data");
+    // console.log("User:", user);
     if (!user) return null;
 
     try {
-      console.log("Fetching user data for user:", user.id);
+      // console.log("Fetching user data for user:", user.id);
       const response = await fetch(`/api/user-data?userId=${user.id}`);
 
       if (!response.ok) {

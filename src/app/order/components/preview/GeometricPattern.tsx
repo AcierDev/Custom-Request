@@ -45,6 +45,8 @@ export function GeometricPattern({
     drawnPatternGrid,
     drawnPatternGridSize,
     activeCustomMode,
+    patternOverride,
+    setPatternOverride,
   } = customStore;
 
   // Use values from customDesign when provided, otherwise use store values
@@ -280,13 +282,39 @@ export function GeometricPattern({
 
   const handleBlockClick = useCallback(
     (x: number, y: number, color: string, name?: string) => {
-      setPinnedInfo({
-        position: [x, y],
-        color,
-        colorName: name,
-      });
+      // Check if we're in pattern editing mode
+      const { patternEditingMode } = customStore;
+
+      if (
+        patternEditingMode &&
+        (patternEditingMode.selectedColorIndex !== undefined ||
+          patternEditingMode.isErasing)
+      ) {
+        // Handle pattern editing
+        const overrideKey = `${x}-${y}`;
+
+        if (patternEditingMode.isErasing) {
+          // Remove override to revert to base pattern
+          const newOverrides = { ...patternOverride };
+          delete newOverrides[overrideKey];
+          setPatternOverride(newOverrides);
+        } else {
+          // Set new color
+          setPatternOverride({
+            ...patternOverride,
+            [overrideKey]: patternEditingMode.selectedColorIndex,
+          });
+        }
+      } else {
+        // Handle normal pinning behavior
+        setPinnedInfo({
+          position: [x, y],
+          color,
+          colorName: name,
+        });
+      }
     },
-    [setPinnedInfo]
+    [customStore, patternOverride, setPatternOverride, setPinnedInfo]
   );
 
   // Optimize the block grid generation using useMemo
@@ -352,7 +380,14 @@ export function GeometricPattern({
           if (color === "#FFFFFF00") continue;
         } else {
           // Use the procedurally generated color (existing logic)
-          const colorIndex = getColorIndexDebug(x, y);
+          let colorIndex = getColorIndexDebug(x, y);
+
+          // Check for pattern override
+          const overrideKey = `${x}-${y}`;
+          if (patternOverride[overrideKey] !== undefined) {
+            colorIndex = patternOverride[overrideKey];
+          }
+
           const colorEntry = colorEntries[colorIndex];
           color = colorEntry?.[1].hex || "#8B5E3B"; // Default procedural color
           colorName = colorEntry?.[1].name;
