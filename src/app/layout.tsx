@@ -24,7 +24,7 @@ const geistMono = localFont({
 // Create a client component for the content
 function LayoutContent({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-screen bg-gray-300 dark:bg-gray-900/50">
+    <div className="flex h-screen bg-gray-300 dark:bg-gray-900">
       <SpeedInsights />
       <MobileWarning />
       <Navbar onOpenSettings={() => {}} />

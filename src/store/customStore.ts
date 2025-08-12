@@ -204,7 +204,17 @@ interface CustomStore extends CustomState {
   setCustomPalette: (palette: CustomColor[]) => void;
   generateShareableLink: () => string;
   generateShortShareableLink: () => string;
+  createSharedDesign: (
+    userId?: string,
+    email?: string
+  ) => Promise<{
+    success: boolean;
+    shareId?: string;
+    shareUrl?: string;
+    error?: string;
+  }>;
   loadFromShareableData: (data: string) => boolean;
+  loadFromDatabaseData: (designData: ShareableState) => boolean;
   saveToDatabase: () => Promise<boolean>;
   loadFromDatabase: () => Promise<boolean>;
   syncWithDatabase: (autoSave?: boolean) => (() => void) | void;
@@ -927,6 +937,54 @@ export const useCustomStore = create<CustomStore>()(
 
       return generateShortShareableUrl(shareableState);
     },
+    createSharedDesign: async (userId?: string, email?: string) => {
+      const state = get();
+
+      const shareableState: ShareableState = {
+        dimensions: state.dimensions,
+        selectedDesign: state.selectedDesign,
+        shippingSpeed: state.shippingSpeed,
+        colorPattern: state.colorPattern,
+        orientation: state.orientation,
+        isReversed: state.isReversed,
+        customPalette: state.customPalette,
+        isRotated: state.isRotated,
+        style: state.style,
+        useMini: state.useMini,
+        activeCustomMode: state.activeCustomMode,
+      };
+
+      try {
+        const response = await fetch("/api/shared-designs", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            designData: shareableState,
+            userId,
+            email,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to create shared design");
+        }
+
+        const result = await response.json();
+        return {
+          success: true,
+          shareId: result.shareId,
+          shareUrl: result.shareUrl,
+        };
+      } catch (error) {
+        console.error("Error creating shared design:", error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error",
+        };
+      }
+    },
     loadFromShareableData: (data: string) => {
       try {
         let shareableState: ShareableState;
@@ -971,6 +1029,41 @@ export const useCustomStore = create<CustomStore>()(
         return true;
       } catch (error) {
         console.error("Failed to load shared data:", error);
+        return false;
+      }
+    },
+    loadFromDatabaseData: (designData: ShareableState) => {
+      try {
+        if (!designData.dimensions || !designData.selectedDesign) {
+          return false;
+        }
+
+        set({
+          dimensions: designData.dimensions,
+          selectedDesign: designData.selectedDesign,
+          shippingSpeed: designData.shippingSpeed,
+          colorPattern: designData.colorPattern,
+          orientation: designData.orientation,
+          isReversed: designData.isReversed,
+          customPalette: designData.customPalette,
+          isRotated: designData.isRotated,
+          style: designData.style,
+          activeCustomMode: designData.activeCustomMode || "palette",
+          currentColors:
+            designData.selectedDesign === ItemDesigns.Custom &&
+            designData.customPalette.length > 0
+              ? createColorMap(designData.customPalette)
+              : DESIGN_COLORS[designData.selectedDesign as ItemDesigns] ||
+                get().currentColors,
+          pricing: calculatePrice(
+            designData.dimensions,
+            designData.shippingSpeed
+          ),
+        });
+
+        return true;
+      } catch (error) {
+        console.error("Failed to load database data:", error);
         return false;
       }
     },

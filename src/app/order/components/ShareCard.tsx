@@ -6,46 +6,48 @@ import { useCustomStore } from "@/store/customStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Share2, Copy, Check, Link, Loader2, LinkIcon } from "lucide-react";
+import { Share2, Copy, Check, Link, Loader2, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
 export function ShareCard() {
-  const generateShareableLink = useCustomStore(
-    (state) => state.generateShareableLink
-  );
-  const generateShortShareableLink = useCustomStore(
-    (state) => state.generateShortShareableLink
+  const createSharedDesign = useCustomStore(
+    (state) => state.createSharedDesign
   );
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [shareableLink, setShareableLink] = useState("");
   const [copied, setCopied] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [useShortLink, setUseShortLink] = useState(true);
+  const [shareId, setShareId] = useState("");
+  const builderOrigin = "https://custom.everwood.shop";
+  const viewerOrigin = "https://viewer.everwoodus.com";
+  const builderLink = shareId ? `${builderOrigin}/shared/${shareId}` : "";
+  const viewerLink = shareId ? `${viewerOrigin}/?shareId=${shareId}` : "";
 
   const handleGenerateLink = async () => {
     setIsGenerating(true);
 
     try {
-      // Wrap in setTimeout to allow UI to update with loading state
-      setTimeout(() => {
-        const link = useShortLink
-          ? generateShortShareableLink()
-          : generateShareableLink();
-        setShareableLink(link);
+      const result = await createSharedDesign();
+
+      if (result.success && result.shareUrl) {
+        setShareableLink(result.shareUrl);
+        setShareId(result.shareId || "");
         setShowShareDialog(true);
-        setIsGenerating(false);
-      }, 100);
+      } else {
+        toast.error(result.error || "Failed to create shared design");
+      }
     } catch (error) {
       console.error("Error generating link:", error);
       toast.error("Failed to generate shareable link");
+    } finally {
       setIsGenerating(false);
     }
   };
 
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(shareableLink);
+  const handleCopyLink = (url: string) => {
+    navigator.clipboard.writeText(url);
     setCopied(true);
     toast.success("Link copied to clipboard!");
 
@@ -101,48 +103,106 @@ export function ShareCard() {
 
               <div className="space-y-4">
                 <p className="text-gray-600 dark:text-gray-400">
-                  Copy this link to share your current design with others.
-                  They'll see exactly what you've created!
+                  Copy this link to share your current design with others. The
+                  design will be saved to our database and accessible via this
+                  unique link.
                 </p>
 
-                <div className="flex items-center space-x-2 mb-2">
-                  <Switch
-                    id="use-short-link"
-                    checked={useShortLink}
-                    onCheckedChange={(checked) => {
-                      setUseShortLink(checked);
-                      // Regenerate the link with the new setting
-                      const link = checked
-                        ? generateShortShareableLink()
-                        : generateShareableLink();
-                      setShareableLink(link);
-                    }}
-                  />
-                  <Label htmlFor="use-short-link" className="text-sm">
-                    Use shorter link format
-                  </Label>
-                </div>
+                {shareId && (
+                  <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-2 rounded">
+                    Share ID: {shareId}
+                  </div>
+                )}
 
                 <div className="flex items-center gap-2">
-                  <Input
-                    value={shareableLink}
-                    readOnly
-                    className="flex-1 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-sm"
-                  />
-                  <Button
-                    onClick={handleCopyLink}
-                    className={`${
-                      copied
-                        ? "bg-green-600 hover:bg-green-700"
-                        : "bg-blue-600 hover:bg-blue-700"
-                    } text-white`}
-                  >
-                    {copied ? (
-                      <Check className="h-4 w-4" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
-                  </Button>
+                  <div className="w-full space-y-3">
+                    {/* Builder row */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-3"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                            Builder
+                          </div>
+                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100 break-all">
+                            {builderLink}
+                          </div>
+                        </div>
+                        <div className="flex shrink-0 gap-2">
+                          <Button
+                            onClick={() =>
+                              window.open(builderLink, "_blank", "noopener")
+                            }
+                            className="gap-2"
+                          >
+                            <ExternalLink className="h-4 w-4" /> Open
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => handleCopyLink(builderLink)}
+                            className={
+                              copied
+                                ? "bg-green-600 hover:bg-green-700 text-white"
+                                : ""
+                            }
+                          >
+                            {copied ? (
+                              <Check className="h-4 w-4" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </motion.div>
+
+                    {/* Viewer row */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.05 }}
+                      className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-3"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                            Viewer
+                          </div>
+                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100 break-all">
+                            {viewerLink}
+                          </div>
+                        </div>
+                        <div className="flex shrink-0 gap-2">
+                          <Button
+                            onClick={() =>
+                              window.open(viewerLink, "_blank", "noopener")
+                            }
+                            className="gap-2"
+                          >
+                            <ExternalLink className="h-4 w-4" /> Open
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => handleCopyLink(viewerLink)}
+                            className={
+                              copied
+                                ? "bg-green-600 hover:bg-green-700 text-white"
+                                : ""
+                            }
+                          >
+                            {copied ? (
+                              <Check className="h-4 w-4" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  </div>
                 </div>
 
                 <div className="flex justify-end gap-3 mt-6">

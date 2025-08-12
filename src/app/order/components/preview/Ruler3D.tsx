@@ -12,17 +12,27 @@ export function Ruler3D({ width, height }: Ruler3DProps) {
   const rulerWidth = 0.05;
   const inchesPerUnit = 12;
 
+  // Guard against invalid inputs to prevent runtime errors
+  const validWidth = Number.isFinite(width) && width > 0 ? width : 1;
+  const validHeight = Number.isFinite(height) && height > 0 ? height : 1;
+
   // Calculate the actual dimensions in inches
-  const actualWidthInches = width * 6;
-  const actualHeightInches = height * 6;
+  const actualWidthInches = validWidth * 6;
+  const actualHeightInches = validHeight * 6;
 
   // Calculate dynamic offsets based on dimensions
-  const horizontalOffset = width / 2; // Center the horizontal measurements
-  const verticalOffset = height / 2; // Center the vertical measurements
+  const horizontalOffset = validWidth / 2; // Center the horizontal measurements
+  const verticalOffset = validHeight / 2; // Center the vertical measurements
 
   // Calculate how many full 12" increments fit
-  const fullWidthIncrements = Math.floor(actualWidthInches / inchesPerUnit);
-  const fullHeightIncrements = Math.floor(actualHeightInches / inchesPerUnit);
+  const fullWidthIncrements = Math.max(
+    0,
+    Math.floor(actualWidthInches / inchesPerUnit)
+  );
+  const fullHeightIncrements = Math.max(
+    0,
+    Math.floor(actualHeightInches / inchesPerUnit)
+  );
 
   // Create measurement arrays including the final actual measurement if it doesn't fall on a 12" increment
   const horizontalMeasurements = [...Array(fullWidthIncrements + 1).keys()]
@@ -42,9 +52,9 @@ export function Ruler3D({ width, height }: Ruler3DProps) {
   return (
     <group position={[-0.25, -2.25, 0]}>
       {/* Horizontal ruler */}
-      <group position={[0, height * 0.5 + 2.5 + rulerWidth, 0]}>
+      <group position={[0, validHeight * 0.5 + 2.5 + rulerWidth, 0]}>
         <mesh>
-          <boxGeometry args={[width, rulerWidth, rulerThickness]} />
+          <boxGeometry args={[validWidth, rulerWidth, rulerThickness]} />
           <meshStandardMaterial color="#9333EA" transparent opacity={0.5} />
         </mesh>
 
@@ -62,9 +72,9 @@ export function Ruler3D({ width, height }: Ruler3DProps) {
       </group>
 
       {/* Vertical ruler */}
-      <group position={[-width * 0.5 - 0.6 + rulerWidth, 2, 0]}>
+      <group position={[-validWidth * 0.5 - 0.6 + rulerWidth, 2, 0]}>
         <mesh>
-          <boxGeometry args={[rulerWidth, height, rulerThickness]} />
+          <boxGeometry args={[rulerWidth, validHeight, rulerThickness]} />
           <meshStandardMaterial color="#9333EA" transparent opacity={0.5} />
         </mesh>
 
@@ -73,7 +83,7 @@ export function Ruler3D({ width, height }: Ruler3DProps) {
             key={`v-text-${i}`}
             position={[
               -rulerWidth,
-              height - measurement / 6 - verticalOffset,
+              validHeight - measurement / 6 - verticalOffset,
               0,
             ]}
             center

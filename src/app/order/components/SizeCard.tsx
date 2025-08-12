@@ -4,7 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { ItemSizes } from "@/typings/types";
 import { SIZE_STRING } from "@/typings/constants";
-import { cn, sizeToDimensions } from "@/lib/utils";
+import { sizeToDimensions } from "@/lib/utils";
 import { useCustomStore } from "@/store/customStore";
 import {
   Select,
@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Ruler } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const sizeOptions = [...Object.values(ItemSizes), "custom"];
