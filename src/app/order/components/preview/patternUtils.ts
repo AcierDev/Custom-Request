@@ -170,7 +170,7 @@ export function generateColorMap(
 
   console.log(colorPattern);
 
-  if (colorPattern === "fade" || colorPattern === "center-fade") {
+  if (colorPattern === "fade") {
     // For fade patterns, use the new column-based distribution approach
     const totalBlocks = adjustedModelWidth * adjustedModelHeight;
 
@@ -191,19 +191,456 @@ export function generateColorMap(
     // The array is already in order: [0,0,0,...,1,1,1,...,2,2,2,...]
     const sequentialColors = [...allColorIndices];
 
-    // Determine the progression direction based on orientation and pattern type
-    let progressDirection: "horizontal" | "vertical";
-    let isCenterFade = false;
-
-    if (colorPattern === "center-fade") {
-      isCenterFade = true;
-      progressDirection = effectiveOrientation;
-    } else {
-      progressDirection = effectiveOrientation;
-    }
+    // Determine the progression direction based on orientation
+    const progressDirection = effectiveOrientation;
 
     // Apply reversal if needed
     const shouldReverse = isReversed;
+
+    // Fill the grid based on rotation mode
+    let colorIndex = 0;
+
+    if (isRotated) {
+      // For rotated mode, always fill row by row regardless of original orientation
+      const rowOrder = shouldReverse
+        ? Array.from(
+            { length: adjustedModelHeight },
+            (_, i) => adjustedModelHeight - 1 - i
+          )
+        : Array.from({ length: adjustedModelHeight }, (_, i) => i);
+
+      for (const y of rowOrder) {
+        // Fill this row with the next available colors
+        const rowPositions = Array.from(
+          { length: adjustedModelWidth },
+          (_, i) => i
+        );
+
+        for (let x = 0; x < adjustedModelWidth; x++) {
+          if (colorIndex < sequentialColors.length) {
+            colorMap[x][y] = sequentialColors[colorIndex++];
+          } else {
+            // Fallback if we run out of colors
+            colorMap[x][y] = sequentialColors[sequentialColors.length - 1];
+          }
+        }
+
+        // If this row has a color transition, randomize the positions within the row
+        if (colorIndex > 0 && colorIndex < sequentialColors.length) {
+          // Find where the color transition happened in this row
+          let transitionX = -1;
+          for (let x = 0; x < adjustedModelWidth; x++) {
+            if (colorMap[x][y] !== colorMap[0][y]) {
+              transitionX = x;
+              break;
+            }
+          }
+
+          if (transitionX !== -1) {
+            // Randomize ALL positions in the row
+            const shuffledPositions = shuffleArray([...rowPositions]);
+
+            // Reassign the colors to the shuffled positions
+            for (let i = 0; i < rowPositions.length; i++) {
+              const originalX = rowPositions[i];
+              const newX = shuffledPositions[i];
+              const tempColor = colorMap[originalX][y];
+              colorMap[originalX][y] = colorMap[newX][y];
+              colorMap[newX][y] = tempColor;
+            }
+          }
+        }
+      }
+
+      // For rotated mode, check for adjacent rows with different single colors and blend them
+      for (let y = 0; y < adjustedModelHeight - 1; y++) {
+        const currentRow = [];
+        const nextRow = [];
+
+        // Extract the current and next rows
+        for (let x = 0; x < adjustedModelWidth; x++) {
+          currentRow.push(colorMap[x][y]);
+          nextRow.push(colorMap[x][y + 1]);
+        }
+
+        // Check if both rows are single color
+        const currentColor = currentRow[0];
+        const nextColor = nextRow[0];
+
+        let currentRowSingleColor = true;
+        let nextRowSingleColor = true;
+
+        // Check if current row is all the same color
+        for (let x = 0; x < adjustedModelWidth; x++) {
+          if (currentRow[x] !== currentColor) {
+            currentRowSingleColor = false;
+            break;
+          }
+        }
+
+        // Check if next row is all the same color
+        for (let x = 0; x < adjustedModelWidth; x++) {
+          if (nextRow[x] !== nextColor) {
+            nextRowSingleColor = false;
+            break;
+          }
+        }
+
+        // If both rows are single color and different, blend them
+        if (
+          currentRowSingleColor &&
+          nextRowSingleColor &&
+          currentColor !== nextColor
+        ) {
+          const blocksToSwap = Math.floor(adjustedModelWidth * 0.25); // 25% of blocks
+
+          // Choose random positions from the first row
+          const allPositions = Array.from(
+            { length: adjustedModelWidth },
+            (_, i) => i
+          );
+          // Use a different seed for each row pair to ensure true randomization
+          const shuffledPositions = shuffleArray(
+            [...allPositions],
+            Math.random() * 10000 + y
+          );
+          const positionsFromFirstRow = shuffledPositions.slice(
+            0,
+            blocksToSwap
+          );
+
+          // Choose random positions from the second row (excluding the ones from first row)
+          const remainingPositions = shuffledPositions.slice(blocksToSwap);
+          const positionsFromSecondRow = remainingPositions.slice(
+            0,
+            blocksToSwap
+          );
+
+          // Swap the blocks
+          for (let i = 0; i < blocksToSwap; i++) {
+            const firstX = positionsFromFirstRow[i];
+            const secondX = positionsFromSecondRow[i];
+
+            // Swap the colors
+            const tempColor = colorMap[firstX][y];
+            colorMap[firstX][y] = colorMap[secondX][y + 1];
+            colorMap[secondX][y + 1] = tempColor;
+          }
+        }
+      }
+    } else if (progressDirection === "horizontal") {
+      // Fill columns from left to right (or right to left if reversed)
+      const columnOrder = shouldReverse
+        ? Array.from(
+            { length: adjustedModelWidth },
+            (_, i) => adjustedModelWidth - 1 - i
+          )
+        : Array.from({ length: adjustedModelWidth }, (_, i) => i);
+
+      for (const x of columnOrder) {
+        // Fill this column with the next available colors
+        const columnPositions = Array.from(
+          { length: adjustedModelHeight },
+          (_, i) => i
+        );
+
+        for (let y = 0; y < adjustedModelHeight; y++) {
+          if (colorIndex < sequentialColors.length) {
+            colorMap[x][y] = sequentialColors[colorIndex++];
+          } else {
+            // Fallback if we run out of colors
+            colorMap[x][y] = sequentialColors[sequentialColors.length - 1];
+          }
+        }
+
+        // If this column has a color transition, randomize the positions within the column
+        if (colorIndex > 0 && colorIndex < sequentialColors.length) {
+          // Find where the color transition happened in this column
+          let transitionY = -1;
+          for (let y = 0; y < adjustedModelHeight; y++) {
+            if (colorMap[x][y] !== colorMap[x][0]) {
+              transitionY = y;
+              break;
+            }
+          }
+
+          if (transitionY !== -1) {
+            // Randomize ALL positions in the column
+            const shuffledPositions = shuffleArray([...columnPositions]);
+
+            // Reassign the colors to the shuffled positions
+            for (let i = 0; i < columnPositions.length; i++) {
+              const originalY = columnPositions[i];
+              const newY = shuffledPositions[i];
+              const tempColor = colorMap[x][originalY];
+              colorMap[x][originalY] = colorMap[x][newY];
+              colorMap[x][newY] = tempColor;
+            }
+          }
+        }
+      }
+    } else {
+      // Fill rows from top to bottom (or bottom to top if reversed)
+      const rowOrder = shouldReverse
+        ? Array.from(
+            { length: adjustedModelHeight },
+            (_, i) => adjustedModelHeight - 1 - i
+          )
+        : Array.from({ length: adjustedModelHeight }, (_, i) => i);
+
+      for (const y of rowOrder) {
+        // Fill this row with the next available colors
+        const rowPositions = Array.from(
+          { length: adjustedModelWidth },
+          (_, i) => i
+        );
+
+        for (let x = 0; x < adjustedModelWidth; x++) {
+          if (colorIndex < sequentialColors.length) {
+            colorMap[x][y] = sequentialColors[colorIndex++];
+          } else {
+            // Fallback if we run out of colors
+            colorMap[x][y] = sequentialColors[sequentialColors.length - 1];
+          }
+        }
+
+        // If this row has a color transition, randomize the positions within the row
+        if (colorIndex > 0 && colorIndex < sequentialColors.length) {
+          // Find where the color transition happened in this row
+          let transitionX = -1;
+          for (let x = 0; x < adjustedModelWidth; x++) {
+            if (colorMap[x][y] !== colorMap[0][y]) {
+              transitionX = x;
+              break;
+            }
+          }
+
+          if (transitionX !== -1) {
+            // Randomize ALL positions in the row
+            const shuffledPositions = shuffleArray([...rowPositions]);
+
+            // Reassign the colors to the shuffled positions
+            for (let i = 0; i < rowPositions.length; i++) {
+              const originalX = rowPositions[i];
+              const newX = shuffledPositions[i];
+              const tempColor = colorMap[originalX][y];
+              colorMap[originalX][y] = colorMap[newX][y];
+              colorMap[newX][y] = tempColor;
+            }
+          }
+        }
+      }
+    }
+
+    // After distributing all colors, check for adjacent columns with different single colors
+    // and blend them by swapping 25% of blocks
+    // Skip blending for rotated mode as requested
+    if (!isRotated && effectiveOrientation === "horizontal") {
+      for (let x = 0; x < adjustedModelWidth - 1; x++) {
+        const currentColumn = colorMap[x];
+        const nextColumn = colorMap[x + 1];
+
+        // Check if both columns are single color
+        const currentColor = currentColumn[0];
+        const nextColor = nextColumn[0];
+
+        let currentColumnSingleColor = true;
+        let nextColumnSingleColor = true;
+
+        // Check if current column is all the same color
+        for (let y = 0; y < adjustedModelHeight; y++) {
+          if (currentColumn[y] !== currentColor) {
+            currentColumnSingleColor = false;
+            break;
+          }
+        }
+
+        // Check if next column is all the same color
+        for (let y = 0; y < adjustedModelHeight; y++) {
+          if (nextColumn[y] !== nextColor) {
+            nextColumnSingleColor = false;
+            break;
+          }
+        }
+
+        // If both columns are single color and different, blend them
+        if (
+          currentColumnSingleColor &&
+          nextColumnSingleColor &&
+          currentColor !== nextColor
+        ) {
+          const blocksToSwap = Math.floor(adjustedModelHeight * 0.25); // 25% of blocks
+
+          // Choose random positions from the first column
+          const allPositions = Array.from(
+            { length: adjustedModelHeight },
+            (_, i) => i
+          );
+          // Use a different seed for each column pair to ensure true randomization
+          const shuffledPositions = shuffleArray(
+            [...allPositions],
+            Math.random() * 10000 + x
+          );
+          const positionsFromFirstColumn = shuffledPositions.slice(
+            0,
+            blocksToSwap
+          );
+
+          // Choose random positions from the second column (excluding the ones from first column)
+          const remainingPositions = shuffledPositions.slice(blocksToSwap);
+          const positionsFromSecondColumn = remainingPositions.slice(
+            0,
+            blocksToSwap
+          );
+
+          // Swap the blocks
+          for (let i = 0; i < blocksToSwap; i++) {
+            const firstY = positionsFromFirstColumn[i];
+            const secondY = positionsFromSecondColumn[i];
+
+            // Swap the colors
+            const tempColor = colorMap[x][firstY];
+            colorMap[x][firstY] = colorMap[x + 1][secondY];
+            colorMap[x + 1][secondY] = tempColor;
+          }
+        }
+      }
+    } else if (!isRotated) {
+      // For vertical orientation, check rows instead of columns (skip blending for rotated mode)
+      for (let y = 0; y < adjustedModelHeight - 1; y++) {
+        const currentRow = [];
+        const nextRow = [];
+
+        // Extract the current and next rows
+        for (let x = 0; x < adjustedModelWidth; x++) {
+          currentRow.push(colorMap[x][y]);
+          nextRow.push(colorMap[x][y + 1]);
+        }
+
+        // Check if both rows are single color
+        const currentColor = currentRow[0];
+        const nextColor = nextRow[0];
+
+        let currentRowSingleColor = true;
+        let nextRowSingleColor = true;
+
+        // Check if current row is all the same color
+        for (let x = 0; x < adjustedModelWidth; x++) {
+          if (currentRow[x] !== currentColor) {
+            currentRowSingleColor = false;
+            break;
+          }
+        }
+
+        // Check if next row is all the same color
+        for (let x = 0; x < adjustedModelWidth; x++) {
+          if (nextRow[x] !== nextColor) {
+            nextRowSingleColor = false;
+            break;
+          }
+        }
+
+        // If both rows are single color and different, blend them
+        if (
+          currentRowSingleColor &&
+          nextRowSingleColor &&
+          currentColor !== nextColor
+        ) {
+          const blocksToSwap = Math.floor(adjustedModelWidth * 0.25); // 25% of blocks
+
+          // Choose random positions from the first row
+          const allPositions = Array.from(
+            { length: adjustedModelWidth },
+            (_, i) => i
+          );
+          // Use a different seed for each row pair to ensure true randomization
+          const shuffledPositions = shuffleArray(
+            [...allPositions],
+            Math.random() * 10000 + y
+          );
+          const positionsFromFirstRow = shuffledPositions.slice(
+            0,
+            blocksToSwap
+          );
+
+          // Choose random positions from the second row (excluding the ones from first row)
+          const remainingPositions = shuffledPositions.slice(blocksToSwap);
+          const positionsFromSecondRow = remainingPositions.slice(
+            0,
+            blocksToSwap
+          );
+
+          // Swap the blocks
+          for (let i = 0; i < blocksToSwap; i++) {
+            const firstX = positionsFromFirstRow[i];
+            const secondX = positionsFromSecondRow[i];
+
+            // Swap the colors
+            const tempColor = colorMap[firstX][y];
+            colorMap[firstX][y] = colorMap[secondX][y + 1];
+            colorMap[secondX][y + 1] = tempColor;
+          }
+        }
+      }
+    }
+  } else if (colorPattern === "center-fade") {
+    // For center-fade patterns, create a mirrored color array
+    const totalBlocks = adjustedModelWidth * adjustedModelHeight;
+
+    // Create the mirrored color array based on reversal
+    const mirroredColorIndices: number[] = [];
+
+    if (isReversed) {
+      // Reversed: start with the last color and mirror back
+      // For [red, green, blue] -> [blue, green, red, green, blue]
+
+      // Add colors from end to start
+      for (let i = colorEntries.length - 1; i >= 0; i--) {
+        mirroredColorIndices.push(i);
+      }
+
+      // Add colors from start+1 back to end (mirroring)
+      for (let i = 1; i < colorEntries.length; i++) {
+        mirroredColorIndices.push(i);
+      }
+    } else {
+      // Normal: start with the first color and mirror back
+      // For [red, green, blue] -> [red, green, blue, green, red]
+
+      // Add colors from start to end
+      for (let i = 0; i < colorEntries.length; i++) {
+        mirroredColorIndices.push(i);
+      }
+
+      // Add colors from end-1 back to start (mirroring)
+      for (let i = colorEntries.length - 2; i >= 0; i--) {
+        mirroredColorIndices.push(i);
+      }
+    }
+
+    // Calculate how many blocks each color should get
+    const totalColors = mirroredColorIndices.length;
+    const blocksPerColor = Math.floor(totalBlocks / totalColors);
+    const extraBlocks = totalBlocks % totalColors;
+
+    // Create an array with the exact number of blocks for each color
+    const allColorIndices: number[] = [];
+    for (let i = 0; i < totalColors; i++) {
+      const blockCount = blocksPerColor + (i < extraBlocks ? 1 : 0);
+      for (let j = 0; j < blockCount; j++) {
+        allColorIndices.push(mirroredColorIndices[i]);
+      }
+    }
+
+    // For center-fade, we want sequential progression through the mirrored array
+    const sequentialColors = [...allColorIndices];
+
+    // Determine the progression direction based on orientation
+    const progressDirection = effectiveOrientation;
+
+    // For center-fade, reversal is already handled above by reversing the mirrored array
+    // so we don't need to apply additional reversal logic
+    const shouldReverse = false;
 
     // Fill the grid based on rotation mode
     let colorIndex = 0;
