@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Edit,
@@ -16,6 +16,7 @@ import {
   MessageSquare,
   Twitter,
   Facebook,
+  Copy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -52,8 +53,17 @@ export const PaletteCard = ({
   const [copyTrycolors, setCopyTrycolors] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [copiedColorIndex, setCopiedColorIndex] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<"export" | "share">("export");
-  const { togglePalettePublic } = useCustomStore();
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editingName, setEditingName] = useState(palette.name);
+  const { togglePalettePublic, updatePalette } = useCustomStore();
+
+  // Reset editing state when palette changes
+  useEffect(() => {
+    setEditingName(palette.name);
+    setIsEditingName(false);
+  }, [palette.id, palette.name]);
 
   const handleExportPalette = () => {
     setShowExportDialog(true);
@@ -125,6 +135,45 @@ export const PaletteCard = ({
   const handleTogglePublic = () => {
     togglePalettePublic(palette.id);
     toast.success(`Palette is now ${palette.isPublic ? "private" : "public"}`);
+  };
+
+  const handleCopyColor = (
+    hex: string,
+    index: number,
+    event: React.MouseEvent
+  ) => {
+    event.stopPropagation();
+    event.preventDefault();
+    navigator.clipboard.writeText(hex);
+    setCopiedColorIndex(index);
+    toast.success(`Copied ${hex} to clipboard`);
+    setTimeout(() => setCopiedColorIndex(null), 1500);
+  };
+
+  const handleNameEdit = () => {
+    setIsEditingName(true);
+    setEditingName(palette.name);
+  };
+
+  const handleNameSave = () => {
+    if (editingName.trim() && editingName.trim() !== palette.name) {
+      updatePalette(palette.id, { name: editingName.trim() });
+      toast.success("Palette name updated");
+    }
+    setIsEditingName(false);
+  };
+
+  const handleNameCancel = () => {
+    setEditingName(palette.name);
+    setIsEditingName(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleNameSave();
+    } else if (e.key === "Escape") {
+      handleNameCancel();
+    }
   };
 
   // Generate sharing links
@@ -200,7 +249,29 @@ export const PaletteCard = ({
         <CardHeader className="p-4 pb-2">
           <div className="flex justify-between items-start">
             <CardTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-              {palette.name}
+              {isEditingName ? (
+                <div className="flex items-center gap-2 flex-1">
+                  <input
+                    type="text"
+                    value={editingName}
+                    onChange={(e) => setEditingName(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    onBlur={handleNameSave}
+                    className="flex-1 bg-transparent border-b border-purple-400 focus:outline-none focus:border-purple-600 text-lg font-semibold text-gray-900 dark:text-gray-100"
+                    autoFocus
+                    maxLength={50}
+                  />
+                </div>
+              ) : (
+                <div
+                  className="flex items-center cursor-pointer hover:text-purple-600 dark:hover:text-purple-400 transition-colors group"
+                  onClick={handleNameEdit}
+                  title="Click to edit name"
+                >
+                  {palette.name}
+                  <Edit className="h-3 w-3 ml-1 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+              )}
               {isEditing && (
                 <span className="ml-2 text-xs font-normal text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/30 px-2 py-0.5 rounded-full">
                   Editing
@@ -225,15 +296,38 @@ export const PaletteCard = ({
               >
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div
-                      className="w-full aspect-square rounded-md cursor-pointer border border-gray-200 dark:border-gray-800"
+                    <motion.div
+                      className="w-full aspect-square rounded-md cursor-pointer border border-gray-200 dark:border-gray-800 relative group"
                       style={{ backgroundColor: color.hex }}
-                    />
+                      whileHover={{ scale: 0.9 }}
+                      transition={{ duration: 0.15 }}
+                      onClick={(e) => handleCopyColor(color.hex, index, e)}
+                    >
+                      {/* Copy icon overlay */}
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-black/20 rounded-md">
+                        <Copy className="h-3 w-3 text-white drop-shadow-sm" />
+                      </div>
+
+                      {/* Copied feedback */}
+                      {copiedColorIndex === index && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.8 }}
+                          className="absolute inset-0 flex items-center justify-center bg-green-500/80 text-white text-xs font-medium rounded-md"
+                        >
+                          ✓
+                        </motion.div>
+                      )}
+                    </motion.div>
                   </TooltipTrigger>
                   <TooltipContent side="bottom" className="text-xs">
                     <p>{color.name || color.hex}</p>
                     <p className="text-gray-500 dark:text-gray-400">
                       {color.hex}
+                    </p>
+                    <p className="text-xs text-blue-500 dark:text-blue-400 mt-1">
+                      Click to copy
                     </p>
                   </TooltipContent>
                 </Tooltip>

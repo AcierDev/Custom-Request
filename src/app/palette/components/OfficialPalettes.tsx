@@ -11,11 +11,10 @@ import {
   Search,
   Palette,
   Edit,
-  SlidersHorizontal,
-  Check,
   Copy,
   Eye,
   ShoppingCart,
+  Download,
 } from "lucide-react";
 import {
   Card,
@@ -41,7 +40,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { usePaletteLoadConfirm } from "@/hooks/usePaletteLoadConfirm";
@@ -107,6 +106,67 @@ const OfficialPaletteCard = ({
 }) => {
   const colors = Object.values(DESIGN_COLORS[design]);
   const [isCustomizeDialogOpen, setIsCustomizeDialogOpen] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [copyTrycolors, setCopyTrycolors] = useState(false);
+
+  const handleCopyToClipboard = () => {
+    const exportData = JSON.stringify(
+      colors.map((color) => ({
+        hex: color.hex,
+        name: color.name || "",
+      })),
+      null,
+      2
+    );
+    navigator.clipboard.writeText(exportData);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleCopyTrycolorsFormat = () => {
+    // Create Trycolors CSV format: #RRGGBB, Name
+    const trycolorsData = colors
+      .map((color) => `${color.hex}, ${color.name || color.hex}`)
+      .join("\n");
+
+    navigator.clipboard.writeText(trycolorsData);
+    setCopyTrycolors(true);
+    setTimeout(() => setCopyTrycolors(false), 2000);
+  };
+
+  const handleDownloadPalette = () => {
+    const exportData = JSON.stringify(
+      {
+        version: "1.0.0",
+        format: "palette",
+        name: design,
+        type: "official",
+        created: new Date().toISOString(),
+        colors: colors.map((color) => ({
+          hex: color.hex,
+          name: color.name || "",
+        })),
+      },
+      null,
+      2
+    );
+    // Create a Blob and download link
+    const blob = new Blob([exportData], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${design
+      .replace(/\s+/g, "-")
+      .toLowerCase()}-official.palette`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    setShowExportDialog(false);
+    toast.success("Official palette downloaded successfully!");
+  };
 
   return (
     <motion.div
@@ -197,58 +257,176 @@ const OfficialPaletteCard = ({
         </CardContent>
 
         <CardFooter className="p-3 flex justify-between border-t border-gray-100 dark:border-gray-800 mt-auto">
-          <Dialog
-            open={isCustomizeDialogOpen}
-            onOpenChange={setIsCustomizeDialogOpen}
-          >
-            <DialogTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 text-xs font-medium text-gray-600 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400"
-              >
-                <Edit className="h-3 w-3 mr-1" />
-                Customize
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Customize Official Palette</DialogTitle>
-                <DialogDescription>
-                  Create a custom palette based on the {design} palette. Your
-                  customized version will be available in the "Create Palette"
-                  tab.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="py-4">
-                <div className="mb-4">
-                  <PalettePreview design={design} />
+          <div className="flex gap-1">
+            <Dialog
+              open={isCustomizeDialogOpen}
+              onOpenChange={setIsCustomizeDialogOpen}
+            >
+              <DialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 text-xs font-medium text-gray-600 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400"
+                >
+                  <Edit className="h-3 w-3 mr-1" />
+                  Customize
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Customize Official Palette</DialogTitle>
+                  <DialogDescription>
+                    Create a custom palette based on the {design} palette. Your
+                    customized version will be available in the "Create Palette"
+                    tab.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                  <div className="mb-4">
+                    <PalettePreview design={design} />
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    This will create a copy of the official palette that you can
+                    modify. The original official palette will remain unchanged.
+                  </p>
                 </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  This will create a copy of the official palette that you can
-                  modify. The original official palette will remain unchanged.
-                </p>
-              </div>
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsCustomizeDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
-                  onClick={() => {
-                    onCustomize(design);
-                    setIsCustomizeDialogOpen(false);
-                  }}
-                >
-                  <Copy className="h-4 w-4 mr-2" />
-                  Create Custom Copy
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsCustomizeDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+                    onClick={() => {
+                      onCustomize(design);
+                      setIsCustomizeDialogOpen(false);
+                    }}
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    Create Custom Copy
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 text-xs font-medium text-gray-600 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400"
+                      >
+                        <Download className="h-3 w-3 mr-1" />
+                        Export
+                      </Button>
+                    </DialogTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p>Export palette data</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Export "{design}"</DialogTitle>
+                  <DialogDescription>
+                    {colors.length} colors in this official palette
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-4">
+                  {/* JSON Format */}
+                  <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-md space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center">
+                        <span className="inline-block w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
+                        JSON Format
+                      </h4>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleCopyToClipboard}
+                        className="h-7 text-xs px-3 border-blue-200 dark:border-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                      >
+                        {copied ? "Copied!" : "Copy JSON"}
+                      </Button>
+                    </div>
+                    <div className="p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 overflow-auto max-h-24">
+                      <pre className="text-xs text-gray-800 dark:text-gray-300 whitespace-pre-wrap">
+                        {JSON.stringify(
+                          colors.map((color) => ({
+                            hex: color.hex,
+                            name: color.name || "",
+                          })),
+                          null,
+                          2
+                        )}
+                      </pre>
+                    </div>
+                  </div>
+
+                  {/* Trycolors Format */}
+                  <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-md space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center">
+                        <span className="inline-block w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+                        Trycolors CSV
+                      </h4>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleCopyTrycolorsFormat}
+                        className="h-7 text-xs px-3 border-green-200 dark:border-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20"
+                      >
+                        {copyTrycolors ? "Copied!" : "Copy CSV"}
+                      </Button>
+                    </div>
+                    <div className="p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 overflow-auto max-h-24">
+                      <pre className="text-xs text-gray-800 dark:text-gray-300 whitespace-pre-wrap">
+                        {colors
+                          .map(
+                            (color) =>
+                              `${color.hex}, ${color.name || color.hex}`
+                          )
+                          .join("\n")}
+                      </pre>
+                    </div>
+                  </div>
+
+                  {/* File Download */}
+                  <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-md">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center">
+                        <span className="inline-block w-3 h-3 bg-purple-500 rounded-full mr-2"></span>
+                        File Download
+                      </h4>
+                      <Button
+                        onClick={handleDownloadPalette}
+                        size="sm"
+                        className="h-7 text-xs px-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+                      >
+                        Download .palette
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowExportDialog(false)}
+                  >
+                    Close
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
 
           <div className="flex gap-2">
             <TooltipProvider delayDuration={300}>

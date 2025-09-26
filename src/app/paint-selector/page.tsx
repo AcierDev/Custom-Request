@@ -10,6 +10,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
   Search,
   ArrowLeft,
   Palette,
@@ -25,6 +32,7 @@ import {
   Zap,
   Sparkles,
   X,
+  Maximize2,
 } from "lucide-react";
 import {
   Select,
@@ -49,7 +57,7 @@ interface PaintColor {
   distance?: number;
 }
 
-type Brand = "Behr" | "Sherwin-Williams" | "Valspar";
+type Brand = "Behr" | "Sherwin-Williams" | "Valspar" | "PPG" | "Benjamin Moore";
 type SortBy = "name" | "brand" | "hue" | "lightness";
 
 export default function PaintSelectorPage() {
@@ -70,6 +78,11 @@ export default function PaintSelectorPage() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [similarToHex, setSimilarToHex] = useState("");
   const [showSimilarColors, setShowSimilarColors] = useState(false);
+  const [comparisonDialogOpen, setComparisonDialogOpen] = useState(false);
+  const [comparisonData, setComparisonData] = useState<{
+    originalColor: string;
+    similarColor: PaintColor;
+  } | null>(null);
 
   const colorsPerPage = 50;
 
@@ -77,23 +90,40 @@ export default function PaintSelectorPage() {
   useEffect(() => {
     const loadPaintColors = async () => {
       try {
-        const [behrResponse, sherwinResponse, valsparResponse] =
-          await Promise.all([
-            fetch("/paints/behr/colors.json"),
-            fetch("/paints/sherwin/colors.json"),
-            fetch("/paints/valspar/colors.json"),
-          ]);
+        const [
+          behrResponse,
+          sherwinResponse,
+          valsparResponse,
+          ppgResponse,
+          benjaminMooreResponse,
+        ] = await Promise.all([
+          fetch("/paints/behr/colors.json"),
+          fetch("/paints/sherwin/colors.json"),
+          fetch("/paints/valspar/colors.json"),
+          fetch("/paints/ppg/colors.json"),
+          fetch("/paints/benjamin_moore/colors.json"),
+        ]);
 
-        const [behrColors, sherwinColors, valsparColors] = await Promise.all([
+        const [
+          behrColors,
+          sherwinColors,
+          valsparColors,
+          ppgColors,
+          benjaminMooreColors,
+        ] = await Promise.all([
           behrResponse.json(),
           sherwinResponse.json(),
           valsparResponse.json(),
+          ppgResponse.json(),
+          benjaminMooreResponse.json(),
         ]);
 
         const combinedColors = [
           ...behrColors,
           ...sherwinColors,
           ...valsparColors,
+          ...ppgColors,
+          ...benjaminMooreColors,
         ] as PaintColor[];
 
         setAllColors(combinedColors);
@@ -541,7 +571,211 @@ export default function PaintSelectorPage() {
     { label: "Warm Orange", icon: Sparkles, search: "warm orange" },
   ];
 
-  // Color card component
+  // Open comparison dialog
+  const openComparisonDialog = (
+    originalColor: string,
+    similarColor: PaintColor
+  ) => {
+    setComparisonData({ originalColor, similarColor });
+    setComparisonDialogOpen(true);
+  };
+
+  // Similar color card component
+  const SimilarColorCard = ({
+    color,
+    originalColor,
+    isSelected,
+    isFavorite,
+  }: {
+    color: PaintColor;
+    originalColor: string;
+    isSelected: boolean;
+    isFavorite: boolean;
+  }) => {
+    const isLight = getLuminance(color.hex) > 0.5;
+    const isInPalette = customPalette.some((c) => c.hex === color.hex);
+
+    return (
+      <motion.div
+        layout
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        className={cn(
+          "relative group cursor-pointer rounded-lg overflow-hidden border-2 transition-all bg-white dark:bg-gray-800",
+          isSelected
+            ? "border-blue-500 shadow-lg"
+            : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+        )}
+        onClick={() => openComparisonDialog(originalColor, color)}
+      >
+        {/* Searched Color Section (Top 25%) */}
+        <div className="h-24 relative overflow-hidden">
+          <div
+            className="absolute inset-0"
+            style={{ backgroundColor: originalColor }}
+          />
+          <div className="absolute top-0 left-0 right-0  text-white text-xs px-2 py-1">
+            <div className="flex items-center justify-between">
+              <span className="font-medium">Searched</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Horizontal Divider */}
+        <div className="h-0. bg-gray-300 dark:bg-gray-600" />
+
+        {/* Similar Color Section (Bottom 75%) */}
+        <div className="h-24 relative">
+          <div
+            className="absolute inset-0"
+            style={{ backgroundColor: color.hex }}
+          />
+
+          {/* Selection indicator */}
+          {isSelected && (
+            <div className="absolute top-2 right-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+              <Check className="w-4 h-4 text-white" />
+            </div>
+          )}
+
+          {/* Distance badge */}
+          {color.distance !== undefined && (
+            <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+              Δ{color.distance.toFixed(1)}
+            </div>
+          )}
+
+          {/* Favorite button */}
+          <button
+            className={cn(
+              "absolute top-2 right-8 w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity",
+              isFavorite ? "bg-red-500 text-white" : "bg-white/80 text-gray-700"
+            )}
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleFavorite(color.hex);
+            }}
+          >
+            {isFavorite ? (
+              <Heart className="w-3 h-3" />
+            ) : (
+              <HeartOff className="w-3 h-3" />
+            )}
+          </button>
+
+          {/* Expand icon */}
+          <div className="absolute bottom-2 right-2 w-6 h-6 bg-white/90 dark:bg-gray-800/90 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <Maximize2 className="w-3 h-3 text-gray-700 dark:text-gray-300" />
+          </div>
+
+          {/* Action buttons */}
+          <div className="absolute bottom-2 left-2 right-8 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    className="flex-1 h-6 bg-white/90 dark:bg-gray-800/90 rounded text-xs flex items-center justify-center hover:bg-white dark:hover:bg-gray-700 transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      copyColorToClipboard(color.hex);
+                    }}
+                  >
+                    <Copy className="w-3 h-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Copy hex code</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    className="flex-1 h-6 bg-white/90 dark:bg-gray-800/90 rounded text-xs flex items-center justify-center hover:bg-white dark:hover:bg-gray-700 transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleColorSelection(color.hex);
+                    }}
+                  >
+                    <Plus className="w-3 h-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Select color</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    className={cn(
+                      "flex-1 h-6 rounded text-xs flex items-center justify-center transition-colors",
+                      isInPalette
+                        ? "bg-green-500 text-white"
+                        : "bg-blue-500 text-white hover:bg-blue-600"
+                    )}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (isInPalette) {
+                        const colorIndex = customPalette.findIndex(
+                          (c) => c.hex === color.hex
+                        );
+                        if (colorIndex !== -1) {
+                          removeCustomColor(colorIndex);
+                          toast.success("Removed from palette");
+                        }
+                      } else {
+                        addCustomColor(color.hex);
+                        toast.success("Added to palette");
+                      }
+                    }}
+                  >
+                    {isInPalette ? (
+                      <Check className="w-3 h-3" />
+                    ) : (
+                      <Plus className="w-3 h-3" />
+                    )}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>
+                    {isInPalette ? "Remove from palette" : "Add to palette"}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        </div>
+
+        {/* Color info */}
+        <div className="p-2 bg-white dark:bg-gray-800 border-t">
+          <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+            Found Color
+          </div>
+          <p className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate">
+            {color.name}
+          </p>
+          <div className="flex items-center justify-between mt-1">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {color.hex.toUpperCase()}
+            </p>
+            <Badge variant="secondary" className="text-xs">
+              {color.brand}
+            </Badge>
+          </div>
+        </div>
+      </motion.div>
+    );
+  };
+
+  // Regular color card component
   const ColorCard = ({
     color,
     isSelected,
@@ -823,6 +1057,10 @@ export default function PaintSelectorPage() {
                     <SelectContent>
                       <SelectItem value="all">All Brands</SelectItem>
                       <SelectItem value="Behr">Behr</SelectItem>
+                      <SelectItem value="Benjamin Moore">
+                        Benjamin Moore
+                      </SelectItem>
+                      <SelectItem value="PPG">PPG</SelectItem>
                       <SelectItem value="Sherwin-Williams">
                         Sherwin-Williams
                       </SelectItem>
@@ -1152,61 +1390,13 @@ export default function PaintSelectorPage() {
 
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                         {similarColors.map((color) => (
-                          <div key={color.hex} className="relative">
-                            <ColorCard
-                              color={color}
-                              isSelected={selectedColors.has(color.hex)}
-                              isFavorite={favorites.has(color.hex)}
-                            />
-                            {color.distance !== undefined && (
-                              <div className="absolute top-1 right-1 bg-black/70 text-white text-xs px-1 py-0.5 rounded">
-                                Δ{color.distance.toFixed(1)}
-                              </div>
-                            )}
-                            {/* Original color comparison */}
-                            <div className="absolute top-2 left-2 flex">
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className="flex rounded overflow-hidden border-2 border-white/70 shadow-sm">
-                                      <div
-                                        className="w-6 h-6"
-                                        style={{
-                                          backgroundColor: similarToHex,
-                                        }}
-                                        title="Original color"
-                                      />
-                                      <div
-                                        className="w-6 h-6"
-                                        style={{ backgroundColor: color.hex }}
-                                        title="Similar color"
-                                      />
-                                    </div>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <div className="text-xs">
-                                      <div className="flex items-center gap-2 mb-1">
-                                        <div
-                                          className="w-4 h-4 rounded border border-gray-300"
-                                          style={{
-                                            backgroundColor: similarToHex,
-                                          }}
-                                        />
-                                        <span>Original: {similarToHex}</span>
-                                      </div>
-                                      <div className="flex items-center gap-2">
-                                        <div
-                                          className="w-4 h-4 rounded border border-gray-300"
-                                          style={{ backgroundColor: color.hex }}
-                                        />
-                                        <span>Similar: {color.hex}</span>
-                                      </div>
-                                    </div>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            </div>
-                          </div>
+                          <SimilarColorCard
+                            key={color.hex}
+                            color={color}
+                            originalColor={similarToHex}
+                            isSelected={selectedColors.has(color.hex)}
+                            isFavorite={favorites.has(color.hex)}
+                          />
                         ))}
                       </div>
                     </div>
@@ -1217,6 +1407,194 @@ export default function PaintSelectorPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Color Comparison Dialog */}
+      <Dialog
+        open={comparisonDialogOpen}
+        onOpenChange={setComparisonDialogOpen}
+      >
+        <DialogContent className="max-w-2xl w-full p-0 overflow-hidden">
+          {comparisonData && (
+            <>
+              <DialogHeader className="p-6 pb-0">
+                <DialogTitle className="text-xl font-semibold">
+                  Color Comparison
+                </DialogTitle>
+                <DialogDescription>
+                  Compare your searched color with the similar paint color found
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="p-6 pt-4">
+                {/* Large Color Comparison */}
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  {/* Original Color */}
+                  <div className="space-y-3">
+                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      Searched Color
+                    </div>
+                    <div className="relative rounded-lg overflow-hidden border-2 border-gray-200 dark:border-gray-700">
+                      <div
+                        className="h-32 w-full"
+                        style={{
+                          backgroundColor: comparisonData.originalColor,
+                        }}
+                      />
+                      <div className="p-3 bg-white dark:bg-gray-800">
+                        <p className="font-mono text-sm text-gray-900 dark:text-gray-100">
+                          {comparisonData.originalColor.toUpperCase()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Similar Color */}
+                  <div className="space-y-3">
+                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      Similar Paint Color
+                    </div>
+                    <div className="relative rounded-lg overflow-hidden border-2 border-gray-200 dark:border-gray-700">
+                      <div
+                        className="h-32 w-full"
+                        style={{
+                          backgroundColor: comparisonData.similarColor.hex,
+                        }}
+                      />
+                      <div className="p-3 bg-white dark:bg-gray-800">
+                        <p className="font-medium text-sm text-gray-900 dark:text-gray-100 mb-1">
+                          {comparisonData.similarColor.name}
+                        </p>
+                        <div className="flex items-center justify-between">
+                          <p className="font-mono text-sm text-gray-600 dark:text-gray-400">
+                            {comparisonData.similarColor.hex.toUpperCase()}
+                          </p>
+                          <Badge variant="secondary" className="text-xs">
+                            {comparisonData.similarColor.brand}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Side-by-side comparison */}
+                <div className="mb-6">
+                  <div className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
+                    Side-by-Side Comparison
+                  </div>
+                  <div className="relative rounded-lg overflow-hidden border-2 border-gray-200 dark:border-gray-700">
+                    <div className="h-24 flex">
+                      <div
+                        className="flex-1"
+                        style={{
+                          backgroundColor: comparisonData.originalColor,
+                        }}
+                      />
+                      <div
+                        className="flex-1"
+                        style={{
+                          backgroundColor: comparisonData.similarColor.hex,
+                        }}
+                      />
+                    </div>
+                    <div className="p-3 bg-white dark:bg-gray-800 flex justify-between text-xs">
+                      <span className="text-gray-600 dark:text-gray-400">
+                        Searched: {comparisonData.originalColor.toUpperCase()}
+                      </span>
+                      <span className="text-gray-600 dark:text-gray-400">
+                        Found: {comparisonData.similarColor.hex.toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Color Information */}
+                <div className="space-y-4">
+                  <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    Color Details
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-xs text-gray-600 dark:text-gray-400">
+                          Color Distance:
+                        </span>
+                        <span className="text-xs font-mono">
+                          Δ{comparisonData.similarColor.distance?.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-xs text-gray-600 dark:text-gray-400">
+                          Brand:
+                        </span>
+                        <span className="text-xs">
+                          {comparisonData.similarColor.brand}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-xs text-gray-600 dark:text-gray-400">
+                          Paint Name:
+                        </span>
+                        <span className="text-xs truncate ml-2">
+                          {comparisonData.similarColor.name}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <Button
+                    onClick={() => {
+                      copyColorToClipboard(comparisonData.similarColor.hex);
+                    }}
+                    variant="outline"
+                    className="flex items-center gap-2"
+                  >
+                    <Copy className="w-4 h-4" />
+                    Copy Hex
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      toggleFavorite(comparisonData.similarColor.hex);
+                      toast.success(
+                        favorites.has(comparisonData.similarColor.hex)
+                          ? "Removed from favorites"
+                          : "Added to favorites"
+                      );
+                    }}
+                    variant="outline"
+                    className="flex items-center gap-2"
+                  >
+                    {favorites.has(comparisonData.similarColor.hex) ? (
+                      <Heart className="w-4 h-4 text-red-500" />
+                    ) : (
+                      <HeartOff className="w-4 h-4" />
+                    )}
+                    {favorites.has(comparisonData.similarColor.hex)
+                      ? "Remove Favorite"
+                      : "Add Favorite"}
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      addCustomColor(comparisonData.similarColor.hex);
+                      toast.success("Added to palette");
+                      setComparisonDialogOpen(false);
+                    }}
+                    className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add to Palette
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
