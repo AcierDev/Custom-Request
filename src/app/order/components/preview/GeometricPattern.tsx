@@ -47,6 +47,7 @@ export function GeometricPattern({
     activeCustomMode,
     patternOverride,
     setPatternOverride,
+    isPatternEditorActive,
   } = customStore;
 
   // Use values from customDesign when provided, otherwise use store values
@@ -286,8 +287,9 @@ export function GeometricPattern({
       const { patternEditingMode } = customStore;
 
       if (
+        isPatternEditorActive &&
         patternEditingMode &&
-        (patternEditingMode.selectedColorIndex !== undefined ||
+        (patternEditingMode.selectedColorIndex >= 0 ||
           patternEditingMode.isErasing)
       ) {
         // Handle pattern editing

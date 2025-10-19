@@ -29,6 +29,8 @@ export function PatternEditor({ className }: PatternEditorProps) {
     patternEditingMode,
     setPatternEditingMode,
     viewSettings,
+    isPatternEditorActive,
+    setIsPatternEditorActive,
   } = useCustomStore();
 
   const [isCollapsed, setIsCollapsed] = useState(true);
@@ -42,20 +44,24 @@ export function PatternEditor({ className }: PatternEditorProps) {
 
   const handleColorSelect = useCallback(
     (index: number) => {
+      // Enable pattern editor when a color is selected
+      setIsPatternEditorActive(true);
       setPatternEditingMode({
         selectedColorIndex: index,
         isErasing: false,
       });
     },
-    [setPatternEditingMode]
+    [setPatternEditingMode, setIsPatternEditorActive]
   );
 
   const handleEraserToggle = useCallback(() => {
+    // Enable pattern editor when eraser is toggled
+    setIsPatternEditorActive(true);
     setPatternEditingMode({
       selectedColorIndex: patternEditingMode.selectedColorIndex,
       isErasing: !patternEditingMode.isErasing,
     });
-  }, [patternEditingMode, setPatternEditingMode]);
+  }, [patternEditingMode, setPatternEditingMode, setIsPatternEditorActive]);
 
   if (colorEntries.length === 0) {
     return (
@@ -111,6 +117,12 @@ export function PatternEditor({ className }: PatternEditorProps) {
           <div className="flex items-center gap-2">
             <Palette className="w-4 h-4" />
             <span className="text-sm font-medium">Pattern Editor</span>
+            {isPatternEditorActive && (
+              <div
+                className="w-2 h-2 bg-green-500 rounded-full"
+                title="Editor Active"
+              />
+            )}
           </div>
           {isCollapsed ? (
             <ChevronRight className="w-4 h-4" />
@@ -122,6 +134,38 @@ export function PatternEditor({ className }: PatternEditorProps) {
         {/* Collapsible Content */}
         {!isCollapsed && (
           <div className="mt-4 space-y-4">
+            {/* Enable/Disable Toggle */}
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                Editor Status
+              </span>
+              <Button
+                size="sm"
+                variant={isPatternEditorActive ? "default" : "outline"}
+                onClick={() => {
+                  if (isPatternEditorActive) {
+                    // Disable editor and reset editing mode
+                    setIsPatternEditorActive(false);
+                    setPatternEditingMode({
+                      selectedColorIndex: -1,
+                      isErasing: false,
+                    });
+                  } else {
+                    // Enable editor
+                    setIsPatternEditorActive(true);
+                  }
+                }}
+                className={cn(
+                  "h-6 px-2 text-xs",
+                  isPatternEditorActive
+                    ? "bg-green-600 hover:bg-green-700 text-white"
+                    : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                )}
+              >
+                {isPatternEditorActive ? "Active" : "Inactive"}
+              </Button>
+            </div>
+
             {/* Color Palette */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -174,13 +218,27 @@ export function PatternEditor({ className }: PatternEditorProps) {
               <div className="flex items-center gap-1.5 mb-2">
                 <MousePointer className="w-3 h-3" />
                 <span className="font-medium">
-                  Click blocks in 3D view to paint them
+                  {isPatternEditorActive
+                    ? "Click blocks in 3D view to paint them"
+                    : "Enable editor to start painting"}
                 </span>
               </div>
-              <p>• Select a color above, then click blocks in the 3D pattern</p>
-              <p>• Use eraser to reset blocks to original pattern</p>
-              <p>• Purple outline shows modified blocks</p>
-              <p>• Press 'h' to hide/show UI controls</p>
+              {isPatternEditorActive ? (
+                <>
+                  <p>
+                    • Select a color above, then click blocks in the 3D pattern
+                  </p>
+                  <p>• Use eraser to reset blocks to original pattern</p>
+                  <p>• Purple outline shows modified blocks</p>
+                  <p>• Press 'h' to hide/show UI controls</p>
+                </>
+              ) : (
+                <>
+                  <p>• Click "Active" above to enable the pattern editor</p>
+                  <p>• Or select a color to automatically enable editing</p>
+                  <p>• Editor must be active to paint blocks</p>
+                </>
+              )}
             </div>
 
             {/* Stats */}

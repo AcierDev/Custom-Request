@@ -53,6 +53,7 @@ export default function PreviewPage() {
     drawnPatternGrid,
     drawnPatternGridSize,
     activeCustomMode,
+    setIsPatternEditorActive,
   } = useCustomStore();
   const { showRuler, showWoodGrain, showColorInfo, showUIControls } =
     viewSettings;
@@ -71,6 +72,9 @@ export default function PreviewPage() {
   useEffect(() => {
     setMounted(true);
 
+    // Disable pattern editor on preview page
+    setIsPatternEditorActive(false);
+
     // Trigger resize event to ensure canvas renders correctly
     const resizeEvent = new Event("resize");
     window.dispatchEvent(resizeEvent);
@@ -86,7 +90,7 @@ export default function PreviewPage() {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [showUIControls, setShowUIControls]);
+  }, [showUIControls, setShowUIControls, setIsPatternEditorActive]);
 
   const showEmptyCustomInfo =
     selectedDesign === ItemDesigns.Custom &&

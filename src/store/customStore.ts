@@ -151,6 +151,7 @@ interface CustomState {
     selectedColorIndex: number;
     isErasing: boolean;
   };
+  isPatternEditorActive: boolean;
 
   paletteHistory: Array<Array<CustomColor>>;
   paletteHistoryIndex: number;
@@ -245,6 +246,7 @@ interface CustomStore extends CustomState {
     selectedColorIndex: number;
     isErasing: boolean;
   }) => void;
+  setIsPatternEditorActive: (active: boolean) => void;
 
   // Action for setting a directly drawn pattern
   setDrawnPattern: (
@@ -393,9 +395,10 @@ export const useCustomStore = create<CustomStore>()(
     activeCustomMode: "palette",
     patternOverride: {},
     patternEditingMode: {
-      selectedColorIndex: 0,
+      selectedColorIndex: -1,
       isErasing: false,
     },
+    isPatternEditorActive: false,
     init: () => {
       if (typeof window !== "undefined") {
         const localState = localStorage.getItem("everwood-custom-design");
@@ -1806,6 +1809,8 @@ export const useCustomStore = create<CustomStore>()(
       selectedColorIndex: number;
       isErasing: boolean;
     }) => set({ patternEditingMode: mode }),
+    setIsPatternEditorActive: (active: boolean) =>
+      set({ isPatternEditorActive: active }),
   }))
 );
 
