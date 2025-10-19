@@ -625,7 +625,7 @@ export default function PaintSelectorPage() {
         </div>
 
         {/* Horizontal Divider */}
-        <div className="h-0. bg-gray-300 dark:bg-gray-600" />
+        <div className="h-0.5 bg-gray-300 dark:bg-gray-600" />
 
         {/* Similar Color Section (Bottom 75%) */}
         <div className="h-24 relative">
