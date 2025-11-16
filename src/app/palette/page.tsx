@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ChangeEvent } from "react";
 import { motion } from "framer-motion";
 import { useCustomStore } from "@/store/customStore";
 import { PaletteManager } from "./components/PaletteManager";
@@ -72,6 +72,14 @@ export default function PalettePage() {
   const [importLoading, setImportLoading] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [showImportDialog, setShowImportDialog] = useState(false);
+
+  // Manual import dialog (file / JSON / ID)
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [importText, setImportText] = useState("");
+  const [importDialogError, setImportDialogError] = useState("");
+  const [isImportLoading, setIsImportLoading] = useState(false);
+  const [importById, setImportById] = useState(false);
+  const [importIdValue, setImportIdValue] = useState("");
 
   // Use activeTab if set, otherwise default to 'official' to focus on inspiration first
   const defaultTab =
@@ -266,9 +274,230 @@ export default function PalettePage() {
     }
   }, [editingPaletteId]);
 
+  // Manual import helpers (shared across tabs)
+  const openImportDialog = () => {
+    setIsImportDialogOpen(true);
+    setImportText("");
+    setImportDialogError("");
+    setImportById(false);
+    setImportIdValue("");
+  };
+
+  const parseTryColorsFormat = (text: string) => {
+    try {
+      const lines = text.split("\n");
+      const colors: { hex: string; name: string }[] = [];
+
+      let inPaletteDetails = false;
+
+      for (const line of lines) {
+        const trimmedLine = line.trim();
+        if (!trimmedLine) continue;
+
+        if (trimmedLine === "— Palette details:") {
+          inPaletteDetails = true;
+          continue;
+        }
+
+        if (inPaletteDetails) {
+          const colorMatch = trimmedLine.match(
+            /^(.+?)\s*\(#([0-9A-F]{6})\):/i
+          );
+          if (colorMatch) {
+            const name = colorMatch[1].trim();
+            const hex = `#${colorMatch[2].toUpperCase()}`;
+            colors.push({ hex, name });
+          }
+        }
+      }
+
+      if (colors.length > 0) {
+        return colors;
+      }
+
+      const fallbackColors: { hex: string; name: string }[] = [];
+      for (const line of lines) {
+        const trimmedLine = line.trim();
+        if (trimmedLine.includes("#") && !trimmedLine.startsWith("—")) {
+          const hexMatches = trimmedLine.match(/#([0-9A-F]{6})/gi);
+          if (hexMatches) {
+            for (const hex of hexMatches) {
+              const formattedHex = hex.toUpperCase();
+              if (
+                !fallbackColors.some((color) => color.hex === formattedHex)
+              ) {
+                fallbackColors.push({
+                  hex: formattedHex,
+                  name: formattedHex,
+                });
+              }
+            }
+          }
+        }
+      }
+
+      return fallbackColors.length > 0 ? fallbackColors : null;
+    } catch (error) {
+      console.error("Error parsing TryColors format:", error);
+      return null;
+    }
+  };
+
+  const handleImportPalette = () => {
+    try {
+      let importData: any;
+
+      try {
+        importData = JSON.parse(importText);
+      } catch {
+        const tryColorsPalette = parseTryColorsFormat(importText);
+        if (tryColorsPalette) {
+          importData = { colors: tryColorsPalette };
+        } else {
+          setImportDialogError(
+            "Invalid format. Please provide valid JSON or TryColors format."
+          );
+          return;
+        }
+      }
+
+      const colorsArray = Array.isArray(importData)
+        ? importData
+        : importData.colors;
+
+      if (!colorsArray || !Array.isArray(colorsArray)) {
+        setImportDialogError(
+          "Invalid palette format. Expected an array of colors or an object with a colors array."
+        );
+        return;
+      }
+
+      const validColors = colorsArray.filter((color: any) => {
+        if (!color.hex) return false;
+        return /^#([0-9A-F]{3}){1,2}$/i.test(color.hex);
+      });
+
+      if (validColors.length === 0) {
+        setImportDialogError("No valid colors found in the imported data.");
+        return;
+      }
+
+      const paletteName =
+        importData.name ||
+        `Imported Palette ${new Date().toLocaleDateString()}`;
+
+      useCustomStore.setState({
+        customPalette: validColors.map((color: any) => ({
+          hex: color.hex,
+          name: color.name || "",
+        })),
+        selectedColors: [],
+      });
+
+      setIsImportDialogOpen(false);
+      setImportText("");
+      setImportDialogError("");
+      toast.success(`Imported ${validColors.length} colors successfully!`);
+      setActiveTab("create");
+    } catch (error) {
+      setImportDialogError(
+        "An error occurred while importing the palette. Please try again."
+      );
+      console.error("Import error:", error);
+    }
+  };
+
+  const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const fileContent = event.target?.result as string;
+        setImportText(fileContent);
+        setImportDialogError("");
+      } catch (error) {
+        setImportDialogError("Failed to read the file.");
+        console.error("File read error:", error);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleImportById = async (id: string) => {
+    try {
+      setIsImportLoading(true);
+
+      // Check if the palette exists in the user's own saved palettes
+      const localPalette = savedPalettes.find((palette) => palette.id === id);
+
+      if (localPalette) {
+        useCustomStore.setState({
+          customPalette: localPalette.colors.map((color) => ({
+            hex: color.hex,
+            name: color.name || "",
+          })),
+          selectedColors: [],
+        });
+
+        setActiveTab("create");
+        toast.success(
+          `Imported "${localPalette.name}" from your palettes!`
+        );
+        return;
+      }
+
+      // If not found locally, try to fetch from the API
+      const response = await fetch(`/api/palettes/${id}`);
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          toast.error("Palette not found. Check the ID and try again.");
+        } else if (response.status === 403) {
+          toast.error("This palette is not shared publicly.");
+        } else {
+          toast.error("Failed to import palette. Please try again.");
+        }
+        return;
+      }
+
+      const data = await response.json();
+
+      if (!data.palette || !data.palette.colors || data.palette.colors.length === 0) {
+        toast.error("Invalid palette data received.");
+        return;
+      }
+
+      useCustomStore.setState({
+        customPalette: data.palette.colors.map(
+          (color: { hex: string; name?: string }) => ({
+            hex: color.hex,
+            name: color.name || "",
+          })
+        ),
+        selectedColors: [],
+      });
+
+      setActiveTab("create");
+      toast.success(`Imported "${data.palette.name}" successfully!`);
+    } catch (error) {
+      console.error("Error importing palette by ID:", error);
+      toast.error("Failed to import palette. Please try again.");
+    } finally {
+      setIsImportLoading(false);
+    }
+  };
+
+  const handleImportIdFromDialog = async () => {
+    if (!importIdValue.trim()) return;
+    await handleImportById(importIdValue.trim());
+    setImportIdValue("");
+    setIsImportDialogOpen(false);
+  };
+
   const handleImport = () => {
-    toast.info("Import functionality would be triggered here");
-    // Actual import logic would be here
+    openImportDialog();
   };
 
   const handleUndoAction = () => {
@@ -351,6 +580,141 @@ export default function PalettePage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Manual Import Dialog (file / JSON / ID) */}
+      {isImportDialogOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="bg-white dark:bg-gray-900 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl border-2 border-gray-200 dark:border-gray-700"
+          >
+            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+              Import Palette
+            </h3>
+
+            {/* Tab navigation */}
+            <div className="flex mb-4 border-b border-gray-200 dark:border-gray-700">
+              <button
+                className={`px-4 py-2 font-medium text-sm ${
+                  !importById
+                    ? "border-b-2 border-purple-500 text-gray-900 dark:text-gray-100"
+                    : "text-gray-500 dark:text-gray-400"
+                }`}
+                onClick={() => setImportById(false)}
+              >
+                File/JSON
+              </button>
+              <button
+                className={`px-4 py-2 font-medium text-sm ${
+                  importById
+                    ? "border-b-2 border-purple-500 text-gray-900 dark:text-gray-100"
+                    : "text-gray-500 dark:text-gray-400"
+                }`}
+                onClick={() => setImportById(true)}
+              >
+                Import by ID
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {importById ? (
+                <div className="space-y-4">
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Enter a palette ID that was shared with you to import it
+                    directly.
+                  </p>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Palette ID
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={importIdValue}
+                        onChange={(e) => setImportIdValue(e.target.value)}
+                        placeholder="Enter palette ID"
+                        className="flex-1 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      IDs are unique identifiers for shared palettes.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Paste JSON data or upload a palette file (.evpal or .json or
+                    .palette)
+                  </p>
+
+                  <div className="space-y-2">
+                    <textarea
+                      className="w-full h-40 p-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      placeholder='Paste JSON here, e.g. [{"hex":"#ff0000","name":"Red"},{"hex":"#00ff00","name":"Green"}] or TryColors format'
+                      value={importText}
+                      onChange={(e) => setImportText(e.target.value)}
+                    />
+                    {importDialogError && (
+                      <p className="text-sm text-red-500">{importDialogError}</p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-center w-full">
+                    <label
+                      htmlFor="dropzone-file"
+                      className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                        <Upload className="w-8 h-8 mb-2 text-gray-500 dark:text-gray-400" />
+                        <p className="mb-1 text-sm text-gray-500 dark:text-gray-400">
+                          <span className="font-semibold">Click to upload</span>{" "}
+                          or drag and drop
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          JSON or EVPAL or Palette files
+                        </p>
+                      </div>
+                      <input
+                        id="dropzone-file"
+                        type="file"
+                        className="hidden"
+                        accept=".json,.palette,.evpal"
+                        onChange={handleFileUpload}
+                      />
+                    </label>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => setIsImportDialogOpen(false)}
+                className="sm:order-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={
+                  importById ? handleImportIdFromDialog : handleImportPalette
+                }
+                disabled={
+                  importById
+                    ? !importIdValue.trim()
+                    : !importText.trim() || isImportLoading
+                }
+                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white sm:order-2"
+              >
+                {isImportLoading ? "Importing..." : "Import Palette"}
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
@@ -476,16 +840,26 @@ export default function PalettePage() {
               </TabsTrigger>
             </TabsList>
 
-            {/* Integrated inspiration/creation button based on active tab */}
+            {/* Integrated inspiration/creation/import buttons based on active tab */}
             {activeTab === "create" ? (
-              <Button
-                onClick={() => setActiveTab("official")}
-                className="hidden md:flex items-center gap-1.5 text-xs bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
-                size="sm"
-              >
-                <Lightbulb className="h-3.5 w-3.5" />
-                Get Inspired
-              </Button>
+              <div className="hidden md:flex gap-2">
+                <Button
+                  onClick={() => setActiveTab("official")}
+                  className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                  size="sm"
+                >
+                  <Lightbulb className="h-3.5 w-3.5" />
+                  Get Inspired
+                </Button>
+                <Button
+                  onClick={handleImport}
+                  className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white"
+                  size="sm"
+                >
+                  <Upload className="h-3.5 w-3.5" />
+                  Import
+                </Button>
+              </div>
             ) : activeTab === "saved" ? (
               <div className="hidden md:flex gap-2">
                 <Button
@@ -503,6 +877,14 @@ export default function PalettePage() {
                 >
                   <Plus className="h-3.5 w-3.5" />
                   Create Palette
+                </Button>
+                <Button
+                  onClick={handleImport}
+                  className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white"
+                  size="sm"
+                >
+                  <Upload className="h-3.5 w-3.5" />
+                  Import
                 </Button>
               </div>
             ) : activeTab === "extract" ? (
@@ -523,25 +905,43 @@ export default function PalettePage() {
                   <Lightbulb className="h-3.5 w-3.5" />
                   Get Inspired
                 </Button>
+                <Button
+                  onClick={handleImport}
+                  className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white"
+                  size="sm"
+                >
+                  <Upload className="h-3.5 w-3.5" />
+                  Import
+                </Button>
               </div>
             ) : (
-              <Button
-                onClick={() => setActiveTab("create")}
-                className="hidden md:flex items-center gap-1.5 text-xs bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white"
-                size="sm"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Create Palette
-              </Button>
+              <div className="hidden md:flex gap-2">
+                <Button
+                  onClick={() => setActiveTab("create")}
+                  className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white"
+                  size="sm"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Create Palette
+                </Button>
+                <Button
+                  onClick={handleImport}
+                  className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white"
+                  size="sm"
+                >
+                  <Upload className="h-3.5 w-3.5" />
+                  Import
+                </Button>
+              </div>
             )}
           </div>
 
           <TabsContent value="create" className="mt-0">
             {/* Optional mobile inspiration button */}
-            <div className="flex md:hidden justify-end mb-2">
+            <div className="flex md:hidden justify-end mb-2 gap-2">
               <Button
                 onClick={() => setActiveTab("extract")}
-                className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white mr-2"
+                className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white"
                 size="sm"
               >
                 <ImageIcon className="h-3.5 w-3.5" />
@@ -554,6 +954,14 @@ export default function PalettePage() {
               >
                 <Lightbulb className="h-3.5 w-3.5" />
                 Inspire
+              </Button>
+              <Button
+                onClick={handleImport}
+                className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white"
+                size="sm"
+              >
+                <Upload className="h-3.5 w-3.5" />
+                Import
               </Button>
             </div>
 
@@ -718,6 +1126,14 @@ export default function PalettePage() {
                 <Lightbulb className="h-3.5 w-3.5" />
                 Inspire
               </Button>
+              <Button
+                onClick={handleImport}
+                className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white ml-2"
+                size="sm"
+              >
+                <Upload className="h-3.5 w-3.5" />
+                Import
+              </Button>
             </div>
 
             <motion.div
@@ -757,6 +1173,14 @@ export default function PalettePage() {
                 <Lightbulb className="h-3.5 w-3.5" />
                 Inspire
               </Button>
+              <Button
+                onClick={handleImport}
+                className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white"
+                size="sm"
+              >
+                <Upload className="h-3.5 w-3.5" />
+                Import
+              </Button>
             </div>
 
             <motion.div
@@ -766,7 +1190,10 @@ export default function PalettePage() {
               transition={{ duration: 0.4 }}
             >
               {savedPalettes.length > 0 ? (
-                <PaletteList />
+                <PaletteList
+                  onOpenImport={handleImport}
+                  onImportById={handleImportById}
+                />
               ) : (
                 <div className="mt-10 flex flex-col items-center justify-center text-center">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl mx-auto">
@@ -803,7 +1230,10 @@ export default function PalettePage() {
                         </p>
                       </div>
                       <div className="px-4 pb-4 w-full">
-                        <ImportCard onImport={handleImport} />
+                        <ImportCard
+                          onImport={handleImport}
+                          onIdImport={handleImportById}
+                        />
                       </div>
                     </div>
                   </div>
@@ -842,6 +1272,14 @@ export default function PalettePage() {
               >
                 <ImageIcon className="h-3.5 w-3.5" />
                 Extract
+              </Button>
+              <Button
+                onClick={handleImport}
+                className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white"
+                size="sm"
+              >
+                <Upload className="h-3.5 w-3.5" />
+                Import
               </Button>
             </div>
 
