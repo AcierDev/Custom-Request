@@ -218,6 +218,17 @@ export const ALOE_COLORS: Record<number, { hex: string; name: string }> = {
   7: { hex: "#3D5541", name: "Tom Thumb" },
 };
 
+export const AMETHYST_COLORS: Record<number, { hex: string; name: string }> = {
+  1: { hex: "#B0D9E8", name: "Regent St Blue" },
+  2: { hex: "#80BFD7", name: "Half Baked" },
+  3: { hex: "#419AB7", name: "Boston Blue" },
+  4: { hex: "#006985", name: "Orient" },
+  5: { hex: "#6289C6", name: "Danube" },
+  6: { hex: "#365496", name: "St Tropaz" },
+  7: { hex: "#4E4E8C", name: "Victoria" },
+  8: { hex: "#413D6D", name: "Mulled Wine" },
+};
+
 export const DESIGN_COLORS: Record<
   ItemDesigns,
   Record<number, { hex: string; name: string }>
@@ -228,6 +239,7 @@ export const DESIGN_COLORS: Record<
   [ItemDesigns.Amber]: AMBER_COLORS,
   [ItemDesigns.Elemental]: ELEMENTAL_COLORS,
   [ItemDesigns.Sapphire]: SAPHIRE_COLORS,
+  [ItemDesigns.Amethyst]: AMETHYST_COLORS,
   [ItemDesigns.Timberline]: TIMBERLINE_COLORS,
   [ItemDesigns.Aloe]: ALOE_COLORS,
   [ItemDesigns.Oceanic_Harmony]: FADE_TO_FIVE_COLORS,
@@ -251,6 +263,7 @@ export const DESIGN_IMAGES: Record<ItemDesigns, string> = {
   [ItemDesigns.Oceanic_Harmony]: "/images/designs/ft5.webp",
   [ItemDesigns.Mirage]: "/images/designs/mirage.webp",
   [ItemDesigns.Sapphire]: "/images/designs/sapphire.webp",
+   [ItemDesigns.Amethyst]: "/images/designs/amethyst.webp",
   [ItemDesigns.Spectrum]: "/images/designs/spectrum.webp",
   [ItemDesigns.Tidal]: "/images/designs/tidal.webp",
   [ItemDesigns.Timberline]: "/images/designs/timberline.webp",

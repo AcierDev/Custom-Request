@@ -64,6 +64,7 @@ const designCategories: Record<ItemDesigns, PaletteCategory[]> = {
   [ItemDesigns.Timberline]: ["All", "Earthy", "Neutrals"],
   [ItemDesigns.Amber]: ["All", "Earthy", "Neutrals"],
   [ItemDesigns.Sapphire]: ["All", "Blues", "Greens"],
+  [ItemDesigns.Amethyst]: ["All", "Blues", "Colorful"],
   [ItemDesigns.Winter]: ["All", "Blues"],
   [ItemDesigns.Forest]: ["All", "Greens", "Earthy"],
   [ItemDesigns.Autumn]: ["All", "Earthy", "Colorful"],

@@ -20,6 +20,7 @@ export enum ItemDesigns {
   Timberline = "Timberline",
   Amber = "Amber",
   Sapphire = "Sapphire",
+  Amethyst = "Amethyst",
   Winter = "Winter",
   Forest = "Forest",
   Autumn = "Autumn",
