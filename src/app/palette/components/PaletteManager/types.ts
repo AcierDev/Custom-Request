@@ -9,6 +9,7 @@ export interface ColorInfo {
 
 // Color swatch component props
 export interface ColorSwatchProps {
+  id?: string;
   color: string;
   name?: string;
   index: number;

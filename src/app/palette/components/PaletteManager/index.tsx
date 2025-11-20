@@ -1,7 +1,22 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { nanoid } from "nanoid";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  rectSortingStrategy,
+} from "@dnd-kit/sortable";
 import { HexColorPicker } from "react-colorful";
 import { useCustomStore } from "@/store/customStore";
 import { Button } from "@/components/ui/button";
@@ -38,6 +53,7 @@ import { toast } from "sonner";
 
 // Import sub-components
 import { ColorSwatch } from "./ColorSwatch";
+import { SortableColorSwatch } from "./SortableColorSwatch";
 import { AddColorButton } from "./AddColorButton";
 import { BlendingGuide } from "./BlendingGuide";
 import { ColorHarmonyGenerator } from "./ColorHarmonyGenerator";
@@ -55,6 +71,8 @@ export function PaletteManager() {
     moveColorRight,
     updateColorName,
     updateColorHex,
+    reorderPalette,
+    commitPaletteToHistory,
     editingPaletteId,
     resetPaletteEditor,
   } = useCustomStore();
@@ -231,12 +249,16 @@ export function PaletteManager() {
 
   const selectedColorIndex =
     selectedColors.length === 1
-      ? customPalette.findIndex((color) => color.hex === selectedColors[0])
+      ? customPalette.findIndex((color) => color.id === selectedColors[0])
       : -1;
 
   const handleAddHarmonyColors = (colors: string[]) => {
     // Add the harmony colors to the palette
-    const newColors = colors.map((hex) => ({ hex, name: "" }));
+    const newColors = colors.map((hex) => ({
+      id: nanoid(),
+      hex,
+      name: "",
+    }));
     useCustomStore.setState({
       customPalette: [...customPalette, ...newColors],
     });
@@ -247,6 +269,30 @@ export function PaletteManager() {
     resetPaletteEditor();
     toast.success("Palette cleared successfully!");
   };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor)
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = customPalette.findIndex((item) => item.id === active.id);
+      const newIndex = customPalette.findIndex((item) => item.id === over.id);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newPalette = arrayMove(customPalette, oldIndex, newIndex);
+        reorderPalette(newPalette);
+        commitPaletteToHistory();
+      }
+    }
+  }
 
   return (
     <div className="space-y-8">
@@ -463,29 +509,43 @@ export function PaletteManager() {
         </AnimatePresence>
 
         {/* Color Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          <AnimatePresence>
-            {customPalette.map((color, index) => (
-              <ColorSwatch
-                key={`${color.hex}-${index}`}
-                color={color.hex}
-                name={color.name}
-                index={index}
-                isSelected={selectedColors.includes(color.hex)}
-                onSelect={() => toggleColorSelection(color.hex)}
-                onRemove={() => removeCustomColor(index)}
-                onEdit={() => handleEditColor(index)}
-                onDuplicate={() => handleDuplicateColor(index)}
-                showBlendHint={selectedColors.length === 1}
-              />
-            ))}
-          </AnimatePresence>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={customPalette.map((c) => c.id)}
+            strategy={rectSortingStrategy}
+          >
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 list-none p-0 m-0">
+              <AnimatePresence>
+                {customPalette.map((color, index) => (
+                  <SortableColorSwatch
+                    key={color.id}
+                    id={color.id}
+                    color={color.hex}
+                    name={color.name}
+                    index={index}
+                    isSelected={selectedColors.includes(color.id)}
+                    onSelect={() => toggleColorSelection(color.id)}
+                    onRemove={() => removeCustomColor(index)}
+                    onEdit={() => handleEditColor(index)}
+                    onDuplicate={() => handleDuplicateColor(index)}
+                    showBlendHint={selectedColors.length === 1}
+                  />
+                ))}
+              </AnimatePresence>
 
-          <AddColorButton
-            onColorAdd={handleAddColor}
-            isEmpty={customPalette.length === 0}
-          />
-        </div>
+              <div className="h-full min-h-[6rem]">
+                <AddColorButton
+                  onColorAdd={handleAddColor}
+                  isEmpty={customPalette.length === 0}
+                />
+              </div>
+            </div>
+          </SortableContext>
+        </DndContext>
       </div>
 
       {/* Blend Controls - Only show when 2 colors are selected */}

@@ -2,7 +2,7 @@ import { SavedPalette } from "@/store/customStore";
 
 // PalettePreview component props
 export interface PalettePreviewProps {
-  colors: Array<{ hex: string; name?: string }>;
+  colors: Array<{ id?: string; hex: string; name?: string }>;
 }
 
 // PaletteCard component props

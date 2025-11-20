@@ -20,7 +20,7 @@ export const PalettePreview = ({ colors }: PalettePreviewProps) => {
     <div className="flex h-8 w-full rounded-md overflow-hidden">
       {colors.map((color, index) => (
         <motion.div
-          key={`${color.hex}-${index}`}
+          key={color.id || `${color.hex}-${index}`}
           className="flex-1 h-full relative group cursor-pointer"
           style={{ backgroundColor: color.hex }}
           title={color.name || color.hex}

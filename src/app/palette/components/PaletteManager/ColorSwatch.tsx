@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { ColorSwatchProps } from "./types";
 
 export function ColorSwatch({
+  id,
   color,
   name,
   isSelected,
@@ -55,7 +56,6 @@ export function ColorSwatch({
 
   return (
     <motion.div
-      layout
       initial={{ opacity: 0, scale: 0.8 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.8, y: 20 }}
@@ -66,7 +66,7 @@ export function ColorSwatch({
         opacity: { duration: 0.2 },
       }}
       className={cn(
-        "relative group rounded-lg overflow-hidden shadow-md transition-all duration-300",
+        "relative group rounded-lg overflow-hidden shadow-md",
         isSelected
           ? "ring-4 ring-purple-500 dark:ring-purple-400 shadow-lg"
           : "hover:shadow-lg",

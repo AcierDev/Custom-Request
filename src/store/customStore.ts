@@ -43,6 +43,7 @@ export type ColorInfo = {
 export type ColorMap = Record<string, ColorInfo>;
 
 export type CustomColor = {
+  id: string;
   hex: string;
   name?: string;
 };
@@ -176,6 +177,8 @@ interface CustomStore extends CustomState {
   addBlendedColors: (count: number) => void;
   moveColorLeft: (index: number) => void;
   moveColorRight: (index: number) => void;
+  reorderPalette: (newOrder: CustomColor[]) => void;
+  commitPaletteToHistory: () => void;
   setIsRotated: (value: boolean) => void;
   setStyle: (style: StyleType) => void;
   setUseMini: (value: boolean) => void;
@@ -405,6 +408,41 @@ export const useCustomStore = create<CustomStore>()(
         if (localState) {
           try {
             const parsedState = JSON.parse(localState);
+
+            // Migration: Ensure all colors have IDs
+            if (parsedState.customPalette) {
+              parsedState.customPalette = parsedState.customPalette.map(
+                (c: any) => ({
+                  ...c,
+                  id: c.id || nanoid(),
+                })
+              );
+            }
+
+            if (parsedState.savedPalettes) {
+              parsedState.savedPalettes = parsedState.savedPalettes.map(
+                (p: any) => ({
+                  ...p,
+                  colors: p.colors.map((c: any) => ({
+                    ...c,
+                    id: c.id || nanoid(),
+                  })),
+                })
+              );
+            }
+
+            if (parsedState.savedDesigns) {
+              parsedState.savedDesigns = parsedState.savedDesigns.map(
+                (d: any) => ({
+                  ...d,
+                  customPalette: d.customPalette.map((c: any) => ({
+                    ...c,
+                    id: c.id || nanoid(),
+                  })),
+                })
+              );
+            }
+
             set(parsedState);
 
             // Determine initial active tab based on conditions
@@ -524,7 +562,10 @@ export const useCustomStore = create<CustomStore>()(
     },
     addCustomColor: (hex) =>
       set((state) => {
-        const newPalette = [...state.customPalette, { hex, name: "" }];
+        const newPalette = [
+          ...state.customPalette,
+          { id: nanoid(), hex, name: "" },
+        ];
 
         const newHistory = state.paletteHistory.slice(
           0,
@@ -542,6 +583,7 @@ export const useCustomStore = create<CustomStore>()(
       }),
     removeCustomColor: (index) =>
       set((state) => {
+        const removedColorId = state.customPalette[index].id;
         const newPalette = state.customPalette.filter((_, i) => i !== index);
 
         const newHistory = state.paletteHistory.slice(
@@ -553,7 +595,7 @@ export const useCustomStore = create<CustomStore>()(
         return {
           customPalette: newPalette,
           selectedColors: state.selectedColors.filter(
-            (hex) => hex !== state.customPalette[index].hex
+            (id) => id !== removedColorId
           ),
           currentColors:
             newPalette.length > 0
@@ -570,7 +612,7 @@ export const useCustomStore = create<CustomStore>()(
         if (index < 0 || index >= state.customPalette.length) return state;
 
         const newPalette = [...state.customPalette];
-        const newColor = { ...newPalette[index] };
+        const newColor = { ...newPalette[index], id: nanoid() };
         newPalette.splice(index + 1, 0, newColor);
 
         const newHistory = state.paletteHistory.slice(
@@ -587,22 +629,22 @@ export const useCustomStore = create<CustomStore>()(
           paletteHistoryIndex: newHistory.length - 1,
         };
       }),
-    toggleColorSelection: (hex) =>
+    toggleColorSelection: (id) =>
       set((state) => {
-        if (state.selectedColors.includes(hex)) {
+        if (state.selectedColors.includes(id)) {
           return {
-            selectedColors: state.selectedColors.filter((h) => h !== hex),
+            selectedColors: state.selectedColors.filter((i) => i !== id),
           };
         } else if (state.selectedColors.length < 2) {
           return {
-            selectedColors: [...state.selectedColors, hex],
+            selectedColors: [...state.selectedColors, id],
           };
         } else {
           console.log(
             "Already have 2 colors selected, replacing the first one"
           );
           return {
-            selectedColors: [hex, state.selectedColors[1]],
+            selectedColors: [id, state.selectedColors[1]],
           };
         }
       }),
@@ -614,8 +656,8 @@ export const useCustomStore = create<CustomStore>()(
       set((state) => {
         if (state.selectedColors.length !== 2) return state;
 
-        const indices = state.selectedColors.map((hex) =>
-          state.customPalette.findIndex((color) => color.hex === hex)
+        const indices = state.selectedColors.map((id) =>
+          state.customPalette.findIndex((color) => color.id === id)
         );
 
         const [startIndex, endIndex] = indices.sort((a, b) => a - b);
@@ -633,7 +675,7 @@ export const useCustomStore = create<CustomStore>()(
             ...Array(Math.floor((1 - ratio) * 100)).fill(color1),
           ]);
 
-          blendedColors.push({ hex: blendedHex });
+          blendedColors.push({ id: nanoid(), hex: blendedHex });
         }
 
         const newPalette = [...state.customPalette];
@@ -685,6 +727,26 @@ export const useCustomStore = create<CustomStore>()(
         return {
           customPalette: newPalette,
           currentColors: createColorMap(newPalette),
+          paletteHistory: newHistory,
+          paletteHistoryIndex: newHistory.length - 1,
+        };
+      }),
+    reorderPalette: (newOrder) =>
+      set((state) => {
+        return {
+          customPalette: newOrder,
+          currentColors: createColorMap(newOrder),
+        };
+      }),
+    commitPaletteToHistory: () =>
+      set((state) => {
+        const newHistory = state.paletteHistory.slice(
+          0,
+          state.paletteHistoryIndex + 1
+        );
+        newHistory.push([...state.customPalette]);
+
+        return {
           paletteHistory: newHistory,
           paletteHistoryIndex: newHistory.length - 1,
         };
@@ -793,13 +855,19 @@ export const useCustomStore = create<CustomStore>()(
         const palette = state.savedPalettes.find((p) => p.id === paletteId);
         if (!palette) return state;
 
+        // Ensure all colors have IDs
+        const colorsWithIds = palette.colors.map((c) => ({
+          ...c,
+          id: c.id || nanoid(),
+        }));
+
         // Initialize history with the loaded palette
-        const newHistory = [[...palette.colors]];
+        const newHistory = [[...colorsWithIds]];
 
         return {
-          customPalette: [...palette.colors],
+          customPalette: [...colorsWithIds],
           selectedDesign: ItemDesigns.Custom,
-          currentColors: createColorMap(palette.colors),
+          currentColors: createColorMap(colorsWithIds),
           selectedColors: [],
           editingPaletteId: paletteId,
           paletteHistory: newHistory,
@@ -847,9 +915,7 @@ export const useCustomStore = create<CustomStore>()(
         return {
           customPalette: newPalette,
           currentColors: createColorMap(newPalette),
-          selectedColors: state.selectedColors.map((color) =>
-            color === state.customPalette[index].hex ? hex : color
-          ),
+          // selectedColors stores IDs, so no need to update it when hex changes
           paletteHistory: newHistory,
           paletteHistoryIndex: newHistory.length - 1,
         };
@@ -869,6 +935,7 @@ export const useCustomStore = create<CustomStore>()(
         const designColors = DESIGN_COLORS[design];
         const customColors: CustomColor[] = Object.values(designColors).map(
           (color) => ({
+            id: nanoid(),
             hex: color.hex,
             name: color.name,
           })
@@ -889,15 +956,20 @@ export const useCustomStore = create<CustomStore>()(
       }),
     setCustomPalette: (palette: CustomColor[]) =>
       set((state) => {
+        const paletteWithIds = palette.map((c) => ({
+          ...c,
+          id: c.id || nanoid(),
+        }));
+
         const newHistory = state.paletteHistory.slice(
           0,
           state.paletteHistoryIndex + 1
         );
-        newHistory.push(palette);
+        newHistory.push(paletteWithIds);
 
         return {
-          customPalette: palette,
-          currentColors: createColorMap(palette),
+          customPalette: paletteWithIds,
+          currentColors: createColorMap(paletteWithIds),
           paletteHistory: newHistory,
           paletteHistoryIndex: newHistory.length - 1,
         };
@@ -1006,28 +1078,34 @@ export const useCustomStore = create<CustomStore>()(
           return false;
         }
 
-        set({
-          dimensions: shareableState.dimensions,
-          selectedDesign: shareableState.selectedDesign,
-          shippingSpeed: shareableState.shippingSpeed,
-          colorPattern: shareableState.colorPattern,
-          orientation: shareableState.orientation,
-          isReversed: shareableState.isReversed,
-          customPalette: shareableState.customPalette,
-          isRotated: shareableState.isRotated,
-          style: shareableState.style,
-          activeCustomMode: shareableState.activeCustomMode || "palette",
-          currentColors:
-            shareableState.selectedDesign === ItemDesigns.Custom &&
-            shareableState.customPalette.length > 0
-              ? createColorMap(shareableState.customPalette)
-              : DESIGN_COLORS[shareableState.selectedDesign as ItemDesigns] ||
-                get().currentColors,
-          pricing: calculatePrice(
-            shareableState.dimensions,
-            shareableState.shippingSpeed
-          ),
-        });
+          // Ensure loaded palette has IDs
+          const loadedPalette = shareableState.customPalette.map((c) => ({
+            ...c,
+            id: c.id || nanoid(),
+          }));
+
+          set({
+            dimensions: shareableState.dimensions,
+            selectedDesign: shareableState.selectedDesign,
+            shippingSpeed: shareableState.shippingSpeed,
+            colorPattern: shareableState.colorPattern,
+            orientation: shareableState.orientation,
+            isReversed: shareableState.isReversed,
+            customPalette: loadedPalette,
+            isRotated: shareableState.isRotated,
+            style: shareableState.style,
+            activeCustomMode: shareableState.activeCustomMode || "palette",
+            currentColors:
+              shareableState.selectedDesign === ItemDesigns.Custom &&
+              loadedPalette.length > 0
+                ? createColorMap(loadedPalette)
+                : DESIGN_COLORS[shareableState.selectedDesign as ItemDesigns] ||
+                  get().currentColors,
+            pricing: calculatePrice(
+              shareableState.dimensions,
+              shareableState.shippingSpeed
+            ),
+          });
 
         return true;
       } catch (error) {
@@ -1041,6 +1119,12 @@ export const useCustomStore = create<CustomStore>()(
           return false;
         }
 
+        // Ensure loaded palette has IDs
+        const loadedPalette = designData.customPalette.map((c) => ({
+          ...c,
+          id: c.id || nanoid(),
+        }));
+
         set({
           dimensions: designData.dimensions,
           selectedDesign: designData.selectedDesign,
@@ -1048,14 +1132,14 @@ export const useCustomStore = create<CustomStore>()(
           colorPattern: designData.colorPattern,
           orientation: designData.orientation,
           isReversed: designData.isReversed,
-          customPalette: designData.customPalette,
+          customPalette: loadedPalette,
           isRotated: designData.isRotated,
           style: designData.style,
           activeCustomMode: designData.activeCustomMode || "palette",
           currentColors:
             designData.selectedDesign === ItemDesigns.Custom &&
-            designData.customPalette.length > 0
-              ? createColorMap(designData.customPalette)
+            loadedPalette.length > 0
+              ? createColorMap(loadedPalette)
               : DESIGN_COLORS[designData.selectedDesign as ItemDesigns] ||
                 get().currentColors,
           pricing: calculatePrice(

@@ -51,7 +51,7 @@ export function CustomChoiceDialog({
       <div className="flex h-8 w-full rounded-md overflow-hidden shadow-sm border">
         {customPalette.slice(0, 8).map((color, index) => (
           <div
-            key={`${color.hex}-${index}`}
+            key={color.id || `${color.hex}-${index}`}
             className="flex-1 h-full"
             style={{ backgroundColor: color.hex }}
             title={color.name || color.hex}

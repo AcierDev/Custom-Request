@@ -2,6 +2,7 @@
 
 import { useState, useEffect, type ChangeEvent } from "react";
 import { motion } from "framer-motion";
+import { nanoid } from "nanoid";
 import { useCustomStore } from "@/store/customStore";
 import { PaletteManager } from "./components/PaletteManager";
 import { PaletteList } from "./components/PaletteList";
@@ -109,6 +110,7 @@ export default function PalettePage() {
           if (localPalette) {
             useCustomStore.setState({
               customPalette: localPalette.colors.map((color) => ({
+                id: nanoid(),
                 hex: color.hex,
                 name: color.name || "",
               })),
@@ -159,6 +161,7 @@ export default function PalettePage() {
           useCustomStore.setState({
             customPalette: data.palette.colors.map(
               (color: { hex: string; name?: string }) => ({
+                id: nanoid(),
                 hex: color.hex,
                 name: color.name || "",
               })
@@ -388,6 +391,7 @@ export default function PalettePage() {
 
       useCustomStore.setState({
         customPalette: validColors.map((color: any) => ({
+          id: nanoid(),
           hex: color.hex,
           name: color.name || "",
         })),
@@ -435,6 +439,7 @@ export default function PalettePage() {
       if (localPalette) {
         useCustomStore.setState({
           customPalette: localPalette.colors.map((color) => ({
+            id: nanoid(),
             hex: color.hex,
             name: color.name || "",
           })),
@@ -472,6 +477,7 @@ export default function PalettePage() {
       useCustomStore.setState({
         customPalette: data.palette.colors.map(
           (color: { hex: string; name?: string }) => ({
+            id: nanoid(),
             hex: color.hex,
             name: color.name || "",
           })
@@ -1075,7 +1081,7 @@ export default function PalettePage() {
                           <div className="flex h-8 w-full rounded-md overflow-hidden">
                             {customPalette.map((color, index) => (
                               <div
-                                key={`${color.hex}-${index}`}
+                                key={color.id || `${color.hex}-${index}`}
                                 className="flex-1 h-full"
                                 style={{ backgroundColor: color.hex }}
                                 title={color.name || color.hex}
