@@ -259,7 +259,7 @@ export const PaletteCard = ({
                     onBlur={handleNameSave}
                     className="flex-1 bg-transparent border-b border-purple-400 focus:outline-none focus:border-purple-600 text-lg font-semibold text-gray-900 dark:text-gray-100"
                     autoFocus
-                    maxLength={50}
+                    maxLength={100}
                   />
                 </div>
               ) : (
