@@ -15,4 +15,7 @@ export interface PaletteCardProps {
   isEditing: boolean;
   onMove?: () => void;
   inFolder?: boolean;
+  selectionMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelected?: (id: string) => void;
 }

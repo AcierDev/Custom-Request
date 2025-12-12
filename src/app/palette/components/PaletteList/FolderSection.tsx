@@ -48,6 +48,9 @@ interface FolderItemProps {
     paletteId: string,
     currentFolderId: string | undefined
   ) => void;
+  selectionMode?: boolean;
+  isSelected?: (id: string) => boolean;
+  onToggleSelected?: (id: string) => void;
 }
 
 const FolderItem = ({
@@ -59,6 +62,9 @@ const FolderItem = ({
   onOrder,
   editingPaletteId,
   onMovePalette,
+  selectionMode = false,
+  isSelected,
+  onToggleSelected,
 }: FolderItemProps) => {
   const [isEditingFolder, setIsEditingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState(folder.name);
@@ -162,6 +168,9 @@ const FolderItem = ({
                     isEditing={palette.id === editingPaletteId}
                     onMove={() => onMovePalette(palette.id, palette.folderId)}
                     inFolder={true}
+                    selectionMode={selectionMode}
+                    isSelected={isSelected?.(palette.id) ?? false}
+                    onToggleSelected={onToggleSelected}
                   />
                 </div>
               ))}
@@ -249,6 +258,9 @@ interface UnorganizedPalettesProps {
   ) => void;
   onImport: () => void;
   onIdImport?: (id: string) => void;
+  selectionMode?: boolean;
+  isSelected?: (id: string) => boolean;
+  onToggleSelected?: (id: string) => void;
 }
 
 const UnorganizedPalettes = ({
@@ -261,6 +273,9 @@ const UnorganizedPalettes = ({
   onMovePalette,
   onImport,
   onIdImport,
+  selectionMode = false,
+  isSelected,
+  onToggleSelected,
 }: UnorganizedPalettesProps) => {
   const { isUncategorizedCollapsed, toggleUncategorized } = useFolderCollapse();
 
@@ -310,6 +325,9 @@ const UnorganizedPalettes = ({
                     isEditing={palette.id === editingPaletteId}
                     onMove={() => onMovePalette(palette.id, undefined)}
                     inFolder={false}
+                    selectionMode={selectionMode}
+                    isSelected={isSelected?.(palette.id) ?? false}
+                    onToggleSelected={onToggleSelected}
                   />
                 </div>
               ))}
@@ -414,6 +432,9 @@ export interface FolderSectionProps {
   onOrder: (palette: SavedPalette) => void;
   onImport: () => void;
   onIdImport?: (id: string) => void;
+  selectionMode?: boolean;
+  isSelected?: (id: string) => boolean;
+  onToggleSelected?: (id: string) => void;
 }
 
 export const FolderSection = ({
@@ -423,6 +444,9 @@ export const FolderSection = ({
   onOrder,
   onImport,
   onIdImport,
+  selectionMode = false,
+  isSelected,
+  onToggleSelected,
 }: FolderSectionProps) => {
   const {
     paletteFolders,
@@ -493,6 +517,9 @@ export const FolderSection = ({
           onOrder={onOrder}
           editingPaletteId={editingPaletteId}
           onMovePalette={handleMovePalette}
+          selectionMode={selectionMode}
+          isSelected={isSelected}
+          onToggleSelected={onToggleSelected}
         />
       ))}
 
@@ -507,6 +534,9 @@ export const FolderSection = ({
         onMovePalette={handleMovePalette}
         onImport={onImport}
         onIdImport={onIdImport}
+        selectionMode={selectionMode}
+        isSelected={isSelected}
+        onToggleSelected={onToggleSelected}
       />
 
       {paletteFolders.length === 0 && unorganizedPalettes.length === 0 && (

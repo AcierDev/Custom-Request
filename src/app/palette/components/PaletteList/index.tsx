@@ -5,7 +5,14 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useCustomStore, SavedPalette } from "@/store/customStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, SlidersHorizontal, Palette } from "lucide-react";
+import {
+  Search,
+  SlidersHorizontal,
+  Palette,
+  Layers,
+  X,
+  Check,
+} from "lucide-react";
 import { PaletteCard } from "./PaletteCard";
 import { FolderSection } from "./FolderSection";
 import { toast } from "sonner";
@@ -25,9 +32,12 @@ export function PaletteList({ onOpenImport, onImportById }: PaletteListProps) {
     applyPalette,
     loadPaletteForEditing,
     editingPaletteId,
+    createSharedDesignSetFromPalettes,
   } = useCustomStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const router = useRouter();
 
   // For navigation to the Create tab
@@ -94,6 +104,30 @@ export function PaletteList({ onOpenImport, onImportById }: PaletteListProps) {
     );
   };
 
+  const isSelected = (id: string) => selectedIds.includes(id);
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const exitSelectionMode = () => {
+    setSelectionMode(false);
+    setSelectedIds([]);
+  };
+
+  const handleShareSelected = async () => {
+    const result = await createSharedDesignSetFromPalettes(selectedIds);
+    if (result.success) {
+      await navigator.clipboard.writeText(result.setUrl);
+      toast.success("Copied shelf link to clipboard");
+      exitSelectionMode();
+    } else {
+      toast.error(result.error);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Search and filter */}
@@ -113,6 +147,45 @@ export function PaletteList({ onOpenImport, onImportById }: PaletteListProps) {
         </Button>
       </div>
 
+      {/* Multi-select action bar */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Button
+            variant={selectionMode ? "secondary" : "outline"}
+            className="flex items-center gap-2"
+            onClick={() => {
+              if (selectionMode) exitSelectionMode();
+              else setSelectionMode(true);
+            }}
+          >
+            {selectionMode ? (
+              <X className="h-4 w-4" />
+            ) : (
+              <Layers className="h-4 w-4" />
+            )}
+            <span>
+              {selectionMode ? "Cancel selection" : "Select palettes"}
+            </span>
+          </Button>
+          {selectionMode && (
+            <div className="text-xs text-gray-600 dark:text-gray-400">
+              {selectedIds.length} selected
+            </div>
+          )}
+        </div>
+
+        {selectionMode && (
+          <Button
+            onClick={handleShareSelected}
+            disabled={selectedIds.length === 0}
+            className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+          >
+            <Check className="h-4 w-4" />
+            Share selected
+          </Button>
+        )}
+      </div>
+
       {/* Palettes section */}
       {searchQuery ? (
         // When searching, show flat list of palettes
@@ -128,6 +201,9 @@ export function PaletteList({ onOpenImport, onImportById }: PaletteListProps) {
                     onVisualize={handleVisualize}
                     onOrder={handleOrder}
                     isEditing={palette.id === editingPaletteId}
+                    selectionMode={selectionMode}
+                    isSelected={isSelected(palette.id)}
+                    onToggleSelected={toggleSelected}
                   />
                 </div>
               ))}
@@ -156,6 +232,9 @@ export function PaletteList({ onOpenImport, onImportById }: PaletteListProps) {
             onOrder={handleOrder}
             onImport={onOpenImport}
             onIdImport={onImportById}
+            selectionMode={selectionMode}
+            isSelected={isSelected}
+            onToggleSelected={toggleSelected}
           />
         </div>
       )}

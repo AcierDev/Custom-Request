@@ -17,6 +17,8 @@ import {
   Twitter,
   Facebook,
   Copy,
+  CheckSquare,
+  Square,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -47,6 +49,9 @@ export const PaletteCard = ({
   isEditing,
   onMove,
   inFolder = false,
+  selectionMode = false,
+  isSelected = false,
+  onToggleSelected,
 }: PaletteCardProps) => {
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -240,15 +245,45 @@ export const PaletteCard = ({
       layout
     >
       <Card
+        onClick={() => {
+          if (!selectionMode) return;
+          onToggleSelected?.(palette.id);
+        }}
         className={`overflow-hidden border h-full flex flex-col ${
-          isEditing
+          selectionMode
+            ? isSelected
+              ? "border-purple-500 dark:border-purple-400 border-2 shadow-md"
+              : "border-gray-200 dark:border-gray-800"
+            : isEditing
             ? "border-purple-400 dark:border-purple-600 border-2"
             : "border-gray-200 dark:border-gray-800"
-        } bg-white dark:bg-gray-900 hover:shadow-md transition-shadow`}
+        } bg-white dark:bg-gray-900 hover:shadow-md transition-shadow ${
+          selectionMode ? "cursor-pointer" : ""
+        }`}
       >
         <CardHeader className="p-4 pb-2">
           <div className="flex justify-between items-start">
             <CardTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
+              {selectionMode && (
+                <button
+                  type="button"
+                  className="mr-2 text-purple-600 dark:text-purple-400"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onToggleSelected?.(palette.id);
+                  }}
+                  aria-label={
+                    isSelected ? "Deselect palette" : "Select palette"
+                  }
+                >
+                  {isSelected ? (
+                    <CheckSquare className="h-5 w-5" />
+                  ) : (
+                    <Square className="h-5 w-5" />
+                  )}
+                </button>
+              )}
               {isEditingName ? (
                 <div className="flex items-center gap-2 flex-1">
                   <input
@@ -264,8 +299,16 @@ export const PaletteCard = ({
                 </div>
               ) : (
                 <div
-                  className="flex items-center cursor-pointer hover:text-purple-600 dark:hover:text-purple-400 transition-colors group"
-                  onClick={handleNameEdit}
+                  className={`flex items-center transition-colors group ${
+                    selectionMode
+                      ? ""
+                      : "cursor-pointer hover:text-purple-600 dark:hover:text-purple-400"
+                  }`}
+                  onClick={(e) => {
+                    if (selectionMode) return;
+                    e.stopPropagation();
+                    handleNameEdit();
+                  }}
                   title="Click to edit name"
                 >
                   {palette.name}
@@ -353,156 +396,164 @@ export const PaletteCard = ({
           </div>
         </CardContent>
         <CardFooter className="p-3 pt-0 flex justify-between">
-          <div className="flex gap-1">
-            <TooltipProvider delayDuration={300}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-gray-500 hover:text-purple-600 dark:text-gray-400 dark:hover:text-purple-400"
-                    onClick={() => onEdit(palette.id)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p>Edit palette</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+          {selectionMode ? (
+            <div className="w-full text-xs text-gray-600 dark:text-gray-400">
+              {isSelected ? "Selected" : "Click to select"}
+            </div>
+          ) : (
+            <>
+              <div className="flex gap-1">
+                <TooltipProvider delayDuration={300}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-gray-500 hover:text-purple-600 dark:text-gray-400 dark:hover:text-purple-400"
+                        onClick={() => onEdit(palette.id)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Edit palette</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
 
-            <TooltipProvider delayDuration={300}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400"
-                    onClick={handleExportPalette}
-                  >
-                    <Download className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p>Export palette</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+                <TooltipProvider delayDuration={300}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400"
+                        onClick={handleExportPalette}
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Export palette</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
 
-            <TooltipProvider delayDuration={300}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
-                    onClick={() => {
-                      setActiveTab("share");
-                      setShowExportDialog(true);
-                    }}
-                  >
-                    <Share2 className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p>Share palette</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+                <TooltipProvider delayDuration={300}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
+                        onClick={() => {
+                          setActiveTab("share");
+                          setShowExportDialog(true);
+                        }}
+                      >
+                        <Share2 className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Share palette</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
 
-            <TooltipProvider delayDuration={300}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      onDelete(palette.id);
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p>Delete palette</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+                <TooltipProvider delayDuration={300}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          onDelete(palette.id);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Delete palette</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
 
-            {/* Add Move to Folder option */}
-            {onMove && (
-              <TooltipProvider delayDuration={300}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-gray-500 hover:text-amber-600 dark:text-gray-400 dark:hover:text-amber-400"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        onMove();
-                      }}
-                    >
-                      <FolderIcon className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    <p>Move to folder</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
-          </div>
+                {/* Add Move to Folder option */}
+                {onMove && (
+                  <TooltipProvider delayDuration={300}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-gray-500 hover:text-amber-600 dark:text-gray-400 dark:hover:text-amber-400"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            onMove();
+                          }}
+                        >
+                          <FolderIcon className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        <p>Move to folder</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+              </div>
 
-          <div className="flex gap-2">
-            <TooltipProvider delayDuration={300}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 text-xs font-medium text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/30 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                    onClick={() => onVisualize(palette)}
-                  >
-                    <Eye className="h-3 w-3 mr-1" />
-                    Visualize
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p>Apply palette and preview</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+              <div className="flex gap-2">
+                <TooltipProvider delayDuration={300}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-xs font-medium text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/30 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                        onClick={() => onVisualize(palette)}
+                      >
+                        <Eye className="h-3 w-3 mr-1" />
+                        Visualize
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Apply palette and preview</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
 
-            <TooltipProvider delayDuration={300}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 text-xs font-medium text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-900/30 hover:bg-purple-50 dark:hover:bg-purple-900/20"
-                    onClick={() => onOrder(palette)}
-                  >
-                    <ShoppingCart className="h-3 w-3 mr-1" />
-                    Order
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p>Apply palette and go to order</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
+                <TooltipProvider delayDuration={300}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-xs font-medium text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-900/30 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                        onClick={() => onOrder(palette)}
+                      >
+                        <ShoppingCart className="h-3 w-3 mr-1" />
+                        Order
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Apply palette and go to order</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            </>
+          )}
         </CardFooter>
       </Card>
 
       {/* Export Dialog */}
-      {showExportDialog && (
+      {!selectionMode && showExportDialog && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}

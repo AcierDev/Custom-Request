@@ -208,6 +208,16 @@ interface CustomStore extends CustomState {
   setCustomPalette: (palette: CustomColor[]) => void;
   generateShareableLink: () => string;
   generateShortShareableLink: () => string;
+  getShareableDesignData: () => {
+    dimensions: Dimensions;
+    selectedDesign: ItemDesigns;
+    colorPattern: ColorPattern;
+    orientation: Orientation;
+    isReversed: boolean;
+    customPalette: Array<{ hex: string; name?: string }>;
+    isRotated: boolean;
+    useMini: boolean;
+  };
   createSharedDesign: (
     userId?: string,
     email?: string
@@ -217,6 +227,14 @@ interface CustomStore extends CustomState {
     shareUrl?: string;
     error?: string;
   }>;
+  createSharedDesignSetFromPalettes: (
+    paletteIds: string[],
+    userId?: string,
+    email?: string
+  ) => Promise<
+    | { success: true; setId: string; setUrl: string }
+    | { success: false; error: string }
+  >;
   loadFromShareableData: (data: string) => boolean;
   loadFromDatabaseData: (designData: ShareableState) => boolean;
   saveToDatabase: () => Promise<boolean>;
@@ -1012,6 +1030,22 @@ export const useCustomStore = create<CustomStore>()(
 
       return generateShortShareableUrl(shareableState);
     },
+    getShareableDesignData: () => {
+      const state = get();
+      return {
+        dimensions: state.dimensions,
+        selectedDesign: state.selectedDesign,
+        colorPattern: state.colorPattern,
+        orientation: state.orientation,
+        isReversed: state.isReversed,
+        customPalette: state.customPalette.map((c) => ({
+          hex: c.hex,
+          name: c.name,
+        })),
+        isRotated: state.isRotated,
+        useMini: state.useMini,
+      };
+    },
     createSharedDesign: async (userId?: string, email?: string) => {
       const state = get();
 
@@ -1060,6 +1094,60 @@ export const useCustomStore = create<CustomStore>()(
         };
       }
     },
+    createSharedDesignSetFromPalettes: async (
+      paletteIds: string[],
+      userId?: string,
+      email?: string
+    ) => {
+      const state = get();
+      const uniqueIds = Array.from(new Set(paletteIds)).filter(Boolean);
+
+      if (uniqueIds.length === 0) {
+        return { success: false, error: "Select at least one palette." };
+      }
+
+      const baseDesign = get().getShareableDesignData();
+
+      const palettes = uniqueIds
+        .map((id) => state.savedPalettes.find((p) => p.id === id))
+        .filter(Boolean);
+
+      if (palettes.length === 0) {
+        return {
+          success: false,
+          error: "No matching palettes found. Please reselect and try again.",
+        };
+      }
+
+      const designs = palettes.map((p) => ({
+        label: p!.name,
+        designData: {
+          ...baseDesign,
+          customPalette: p!.colors.map((c) => ({ hex: c.hex, name: c.name })),
+        },
+      }));
+
+      try {
+        const response = await fetch("/api/shared-design-sets", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ designs, userId, email }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to create shared design set");
+        }
+
+        const result: { setId: string; setUrl: string } = await response.json();
+        return { success: true, setId: result.setId, setUrl: result.setUrl };
+      } catch (error) {
+        console.error("Error creating shared design set:", error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error",
+        };
+      }
+    },
     loadFromShareableData: (data: string) => {
       try {
         let shareableState: ShareableState;
@@ -1078,34 +1166,34 @@ export const useCustomStore = create<CustomStore>()(
           return false;
         }
 
-          // Ensure loaded palette has IDs
-          const loadedPalette = shareableState.customPalette.map((c) => ({
-            ...c,
-            id: c.id || nanoid(),
-          }));
+        // Ensure loaded palette has IDs
+        const loadedPalette = shareableState.customPalette.map((c) => ({
+          ...c,
+          id: c.id || nanoid(),
+        }));
 
-          set({
-            dimensions: shareableState.dimensions,
-            selectedDesign: shareableState.selectedDesign,
-            shippingSpeed: shareableState.shippingSpeed,
-            colorPattern: shareableState.colorPattern,
-            orientation: shareableState.orientation,
-            isReversed: shareableState.isReversed,
-            customPalette: loadedPalette,
-            isRotated: shareableState.isRotated,
-            style: shareableState.style,
-            activeCustomMode: shareableState.activeCustomMode || "palette",
-            currentColors:
-              shareableState.selectedDesign === ItemDesigns.Custom &&
-              loadedPalette.length > 0
-                ? createColorMap(loadedPalette)
-                : DESIGN_COLORS[shareableState.selectedDesign as ItemDesigns] ||
-                  get().currentColors,
-            pricing: calculatePrice(
-              shareableState.dimensions,
-              shareableState.shippingSpeed
-            ),
-          });
+        set({
+          dimensions: shareableState.dimensions,
+          selectedDesign: shareableState.selectedDesign,
+          shippingSpeed: shareableState.shippingSpeed,
+          colorPattern: shareableState.colorPattern,
+          orientation: shareableState.orientation,
+          isReversed: shareableState.isReversed,
+          customPalette: loadedPalette,
+          isRotated: shareableState.isRotated,
+          style: shareableState.style,
+          activeCustomMode: shareableState.activeCustomMode || "palette",
+          currentColors:
+            shareableState.selectedDesign === ItemDesigns.Custom &&
+            loadedPalette.length > 0
+              ? createColorMap(loadedPalette)
+              : DESIGN_COLORS[shareableState.selectedDesign as ItemDesigns] ||
+                get().currentColors,
+          pricing: calculatePrice(
+            shareableState.dimensions,
+            shareableState.shippingSpeed
+          ),
+        });
 
         return true;
       } catch (error) {
