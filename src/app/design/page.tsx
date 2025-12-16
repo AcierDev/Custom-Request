@@ -44,7 +44,7 @@ import { SizeCard } from "../order/components/SizeCard";
 import { StyleCard } from "../order/components/StyleCard";
 import { DesignCard } from "../order/components/DesignCard";
 import { ShareDialog } from "@/components/ShareDialog";
-import { DesignTips } from "@/components/DesignTips";
+import { DraftSetControls } from "@/components/DraftSetControls";
 import { DesignTutorial } from "@/components/DesignTutorial";
 import { EmptyPaletteWarning } from "@/components/EmptyPaletteWarning";
 import { CustomChoiceDialog } from "@/components/CustomChoiceDialog";
@@ -139,16 +139,7 @@ export default function DesignPage() {
         <div className="flex items-center gap-2">
           {showUIControls && (
             <>
-              <Link href="/designs">
-                <Button
-                  variant="outline"
-                  className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm flex items-center gap-2 text-sm"
-                >
-                  <Eye className="w-4 h-4" />
-                  <span className="hidden sm:inline">View Saved Designs</span>
-                  <span className="sm:hidden">Designs</span>
-                </Button>
-              </Link>
+              <DraftSetControls compact={false} />
               <Link href="/designs">
                 <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white flex items-center gap-2 text-sm save-button">
                   <Save className="w-4 h-4" />
@@ -327,9 +318,6 @@ export default function DesignPage() {
         isOpen={isShareDialogOpen}
         onClose={() => setIsShareDialogOpen(false)}
       />
-
-      {/* Design tips */}
-      {showUIControls && <DesignTips />}
 
       {/* Design tutorial */}
       {showUIControls && <DesignTutorial />}

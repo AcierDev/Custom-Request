@@ -156,6 +156,7 @@ interface CustomState {
 
   paletteHistory: Array<Array<CustomColor>>;
   paletteHistoryIndex: number;
+  draftSet: DraftSetItem[];
 }
 
 interface CustomStore extends CustomState {
@@ -208,6 +209,7 @@ interface CustomStore extends CustomState {
   setCustomPalette: (palette: CustomColor[]) => void;
   generateShareableLink: () => string;
   generateShortShareableLink: () => string;
+  getShareableStateSnapshot: () => ShareableState;
   getShareableDesignData: () => {
     dimensions: Dimensions;
     selectedDesign: ItemDesigns;
@@ -227,6 +229,14 @@ interface CustomStore extends CustomState {
     shareUrl?: string;
     error?: string;
   }>;
+  createSharedDesignSet: (
+    designs: Array<{ label?: string | null; designData: ShareableState }>,
+    userId?: string,
+    email?: string
+  ) => Promise<
+    | { success: true; setId: string; setUrl: string }
+    | { success: false; error: string }
+  >;
   createSharedDesignSetFromPalettes: (
     paletteIds: string[],
     userId?: string,
@@ -261,6 +271,13 @@ interface CustomStore extends CustomState {
 
   // New action to set the active custom mode
   setActiveCustomMode: (mode: CustomMode) => void;
+
+  // Draft Set Actions
+  addToDraftSet: (item: { label?: string; designData: ShareableState }) => void;
+  removeFromDraftSet: (id: string) => void;
+  clearDraftSet: () => void;
+  updateDraftSetItemLabel: (id: string, label: string) => void;
+
   setPatternOverride: (overrides: Record<string, number>) => void;
   clearPatternOverride: () => void;
   setPatternEditingMode: (mode: {
@@ -308,8 +325,29 @@ const createColorMap = (colors: CustomColor[]): ColorMap => {
   );
 };
 
+const normalizeSavedPaletteToCustomColors = (
+  palette: SavedPalette
+): CustomColor[] =>
+  palette.colors.map((c) => ({
+    id: nanoid(),
+    hex: c.hex,
+    name: c.name ?? "",
+  }));
+
+const buildShareableStateForPalette = (
+  base: ShareableState,
+  palette: SavedPalette,
+  overrides?: Partial<ShareableState>
+): ShareableState => {
+  const next: ShareableState = { ...base, ...(overrides ?? {}) };
+  if (!overrides?.customPalette) {
+    next.customPalette = normalizeSavedPaletteToCustomColors(palette);
+  }
+  return next;
+};
+
 // Define the shareable state interface - only include what's needed for sharing
-interface ShareableState {
+export interface ShareableState {
   dimensions: Dimensions;
   selectedDesign: ItemDesigns;
   shippingSpeed: ShippingSpeed;
@@ -322,6 +360,13 @@ interface ShareableState {
   useMini: boolean;
   activeCustomMode: CustomMode;
 }
+
+export type DraftSetItem = {
+  id: string;
+  label: string;
+  designData: ShareableState;
+  createdAt: number;
+};
 
 // Define what we want to persist in the database
 interface PersistentState extends ShareableState {
@@ -340,6 +385,7 @@ interface PersistentState extends ShareableState {
     showUIControls: boolean;
   };
   dataSyncVersion?: number;
+  draftSet?: DraftSetItem[];
 }
 
 // List of state properties that should trigger an auto-save when changed
@@ -361,6 +407,7 @@ const AUTO_SAVE_TRACKED_PROPERTIES: (keyof CustomState)[] = [
   "paletteHistory",
   "paletteHistoryIndex",
   "activeCustomMode",
+  "draftSet",
 ];
 
 // Create the store with the subscribeWithSelector middleware
@@ -414,6 +461,7 @@ export const useCustomStore = create<CustomStore>()(
     paletteHistory: [],
     paletteHistoryIndex: -1,
     activeCustomMode: "palette",
+    draftSet: [],
     patternOverride: {},
     patternEditingMode: {
       selectedColorIndex: -1,
@@ -459,6 +507,21 @@ export const useCustomStore = create<CustomStore>()(
                   })),
                 })
               );
+            }
+
+            if (parsedState.draftSet) {
+              parsedState.draftSet = parsedState.draftSet.map((item: any) => ({
+                ...item,
+                designData: {
+                  ...item.designData,
+                  customPalette: item.designData.customPalette.map(
+                    (c: any) => ({
+                      ...c,
+                      id: c.id || nanoid(),
+                    })
+                  ),
+                },
+              }));
             }
 
             set(parsedState);
@@ -993,28 +1056,14 @@ export const useCustomStore = create<CustomStore>()(
         };
       }),
     generateShareableLink: () => {
-      const state = get();
-
-      const shareableState: ShareableState = {
-        dimensions: state.dimensions,
-        selectedDesign: state.selectedDesign,
-        shippingSpeed: state.shippingSpeed,
-        colorPattern: state.colorPattern,
-        orientation: state.orientation,
-        isReversed: state.isReversed,
-        customPalette: state.customPalette,
-        isRotated: state.isRotated,
-        style: state.style,
-        useMini: state.useMini,
-        activeCustomMode: state.activeCustomMode,
-      };
-
-      return generateShareableUrl(shareableState);
+      return generateShareableUrl(get().getShareableStateSnapshot());
     },
     generateShortShareableLink: () => {
+      return generateShortShareableUrl(get().getShareableStateSnapshot());
+    },
+    getShareableStateSnapshot: () => {
       const state = get();
-
-      const shareableState: ShareableState = {
+      return {
         dimensions: state.dimensions,
         selectedDesign: state.selectedDesign,
         shippingSpeed: state.shippingSpeed,
@@ -1027,8 +1076,6 @@ export const useCustomStore = create<CustomStore>()(
         useMini: state.useMini,
         activeCustomMode: state.activeCustomMode,
       };
-
-      return generateShortShareableUrl(shareableState);
     },
     getShareableDesignData: () => {
       const state = get();
@@ -1047,21 +1094,7 @@ export const useCustomStore = create<CustomStore>()(
       };
     },
     createSharedDesign: async (userId?: string, email?: string) => {
-      const state = get();
-
-      const shareableState: ShareableState = {
-        dimensions: state.dimensions,
-        selectedDesign: state.selectedDesign,
-        shippingSpeed: state.shippingSpeed,
-        colorPattern: state.colorPattern,
-        orientation: state.orientation,
-        isReversed: state.isReversed,
-        customPalette: state.customPalette,
-        isRotated: state.isRotated,
-        style: state.style,
-        useMini: state.useMini,
-        activeCustomMode: state.activeCustomMode,
-      };
+      const shareableState = get().getShareableStateSnapshot();
 
       try {
         const response = await fetch("/api/shared-designs", {
@@ -1094,38 +1127,10 @@ export const useCustomStore = create<CustomStore>()(
         };
       }
     },
-    createSharedDesignSetFromPalettes: async (
-      paletteIds: string[],
-      userId?: string,
-      email?: string
-    ) => {
-      const state = get();
-      const uniqueIds = Array.from(new Set(paletteIds)).filter(Boolean);
-
-      if (uniqueIds.length === 0) {
-        return { success: false, error: "Select at least one palette." };
+    createSharedDesignSet: async (designs, userId, email) => {
+      if (!Array.isArray(designs) || designs.length === 0) {
+        return { success: false, error: "Add at least one design to share." };
       }
-
-      const baseDesign = get().getShareableDesignData();
-
-      const palettes = uniqueIds
-        .map((id) => state.savedPalettes.find((p) => p.id === id))
-        .filter(Boolean);
-
-      if (palettes.length === 0) {
-        return {
-          success: false,
-          error: "No matching palettes found. Please reselect and try again.",
-        };
-      }
-
-      const designs = palettes.map((p) => ({
-        label: p!.name,
-        designData: {
-          ...baseDesign,
-          customPalette: p!.colors.map((c) => ({ hex: c.hex, name: c.name })),
-        },
-      }));
 
       try {
         const response = await fetch("/api/shared-design-sets", {
@@ -1147,6 +1152,37 @@ export const useCustomStore = create<CustomStore>()(
           error: error instanceof Error ? error.message : "Unknown error",
         };
       }
+    },
+    createSharedDesignSetFromPalettes: async (
+      paletteIds: string[],
+      userId?: string,
+      email?: string
+    ) => {
+      const state = get();
+      const normalizedIds = paletteIds.filter(Boolean);
+
+      if (normalizedIds.length === 0) {
+        return { success: false, error: "Select at least one palette." };
+      }
+
+      const baseDesign = get().getShareableStateSnapshot();
+      const palettes = normalizedIds
+        .map((id) => state.savedPalettes.find((p) => p.id === id))
+        .filter((p): p is SavedPalette => Boolean(p));
+
+      if (palettes.length === 0) {
+        return {
+          success: false,
+          error: "No matching palettes found. Please reselect and try again.",
+        };
+      }
+
+      const designs = palettes.map((palette) => ({
+        label: palette.name,
+        designData: buildShareableStateForPalette(baseDesign, palette),
+      }));
+
+      return get().createSharedDesignSet(designs, userId, email);
     },
     loadFromShareableData: (data: string) => {
       try {
@@ -1345,6 +1381,7 @@ export const useCustomStore = create<CustomStore>()(
           useMini: get().useMini,
           viewSettings: get().viewSettings,
           activeCustomMode: get().activeCustomMode,
+          draftSet: get().draftSet,
           dataSyncVersion: newVersion,
         };
 
@@ -1974,6 +2011,32 @@ export const useCustomStore = create<CustomStore>()(
       return true;
     },
     setActiveCustomMode: (mode: CustomMode) => set({ activeCustomMode: mode }),
+
+    // Draft Set Actions
+    addToDraftSet: (item) =>
+      set((state) => ({
+        draftSet: [
+          ...state.draftSet,
+          {
+            id: nanoid(),
+            label: item.label || `Design ${state.draftSet.length + 1}`,
+            designData: item.designData,
+            createdAt: Date.now(),
+          },
+        ],
+      })),
+    removeFromDraftSet: (id) =>
+      set((state) => ({
+        draftSet: state.draftSet.filter((item) => item.id !== id),
+      })),
+    clearDraftSet: () => set({ draftSet: [] }),
+    updateDraftSetItemLabel: (id, label) =>
+      set((state) => ({
+        draftSet: state.draftSet.map((item) =>
+          item.id === id ? { ...item, label } : item
+        ),
+      })),
+
     setPatternOverride: (overrides: Record<string, number>) =>
       set({ patternOverride: overrides }),
     clearPatternOverride: () => set({ patternOverride: {} }),

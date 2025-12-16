@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCustomStore, SavedPalette } from "@/store/customStore";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { usePaletteLoadConfirm } from "@/hooks/usePaletteLoadConfirm";
 import { PaletteLoadConfirmDialog } from "@/components/PaletteLoadConfirmDialog";
+import { ShareSetDialog } from "@/components/ShareSetDialog";
 
 interface PaletteListProps {
   onOpenImport: () => void;
@@ -32,12 +33,12 @@ export function PaletteList({ onOpenImport, onImportById }: PaletteListProps) {
     applyPalette,
     loadPaletteForEditing,
     editingPaletteId,
-    createSharedDesignSetFromPalettes,
   } = useCustomStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isShareSetOpen, setIsShareSetOpen] = useState(false);
   const router = useRouter();
 
   // For navigation to the Create tab
@@ -117,16 +118,11 @@ export function PaletteList({ onOpenImport, onImportById }: PaletteListProps) {
     setSelectedIds([]);
   };
 
-  const handleShareSelected = async () => {
-    const result = await createSharedDesignSetFromPalettes(selectedIds);
-    if (result.success) {
-      await navigator.clipboard.writeText(result.setUrl);
-      toast.success("Copied shelf link to clipboard");
-      exitSelectionMode();
-    } else {
-      toast.error(result.error);
-    }
-  };
+  const selectedPalettes = useMemo(() => {
+    return selectedIds
+      .map((id) => savedPalettes.find((p) => p.id === id))
+      .filter((p): p is SavedPalette => Boolean(p));
+  }, [selectedIds, savedPalettes]);
 
   return (
     <div className="space-y-6">
@@ -176,7 +172,7 @@ export function PaletteList({ onOpenImport, onImportById }: PaletteListProps) {
 
         {selectionMode && (
           <Button
-            onClick={handleShareSelected}
+            onClick={() => setIsShareSetOpen(true)}
             disabled={selectedIds.length === 0}
             className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
           >
@@ -281,6 +277,16 @@ export function PaletteList({ onOpenImport, onImportById }: PaletteListProps) {
           paletteToLoad={paletteToLoad}
         />
       )}
+
+      <ShareSetDialog
+        open={isShareSetOpen}
+        onOpenChange={setIsShareSetOpen}
+        palettes={selectedPalettes}
+        onShared={() => {
+          setIsShareSetOpen(false);
+          exitSelectionMode();
+        }}
+      />
     </div>
   );
 }
