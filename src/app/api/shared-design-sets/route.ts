@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     const viewerBaseUrl =
       process.env.NEXT_PUBLIC_VIEWER_APP_URL ||
       process.env.NEXT_PUBLIC_APP_URL ||
-      "http://localhost:3000";
+      "http://viewer.everwoodus.com";
 
     return NextResponse.json({
       setId,
