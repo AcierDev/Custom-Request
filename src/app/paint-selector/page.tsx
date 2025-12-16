@@ -73,7 +73,7 @@ export default function PaintSelectorPage() {
   const [selectedColors, setSelectedColors] = useState<Set<string>>(new Set());
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
-  const [activeTab, setActiveTab] = useState("browse");
+  const [activeTab, setActiveTab] = useState("similar");
   const [searchSuggestions, setSearchSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [similarToHex, setSimilarToHex] = useState("");
@@ -301,9 +301,9 @@ export default function PaintSelectorPage() {
       .slice(0, 50); // Limit to top 50 similar colors
   };
 
-  // Validate hex color
   const isValidHex = (hex: string): boolean => {
-    return /^#[0-9A-F]{6}$/i.test(hex);
+    const normalized = hex.startsWith("#") ? hex : `#${hex}`;
+    return /^#[0-9A-F]{6}$/i.test(normalized);
   };
 
   // Enhanced search function
@@ -979,11 +979,11 @@ export default function PaintSelectorPage() {
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full max-w-md grid-cols-3 mb-6">
+            <TabsTrigger value="similar">Similar Colors</TabsTrigger>
             <TabsTrigger value="browse">Browse Colors</TabsTrigger>
             <TabsTrigger value="favorites">
               Favorites ({favorites.size})
             </TabsTrigger>
-            <TabsTrigger value="similar">Similar Colors</TabsTrigger>
           </TabsList>
 
           <TabsContent value="browse" className="space-y-6">
@@ -1219,21 +1219,30 @@ export default function PaintSelectorPage() {
                 <div className="flex gap-2">
                   <div className="flex-1 relative">
                     <Input
-                      placeholder="#3B82F6"
+                      placeholder="#3B82F6 or 3B82F6"
                       value={similarToHex}
                       onChange={(e) => {
                         setSimilarToHex(e.target.value);
                         setShowSimilarColors(false);
                       }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && isValidHex(similarToHex)) {
+                          const normalized = similarToHex.startsWith("#")
+                            ? similarToHex
+                            : `#${similarToHex}`;
+                          setSimilarToHex(normalized);
+                          setShowSimilarColors(true);
+                        }
+                      }}
                       className="font-mono"
                     />
-                    {similarToHex && (
+                    {similarToHex && isValidHex(similarToHex) && (
                       <div
                         className="absolute right-2 top-2 w-6 h-6 rounded border border-gray-300 dark:border-gray-600"
                         style={{
-                          backgroundColor: isValidHex(similarToHex)
+                          backgroundColor: similarToHex.startsWith("#")
                             ? similarToHex
-                            : "#transparent",
+                            : `#${similarToHex}`,
                         }}
                       />
                     )}
@@ -1241,6 +1250,10 @@ export default function PaintSelectorPage() {
                   <Button
                     onClick={() => {
                       if (isValidHex(similarToHex)) {
+                        const normalized = similarToHex.startsWith("#")
+                          ? similarToHex
+                          : `#${similarToHex}`;
+                        setSimilarToHex(normalized);
                         setShowSimilarColors(true);
                       } else {
                         toast.error(
