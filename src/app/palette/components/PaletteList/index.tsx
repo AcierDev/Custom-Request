@@ -280,12 +280,11 @@ export function PaletteList({ onOpenImport, onImportById }: PaletteListProps) {
 
       <ShareSetDialog
         open={isShareSetOpen}
-        onOpenChange={setIsShareSetOpen}
-        palettes={selectedPalettes}
-        onShared={() => {
-          setIsShareSetOpen(false);
-          exitSelectionMode();
+        onOpenChange={(open) => {
+          setIsShareSetOpen(open);
+          if (!open) exitSelectionMode();
         }}
+        palettes={selectedPalettes}
       />
     </div>
   );

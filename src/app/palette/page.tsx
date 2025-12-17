@@ -24,6 +24,7 @@ import {
   Image as ImageIcon,
   Undo2,
   Redo2,
+  Anchor,
 } from "lucide-react";
 import {
   Card,
@@ -61,11 +62,170 @@ export default function PalettePage() {
     redoPaletteAction,
     paletteHistory,
     paletteHistoryIndex,
+    setCustomPalette,
   } = useCustomStore();
 
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   const [paletteName, setPaletteName] = useState("");
   const [saveSuccess, setSaveSuccess] = useState(false);
+  
+  // Paint color grounding
+  const [allPaintColors, setAllPaintColors] = useState<any[]>([]);
+  const [paintColorsLoaded, setPaintColorsLoaded] = useState(false);
+
+  useEffect(() => {
+     const loadPaintColors = async () => {
+      try {
+        const [
+          behrResponse,
+          sherwinResponse,
+          valsparResponse,
+          ppgResponse,
+          benjaminMooreResponse,
+        ] = await Promise.all([
+          fetch("/paints/behr/colors.json"),
+          fetch("/paints/sherwin/colors.json"),
+          fetch("/paints/valspar/colors.json"),
+          fetch("/paints/ppg/colors.json"),
+          fetch("/paints/benjamin_moore/colors.json"),
+        ]);
+
+        const [
+          behrColors,
+          sherwinColors,
+          valsparColors,
+          ppgColors,
+          benjaminMooreColors,
+        ] = await Promise.all([
+          behrResponse.json(),
+          sherwinResponse.json(),
+          valsparResponse.json(),
+          ppgResponse.json(),
+          benjaminMooreResponse.json(),
+        ]);
+
+        const combinedColors = [
+          ...behrColors,
+          ...sherwinColors,
+          ...valsparColors,
+          ...ppgColors,
+          ...benjaminMooreColors,
+        ];
+
+        setAllPaintColors(combinedColors);
+        setPaintColorsLoaded(true);
+      } catch (error) {
+        console.error("Error loading paint colors:", error);
+      }
+    };
+
+    loadPaintColors();
+  }, []);
+
+  // Helper function to get color luminance
+  const getLuminance = (hex: string): number => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  };
+
+  // Color distance calculation using Delta E (CIE76)
+  const hexToLab = (hex: string): [number, number, number] => {
+    // Convert hex to RGB
+    const r = parseInt(hex.slice(1, 3), 16) / 255;
+    const g = parseInt(hex.slice(3, 5), 16) / 255;
+    const b = parseInt(hex.slice(5, 7), 16) / 255;
+
+    // Convert RGB to XYZ
+    const toXYZ = (c: number) => {
+      c = c > 0.04045 ? Math.pow((c + 0.055) / 1.055, 2.4) : c / 12.92;
+      return c * 100;
+    };
+
+    const x = toXYZ(r) * 0.4124 + toXYZ(g) * 0.3576 + toXYZ(b) * 0.1805;
+    const y = toXYZ(r) * 0.2126 + toXYZ(g) * 0.7152 + toXYZ(b) * 0.0722;
+    const z = toXYZ(r) * 0.0193 + toXYZ(g) * 0.1192 + toXYZ(b) * 0.9505;
+
+    // Convert XYZ to LAB
+    const xn = 95.047;
+    const yn = 100.0;
+    const zn = 108.883;
+
+    const fx =
+      x / xn > 0.008856 ? Math.pow(x / xn, 1 / 3) : (7.787 * x) / xn + 16 / 116;
+    const fy =
+      y / yn > 0.008856 ? Math.pow(y / yn, 1 / 3) : (7.787 * y) / yn + 16 / 116;
+    const fz =
+      z / zn > 0.008856 ? Math.pow(z / zn, 1 / 3) : (7.787 * z) / zn + 16 / 116;
+
+    const L = 116 * fy - 16;
+    const a = 500 * (fx - fy);
+    const b_lab = 200 * (fy - fz);
+
+    return [L, a, b_lab];
+  };
+
+  // Calculate color distance using Delta E
+  const calculateColorDistance = (hex1: string, hex2: string): number => {
+    const [L1, a1, b1] = hexToLab(hex1);
+    const [L2, a2, b2] = hexToLab(hex2);
+
+    const deltaL = L1 - L2;
+    const deltaA = a1 - a2;
+    const deltaB = b1 - b2;
+
+    return Math.sqrt(deltaL * deltaL + deltaA * deltaA + deltaB * deltaB);
+  };
+
+  const groundPalette = () => {
+    if (customPalette.length === 0) {
+      toast.error("Palette is empty");
+      return;
+    }
+    
+    if (!paintColorsLoaded || allPaintColors.length === 0) {
+      toast.error("Paint colors not loaded yet. Please wait a moment.");
+      return;
+    }
+
+    const groundedColors = customPalette.map((customColor) => {
+      let closestColor = allPaintColors[0];
+      let minDistance = Infinity;
+
+      for (const paintColor of allPaintColors) {
+        const dist = calculateColorDistance(customColor.hex, paintColor.hex);
+        if (dist < minDistance) {
+          minDistance = dist;
+          closestColor = paintColor;
+        }
+      }
+
+      let brandPrefix = "";
+      if (closestColor.brand === "Benjamin Moore") {
+        brandPrefix = "BM - ";
+      } else if (closestColor.brand === "Sherwin-Williams") {
+        brandPrefix = "SW - ";
+      } else if (closestColor.brand === "Behr") {
+        brandPrefix = "Behr - ";
+      } else if (closestColor.brand === "Valspar") {
+        brandPrefix = "Valspar - ";
+      } else if (closestColor.brand === "PPG") {
+        brandPrefix = "PPG - ";
+      }
+
+      return {
+        ...customColor,
+        hex: closestColor.hex,
+        name: `${brandPrefix}${closestColor.name}`,
+      };
+    });
+
+    setCustomPalette(groundedColors);
+    toast.success(
+      `Grounded ${customPalette.length} colors to nearest paint matches`
+    );
+  };
 
   // For import functionality
   const searchParams = useSearchParams();
@@ -724,25 +884,40 @@ export default function PalettePage() {
 
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="space-y-2">
-          <motion.h1
-            className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            Color Palette Studio
-          </motion.h1>
-          <motion.p
-            className="text-gray-600 dark:text-gray-400 max-w-3xl"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            Create your own custom color palettes or browse our curated
-            collection for inspiration. Design harmonious color schemes for your
-            projects with our intuitive tools.
-          </motion.p>
+        <div className="flex items-center justify-between space-x-4">
+          <div className="space-y-2">
+            <motion.h1
+              className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              Color Palette Studio
+            </motion.h1>
+            <motion.p
+              className="text-gray-600 dark:text-gray-400 max-w-3xl"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              Create your own custom color palettes or browse our curated
+              collection for inspiration. Design harmonious color schemes for your
+              projects with our intuitive tools.
+            </motion.p>
+          </div>
+          <div className="flex gap-2">
+             {activeTab === 'create' && customPalette.length > 0 && (
+                <Button
+                  variant="outline"
+                  onClick={groundPalette}
+                  className="flex items-center gap-2"
+                  disabled={!paintColorsLoaded}
+                >
+                  <Anchor className="w-4 h-4" />
+                  Ground
+                </Button>
+             )}
+          </div>
         </div>
 
         {/* Main Content */}

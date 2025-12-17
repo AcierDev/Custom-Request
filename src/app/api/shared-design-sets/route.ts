@@ -62,10 +62,7 @@ export async function POST(request: NextRequest) {
       { key: { createdAt: 1 }, expireAfterSeconds: 30 * 24 * 60 * 60 },
     ]);
 
-    const viewerBaseUrl =
-      process.env.NEXT_PUBLIC_VIEWER_APP_URL ||
-      process.env.NEXT_PUBLIC_APP_URL ||
-      "http://viewer.everwoodus.com";
+    const viewerBaseUrl = "http://viewer.everwoodus.com";
 
     return NextResponse.json({
       setId,
