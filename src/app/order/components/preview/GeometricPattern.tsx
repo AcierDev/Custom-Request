@@ -179,9 +179,13 @@ export function GeometricPattern({
       colorMapRef.current.colorPattern !== colorPattern ||
       colorMapRef.current.isReversed !== isReversed ||
       colorMapRef.current.isRotated !== isRotated ||
+      colorMapRef.current.isRotated !== isRotated ||
       colorMapRef.current.selectedDesign !== selectedDesign ||
       (selectedDesign === ItemDesigns.Custom &&
-        colorMapRef.current.customPaletteLength !== customPalette.length)
+        colorMapRef.current.customPaletteLength !== customPalette.length) ||
+      colorMapRef.current.scatterEase !== (customStore.scatterEase ?? 50) ||
+      colorMapRef.current.scatterWidth !== (customStore.scatterWidth ?? 10) ||
+      colorMapRef.current.scatterAmount !== (customStore.scatterAmount ?? 50)
     ) {
       colorMapRef.current = generateColorMap(
         adjustedModelWidth,
@@ -192,7 +196,10 @@ export function GeometricPattern({
         isReversed,
         isRotated,
         selectedDesign,
-        customPalette.length
+        customPalette.length,
+        customStore.scatterEase ?? 50,
+        customStore.scatterWidth ?? 10,
+        customStore.scatterAmount ?? 50
       );
       // Store the parameters used to generate this color map
       colorMapRef.current.orientation = orientation;
@@ -201,6 +208,9 @@ export function GeometricPattern({
       colorMapRef.current.isRotated = isRotated;
       colorMapRef.current.selectedDesign = selectedDesign;
       colorMapRef.current.customPaletteLength = customPalette.length;
+      colorMapRef.current.scatterEase = customStore.scatterEase ?? 50;
+      colorMapRef.current.scatterWidth = customStore.scatterWidth ?? 10;
+      colorMapRef.current.scatterAmount = customStore.scatterAmount ?? 50;
     }
 
     return {
@@ -219,6 +229,9 @@ export function GeometricPattern({
     customPalette.length,
     colorEntries,
     blockSize,
+    customStore.scatterEase,
+    customStore.scatterWidth,
+    customStore.scatterAmount,
   ]);
 
   const { oneThirdWidth, twoThirdsWidth, driftAmount } = colorMapDetails;
@@ -460,6 +473,10 @@ export function GeometricPattern({
     adjustedModelWidth,
     adjustedModelHeight,
     colorEntries,
+    orientation,
+    colorPattern,
+    isReversed,
+    isRotated,
     blockSpacing,
     blockSize,
     offsetX,
@@ -480,6 +497,11 @@ export function GeometricPattern({
     hasDrawnPattern,
     drawnPatternGrid,
     drawnPatternGridSize,
+    customStore.scatterEase,
+    customStore.scatterWidth,
+    customStore.scatterAmount,
+    isPatternEditorActive,
+    patternOverride,
   ]);
 
   // Handle group click outside of render to prevent unnecessary recreations
@@ -499,7 +521,9 @@ export function GeometricPattern({
           customPalette.length
         }-${colorPattern}-${orientation}-${isReversed ? 1 : 0}-${
           isRotated ? 1 : 0
-        }-${useMini ? 1 : 0}`}
+        }-${useMini ? 1 : 0}-${customStore.scatterEase ?? 50}-${
+          customStore.scatterWidth ?? 10
+        }-${customStore.scatterAmount ?? 50}`}
         rotation={
           orientation === "vertical"
             ? isReversed

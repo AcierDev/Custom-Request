@@ -20,6 +20,7 @@ import {
   Eye,
   EyeOff,
   Save,
+  Sparkles,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -56,6 +57,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { PatternEditor } from "./components/PatternEditor";
+import { Slider } from "@/components/ui/slider";
 
 export default function DesignPage() {
   const router = useRouter();
@@ -125,14 +127,6 @@ export default function DesignPage() {
         className="absolute top-4 left-4 z-50 flex items-center gap-4"
         style={{ marginLeft: showUIControls ? "336px" : "0px" }}
       >
-        <Button
-          onClick={() => router.back()}
-          variant="outline"
-          className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
-        </Button>
         <h1 className="text-xl font-bold text-gray-900 dark:text-white">
           3D Preview
         </h1>
@@ -386,6 +380,10 @@ function PatternControls() {
     drawnPatternGrid,
     drawnPatternGridSize,
     activeCustomMode,
+    scatterWidth,
+    setScatterWidth,
+    scatterAmount,
+    setScatterAmount,
   } = useCustomStore();
 
   // Hide controls if custom is selected but we don't have the appropriate data for the active mode
@@ -422,6 +420,12 @@ function PatternControls() {
       icon: <Shuffle className="w-4 h-4" />,
       description: "Random arrangement of colors",
     },
+    {
+      value: "scatter",
+      label: "Scatter",
+      icon: <Sparkles className="w-4 h-4" />,
+      description: "Probabilistic dithering transitions",
+    },
   ];
 
   return (
@@ -457,6 +461,46 @@ function PatternControls() {
             ))}
           </RadioGroup>
         </div>
+
+        {colorPattern === "scatter" && (
+          <div className="space-y-4 pt-1 border-t border-gray-100 dark:border-gray-700/50 mt-2">
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <Label className="text-xs text-gray-500 dark:text-gray-400">
+                  Scatter Width (blocks)
+                </Label>
+                <span className="text-xs font-mono text-gray-700 dark:text-gray-300">
+                  {scatterWidth ?? 10}
+                </span>
+              </div>
+              <Slider
+                value={[scatterWidth ?? 10]}
+                min={0}
+                max={10}
+                step={1}
+                onValueChange={(value) => setScatterWidth(value[0])}
+              />
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <Label className="text-xs text-gray-500 dark:text-gray-400">
+                  Scatter Amount
+                </Label>
+                <span className="text-xs font-mono text-gray-700 dark:text-gray-300">
+                  {scatterAmount ?? 50}%
+                </span>
+              </div>
+              <Slider
+                value={[scatterAmount ?? 50]}
+                min={0}
+                max={100}
+                step={1}
+                onValueChange={(value) => setScatterAmount(value[0])}
+              />
+            </div>
+          </div>
+        )}
 
         <div className="space-y-2">
           <Label className="text-sm text-gray-700 dark:text-gray-300">

@@ -31,7 +31,8 @@ export type ColorPattern =
   | "checkerboard"
   | "random"
   | "fade"
-  | "center-fade";
+  | "center-fade"
+  | "scatter";
 
 type Orientation = "horizontal" | "vertical";
 
@@ -138,6 +139,9 @@ interface CustomState {
   lastSaved: number;
   autoSaveEnabled: boolean;
   dataSyncVersion: number;
+  scatterEase: number;
+  scatterWidth: number;
+  scatterAmount: number;
 
   // State for directly drawn patterns
   drawnPatternGrid: PatternCell[][] | null;
@@ -268,6 +272,9 @@ interface CustomStore extends CustomState {
   moveDesignToFolder: (designId: string, folderId: string | null) => void;
   init: () => void;
   togglePalettePublic: (id: string) => void;
+  setScatterEase: (value: number) => void;
+  setScatterWidth: (value: number) => void;
+  setScatterAmount: (value: number) => void;
 
   // New action to set the active custom mode
   setActiveCustomMode: (mode: CustomMode) => void;
@@ -359,6 +366,9 @@ export interface ShareableState {
   style: StyleType;
   useMini: boolean;
   activeCustomMode: CustomMode;
+  scatterEase?: number;
+  scatterWidth?: number;
+  scatterAmount?: number;
 }
 
 export type DraftSetItem = {
@@ -408,6 +418,9 @@ const AUTO_SAVE_TRACKED_PROPERTIES: (keyof CustomState)[] = [
   "paletteHistoryIndex",
   "activeCustomMode",
   "draftSet",
+  "scatterEase",
+  "scatterWidth",
+  "scatterAmount",
 ];
 
 // Create the store with the subscribeWithSelector middleware
@@ -456,6 +469,9 @@ export const useCustomStore = create<CustomStore>()(
     lastSaved: 0,
     autoSaveEnabled: true,
     dataSyncVersion: 1,
+    scatterEase: 50,
+    scatterWidth: 10,
+    scatterAmount: 50,
     drawnPatternGrid: null,
     drawnPatternGridSize: null,
     paletteHistory: [],
@@ -812,6 +828,9 @@ export const useCustomStore = create<CustomStore>()(
           paletteHistoryIndex: newHistory.length - 1,
         };
       }),
+    setScatterEase: (value) => set({ scatterEase: value }),
+    setScatterWidth: (value) => set({ scatterWidth: value }),
+    setScatterAmount: (value) => set({ scatterAmount: value }),
     reorderPalette: (newOrder) =>
       set((state) => {
         return {

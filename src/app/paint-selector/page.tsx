@@ -29,7 +29,6 @@ import {
   Shuffle,
   Heart,
   HeartOff,
-  Zap,
   Sparkles,
   X,
   Maximize2,
@@ -74,8 +73,6 @@ export default function PaintSelectorPage() {
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [activeTab, setActiveTab] = useState("similar");
-  const [searchSuggestions, setSearchSuggestions] = useState<string[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
   const [similarToHex, setSimilarToHex] = useState("");
   const [showSimilarColors, setShowSimilarColors] = useState(false);
   const [comparisonDialogOpen, setComparisonDialogOpen] = useState(false);
@@ -125,6 +122,12 @@ export default function PaintSelectorPage() {
           ...ppgColors,
           ...benjaminMooreColors,
         ] as PaintColor[];
+
+        // #region agent log
+        const duplicateHexes = combinedColors.map(c=>c.hex).filter((h,i,a)=>a.indexOf(h)!==i);
+        const duplicateColors = combinedColors.filter(c=>duplicateHexes.includes(c.hex));
+        fetch('http://127.0.0.1:7242/ingest/36fc63a3-0387-437e-a3a4-a17c9228bfcd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'paint-selector/page.tsx:130',message:'colors loaded',data:{totalCount:combinedColors.length,duplicateHexCount:duplicateHexes.length,duplicateHexes:Array.from(new Set(duplicateHexes)),duplicateColors:duplicateColors.map(c=>({name:c.name,hex:c.hex,brand:c.brand}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
 
         setAllColors(combinedColors);
         setLoading(false);
@@ -182,57 +185,6 @@ export default function PaintSelectorPage() {
     return hue * 60;
   };
 
-  // Helper function to get color saturation
-  const getSaturation = (hex: string): number => {
-    const r = parseInt(hex.slice(1, 3), 16) / 255;
-    const g = parseInt(hex.slice(3, 5), 16) / 255;
-    const b = parseInt(hex.slice(5, 7), 16) / 255;
-
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-
-    if (max === 0) return 0;
-    return (max - min) / max;
-  };
-
-  // Color analysis functions
-  const getColorCategory = (hex: string): string[] => {
-    const hue = getHue(hex);
-    const saturation = getSaturation(hex);
-    const lightness = getLuminance(hex);
-
-    const categories: string[] = [];
-
-    // Hue-based categories
-    if (hue >= 0 && hue < 15) categories.push("red");
-    else if (hue >= 15 && hue < 45) categories.push("orange");
-    else if (hue >= 45 && hue < 75) categories.push("yellow");
-    else if (hue >= 75 && hue < 150) categories.push("green");
-    else if (hue >= 150 && hue < 210) categories.push("cyan");
-    else if (hue >= 210 && hue < 270) categories.push("blue");
-    else if (hue >= 270 && hue < 330) categories.push("purple", "violet");
-    else categories.push("red");
-
-    // Saturation-based categories
-    if (saturation > 0.7)
-      categories.push("vibrant", "bright", "vivid", "intense");
-    else if (saturation > 0.4) categories.push("moderate", "medium");
-    else categories.push("muted", "subtle", "pale", "pastel");
-
-    // Lightness-based categories
-    if (lightness > 0.8) categories.push("light", "pale", "bright", "white");
-    else if (lightness > 0.6) categories.push("medium", "moderate");
-    else if (lightness > 0.3) categories.push("dark", "deep");
-    else categories.push("very dark", "black", "deep");
-
-    // Special combinations
-    if (saturation > 0.6 && lightness > 0.5)
-      categories.push("bright", "vibrant");
-    if (saturation < 0.3 && lightness > 0.7) categories.push("pastel", "soft");
-    if (saturation > 0.5 && lightness < 0.4) categories.push("rich", "deep");
-
-    return categories;
-  };
 
   // Color distance calculation using Delta E (CIE76)
   const hexToLab = (hex: string): [number, number, number] => {
@@ -306,152 +258,47 @@ export default function PaintSelectorPage() {
     return /^#[0-9A-F]{6}$/i.test(normalized);
   };
 
-  // Enhanced search function
+  // Simple search function - searches by color name only
   const searchColors = (colors: PaintColor[], term: string): PaintColor[] => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/36fc63a3-0387-437e-a3a4-a17c9228bfcd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'paint-selector/page.tsx:256',message:'searchColors called',data:{term,colorsCount:colors.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     if (!term.trim()) return colors;
 
-    const searchTerms = term
-      .toLowerCase()
-      .split(" ")
-      .filter((t) => t.length > 0);
+    const searchTerm = term.toLowerCase().trim();
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/36fc63a3-0387-437e-a3a4-a17c9228bfcd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'paint-selector/page.tsx:260',message:'searchTerm normalized',data:{searchTerm,originalTerm:term},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
 
-    return colors.filter((color) => {
-      const colorName = color.name.toLowerCase();
-      const colorHex = color.hex.toLowerCase();
-      const colorCategories = getColorCategory(color.hex);
-
-      // Check if all search terms match
-      return searchTerms.every((searchTerm) => {
-        // Direct name match
-        if (colorName.includes(searchTerm)) return true;
-
-        // Hex code match
-        if (colorHex.includes(searchTerm)) return true;
-
-        // Category match (descriptive terms)
-        if (
-          colorCategories.some(
-            (category) =>
-              category.toLowerCase().includes(searchTerm) ||
-              searchTerm.includes(category.toLowerCase())
-          )
-        )
-          return true;
-
-        // Fuzzy name matching for common color terms
-        const colorWords = colorName.split(/[\s-_]+/);
-        if (
-          colorWords.some(
-            (word) => word.includes(searchTerm) || searchTerm.includes(word)
-          )
-        )
-          return true;
-
-        return false;
-      });
-    });
-  };
-
-  // Generate search suggestions
-  const generateSuggestions = (term: string): string[] => {
-    if (!term.trim()) return [];
-
-    const suggestions = new Set<string>();
-    const termLower = term.toLowerCase();
-
-    // Color descriptors
-    const descriptors = [
-      "vibrant",
-      "bright",
-      "vivid",
-      "intense",
-      "bold",
-      "rich",
-      "deep",
-      "light",
-      "pale",
-      "pastel",
-      "soft",
-      "muted",
-      "subtle",
-      "dark",
-      "medium",
-      "moderate",
-      "warm",
-      "cool",
-      "neutral",
-    ];
-
-    // Color names
-    const colorNames = [
-      "red",
-      "orange",
-      "yellow",
-      "green",
-      "blue",
-      "purple",
-      "violet",
-      "pink",
-      "brown",
-      "gray",
-      "grey",
-      "black",
-      "white",
-      "cream",
-      "beige",
-      "tan",
-      "navy",
-      "teal",
-      "turquoise",
-      "lime",
-      "olive",
-      "maroon",
-      "burgundy",
-      "coral",
-      "salmon",
-      "peach",
-      "mint",
-    ];
-
-    // Add matching descriptors + colors
-    descriptors.forEach((desc) => {
-      if (desc.includes(termLower) || termLower.includes(desc)) {
-        colorNames.forEach((color) => {
-          suggestions.add(`${desc} ${color}`);
-        });
+    const results = colors.filter((color) => {
+      const colorNameLower = color.name.toLowerCase();
+      const matches = colorNameLower.includes(searchTerm);
+      // #region agent log
+      if (matches || colorNameLower.includes('bare') || colorNameLower.includes('minimum')) {
+        fetch('http://127.0.0.1:7242/ingest/36fc63a3-0387-437e-a3a4-a17c9228bfcd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'paint-selector/page.tsx:265',message:'color match check',data:{colorName:color.name,colorNameLower,searchTerm,matches,hex:color.hex},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
       }
+      // #endregion
+      return matches;
     });
-
-    // Add matching color names
-    colorNames.forEach((color) => {
-      if (color.includes(termLower) || termLower.includes(color)) {
-        suggestions.add(color);
-        descriptors.forEach((desc) => {
-          suggestions.add(`${desc} ${color}`);
-        });
-      }
-    });
-
-    // Add exact matches from actual color names
-    allColors.forEach((color) => {
-      const words = color.name.toLowerCase().split(/[\s-_]+/);
-      words.forEach((word) => {
-        if (word.includes(termLower) && word.length > 2) {
-          suggestions.add(word);
-        }
-      });
-    });
-
-    return Array.from(suggestions).slice(0, 8);
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/36fc63a3-0387-437e-a3a4-a17c9228bfcd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'paint-selector/page.tsx:273',message:'searchColors results',data:{term,resultsCount:results.length,resultNames:results.map(c=>c.name)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    return results;
   };
 
   // Filter and sort colors
   const filteredAndSortedColors = useMemo(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/36fc63a3-0387-437e-a3a4-a17c9228bfcd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'paint-selector/page.tsx:267',message:'filteredAndSortedColors useMemo start',data:{allColorsCount:allColors.length,searchTerm,selectedBrand,sortBy},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
     let filtered = allColors;
 
     // Filter by search term using enhanced search
     if (searchTerm) {
       filtered = searchColors(filtered, searchTerm);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/36fc63a3-0387-437e-a3a4-a17c9228bfcd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'paint-selector/page.tsx:275',message:'after search filter',data:{filteredCount:filtered.length,filteredNames:filtered.map(c=>c.name),filteredHexes:filtered.map(c=>c.hex)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
     }
 
     // Filter by brand
@@ -475,14 +322,25 @@ export default function PaintSelectorPage() {
       }
     });
 
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/36fc63a3-0387-437e-a3a4-a17c9228bfcd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'paint-selector/page.tsx:300',message:'filteredAndSortedColors final result',data:{finalCount:filtered.length,finalNames:filtered.map(c=>c.name),finalHexes:filtered.map(c=>c.hex),duplicateHexes:filtered.map(c=>c.hex).filter((h,i,a)=>a.indexOf(h)!==i)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
     return filtered;
   }, [allColors, searchTerm, selectedBrand, sortBy]);
 
   // Get current page colors
-  const currentColors = filteredAndSortedColors.slice(
-    (currentPage - 1) * colorsPerPage,
-    currentPage * colorsPerPage
-  );
+  const currentColors = (() => {
+    const sliced = filteredAndSortedColors.slice(
+      (currentPage - 1) * colorsPerPage,
+      currentPage * colorsPerPage
+    );
+    // #region agent log
+    if (searchTerm) {
+      fetch('http://127.0.0.1:7242/ingest/36fc63a3-0387-437e-a3a4-a17c9228bfcd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'paint-selector/page.tsx:303',message:'currentColors slice result',data:{currentPage,colorsPerPage,filteredCount:filteredAndSortedColors.length,currentCount:sliced.length,currentNames:sliced.map(c=>c.name),currentHexes:sliced.map(c=>c.hex),sliceStart:(currentPage-1)*colorsPerPage,sliceEnd:currentPage*colorsPerPage},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    }
+    // #endregion
+    return sliced;
+  })();
 
   const totalPages = Math.ceil(filteredAndSortedColors.length / colorsPerPage);
 
@@ -543,33 +401,8 @@ export default function PaintSelectorPage() {
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
     setCurrentPage(1);
-
-    if (value.trim()) {
-      const suggestions = generateSuggestions(value);
-      setSearchSuggestions(suggestions);
-      setShowSuggestions(suggestions.length > 0);
-    } else {
-      setSearchSuggestions([]);
-      setShowSuggestions(false);
-    }
   };
 
-  // Handle suggestion selection
-  const handleSuggestionSelect = (suggestion: string) => {
-    setSearchTerm(suggestion);
-    setCurrentPage(1);
-    setShowSuggestions(false);
-  };
-
-  // Quick search presets
-  const quickSearches = [
-    { label: "Vibrant Blue", icon: Zap, search: "vibrant blue" },
-    { label: "Soft Green", icon: Sparkles, search: "soft green" },
-    { label: "Deep Red", icon: Zap, search: "deep red" },
-    { label: "Pastel Pink", icon: Sparkles, search: "pastel pink" },
-    { label: "Rich Purple", icon: Zap, search: "rich purple" },
-    { label: "Warm Orange", icon: Sparkles, search: "warm orange" },
-  ];
 
   // Open comparison dialog
   const openComparisonDialog = (
@@ -597,10 +430,10 @@ export default function PaintSelectorPage() {
 
     return (
       <motion.div
-        layout
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.9 }}
+        transition={{ duration: 0.15 }}
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
         className={cn(
@@ -790,10 +623,10 @@ export default function PaintSelectorPage() {
 
     return (
       <motion.div
-        layout
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.9 }}
+        transition={{ duration: 0.15 }}
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
         className={cn(
@@ -992,8 +825,7 @@ export default function PaintSelectorPage() {
               <CardHeader>
                 <CardTitle className="text-lg">Search & Filter</CardTitle>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  Search by color name, hex code, or descriptive terms like
-                  "vibrant blue" or "soft green"
+                  Search by color name
                 </p>
               </CardHeader>
               <CardContent>
@@ -1001,18 +833,9 @@ export default function PaintSelectorPage() {
                   <div className="relative">
                     <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400 z-10" />
                     <Input
-                      placeholder="Search colors (e.g., 'vibrant blue', 'soft green')..."
+                      placeholder="Search by color name..."
                       value={searchTerm}
                       onChange={(e) => handleSearchChange(e.target.value)}
-                      onFocus={() => {
-                        if (searchTerm.trim() && searchSuggestions.length > 0) {
-                          setShowSuggestions(true);
-                        }
-                      }}
-                      onBlur={() => {
-                        // Delay hiding suggestions to allow for clicks
-                        setTimeout(() => setShowSuggestions(false), 200);
-                      }}
                       className="pl-10 pr-8"
                     />
                     {searchTerm && (
@@ -1020,27 +843,11 @@ export default function PaintSelectorPage() {
                         onClick={() => {
                           setSearchTerm("");
                           setCurrentPage(1);
-                          setShowSuggestions(false);
                         }}
                         className="absolute right-3 top-3 h-4 w-4 text-gray-400 hover:text-gray-600 z-10"
                       >
                         <X className="h-4 w-4" />
                       </button>
-                    )}
-
-                    {/* Search Suggestions */}
-                    {showSuggestions && searchSuggestions.length > 0 && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20 max-h-60 overflow-y-auto">
-                        {searchSuggestions.map((suggestion, index) => (
-                          <button
-                            key={index}
-                            onClick={() => handleSuggestionSelect(suggestion)}
-                            className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm capitalize"
-                          >
-                            {suggestion}
-                          </button>
-                        ))}
-                      </div>
                     )}
                   </div>
 
@@ -1093,25 +900,6 @@ export default function PaintSelectorPage() {
                   </Button>
                 </div>
 
-                {/* Quick Search Buttons */}
-                <div className="flex flex-wrap gap-2 mt-4">
-                  <span className="text-sm text-gray-600 dark:text-gray-400 flex items-center mr-2">
-                    Quick search:
-                  </span>
-                  {quickSearches.map((quick, index) => (
-                    <Button
-                      key={index}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleSuggestionSelect(quick.search)}
-                      className="text-xs h-7 px-2 flex items-center gap-1"
-                    >
-                      <quick.icon className="h-3 w-3" />
-                      {quick.label}
-                    </Button>
-                  ))}
-                </div>
-
                 <div className="flex items-center justify-between mt-4">
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     Showing {currentColors.length} of{" "}
@@ -1137,15 +925,26 @@ export default function PaintSelectorPage() {
 
             {/* Color Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-              <AnimatePresence>
-                {currentColors.map((color) => (
-                  <ColorCard
-                    key={color.hex}
-                    color={color}
-                    isSelected={selectedColors.has(color.hex)}
-                    isFavorite={favorites.has(color.hex)}
-                  />
-                ))}
+              {/* #region agent log */}
+              {(() => {
+                fetch('http://127.0.0.1:7242/ingest/36fc63a3-0387-437e-a3a4-a17c9228bfcd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'paint-selector/page.tsx:905',message:'rendering color grid',data:{currentColorsCount:currentColors.length,currentColors:currentColors.map(c=>({name:c.name,hex:c.hex,brand:c.brand})),activeTab,searchTerm},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'F'})}).catch(()=>{});
+                return null;
+              })()}
+              {/* #endregion */}
+              <AnimatePresence initial={false}>
+                {currentColors.map((color, index) => {
+                  // #region agent log
+                  fetch('http://127.0.0.1:7242/ingest/36fc63a3-0387-437e-a3a4-a17c9228bfcd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'paint-selector/page.tsx:912',message:'mapping color to render',data:{index,colorName:color.name,colorHex:color.hex,colorBrand:color.brand,searchTerm,totalColors:currentColors.length,key:`browse-${color.hex}-${color.name}-${color.brand}`},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'F'})}).catch(()=>{});
+                  // #endregion
+                  return (
+                    <ColorCard
+                      key={`browse-${color.hex}-${color.name}-${color.brand}`}
+                      color={color}
+                      isSelected={selectedColors.has(color.hex)}
+                      isFavorite={favorites.has(color.hex)}
+                    />
+                  );
+                })}
               </AnimatePresence>
             </div>
 
@@ -1197,7 +996,7 @@ export default function PaintSelectorPage() {
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                 {favoriteColors.map((color) => (
                   <ColorCard
-                    key={color.hex}
+                    key={`favorite-${color.hex}-${color.name}-${color.brand}`}
                     color={color}
                     isSelected={selectedColors.has(color.hex)}
                     isFavorite={true}
@@ -1404,7 +1203,7 @@ export default function PaintSelectorPage() {
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                         {similarColors.map((color) => (
                           <SimilarColorCard
-                            key={color.hex}
+                            key={`similar-${color.hex}-${color.name}-${color.brand}-${similarToHex}`}
                             color={color}
                             originalColor={similarToHex}
                             isSelected={selectedColors.has(color.hex)}

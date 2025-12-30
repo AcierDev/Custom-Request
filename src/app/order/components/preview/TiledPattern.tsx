@@ -177,7 +177,10 @@ export function TiledPattern({
     colorMapRef.current.isRotated !== isRotated ||
     colorMapRef.current.selectedDesign !== selectedDesign ||
     (selectedDesign === ItemDesigns.Custom &&
-      colorMapRef.current.customPaletteLength !== customPalette.length)
+      colorMapRef.current.customPaletteLength !== customPalette.length) ||
+    colorMapRef.current.scatterEase !== (customStore.scatterEase ?? 50) ||
+    colorMapRef.current.scatterWidth !== (customStore.scatterWidth ?? 10) ||
+    colorMapRef.current.scatterAmount !== (customStore.scatterAmount ?? 50)
   ) {
     colorMapRef.current = generateColorMap(
       adjustedModelWidth,
@@ -188,8 +191,20 @@ export function TiledPattern({
       isReversed,
       isRotated,
       selectedDesign,
-      customPalette.length
+      customPalette.length,
+      customStore.scatterEase ?? 50,
+      customStore.scatterWidth ?? 10,
+      customStore.scatterAmount ?? 50
     );
+    colorMapRef.current.orientation = orientation;
+    colorMapRef.current.colorPattern = colorPattern;
+    colorMapRef.current.isReversed = isReversed;
+    colorMapRef.current.isRotated = isRotated;
+    colorMapRef.current.selectedDesign = selectedDesign;
+    colorMapRef.current.customPaletteLength = customPalette.length;
+    colorMapRef.current.scatterEase = customStore.scatterEase ?? 50;
+    colorMapRef.current.scatterWidth = customStore.scatterWidth ?? 10;
+    colorMapRef.current.scatterAmount = customStore.scatterAmount ?? 50;
   }
 
   // Memoize the animation spring
@@ -357,6 +372,10 @@ export function TiledPattern({
     offsetY,
     useMini,
     colorEntries,
+    orientation,
+    colorPattern,
+    isReversed,
+    isRotated,
     showWoodGrain,
     showColorInfo,
     hoverInfo,
@@ -368,6 +387,9 @@ export function TiledPattern({
     hasDrawnPattern,
     drawnPatternGrid,
     drawnPatternGridSize,
+    customStore.scatterEase,
+    customStore.scatterWidth,
+    customStore.scatterAmount,
   ]);
 
   // Handle group click to clear pinned info

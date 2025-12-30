@@ -20,6 +20,9 @@ export interface ColorMapRef extends Array<Array<number>> {
   isRotated?: boolean;
   selectedDesign?: string;
   customPaletteLength?: number;
+  scatterEase?: number;
+  scatterWidth?: number;
+  scatterAmount?: number;
 }
 
 export interface TextureVariation {
@@ -151,7 +154,10 @@ export function generateColorMap(
   isReversed: boolean,
   isRotated: boolean,
   selectedDesign: string,
-  customPaletteLength: number
+  customPaletteLength: number,
+  scatterEase: number = 50,
+  scatterWidth: number = 10,
+  scatterAmount: number = 50
 ): ColorMapRef {
   // Total number of blocks
   const totalBlocks = adjustedModelWidth * adjustedModelHeight;
@@ -167,8 +173,6 @@ export function generateColorMap(
       ? "vertical"
       : "horizontal"
     : orientation;
-
-  console.log(colorPattern);
 
   if (colorPattern === "fade") {
     // For fade patterns, use the new column-based distribution approach
@@ -1028,6 +1032,105 @@ export function generateColorMap(
         }
       }
     }
+  } else if (colorPattern === "scatter") {
+    // Scatter pattern with mass conservation (1-to-1 swaps)
+    // We achieve this by calculating exact counts, assigning scores to positions,
+    // sorting positions by score, and filling with the fixed color supply.
+
+    const totalBlocks = adjustedModelWidth * adjustedModelHeight;
+
+    // 1. Calculate how many blocks each color should get (same as Fade pattern)
+    const blocksPerColor = Math.floor(totalBlocks / colorEntries.length);
+    const extraBlocks = totalBlocks % colorEntries.length;
+
+    // Create the sequential supply of colors
+    // [0,0,0, ..., 1,1,1, ..., 2,2,2, ...]
+    const supplyColors: number[] = [];
+    for (let i = 0; i < colorEntries.length; i++) {
+      const blockCount = blocksPerColor + (i < extraBlocks ? 1 : 0);
+      for (let j = 0; j < blockCount; j++) {
+        supplyColors.push(i);
+      }
+    }
+
+    // 2. Create a list of all positions with a "Score"
+    // Base score is position along the gradient axis.
+    // Noise is added based on scatterWidth and scatterAmount.
+    
+    interface BlockScore {
+      x: number;
+      y: number;
+      score: number;
+    }
+
+    const blockScores: BlockScore[] = [];
+    const amount = scatterAmount / 100;
+    
+    // Seeded random helper
+    const random = (seed: number) => {
+      const x = Math.sin(seed) * 10000;
+      return x - Math.floor(x);
+    };
+
+    for (let x = 0; x < adjustedModelWidth; x++) {
+      for (let y = 0; y < adjustedModelHeight; y++) {
+        // Determine base position (0 to Max) along the gradient axis
+        let basePos = 0;
+        if (effectiveOrientation === "horizontal") {
+          basePos = x;
+          // Add tiny y offset to ensure stable sort for equal x
+          basePos += y * 0.001; 
+        } else {
+          basePos = y;
+          basePos += x * 0.001;
+        }
+
+        // Handle reversal (invert base score)
+        if (isReversed) {
+           const maxPos = effectiveOrientation === "horizontal" ? adjustedModelWidth : adjustedModelHeight;
+           basePos = maxPos - basePos;
+        }
+
+        // Calculate Noise
+        // ScatterWidth is in blocks. 
+        // We want noise to be able to shift a block by +/- scatterWidth/2 roughly.
+        // If scatterAmount < 100%, we only apply noise to some blocks.
+        
+        let noise = 0;
+        
+        // Use seeded random
+        const seed1 = x * adjustedModelHeight + y + (isReversed ? 1000 : 0);
+        const randTrigger = random(seed1);
+        
+        // Decide whether to scatter this block
+        if (randTrigger < amount) {
+            // Apply noise
+            const seed2 = seed1 + 100000; // different seed for value
+            // Noise should be centered around 0. Range: [-scatterWidth/2, +scatterWidth/2]
+            // We use a bit wider range to ensure smooth tails if desired, 
+            // but scatterWidth usually implies the transition width.
+            noise = (random(seed2) - 0.5) * scatterWidth;
+        }
+
+        blockScores.push({
+            x,
+            y,
+            score: basePos + noise
+        });
+      }
+    }
+
+    // 3. Sort blocks by Score
+    blockScores.sort((a, b) => a.score - b.score);
+
+    // 4. Assign colors from supply to the sorted positions
+    for (let i = 0; i < totalBlocks; i++) {
+        const { x, y } = blockScores[i];
+        // Safety check if supply mismatch (shouldn't happen)
+        const colorIdx = i < supplyColors.length ? supplyColors[i] : supplyColors[supplyColors.length - 1];
+        colorMap[x][y] = colorIdx;
+    }
+
   } else if (colorPattern === "random") {
     // For random pattern, distribute colors evenly but randomly
     const blocksPerColor = Math.floor(totalBlocks / colorEntries.length);
