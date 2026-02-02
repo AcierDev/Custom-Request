@@ -71,7 +71,7 @@ export function ColorSwatch({
           ? "ring-4 ring-purple-500 dark:ring-purple-400 shadow-lg"
           : "hover:shadow-lg",
         showBlendHint && !isSelected
-          ? "ring-2 ring-purple-300 dark:ring-purple-600 ring-opacity-70 dark:ring-opacity-70 custom-pulse"
+          ? "ring-2 ring-purple-300 dark:ring-purple-600 ring-opacity-70 dark:ring-opacity-70"
           : ""
       )}
       style={{ backgroundColor: color }}
