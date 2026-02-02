@@ -37,11 +37,28 @@ export async function POST(request: NextRequest) {
     await collection.insertOne(sharedDesign);
 
     // Create indexes for better performance
-    await collection.createIndexes([
-      { key: { shareId: 1 }, unique: true },
-      { key: { userId: 1 } },
-      { key: { createdAt: 1 } }, // Removed TTL to keep designs indefinitely
-    ]);
+    // Create indexes for better performance
+    try {
+      await collection.createIndexes([
+        { key: { shareId: 1 }, unique: true },
+        { key: { userId: 1 } },
+        { key: { createdAt: 1 } }, // Removed TTL to keep designs indefinitely
+      ]);
+    } catch (error: any) {
+      if (error.code === 85) {
+        // IndexOptionsConflict: Index exists with different options (likely TTL)
+        // Drop the conflicting index and retry
+        console.log("Dropping conflicting index createdAt_1 to remove TTL...");
+        await collection.dropIndex("createdAt_1");
+        await collection.createIndexes([
+          { key: { shareId: 1 }, unique: true },
+          { key: { userId: 1 } },
+          { key: { createdAt: 1 } },
+        ]);
+      } else {
+        throw error;
+      }
+    }
 
     return NextResponse.json({
       shareId,

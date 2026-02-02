@@ -56,11 +56,26 @@ export async function POST(request: NextRequest) {
     await collection.insertOne(sharedDesignSet);
 
     // Create indexes for better performance (idempotent)
-    await collection.createIndexes([
-      { key: { setId: 1 }, unique: true },
-      { key: { userId: 1 } },
-      { key: { createdAt: 1 } }, // Removed TTL to keep designs indefinitely
-    ]);
+    // Create indexes for better performance (idempotent)
+    try {
+      await collection.createIndexes([
+        { key: { setId: 1 }, unique: true },
+        { key: { userId: 1 } },
+        { key: { createdAt: 1 } }, // Removed TTL to keep designs indefinitely
+      ]);
+    } catch (error: any) {
+      if (error.code === 85) {
+        console.log("Dropping conflicting index createdAt_1 to remove TTL...");
+        await collection.dropIndex("createdAt_1");
+        await collection.createIndexes([
+          { key: { setId: 1 }, unique: true },
+          { key: { userId: 1 } },
+          { key: { createdAt: 1 } },
+        ]);
+      } else {
+        throw error;
+      }
+    }
 
     const viewerBaseUrl = "http://viewer.everwoodus.com";
 
