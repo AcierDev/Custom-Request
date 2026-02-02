@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     await collection.createIndexes([
       { key: { setId: 1 }, unique: true },
       { key: { userId: 1 } },
-      { key: { createdAt: 1 }, expireAfterSeconds: 30 * 24 * 60 * 60 },
+      { key: { createdAt: 1 } }, // Removed TTL to keep designs indefinitely
     ]);
 
     const viewerBaseUrl = "http://viewer.everwoodus.com";

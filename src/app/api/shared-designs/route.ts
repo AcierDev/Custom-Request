@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     await collection.createIndexes([
       { key: { shareId: 1 }, unique: true },
       { key: { userId: 1 } },
-      { key: { createdAt: 1 }, expireAfterSeconds: 30 * 24 * 60 * 60 }, // TTL: 30 days
+      { key: { createdAt: 1 } }, // Removed TTL to keep designs indefinitely
     ]);
 
     return NextResponse.json({
