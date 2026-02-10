@@ -9,6 +9,7 @@ import { Toaster } from "sonner";
 import { AuthProvider } from "@/lib/auth-context";
 import { AuthContextProvider } from "@/components/AuthContextProvider";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { SidebarProvider, useSidebar } from "@/contexts/sidebar-context";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -24,12 +25,25 @@ const geistMono = localFont({
 // Create a client component for the content
 function LayoutContent({ children }: { children: React.ReactNode }) {
   return (
+    <SidebarProvider>
+      <LayoutContentInner>{children}</LayoutContentInner>
+    </SidebarProvider>
+  );
+}
+
+function LayoutContentInner({ children }: { children: React.ReactNode }) {
+  const { isSidebarOpen } = useSidebar();
+  return (
     <div className="flex h-screen bg-gray-300 dark:bg-gray-700">
       <SpeedInsights />
       <MobileWarning />
       <Navbar onOpenSettings={() => {}} />
-      <div className="flex-1 flex flex-col">
-        <div className="lg:ml-64 mt-14 lg:mt-0 transition-[margin] duration-300 flex flex-col h-full">
+      <div className="flex-1 flex flex-col min-w-0">
+        <div
+          className={`mt-14 lg:mt-0 transition-[margin] duration-300 flex flex-col h-full ${
+            isSidebarOpen ? "lg:ml-64" : "lg:ml-16"
+          }`}
+        >
           <main className="flex-1 w-full overflow-y-auto pb-16">
             {children}
           </main>

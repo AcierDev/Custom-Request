@@ -249,7 +249,7 @@ export default function DesignPage() {
           <OrbitControls
             enablePan={true}
             minDistance={4}
-            maxDistance={50}
+            maxDistance={120}
             target={[0, 0, 0]}
             makeDefault
           />

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSidebar } from "@/contexts/sidebar-context";
 import {
   Moon,
   Sun,
@@ -91,7 +92,10 @@ export function Navbar({ onOpenSettings }: NavbarProps) {
   const [navigationSequence, setNavigationSequence] = useState<string[]>([]);
   const saveToDatabase = useCustomStore((state) => state.saveToDatabase);
   const [isSaving, setIsSaving] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const sidebarContext = useSidebar();
+  const [localSidebarOpen, setLocalSidebarOpen] = useState(true);
+  const isSidebarOpen = sidebarContext?.isSidebarOpen ?? localSidebarOpen;
+  const setIsSidebarOpen = sidebarContext?.setIsSidebarOpen ?? setLocalSidebarOpen;
 
   useEffect(() => {
     setActiveTab(pathname);
