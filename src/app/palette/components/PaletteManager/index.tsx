@@ -71,6 +71,7 @@ export function PaletteManager() {
     moveColorRight,
     updateColorName,
     updateColorHex,
+    updateColorExtraPercent,
     reorderPalette,
     commitPaletteToHistory,
     editingPaletteId,
@@ -527,6 +528,10 @@ export function PaletteManager() {
                     color={color.hex}
                     name={color.name}
                     index={index}
+                    extraPercent={color.extraPercent ?? 0}
+                    onExtraPercentChange={(v) =>
+                      updateColorExtraPercent(index, v)
+                    }
                     isSelected={selectedColors.includes(color.id)}
                     onSelect={() => toggleColorSelection(color.id)}
                     onRemove={() => removeCustomColor(index)}

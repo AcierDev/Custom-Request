@@ -183,10 +183,17 @@ export function GeometricPattern({
       colorMapRef.current.selectedDesign !== selectedDesign ||
       (selectedDesign === ItemDesigns.Custom &&
         colorMapRef.current.customPaletteLength !== customPalette.length) ||
+      (selectedDesign === ItemDesigns.Custom &&
+        colorMapRef.current.extraPercentKey !==
+          customPalette.map((c) => c.extraPercent ?? 0).join(",")) ||
       colorMapRef.current.scatterEase !== (customStore.scatterEase ?? 50) ||
       colorMapRef.current.scatterWidth !== (customStore.scatterWidth ?? 10) ||
       colorMapRef.current.scatterAmount !== (customStore.scatterAmount ?? 50)
     ) {
+      const extraPercentByIndex =
+        selectedDesign === ItemDesigns.Custom && customPalette?.length
+          ? customPalette.map((c) => c.extraPercent ?? 0)
+          : undefined;
       colorMapRef.current = generateColorMap(
         adjustedModelWidth,
         adjustedModelHeight,
@@ -199,7 +206,8 @@ export function GeometricPattern({
         customPalette.length,
         customStore.scatterEase ?? 50,
         customStore.scatterWidth ?? 10,
-        customStore.scatterAmount ?? 50
+        customStore.scatterAmount ?? 50,
+        extraPercentByIndex
       );
       // Store the parameters used to generate this color map
       colorMapRef.current.orientation = orientation;
@@ -211,6 +219,8 @@ export function GeometricPattern({
       colorMapRef.current.scatterEase = customStore.scatterEase ?? 50;
       colorMapRef.current.scatterWidth = customStore.scatterWidth ?? 10;
       colorMapRef.current.scatterAmount = customStore.scatterAmount ?? 50;
+      colorMapRef.current.extraPercentKey =
+        extraPercentByIndex?.join(",") ?? "";
     }
 
     return {
@@ -226,6 +236,7 @@ export function GeometricPattern({
     isReversed,
     isRotated,
     selectedDesign,
+    customPalette,
     customPalette.length,
     colorEntries,
     blockSize,

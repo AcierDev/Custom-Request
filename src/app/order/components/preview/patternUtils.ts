@@ -23,6 +23,8 @@ export interface ColorMapRef extends Array<Array<number>> {
   scatterEase?: number;
   scatterWidth?: number;
   scatterAmount?: number;
+  /** Cache key for weighted proportions; invalidates when extraPercent changes */
+  extraPercentKey?: string;
 }
 
 export interface TextureVariation {
@@ -116,6 +118,60 @@ export function initializeTextureVariations(
 }
 
 /**
+ * Compute per-color block counts using optional extra-percent weights.
+ * Weights are 1 + extraPercent/100; uses largest-remainder so counts sum to totalBlocks.
+ */
+export function getWeightedBlockCounts(
+  totalBlocks: number,
+  numColors: number,
+  extraPercentByIndex?: number[]
+): number[] {
+  const n = numColors;
+  if (n <= 0) return [];
+
+  const hasWeights =
+    extraPercentByIndex &&
+    extraPercentByIndex.length === n &&
+    extraPercentByIndex.some(
+      (p) => typeof p === "number" && !Number.isNaN(p) && p > 0
+    );
+
+  if (!hasWeights) {
+    const blocksPerColor = Math.floor(totalBlocks / n);
+    const extraBlocks = totalBlocks % n;
+    return Array.from(
+      { length: n },
+      (_, i) => blocksPerColor + (i < extraBlocks ? 1 : 0)
+    );
+  }
+
+  const weights = (extraPercentByIndex as number[]).map(
+    (p) => 1 + (typeof p === "number" && !Number.isNaN(p) ? p : 0) / 100
+  );
+  const totalWeight = weights.reduce((a, b) => a + b, 0);
+  if (totalWeight <= 0) {
+    const blocksPerColor = Math.floor(totalBlocks / n);
+    const extraBlocks = totalBlocks % n;
+    return Array.from(
+      { length: n },
+      (_, i) => blocksPerColor + (i < extraBlocks ? 1 : 0)
+    );
+  }
+
+  const ideal = weights.map((w) => (totalBlocks * w) / totalWeight);
+  const floors = ideal.map((x) => Math.floor(x));
+  const sumFloors = floors.reduce((a, b) => a + b, 0);
+  const remainders = ideal.map((x, i) => ({ i, r: x - Math.floor(x) }));
+  remainders.sort((a, b) => b.r - a.r);
+  const counts = [...floors];
+  let need = totalBlocks - sumFloors;
+  for (let k = 0; k < need && k < n; k++) {
+    counts[remainders[k].i]++;
+  }
+  return counts;
+}
+
+/**
  * Shuffle an array using a seeded random function
  */
 export function shuffleArray(array: number[], seed: number = 12345): number[] {
@@ -157,7 +213,8 @@ export function generateColorMap(
   customPaletteLength: number,
   scatterEase: number = 50,
   scatterWidth: number = 10,
-  scatterAmount: number = 50
+  scatterAmount: number = 50,
+  extraPercentByIndex?: number[]
 ): ColorMapRef {
   // Total number of blocks
   const totalBlocks = adjustedModelWidth * adjustedModelHeight;
@@ -178,14 +235,15 @@ export function generateColorMap(
     // For fade patterns, use the new column-based distribution approach
     const totalBlocks = adjustedModelWidth * adjustedModelHeight;
 
-    // Calculate how many blocks each color should get
-    const blocksPerColor = Math.floor(totalBlocks / colorEntries.length);
-    const extraBlocks = totalBlocks % colorEntries.length;
+    const blockCounts = getWeightedBlockCounts(
+      totalBlocks,
+      colorEntries.length,
+      extraPercentByIndex
+    );
 
-    // Create an array with the exact number of blocks for each color
     const allColorIndices: number[] = [];
     for (let i = 0; i < colorEntries.length; i++) {
-      const blockCount = blocksPerColor + (i < extraBlocks ? 1 : 0);
+      const blockCount = blockCounts[i] ?? 0;
       for (let j = 0; j < blockCount; j++) {
         allColorIndices.push(i);
       }
@@ -622,15 +680,22 @@ export function generateColorMap(
       }
     }
 
-    // Calculate how many blocks each color should get
     const totalColors = mirroredColorIndices.length;
-    const blocksPerColor = Math.floor(totalBlocks / totalColors);
-    const extraBlocks = totalBlocks % totalColors;
+    const extraPercentForMirrored =
+      extraPercentByIndex && extraPercentByIndex.length === colorEntries.length
+        ? mirroredColorIndices.map(
+            (idx) => extraPercentByIndex[idx] ?? 0
+          )
+        : undefined;
+    const blockCounts = getWeightedBlockCounts(
+      totalBlocks,
+      totalColors,
+      extraPercentForMirrored
+    );
 
-    // Create an array with the exact number of blocks for each color
     const allColorIndices: number[] = [];
     for (let i = 0; i < totalColors; i++) {
-      const blockCount = blocksPerColor + (i < extraBlocks ? 1 : 0);
+      const blockCount = blockCounts[i] ?? 0;
       for (let j = 0; j < blockCount; j++) {
         allColorIndices.push(mirroredColorIndices[i]);
       }
@@ -1039,15 +1104,15 @@ export function generateColorMap(
 
     const totalBlocks = adjustedModelWidth * adjustedModelHeight;
 
-    // 1. Calculate how many blocks each color should get (same as Fade pattern)
-    const blocksPerColor = Math.floor(totalBlocks / colorEntries.length);
-    const extraBlocks = totalBlocks % colorEntries.length;
+    const blockCounts = getWeightedBlockCounts(
+      totalBlocks,
+      colorEntries.length,
+      extraPercentByIndex
+    );
 
-    // Create the sequential supply of colors
-    // [0,0,0, ..., 1,1,1, ..., 2,2,2, ...]
     const supplyColors: number[] = [];
     for (let i = 0; i < colorEntries.length; i++) {
-      const blockCount = blocksPerColor + (i < extraBlocks ? 1 : 0);
+      const blockCount = blockCounts[i] ?? 0;
       for (let j = 0; j < blockCount; j++) {
         supplyColors.push(i);
       }
@@ -1132,14 +1197,16 @@ export function generateColorMap(
     }
 
   } else if (colorPattern === "random") {
-    // For random pattern, distribute colors evenly but randomly
-    const blocksPerColor = Math.floor(totalBlocks / colorEntries.length);
-    const extraBlocks = totalBlocks % colorEntries.length;
+    // For random pattern, distribute colors by weight but randomly
+    const blockCounts = getWeightedBlockCounts(
+      totalBlocks,
+      colorEntries.length,
+      extraPercentByIndex
+    );
 
-    // Create an array with the right number of each color index
     const allColorIndices: number[] = [];
     for (let i = 0; i < colorEntries.length; i++) {
-      const blockCount = blocksPerColor + (i < extraBlocks ? 1 : 0);
+      const blockCount = blockCounts[i] ?? 0;
       for (let j = 0; j < blockCount; j++) {
         allColorIndices.push(i);
       }

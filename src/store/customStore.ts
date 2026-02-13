@@ -47,6 +47,8 @@ export type CustomColor = {
   id: string;
   hex: string;
   name?: string;
+  /** Extra proportion of blocks for this color (e.g. 50 = +50%). Default 0. */
+  extraPercent?: number;
 };
 
 // Add a new type for custom modes
@@ -207,6 +209,7 @@ interface CustomStore extends CustomState {
   setActiveTab: (tab: "create" | "saved" | "official" | "extract") => void;
   updateColorName: (index: number, name: string) => void;
   updateColorHex: (index: number, hex: string) => void;
+  updateColorExtraPercent: (index: number, extraPercent: number) => void;
   resetPaletteEditor: () => void;
   resetDesignEditor: () => void;
   loadOfficialPalette: (design: ItemDesigns) => void;
@@ -220,7 +223,7 @@ interface CustomStore extends CustomState {
     colorPattern: ColorPattern;
     orientation: Orientation;
     isReversed: boolean;
-    customPalette: Array<{ hex: string; name?: string }>;
+    customPalette: Array<{ hex: string; name?: string; extraPercent?: number }>;
     isRotated: boolean;
     useMini: boolean;
   };
@@ -339,6 +342,11 @@ const normalizeSavedPaletteToCustomColors = (
     id: nanoid(),
     hex: c.hex,
     name: c.name ?? "",
+    extraPercent:
+      typeof (c as CustomColor).extraPercent === "number" &&
+      !Number.isNaN((c as CustomColor).extraPercent)
+        ? (c as CustomColor).extraPercent
+        : 0,
   }));
 
 const buildShareableStateForPalette = (
@@ -1020,6 +1028,34 @@ export const useCustomStore = create<CustomStore>()(
           paletteHistoryIndex: newHistory.length - 1,
         };
       }),
+    updateColorExtraPercent: (index, extraPercent) =>
+      set((state) => {
+        if (index < 0 || index >= state.customPalette.length) return state;
+        const clamped = Math.max(
+          0,
+          Math.min(500,
+            typeof extraPercent === "number" && !Number.isNaN(extraPercent)
+              ? extraPercent
+              : 0
+          )
+        );
+
+        const newPalette = [...state.customPalette];
+        newPalette[index] = { ...newPalette[index], extraPercent: clamped };
+
+        const newHistory = state.paletteHistory.slice(
+          0,
+          state.paletteHistoryIndex + 1
+        );
+        newHistory.push(newPalette);
+
+        return {
+          customPalette: newPalette,
+          currentColors: createColorMap(newPalette),
+          paletteHistory: newHistory,
+          paletteHistoryIndex: newHistory.length - 1,
+        };
+      }),
     setActiveTab: (tab: "create" | "saved" | "official" | "extract") =>
       set({ activeTab: tab }),
     resetPaletteEditor: () =>
@@ -1107,6 +1143,9 @@ export const useCustomStore = create<CustomStore>()(
         customPalette: state.customPalette.map((c) => ({
           hex: c.hex,
           name: c.name,
+          ...(c.extraPercent != null && c.extraPercent !== 0
+            ? { extraPercent: c.extraPercent }
+            : {}),
         })),
         isRotated: state.isRotated,
         useMini: state.useMini,
@@ -1221,11 +1260,17 @@ export const useCustomStore = create<CustomStore>()(
           return false;
         }
 
-        // Ensure loaded palette has IDs
-        const loadedPalette = shareableState.customPalette.map((c) => ({
-          ...c,
-          id: c.id || nanoid(),
-        }));
+        // Ensure loaded palette has IDs and normalized extraPercent
+        const loadedPalette = (shareableState.customPalette || []).map(
+          (c: { id?: string; hex: string; name?: string; extraPercent?: number }) => ({
+            ...c,
+            id: c.id || nanoid(),
+            extraPercent:
+              typeof c.extraPercent === "number" && !Number.isNaN(c.extraPercent)
+                ? c.extraPercent
+                : 0,
+          })
+        );
 
         set({
           dimensions: shareableState.dimensions,
@@ -1262,11 +1307,17 @@ export const useCustomStore = create<CustomStore>()(
           return false;
         }
 
-        // Ensure loaded palette has IDs
-        const loadedPalette = designData.customPalette.map((c) => ({
-          ...c,
-          id: c.id || nanoid(),
-        }));
+        // Ensure loaded palette has IDs and normalized extraPercent
+        const loadedPalette = (designData.customPalette || []).map(
+          (c: { id?: string; hex: string; name?: string; extraPercent?: number }) => ({
+            ...c,
+            id: c.id || nanoid(),
+            extraPercent:
+              typeof c.extraPercent === "number" && !Number.isNaN(c.extraPercent)
+                ? c.extraPercent
+                : 0,
+          })
+        );
 
         set({
           dimensions: designData.dimensions,

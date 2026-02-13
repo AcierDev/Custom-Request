@@ -178,10 +178,17 @@ export function TiledPattern({
     colorMapRef.current.selectedDesign !== selectedDesign ||
     (selectedDesign === ItemDesigns.Custom &&
       colorMapRef.current.customPaletteLength !== customPalette.length) ||
+    (selectedDesign === ItemDesigns.Custom &&
+      colorMapRef.current.extraPercentKey !==
+        customPalette.map((c) => c.extraPercent ?? 0).join(",")) ||
     colorMapRef.current.scatterEase !== (customStore.scatterEase ?? 50) ||
     colorMapRef.current.scatterWidth !== (customStore.scatterWidth ?? 10) ||
     colorMapRef.current.scatterAmount !== (customStore.scatterAmount ?? 50)
   ) {
+    const extraPercentByIndex =
+      selectedDesign === ItemDesigns.Custom && customPalette?.length
+        ? customPalette.map((c) => c.extraPercent ?? 0)
+        : undefined;
     colorMapRef.current = generateColorMap(
       adjustedModelWidth,
       adjustedModelHeight,
@@ -194,7 +201,8 @@ export function TiledPattern({
       customPalette.length,
       customStore.scatterEase ?? 50,
       customStore.scatterWidth ?? 10,
-      customStore.scatterAmount ?? 50
+      customStore.scatterAmount ?? 50,
+      extraPercentByIndex
     );
     colorMapRef.current.orientation = orientation;
     colorMapRef.current.colorPattern = colorPattern;
@@ -205,6 +213,8 @@ export function TiledPattern({
     colorMapRef.current.scatterEase = customStore.scatterEase ?? 50;
     colorMapRef.current.scatterWidth = customStore.scatterWidth ?? 10;
     colorMapRef.current.scatterAmount = customStore.scatterAmount ?? 50;
+    colorMapRef.current.extraPercentKey =
+      extraPercentByIndex?.join(",") ?? "";
   }
 
   // Memoize the animation spring

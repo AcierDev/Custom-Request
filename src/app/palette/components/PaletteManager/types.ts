@@ -15,6 +15,9 @@ export interface ColorSwatchProps {
   index: number;
   isSelected: boolean;
   showBlendHint?: boolean;
+  /** Extra proportion of blocks for this color (e.g. 50 = +50%). 0–500. */
+  extraPercent?: number;
+  onExtraPercentChange?: (value: number) => void;
   onSelect: () => void;
   onRemove: () => void;
   onEdit: () => void;

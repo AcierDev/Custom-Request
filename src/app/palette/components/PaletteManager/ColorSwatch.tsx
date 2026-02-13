@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Edit, Trash2, Sparkles, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Tooltip,
   TooltipContent,
@@ -13,12 +14,17 @@ import {
 import { cn } from "@/lib/utils";
 import { ColorSwatchProps } from "./types";
 
+const EXTRA_PERCENT_MIN = 0;
+const EXTRA_PERCENT_MAX = 500;
+
 export function ColorSwatch({
   id,
   color,
   name,
   isSelected,
   showBlendHint = false,
+  extraPercent = 0,
+  onExtraPercentChange,
   onSelect,
   onRemove,
   onEdit,
@@ -84,6 +90,42 @@ export function ColorSwatch({
         <div className={cn("font-medium text-sm", textColorClass)}>
           {name || color}
         </div>
+
+        {/* Extra % - compact row */}
+        {onExtraPercentChange && (
+          <div
+            className="flex items-center gap-1.5 mt-1"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span
+              className={cn(
+                "text-[10px] sm:text-xs font-medium opacity-90",
+                textColorClass
+              )}
+            >
+              +%
+            </span>
+            <Input
+              type="number"
+              min={EXTRA_PERCENT_MIN}
+              max={EXTRA_PERCENT_MAX}
+              step={10}
+              value={extraPercent}
+              onChange={(e) => {
+                const raw = e.target.value === "" ? 0 : Number(e.target.value);
+                const clamped = Math.max(
+                  EXTRA_PERCENT_MIN,
+                  Math.min(EXTRA_PERCENT_MAX, Number.isNaN(raw) ? 0 : raw)
+                );
+                onExtraPercentChange(clamped);
+              }}
+              className={cn(
+                "h-6 w-12 sm:w-14 text-xs px-1.5 bg-white/20 dark:bg-white/10 border-white/30 dark:border-white/20",
+                textColorClass
+              )}
+            />
+          </div>
+        )}
 
         {/* Actions */}
         <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
