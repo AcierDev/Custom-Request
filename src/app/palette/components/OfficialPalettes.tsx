@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import html2canvas from "html2canvas";
 import { useCustomStore } from "@/store/customStore";
 import { ItemDesigns } from "@/typings/types";
 import { DESIGN_COLORS, DESIGN_IMAGES } from "@/typings/color-maps";
@@ -110,6 +111,7 @@ const OfficialPaletteCard = ({
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [copied, setCopied] = useState(false);
   const [copyTrycolors, setCopyTrycolors] = useState(false);
+  const exportRef = useRef<HTMLDivElement>(null);
 
   const handleCopyToClipboard = () => {
     const exportData = JSON.stringify(
@@ -123,6 +125,32 @@ const OfficialPaletteCard = ({
     navigator.clipboard.writeText(exportData);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDownloadImage = async () => {
+    if (!exportRef.current) return;
+
+    try {
+      const canvas = await html2canvas(exportRef.current, {
+        scale: 2, // Higher resolution
+        backgroundColor: null,
+        logging: false,
+      });
+
+      const url = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${design.replace(/\s+/g, "-").toLowerCase()}-official.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      setShowExportDialog(false);
+      toast.success("Image exported successfully!");
+    } catch (error) {
+      console.error("Export failed:", error);
+      toast.error("Failed to export image");
+    }
   };
 
   const handleCopyTrycolorsFormat = () => {
@@ -399,6 +427,23 @@ const OfficialPaletteCard = ({
                     </div>
                   </div>
 
+                  {/* Image Download */}
+                  <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-md space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center">
+                        <span className="inline-block w-3 h-3 bg-indigo-500 rounded-full mr-2"></span>
+                        Image Export
+                      </h4>
+                      <Button
+                        onClick={handleDownloadImage}
+                        size="sm"
+                        className="h-7 text-xs px-3 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white"
+                      >
+                        Download Image
+                      </Button>
+                    </div>
+                  </div>
+
                   {/* File Download */}
                   <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-md">
                     <div className="flex items-center justify-between">
@@ -470,6 +515,36 @@ const OfficialPaletteCard = ({
           </div>
         </CardFooter>
       </Card>
+      
+      {/* Hidden Export Template */}
+      <div
+        style={{
+          position: "fixed",
+          top: "-9999px",
+          left: "-9999px",
+          width: "1200px",
+          height: "auto",
+        }}
+      >
+        <div
+          ref={exportRef}
+          className="bg-white p-8 flex flex-col gap-4"
+          style={{ width: "1200px" }}
+        >
+
+          {/* Colors Strip */}
+          <div className="w-full h-64 rounded-xl overflow-hidden flex shadow-sm">
+            {colors.map((color) => (
+              <div
+                key={color.hex}
+                className="h-full flex-1"
+                style={{ backgroundColor: color.hex }}
+              />
+            ))}
+          </div>
+
+        </div>
+      </div>
     </motion.div>
   );
 };
