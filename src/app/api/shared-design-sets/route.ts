@@ -4,6 +4,7 @@ import { nanoid } from "nanoid";
 
 // Collection name for shared design sets
 const SHARED_DESIGN_SETS_COLLECTION = "sharedDesignSets";
+const VIEWER_BASE_URL = "http://viewer.everwoodus.com";
 
 type SharedDesignSetItem = {
   designData: Record<string, unknown>;
@@ -77,11 +78,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const viewerBaseUrl = "http://viewer.everwoodus.com";
-
     return NextResponse.json({
       setId,
-      setUrl: `${viewerBaseUrl}/?setId=${setId}`,
+      setUrl: `${VIEWER_BASE_URL}/?setId=${setId}`,
     });
   } catch (error) {
     console.error("Error creating shared design set:", error);
@@ -97,14 +96,39 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const setId = searchParams.get("id");
 
+    const collection = await getCollection(SHARED_DESIGN_SETS_COLLECTION);
+
+    // List last 10 shared sets when no id is provided
     if (!setId) {
-      return NextResponse.json(
-        { error: "Set ID is required" },
-        { status: 400 }
+      const limit = Math.min(
+        Math.max(1, parseInt(searchParams.get("limit") ?? "10", 10)),
+        50
       );
+      const cursor = collection
+        .find(
+          {},
+          {
+            projection: { setId: 1, createdAt: 1, accessCount: 1 },
+          }
+        )
+        .sort({ createdAt: -1 })
+        .limit(limit);
+
+      const sets = await cursor.toArray();
+      const items = sets.map((s) => ({
+        setId: s.setId,
+        link: `${VIEWER_BASE_URL}/?setId=${s.setId}`,
+        createdAt: s.createdAt,
+        accessCount: s.accessCount ?? 0,
+      }));
+
+      return NextResponse.json({
+        sets: items,
+        count: items.length,
+      });
     }
 
-    const collection = await getCollection(SHARED_DESIGN_SETS_COLLECTION);
+    // Fetch single set by id
     const sharedSet = await collection.findOne({ setId });
 
     if (!sharedSet) {
@@ -114,20 +138,130 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    await collection.updateOne(
-      { setId },
-      {
-        $inc: { accessCount: 1 },
-        $set: { lastAccessed: new Date() },
-      }
-    );
+    const wantBreakdown = searchParams.get("breakdown") === "colors";
 
-    return NextResponse.json({
+    if (!wantBreakdown) {
+      await collection.updateOne(
+        { setId },
+        {
+          $inc: { accessCount: 1 },
+          $set: { lastAccessed: new Date() },
+        }
+      );
+    }
+
+    const designs = sharedSet.designs as Array<{
+      designData: {
+        customPalette?: Array<{
+          hex: string;
+          name?: string | null;
+          extraPercent?: number;
+        }>;
+        selectedDesign?: string;
+        dimensions?: { width?: number; height?: number };
+      };
+      label?: string | null;
+    }>;
+
+    type ColorEntry = {
+      hex: string;
+      name: string | null;
+      extraPercent: number;
+      designIndex: number;
+      designLabel: string | null;
+    };
+
+    const allColorEntries: ColorEntry[] = [];
+    (designs || []).forEach((d, i) => {
+      const palette = d?.designData?.customPalette;
+      const label = d?.label ?? `Design ${i + 1}`;
+      if (Array.isArray(palette)) {
+        palette.forEach((c) => {
+          if (c && typeof c === "object" && c.hex) {
+            allColorEntries.push({
+              hex: String(c.hex),
+              name: c.name != null ? String(c.name) : null,
+              extraPercent:
+                typeof c.extraPercent === "number" && !Number.isNaN(c.extraPercent)
+                  ? c.extraPercent
+                  : 0,
+              designIndex: i,
+              designLabel: label,
+            });
+          }
+        });
+      }
+    });
+
+    // Unique colors across the set (by hex), with first name and list of designs
+    const byHex = new Map<
+      string,
+      {
+        hex: string;
+        name: string | null;
+        designs: { index: number; label: string | null; extraPercent: number }[];
+      }
+    >();
+    for (const e of allColorEntries) {
+      const key = e.hex.startsWith("#")
+        ? e.hex.toUpperCase()
+        : `#${e.hex.toUpperCase()}`;
+      if (!byHex.has(key)) {
+        byHex.set(key, {
+          hex: key,
+          name: e.name,
+          designs: [],
+        });
+      }
+      const rec = byHex.get(key)!;
+      if (!rec.name && e.name) rec.name = e.name;
+      rec.designs.push({
+        index: e.designIndex,
+        label: e.designLabel,
+        extraPercent: e.extraPercent,
+      });
+    }
+
+    const colorBreakdown = Array.from(byHex.entries()).map(([, v]) => ({
+      hex: v.hex,
+      name: v.name,
+      designCount: v.designs.length,
+      designs: v.designs,
+    }));
+
+    const response: Record<string, unknown> = {
       setId: sharedSet.setId,
       designs: sharedSet.designs,
       createdAt: sharedSet.createdAt,
-      accessCount: sharedSet.accessCount + 1,
-    });
+      accessCount: sharedSet.accessCount + (wantBreakdown ? 0 : 1),
+      setUrl: `${VIEWER_BASE_URL}/?setId=${setId}`,
+    };
+
+    if (wantBreakdown) {
+      response.colorBreakdown = {
+        totalUniqueColors: colorBreakdown.length,
+        totalColorSlots: allColorEntries.length,
+        byColor: colorBreakdown.sort((a, b) =>
+          a.hex.localeCompare(b.hex, "en", { sensitivity: "base" })
+        ),
+        byDesign: (designs || []).map((d, i) => {
+          const palette = d?.designData?.customPalette ?? [];
+          return {
+            index: i,
+            label: d?.label ?? `Design ${i + 1}`,
+            colorCount: Array.isArray(palette) ? palette.length : 0,
+            colors: Array.isArray(palette)
+              ? palette.map((c: { hex?: string; name?: string | null }) => ({
+                  hex: c?.hex ?? "",
+                  name: c?.name ?? null,
+                }))
+              : [],
+          };
+        }),
+      };
+    }
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error("Error retrieving shared design set:", error);
     return NextResponse.json(
