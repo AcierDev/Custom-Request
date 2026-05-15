@@ -1026,7 +1026,7 @@ export default function PalettePage() {
               <div className="hidden md:flex gap-2">
                 <Button
                   onClick={() => setActiveTab("official")}
-                  className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
+                  className="flex items-center gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-500 ring-1 ring-indigo-400/40 text-white"
                   size="sm"
                 >
                   <Lightbulb className="h-3.5 w-3.5" />
@@ -1034,7 +1034,7 @@ export default function PalettePage() {
                 </Button>
                 <Button
                   onClick={handleImport}
-                  className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white"
+                  className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 ring-1 ring-emerald-400/40 text-white"
                   size="sm"
                 >
                   <Upload className="h-3.5 w-3.5" />
@@ -1045,7 +1045,7 @@ export default function PalettePage() {
               <div className="hidden md:flex gap-2">
                 <Button
                   onClick={() => setActiveTab("official")}
-                  className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
+                  className="flex items-center gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-500 ring-1 ring-indigo-400/40 text-white"
                   size="sm"
                 >
                   <Lightbulb className="h-3.5 w-3.5" />
@@ -1053,7 +1053,7 @@ export default function PalettePage() {
                 </Button>
                 <Button
                   onClick={() => setActiveTab("create")}
-                  className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white"
+                  className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
                   size="sm"
                 >
                   <Plus className="h-3.5 w-3.5" />
@@ -1061,7 +1061,7 @@ export default function PalettePage() {
                 </Button>
                 <Button
                   onClick={handleImport}
-                  className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white"
+                  className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 ring-1 ring-emerald-400/40 text-white"
                   size="sm"
                 >
                   <Upload className="h-3.5 w-3.5" />
@@ -1072,7 +1072,7 @@ export default function PalettePage() {
               <div className="hidden md:flex gap-2">
                 <Button
                   onClick={() => setActiveTab("create")}
-                  className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white"
+                  className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
                   size="sm"
                 >
                   <Plus className="h-3.5 w-3.5" />
@@ -1080,7 +1080,7 @@ export default function PalettePage() {
                 </Button>
                 <Button
                   onClick={() => setActiveTab("official")}
-                  className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
+                  className="flex items-center gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-500 ring-1 ring-indigo-400/40 text-white"
                   size="sm"
                 >
                   <Lightbulb className="h-3.5 w-3.5" />
@@ -1088,7 +1088,7 @@ export default function PalettePage() {
                 </Button>
                 <Button
                   onClick={handleImport}
-                  className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white"
+                  className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 ring-1 ring-emerald-400/40 text-white"
                   size="sm"
                 >
                   <Upload className="h-3.5 w-3.5" />
@@ -1099,7 +1099,7 @@ export default function PalettePage() {
               <div className="hidden md:flex gap-2">
                 <Button
                   onClick={() => setActiveTab("create")}
-                  className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white"
+                  className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
                   size="sm"
                 >
                   <Plus className="h-3.5 w-3.5" />
@@ -1107,7 +1107,7 @@ export default function PalettePage() {
                 </Button>
                 <Button
                   onClick={handleImport}
-                  className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white"
+                  className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 ring-1 ring-emerald-400/40 text-white"
                   size="sm"
                 >
                   <Upload className="h-3.5 w-3.5" />
@@ -1122,7 +1122,7 @@ export default function PalettePage() {
             <div className="flex md:hidden justify-end mb-2 gap-2">
               <Button
                 onClick={() => setActiveTab("extract")}
-                className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white"
+                className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
                 size="sm"
               >
                 <ImageIcon className="h-3.5 w-3.5" />
@@ -1130,7 +1130,7 @@ export default function PalettePage() {
               </Button>
               <Button
                 onClick={() => setActiveTab("official")}
-                className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
+                className="flex items-center gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-500 ring-1 ring-indigo-400/40 text-white"
                 size="sm"
               >
                 <Lightbulb className="h-3.5 w-3.5" />
@@ -1138,7 +1138,7 @@ export default function PalettePage() {
               </Button>
               <Button
                 onClick={handleImport}
-                className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white"
+                className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 ring-1 ring-emerald-400/40 text-white"
                 size="sm"
               >
                 <Upload className="h-3.5 w-3.5" />
@@ -1152,7 +1152,7 @@ export default function PalettePage() {
               exit={{ opacity: 0, y: 20 }}
               transition={{ duration: 0.4 }}
             >
-              <Card className="border-2 border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm shadow-lg">
+              <Card className="glass-surface rounded-2xl shadow-lg">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-xl font-bold text-white">
                     {editingPaletteId
@@ -1168,7 +1168,7 @@ export default function PalettePage() {
                 <CardContent>
                   <PaletteManager />
                 </CardContent>
-                <CardFooter className="flex justify-between border-t border-gray-200 dark:border-gray-800 pt-4">
+                <CardFooter className="flex justify-between border-t border-white/10 pt-4">
                   <div className="flex items-center gap-2">
                     <motion.div whileTap={{ scale: 0.9 }}>
                       <Button
@@ -1293,7 +1293,7 @@ export default function PalettePage() {
             <div className="flex md:hidden justify-end mb-2">
               <Button
                 onClick={() => setActiveTab("create")}
-                className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white mr-2"
+                className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white mr-2"
                 size="sm"
               >
                 <Plus className="h-3.5 w-3.5" />
@@ -1301,7 +1301,7 @@ export default function PalettePage() {
               </Button>
               <Button
                 onClick={() => setActiveTab("official")}
-                className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
+                className="flex items-center gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-500 ring-1 ring-indigo-400/40 text-white"
                 size="sm"
               >
                 <Lightbulb className="h-3.5 w-3.5" />
@@ -1309,7 +1309,7 @@ export default function PalettePage() {
               </Button>
               <Button
                 onClick={handleImport}
-                className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white ml-2"
+                className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 ring-1 ring-emerald-400/40 text-white ml-2"
                 size="sm"
               >
                 <Upload className="h-3.5 w-3.5" />
@@ -1332,7 +1332,7 @@ export default function PalettePage() {
             <div className="flex md:hidden justify-end gap-2 mb-2">
               <Button
                 onClick={() => setActiveTab("create")}
-                className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white"
+                className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
                 size="sm"
               >
                 <Plus className="h-3.5 w-3.5" />
@@ -1340,7 +1340,7 @@ export default function PalettePage() {
               </Button>
               <Button
                 onClick={() => setActiveTab("extract")}
-                className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white"
+                className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
                 size="sm"
               >
                 <ImageIcon className="h-3.5 w-3.5" />
@@ -1348,7 +1348,7 @@ export default function PalettePage() {
               </Button>
               <Button
                 onClick={() => setActiveTab("official")}
-                className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
+                className="flex items-center gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-500 ring-1 ring-indigo-400/40 text-white"
                 size="sm"
               >
                 <Lightbulb className="h-3.5 w-3.5" />
@@ -1356,7 +1356,7 @@ export default function PalettePage() {
               </Button>
               <Button
                 onClick={handleImport}
-                className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white"
+                className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 ring-1 ring-emerald-400/40 text-white"
                 size="sm"
               >
                 <Upload className="h-3.5 w-3.5" />
@@ -1440,7 +1440,7 @@ export default function PalettePage() {
             <div className="flex md:hidden justify-end gap-2 mb-2">
               <Button
                 onClick={() => setActiveTab("create")}
-                className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white"
+                className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
                 size="sm"
               >
                 <Plus className="h-3.5 w-3.5" />
@@ -1448,7 +1448,7 @@ export default function PalettePage() {
               </Button>
               <Button
                 onClick={() => setActiveTab("extract")}
-                className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white"
+                className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
                 size="sm"
               >
                 <ImageIcon className="h-3.5 w-3.5" />
@@ -1456,7 +1456,7 @@ export default function PalettePage() {
               </Button>
               <Button
                 onClick={handleImport}
-                className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white"
+                className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 ring-1 ring-emerald-400/40 text-white"
                 size="sm"
               >
                 <Upload className="h-3.5 w-3.5" />

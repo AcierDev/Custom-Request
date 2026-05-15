@@ -14,7 +14,6 @@ import {
   Edit,
   Copy,
   Eye,
-  ShoppingCart,
   Download,
 } from "lucide-react";
 import {
@@ -67,12 +66,10 @@ const PalettePreview = ({ design }: { design: ItemDesigns }) => {
 const OfficialPaletteCard = ({
   design,
   onVisualize,
-  onOrder,
   onCustomize,
 }: {
   design: ItemDesigns;
   onVisualize: (design: ItemDesigns) => void;
-  onOrder: (design: ItemDesigns) => void;
   onCustomize: (design: ItemDesigns) => void;
 }) => {
   const colors = Object.values(DESIGN_COLORS[design]);
@@ -208,7 +205,7 @@ const OfficialPaletteCard = ({
           </CardDescription>
         </CardHeader>
 
-        <CardFooter className="p-3 flex justify-between border-t border-gray-100 dark:border-gray-800 mt-auto opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition-all duration-200">
+        <CardFooter className="p-3 flex justify-between border-t border-gray-100 dark:border-gray-800 mt-auto">
           <div className="flex gap-1">
             <Dialog
               open={isCustomizeDialogOpen}
@@ -404,26 +401,15 @@ const OfficialPaletteCard = ({
             </Dialog>
           </div>
 
-          <div className="flex gap-1">
-            <TooltipProvider delayDuration={300}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-7 w-7 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/30 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                    onClick={() => onVisualize(design)}
-                  >
-                    <Eye className="h-3.5 w-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p>Viewer</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs font-medium text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/30 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+            onClick={() => onVisualize(design)}
+          >
+            <Eye className="h-3.5 w-3.5 mr-1" />
+            Viewer
+          </Button>
         </CardFooter>
       </Card>
       
@@ -499,19 +485,6 @@ export function OfficialPalettes() {
     });
   };
 
-  const handleOrderOfficialPalette = (design: ItemDesigns) => {
-    setSelectedDesign(design);
-    setAppliedDesign(design);
-
-    // Navigate to order page
-    router.push("/viewer");
-
-    // Show success toast
-    toast.success(`${design} palette applied for ordering`, {
-      description: "Navigating to the order page.",
-    });
-  };
-
   const handleCustomizeOfficialPalette = (design: ItemDesigns) => {
     const designName = design.replace(/_/g, " ");
 
@@ -565,7 +538,6 @@ export function OfficialPalettes() {
                 key={design}
                 design={design}
                 onVisualize={handleVisualizeOfficialPalette}
-                onOrder={handleOrderOfficialPalette}
                 onCustomize={handleCustomizeOfficialPalette}
               />
             ))}

@@ -15,7 +15,7 @@ import {
 import {
   arrayMove,
   SortableContext,
-  verticalListSortingStrategy,
+  horizontalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { HexColorPicker } from "react-colorful";
 import { useCustomStore } from "@/store/customStore";
@@ -517,9 +517,9 @@ export function PaletteManager() {
         >
           <SortableContext
             items={customPalette.map((c) => c.id)}
-            strategy={verticalListSortingStrategy}
+            strategy={horizontalListSortingStrategy}
           >
-            <div className="flex flex-col gap-1 list-none p-0 m-0 rounded-lg overflow-hidden">
+            <div className="flex w-full gap-0 list-none p-0 m-0 rounded-lg overflow-hidden">
               <AnimatePresence>
                 {customPalette.map((color, index) => (
                   <SortableColorSwatch
@@ -533,6 +533,11 @@ export function PaletteManager() {
                       updateColorExtraPercent(index, v)
                     }
                     isSelected={selectedColors.includes(color.id)}
+                    selectionOrder={
+                      selectedColors.indexOf(color.id) >= 0
+                        ? selectedColors.indexOf(color.id) + 1
+                        : undefined
+                    }
                     onSelect={() => toggleColorSelection(color.id)}
                     onRemove={() => removeCustomColor(index)}
                     onEdit={() => handleEditColor(index)}

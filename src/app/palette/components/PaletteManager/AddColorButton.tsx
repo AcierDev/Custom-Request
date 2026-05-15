@@ -105,7 +105,10 @@ export function AddColorButton({
           damping: 30,
           opacity: { duration: 0.2 },
         }}
-        className="h-14 sm:h-16 w-full border-2 border-dashed border-white/10 flex items-center justify-center gap-2 cursor-pointer hover:border-blue-400 dark:hover:border-blue-500 transition-colors text-slate-400"
+        className={cn(
+          "h-32 sm:h-40 flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors text-slate-400 border-2 border-dashed border-white/15 hover:border-blue-400 bg-white/5",
+          isEmpty ? "flex-1" : "w-16 sm:w-20 shrink-0"
+        )}
         onClick={() => setIsOpen(true)}
       >
         <motion.div
@@ -115,9 +118,9 @@ export function AddColorButton({
         >
           <Plus className="h-4 w-4 text-blue-300" />
         </motion.div>
-        <span className="text-sm font-medium">
-          {isEmpty ? "Add your first color" : "Add color"}
-        </span>
+        {isEmpty && (
+          <span className="text-sm font-medium">Add your first color</span>
+        )}
       </motion.div>
 
       {isOpen && (

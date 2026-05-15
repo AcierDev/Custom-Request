@@ -92,7 +92,7 @@ export function EmptyPaletteWarning() {
                 <div className="flex gap-3">
                   <Button
                     onClick={handleNavigateToPalette}
-                    className="bg-gradient-to-r from-blue-500 to-sky-500 text-white hover:from-blue-600 hover:to-sky-600"
+                    className="bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
                   >
                     Create Palette
                   </Button>

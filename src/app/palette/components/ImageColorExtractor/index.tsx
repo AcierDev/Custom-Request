@@ -171,7 +171,7 @@ export function ImageColorExtractor() {
   };
 
   return (
-    <Card className="border-2 border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm shadow-lg">
+    <Card className="glass-surface rounded-2xl shadow-lg">
       <CardHeader className="pb-3">
         <CardTitle className="text-xl font-bold text-white">
           Extract Colors from Image
@@ -375,7 +375,7 @@ export function ImageColorExtractor() {
       </CardContent>
 
       {image && (
-        <CardFooter className="border-t border-gray-200 dark:border-gray-800 pt-4 flex justify-between">
+        <CardFooter className="border-t border-white/10 pt-4 flex justify-between">
           <div className="text-sm text-slate-400">
             {extractionMethod === "manual"
               ? "Click on the image to extract colors"
