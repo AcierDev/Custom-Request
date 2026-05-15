@@ -586,8 +586,8 @@ export function OfficialPalettes() {
     setSelectedDesign(design);
     setAppliedDesign(design);
 
-    // Navigate to preview page
-    router.push("/preview");
+    // Navigate to design page
+    router.push("/design");
 
     // Show success toast
     toast.success(`${design} palette applied for preview`, {
@@ -600,7 +600,7 @@ export function OfficialPalettes() {
     setAppliedDesign(design);
 
     // Navigate to order page
-    router.push("/order");
+    router.push("/design");
 
     // Show success toast
     toast.success(`${design} palette applied for ordering`, {

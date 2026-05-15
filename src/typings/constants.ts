@@ -14,7 +14,7 @@ export const SIZE_STRING = {
   [ItemSizes.ThirtySix_By_Sixteen]: `48" x 9 Feet`,
 };
 
-export enum BlockSize {
+export enum SquareSize {
   Mini = 0.4416,
   Normal = 0.5,
 }

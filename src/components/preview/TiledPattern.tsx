@@ -6,23 +6,23 @@ import { useRef, useMemo, useCallback, memo } from "react";
 import { Html } from "@react-three/drei";
 import { hoverStore } from "@/store/customStore";
 import { useStore } from "zustand";
-import { Block } from "./Block";
+import { Square } from "./Square";
 import { PlywoodBase } from "./PlywoodBase";
-import { BlockSize } from "@/typings/constants";
+import { SquareSize } from "@/typings/constants";
 import {
   PatternProps,
   ColorMapRef,
   getColorEntries,
   generateColorMap,
-  calculateBlockLayout,
+  calculateSquareLayout,
   initializeTextureVariations,
   TextureVariation,
 } from "./patternUtils";
 import { ItemDesigns } from "@/typings/types";
 import { useSpring, animated } from "@react-spring/three";
 
-// Create a memoized Block component to prevent unnecessary re-renders
-const MemoizedBlock = memo(Block);
+// Create a memoized Square component to prevent unnecessary re-renders
+const MemoizedSquare = memo(Square);
 
 export function TiledPattern({
   showWoodGrain = true,
@@ -90,17 +90,17 @@ export function TiledPattern({
     return null;
   }
 
-  // Modify blockSize to be dynamic based on state
-  const blockSize = useMini ? BlockSize.Mini : BlockSize.Normal;
-  // Use the same blockSpacing as in GeometricPattern
-  const blockSpacing = useMini ? 0.9 : 1;
-  const blockHeight = 0.1;
-  // Reduce height variation to prevent blocks from going below the plywood base
+  // Modify squareSize to be dynamic based on state
+  const squareSize = useMini ? SquareSize.Mini : SquareSize.Normal;
+  // Use the same squareSpacing as in GeometricPattern
+  const squareSpacing = useMini ? 0.9 : 1;
+  const squareHeight = 0.1;
+  // Reduce height variation to prevent squares from going below the plywood base
   const heightVariation = 0.15;
 
   // Determine the dimensions based on whether a drawn pattern is available
   const { width: originalModelWidth, height: originalModelHeight } =
-    details.blocks;
+    details.squares;
 
   // If drawn pattern is available, use its dimensions instead
   const modelWidth = hasDrawnPattern
@@ -110,14 +110,14 @@ export function TiledPattern({
     ? drawnPatternGridSize!.height
     : originalModelHeight;
 
-  // Calculate layout dimensions and spacing for the block grid
+  // Calculate layout dimensions and spacing for the square grid
   const layoutDetails = useMemo(() => {
-    // Calculate the block layout based on model dimensions and spacing
-    const baseLayout = calculateBlockLayout(
+    // Calculate the square layout based on model dimensions and spacing
+    const baseLayout = calculateSquareLayout(
       modelWidth,
       modelHeight,
-      blockSize,
-      blockSpacing,
+      squareSize,
+      squareSpacing,
       useMini
     );
 
@@ -127,9 +127,9 @@ export function TiledPattern({
     return {
       ...baseLayout,
       oneThirdWidth,
-      driftAmount: blockSize * 2, // Amount blocks will move during split animations
+      driftAmount: squareSize * 2, // Amount squares will move during split animations
     };
-  }, [modelWidth, modelHeight, blockSize, blockSpacing, useMini]);
+  }, [modelWidth, modelHeight, squareSize, squareSpacing, useMini]);
 
   const {
     adjustedModelWidth,
@@ -156,7 +156,7 @@ export function TiledPattern({
       .map(() =>
         Array(adjustedModelHeight)
           .fill(0)
-          .map(() => blockHeight + Math.random() * heightVariation)
+          .map(() => squareHeight + Math.random() * heightVariation)
       );
 
     // Initialize texture variations with proper typing
@@ -245,9 +245,9 @@ export function TiledPattern({
     return colorMapRef.current![x][y];
   };
 
-  // Memoize block creation to prevent unnecessary recalculations
-  const blocks = useMemo(() => {
-    const blockElements = [];
+  // Memoize square creation to prevent unnecessary recalculations
+  const squares = useMemo(() => {
+    const squareElements = [];
 
     // Determine current grid dimensions based on whether we have a drawn pattern
     const currentGridWidth = hasDrawnPattern
@@ -283,7 +283,7 @@ export function TiledPattern({
             colorName = "Error: Out of Bounds";
           }
 
-          // Skip rendering completely transparent blocks from the drawn pattern
+          // Skip rendering completely transparent squares from the drawn pattern
           if (color === "#FFFFFF00") continue;
         } else {
           // Use the procedurally generated color (existing logic)
@@ -297,7 +297,7 @@ export function TiledPattern({
         const randomHeight =
           heightsRef.current![x] && heightsRef.current![x][y]
             ? heightsRef.current![x][y]
-            : blockHeight + Math.random() * heightVariation;
+            : squareHeight + Math.random() * heightVariation;
 
         const textureVariation =
           textureVariationsRef.current![x] &&
@@ -311,35 +311,35 @@ export function TiledPattern({
               };
 
         // Calculate base position without drift
-        const baseXPos = x * blockSpacing * blockSize + offsetX + blockSize / 2;
-        const yPos = y * blockSpacing * blockSize + offsetY + blockSize / 2;
+        const baseXPos = x * squareSpacing * squareSize + offsetX + squareSize / 2;
+        const yPos = y * squareSpacing * squareSize + offsetY + squareSize / 2;
         // Use similar z-position calculation as GeometricPattern
         const zPos = randomHeight / 2 - (useMini ? 0.41 : 0.401);
 
-        const isBlockHovered =
+        const isSquareHovered =
           hoverInfo?.position[0] === x && hoverInfo?.position[1] === y;
-        const isBlockPinned =
+        const isSquarePinned =
           pinnedInfo?.position[0] === x && pinnedInfo?.position[1] === y;
 
         // Only render if color is not null
         if (color && color !== "null") {
-          blockElements.push(
+          squareElements.push(
             <animated.group
-              key={`block-${x}-${y}`}
+              key={`square-${x}-${y}`}
               position={driftFactor.to((d) => [
                 baseXPos + calculateDrift(x, d),
                 yPos,
                 zPos + 0.27, // Adjust z-position to align with plywood base
               ])}
             >
-              <MemoizedBlock
+              <MemoizedSquare
                 position={[0, 0, 0]} // Position is handled by the parent group
-                size={blockSize}
+                size={squareSize}
                 height={randomHeight}
                 color={color}
                 showWoodGrain={showWoodGrain}
                 showColorInfo={showColorInfo}
-                isHovered={isBlockHovered || isBlockPinned}
+                isHovered={isSquareHovered || isSquarePinned}
                 textureVariation={textureVariation}
                 onHover={(isHovering) => {
                   if (showColorInfo) {
@@ -372,12 +372,12 @@ export function TiledPattern({
       }
     }
 
-    return blockElements;
+    return squareElements;
   }, [
     adjustedModelWidth,
     adjustedModelHeight,
-    blockSize,
-    blockSpacing,
+    squareSize,
+    squareSpacing,
     offsetX,
     offsetY,
     useMini,
@@ -405,7 +405,7 @@ export function TiledPattern({
   // Handle group click to clear pinned info
   const handleGroupClick = useCallback(
     (e: any) => {
-      // Clear pinned info when clicking outside blocks
+      // Clear pinned info when clicking outside squares
       if (e.object.type === "Group") {
         setPinnedInfo(null);
       }
@@ -431,12 +431,12 @@ export function TiledPattern({
           width={totalWidth}
           height={totalHeight}
           showWoodGrain={showWoodGrain}
-          blockSize={blockSize}
+          squareSize={squareSize}
           adjustedModelWidth={adjustedModelWidth}
           adjustedModelHeight={adjustedModelHeight + 0.005}
           useMini={useMini}
         />
-        {blocks}
+        {squares}
         {showColorInfo && (hoverInfo || pinnedInfo) && (
           <Html position={[0, 0, 1]}>
             <div className="min-w-[140px] px-3 py-2 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">

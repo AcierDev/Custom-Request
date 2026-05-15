@@ -13,7 +13,7 @@ interface PlywoodBaseProps {
   width: number;
   height: number;
   showWoodGrain?: boolean;
-  blockSize: number;
+  squareSize: number;
   adjustedModelWidth: number;
   adjustedModelHeight: number;
   useMini: boolean;
@@ -156,7 +156,7 @@ AnimatedPlywoodPanel.displayName = "AnimatedPlywoodPanel";
 
 export function PlywoodBase({
   showWoodGrain = true,
-  blockSize,
+  squareSize,
   adjustedModelWidth,
   adjustedModelHeight,
   useMini,
@@ -178,56 +178,56 @@ export function PlywoodBase({
 
   // Memoize all calculations to prevent recalculation on every render
   const dimensions = useMemo(() => {
-    // Use the same blockSpacing factor as in GeometricPattern
-    const blockSpacing = useMini ? 0.9 : 1;
+    // Use the same squareSpacing factor as in GeometricPattern
+    const squareSpacing = useMini ? 0.9 : 1;
     const baseThickness = 0.07;
 
     // Compute accurate dimensions using the same calculation as the geometric pattern
-    const totalWidth = adjustedModelWidth * blockSize * blockSpacing;
-    const totalHeight = adjustedModelHeight * blockSize * blockSpacing;
+    const totalWidth = adjustedModelWidth * squareSize * squareSpacing;
+    const totalHeight = adjustedModelHeight * squareSize * squareSpacing;
 
     const offsetX = -totalWidth / 2 - 0.25 + (useMini ? 0.03 : 0);
     const offsetY = -totalHeight / 2 - 0.25 + (useMini ? 0.03 : 0);
 
-    // Compute center position to align with the blocks grid
+    // Compute center position to align with the squares grid
     const centerX =
       offsetX +
-      blockSize / 2 +
-      ((adjustedModelWidth - 1) * blockSize * blockSpacing) / 2;
+      squareSize / 2 +
+      ((adjustedModelWidth - 1) * squareSize * squareSpacing) / 2;
     const centerY =
       offsetY +
-      blockSize / 2 +
-      ((adjustedModelHeight - 1) * blockSize * blockSpacing) / 2;
+      squareSize / 2 +
+      ((adjustedModelHeight - 1) * squareSize * squareSpacing) / 2;
 
-    // Calculate split points based on block positions like in GeometricPattern
+    // Calculate split points based on square positions like in GeometricPattern
     const oneThirdWidth = Math.floor(adjustedModelWidth / 3);
     const twoThirdsWidth = oneThirdWidth * 2;
 
-    // Calculate the exact width of each section based on block count
-    const leftSectionBlocks = oneThirdWidth;
-    const centerSectionBlocks = twoThirdsWidth - oneThirdWidth;
-    const rightSectionBlocks = adjustedModelWidth - twoThirdsWidth;
+    // Calculate the exact width of each section based on square count
+    const leftSectionSquares = oneThirdWidth;
+    const centerSectionSquares = twoThirdsWidth - oneThirdWidth;
+    const rightSectionSquares = adjustedModelWidth - twoThirdsWidth;
 
-    // Calculate widths based on block counts
-    const leftPanelWidth = leftSectionBlocks * blockSize * blockSpacing;
-    const centerPanelWidth = centerSectionBlocks * blockSize * blockSpacing;
-    const rightPanelWidth = rightSectionBlocks * blockSize * blockSpacing;
+    // Calculate widths based on square counts
+    const leftPanelWidth = leftSectionSquares * squareSize * squareSpacing;
+    const centerPanelWidth = centerSectionSquares * squareSize * squareSpacing;
+    const rightPanelWidth = rightSectionSquares * squareSize * squareSpacing;
 
     // Calculate panel positions
     const leftPanelX =
       offsetX +
-      blockSize / 2 +
-      (leftSectionBlocks * blockSize * blockSpacing) / 2;
+      squareSize / 2 +
+      (leftSectionSquares * squareSize * squareSpacing) / 2;
     const centerPanelX =
-      offsetX + blockSize / 2 + leftPanelWidth + centerPanelWidth / 2;
+      offsetX + squareSize / 2 + leftPanelWidth + centerPanelWidth / 2;
     const rightPanelX =
       offsetX +
-      blockSize / 2 +
+      squareSize / 2 +
       leftPanelWidth +
       centerPanelWidth +
       rightPanelWidth / 2;
 
-    const driftDistance = blockSize * 2; // Scale drift by block size to match geometric pattern
+    const driftDistance = squareSize * 2; // Scale drift by square size to match geometric pattern
 
     return {
       baseThickness,
@@ -243,7 +243,7 @@ export function PlywoodBase({
       rightPanelWidth,
       driftDistance,
     };
-  }, [adjustedModelWidth, adjustedModelHeight, blockSize, useMini]);
+  }, [adjustedModelWidth, adjustedModelHeight, squareSize, useMini]);
 
   // Destructure memoized values
   const {

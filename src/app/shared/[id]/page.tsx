@@ -18,16 +18,16 @@ import {
   Copy,
   Check,
 } from "lucide-react";
-import { GeometricPattern } from "../../order/components/preview/GeometricPattern";
-import { TiledPattern } from "../../order/components/preview/TiledPattern";
+import { GeometricPattern } from "@/components/preview/GeometricPattern";
+import { TiledPattern } from "@/components/preview/TiledPattern";
 import {
   GeometricLighting,
   TiledLighting,
   StripedLighting,
-} from "../../order/components/preview/LightingSetups";
-import { ViewControls } from "../../order/components/preview/ViewControls";
-import { ColorInfoHint } from "../../order/components/preview/ColorInfoHint";
-import { Ruler3D } from "../../order/components/preview/Ruler3D";
+} from "@/components/preview/LightingSetups";
+import { ViewControls } from "@/components/preview/ViewControls";
+import { ColorInfoHint } from "@/components/preview/ColorInfoHint";
+import { Ruler3D } from "@/components/preview/Ruler3D";
 import { ItemDesigns } from "@/typings/types";
 import { cn } from "@/lib/utils";
 import Link from "next/link";

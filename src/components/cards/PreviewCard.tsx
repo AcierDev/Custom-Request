@@ -8,13 +8,13 @@ import { motion } from "framer-motion";
 import { useEffect, useState, useRef, ReactNode } from "react";
 import { Maximize, ExternalLink, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { GeometricPattern } from "../../order/components/preview/GeometricPattern";
-import { TiledPattern } from "../../order/components/preview/TiledPattern";
+import { GeometricPattern } from "@/components/preview/GeometricPattern";
+import { TiledPattern } from "@/components/preview/TiledPattern";
 import {
   GeometricLighting,
   TiledLighting,
   StripedLighting,
-} from "../../order/components/preview/LightingSetups";
+} from "@/components/preview/LightingSetups";
 import { useRouter } from "next/navigation";
 import * as THREE from "three";
 import { Group } from "three";
@@ -64,7 +64,7 @@ export function PreviewCard({ zoom = 1.4 }: { zoom?: number }) {
   }, []);
 
   const handleNavigateToPreview = () => {
-    router.push("/preview");
+    router.push("/design");
   };
 
   if (!mounted) return null;

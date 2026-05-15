@@ -5,18 +5,15 @@ import { useSidebar } from "@/contexts/sidebar-context";
 import {
   Moon,
   Sun,
-  Settings,
   ChevronLeft,
   ChevronRight,
   Menu,
-  ShoppingCart,
   Palette,
   LogOut,
   User,
   Save,
   PencilRuler,
   LogIn,
-  Eye,
   Pencil,
   Paintbrush,
 } from "lucide-react";
@@ -58,13 +55,12 @@ type DividerItem = NavItemBase & {
 type NavItem = NavLinkItem | DividerItem;
 
 const mainNavItems: NavItem[] = [
-  { href: "/order", icon: ShoppingCart, label: "Order", hotkey: "1" },
-  { href: "/designs", icon: Save, label: "Saved Designs", hotkey: "4" },
-  // { href: "/viewer", icon: Eye, label: "View Art", hotkey: "6" },
-  { href: "/preview", icon: Eye, label: "Preview", hotkey: "2" },
-  { href: "/design", icon: PencilRuler, label: "Design", hotkey: "3" },
-  { href: "/draw-pattern", icon: Pencil, label: "Draw Pattern", hotkey: "6" },
+  { href: "/design", icon: PencilRuler, label: "Design", hotkey: "1" },
   { href: "/palette", icon: Palette, label: "Palette", hotkey: "5" },
+];
+
+const bottomNavItems: NavItem[] = [
+  { href: "/draw-pattern", icon: Pencil, label: "Draw Pattern", hotkey: "6" },
   {
     href: "/paint-selector",
     icon: Paintbrush,
@@ -73,17 +69,13 @@ const mainNavItems: NavItem[] = [
   },
 ];
 
-interface NavbarProps {
-  onOpenSettings: () => void;
-}
-
 interface NavLinkProps {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   label: string;
 }
 
-export function Navbar({ onOpenSettings }: NavbarProps) {
+export function Navbar() {
   const { theme, setTheme } = useTheme();
   const pathname = usePathname();
   const router = useRouter();
@@ -227,6 +219,26 @@ export function Navbar({ onOpenSettings }: NavbarProps) {
               )}
             </div>
           </div>
+          <div className="px-3 pt-2 pb-2 border-t border-gray-200/80 dark:border-gray-700/50">
+            <div className="flex flex-col space-y-1">
+              {bottomNavItems.map((item, index) =>
+                item.type === "divider" ? (
+                  <Separator
+                    key={index}
+                    className="my-2 bg-gray-200/80 dark:bg-gray-700/50"
+                    decorative
+                  />
+                ) : (
+                  <NavLink
+                    key={"href" in item ? item.href : index}
+                    href={"href" in item ? item.href : ""}
+                    icon={"icon" in item ? item.icon : Menu}
+                    label={"label" in item ? item.label : ""}
+                  />
+                )
+              )}
+            </div>
+          </div>
           <div className="p-3 border-t border-gray-200/80 dark:border-gray-700/50 bg-white/80 dark:bg-gray-950/60">
             <div className={cn("flex gap-2", !isSidebarOpen && "flex-col")}>
               <Button
@@ -245,16 +257,6 @@ export function Navbar({ onOpenSettings }: NavbarProps) {
                     ? "Switch to light theme"
                     : "Switch to dark theme"}
                 </span>
-              </Button>
-              <Button
-                className={cn(
-                  "flex items-center justify-center bg-white text-black hover:opacity-90 transition-opacity shadow-sm",
-                  isSidebarOpen ? "flex-1" : ""
-                )}
-                onClick={onOpenSettings}
-              >
-                <Settings className="h-5 w-5 flex-shrink-0" />
-                {isSidebarOpen && <span className="ml-2">Settings</span>}
               </Button>
               {user ? (
                 <DropdownMenu>
@@ -294,7 +296,7 @@ export function Navbar({ onOpenSettings }: NavbarProps) {
                       disabled={isSaving}
                     >
                       <Save className="mr-2 h-4 w-4" />
-                      <span>{isSaving ? "Saving..." : "Save My Designs"}</span>
+                      <span>{isSaving ? "Saving..." : "Save My Data"}</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
@@ -340,7 +342,7 @@ export function Navbar({ onOpenSettings }: NavbarProps) {
                       disabled={isSaving}
                     >
                       <Save className="mr-2 h-4 w-4" />
-                      <span>{isSaving ? "Saving..." : "Save My Designs"}</span>
+                      <span>{isSaving ? "Saving..." : "Save My Data"}</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
@@ -384,7 +386,7 @@ export function Navbar({ onOpenSettings }: NavbarProps) {
             </SheetTrigger>
             <span
               className="text-xl font-bold mr-auto cursor-pointer text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-violet-600 hover:opacity-80 transition-opacity ml-2"
-              onClick={() => router.push("/order")}
+              onClick={() => router.push("/design")}
             >
               Everwood
             </span>
@@ -427,7 +429,7 @@ export function Navbar({ onOpenSettings }: NavbarProps) {
                     disabled={isSaving}
                   >
                     <Save className="mr-2 h-4 w-4" />
-                    <span>{isSaving ? "Saving..." : "Save My Designs"}</span>
+                    <span>{isSaving ? "Saving..." : "Save My Data"}</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
@@ -466,7 +468,7 @@ export function Navbar({ onOpenSettings }: NavbarProps) {
                     disabled={isSaving}
                   >
                     <Save className="mr-2 h-4 w-4" />
-                    <span>{isSaving ? "Saving..." : "Save My Designs"}</span>
+                    <span>{isSaving ? "Saving..." : "Save My Data"}</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="cursor-pointer focus:bg-muted/80"
@@ -524,35 +526,45 @@ export function Navbar({ onOpenSettings }: NavbarProps) {
                     )
                   )}
                 </div>
-                <div className="p-4 border-t border-gray-200/80 dark:border-gray-700/50 bg-white/80 dark:bg-gray-950/60">
-                  <div className="flex gap-2">
-                    <Button
-                      className="flex-1 flex items-center justify-center bg-gradient-to-r from-blue-600 to-violet-600 text-white hover:opacity-90 transition-opacity shadow-sm"
-                      onClick={onOpenSettings}
-                    >
-                      <Settings className="mr-2 h-5 w-5" />
-                      Settings
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        setTheme(theme === "dark" ? "light" : "dark");
-                      }}
-                      className="flex-shrink-0 hover:bg-muted/80 dark:hover:bg-gray-800/60"
-                    >
-                      {theme === "dark" ? (
-                        <Sun className="h-5 w-5" />
+                <div className="px-3 pt-2 pb-2 border-t border-gray-200/80 dark:border-gray-700/50">
+                  <div className="flex flex-col space-y-1">
+                    {bottomNavItems.map((item, index) =>
+                      item.type === "divider" ? (
+                        <Separator
+                          key={index}
+                          className="my-2 bg-gray-200/80 dark:bg-gray-700/50"
+                        />
                       ) : (
-                        <Moon className="h-5 w-5" />
-                      )}
-                      <span className="sr-only">
-                        {theme === "dark"
-                          ? "Switch to light theme"
-                          : "Switch to dark theme"}
-                      </span>
-                    </Button>
+                        <NavLink
+                          key={"href" in item ? item.href : index}
+                          href={"href" in item ? item.href : ""}
+                          icon={"icon" in item ? item.icon : Menu}
+                          label={"label" in item ? item.label : ""}
+                        />
+                      )
+                    )}
                   </div>
+                </div>
+                <div className="p-4 border-t border-gray-200/80 dark:border-gray-700/50 bg-white/80 dark:bg-gray-950/60">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      setTheme(theme === "dark" ? "light" : "dark");
+                    }}
+                    className="flex-shrink-0 hover:bg-muted/80 dark:hover:bg-gray-800/60"
+                  >
+                    {theme === "dark" ? (
+                      <Sun className="h-5 w-5" />
+                    ) : (
+                      <Moon className="h-5 w-5" />
+                    )}
+                    <span className="sr-only">
+                      {theme === "dark"
+                        ? "Switch to light theme"
+                        : "Switch to dark theme"}
+                    </span>
+                  </Button>
                 </div>
               </div>
             </SheetContent>

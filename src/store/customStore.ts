@@ -47,7 +47,7 @@ export type CustomColor = {
   id: string;
   hex: string;
   name?: string;
-  /** Extra proportion of blocks for this color (e.g. 50 = +50%). Default 0. */
+  /** Extra proportion of squares for this color (e.g. 50 = +50%). Default 0. */
   extraPercent?: number;
 };
 
@@ -63,24 +63,6 @@ export interface SavedPalette {
   folderId?: string;
   isPublic?: boolean;
 }
-
-export type SavedDesign = {
-  id: string;
-  name: string;
-  dimensions: Dimensions;
-  selectedDesign: ItemDesigns;
-  shippingSpeed: ShippingSpeed;
-  colorPattern: ColorPattern;
-  orientation: Orientation;
-  isReversed: boolean;
-  customPalette: CustomColor[];
-  isRotated: boolean;
-  style: StyleType;
-  useMini: boolean;
-  createdAt: string;
-  updatedAt?: string;
-  folderId?: string;
-};
 
 export type Folder = {
   id: string;
@@ -122,13 +104,10 @@ interface CustomState {
   useMini: boolean;
   isReversed: boolean;
   savedPalettes: SavedPalette[];
-  savedDesigns: SavedDesign[];
   paletteFolders: Folder[];
-  designFolders: Folder[];
   folders: Folder[];
   activeTab: "create" | "saved" | "official" | "extract";
   editingPaletteId: string | null;
-  editingDesignId: string | null;
   viewSettings: {
     showRuler: boolean;
     showWoodGrain: boolean;
@@ -152,7 +131,7 @@ interface CustomState {
   // New property to track which custom mode is active
   activeCustomMode: CustomMode;
 
-  // Pattern override functionality for individual block editing
+  // Pattern override functionality for individual square editing
   patternOverride: Record<string, number>;
   patternEditingMode: {
     selectedColorIndex: number;
@@ -201,17 +180,11 @@ interface CustomStore extends CustomState {
   deletePalette: (id: string) => void;
   applyPalette: (paletteId: string) => void;
   loadPaletteForEditing: (paletteId: string) => void;
-  saveDesign: (name: string, folderId?: string) => void;
-  updateDesign: (id: string, updates: Partial<SavedDesign>) => void;
-  deleteDesign: (id: string) => void;
-  applyDesign: (designId: string) => void;
-  loadDesignForEditing: (designId: string) => void;
   setActiveTab: (tab: "create" | "saved" | "official" | "extract") => void;
   updateColorName: (index: number, name: string) => void;
   updateColorHex: (index: number, hex: string) => void;
   updateColorExtraPercent: (index: number, extraPercent: number) => void;
   resetPaletteEditor: () => void;
-  resetDesignEditor: () => void;
   loadOfficialPalette: (design: ItemDesigns) => void;
   setCustomPalette: (palette: CustomColor[]) => void;
   generateShareableLink: () => string;
@@ -269,10 +242,6 @@ interface CustomStore extends CustomState {
   updatePaletteFolder: (id: string, updates: Partial<Folder>) => void;
   deletePaletteFolder: (id: string) => void;
   movePaletteToFolder: (paletteId: string, folderId: string | null) => void;
-  createDesignFolder: (name: string) => string;
-  updateDesignFolder: (id: string, updates: Partial<Folder>) => void;
-  deleteDesignFolder: (id: string) => void;
-  moveDesignToFolder: (designId: string, folderId: string | null) => void;
   init: () => void;
   togglePalettePublic: (id: string) => void;
   setScatterEase: (value: number) => void;
@@ -389,9 +358,7 @@ export type DraftSetItem = {
 // Define what we want to persist in the database
 interface PersistentState extends ShareableState {
   savedPalettes: SavedPalette[];
-  savedDesigns: SavedDesign[];
   paletteFolders: Folder[];
-  designFolders: Folder[];
   useMini: boolean;
   viewSettings: {
     showRuler: boolean;
@@ -418,9 +385,7 @@ const AUTO_SAVE_TRACKED_PROPERTIES: (keyof CustomState)[] = [
   "isRotated",
   "style",
   "savedPalettes",
-  "savedDesigns",
   "paletteFolders",
-  "designFolders",
   "viewSettings",
   "paletteHistory",
   "paletteHistoryIndex",
@@ -445,7 +410,7 @@ export const useCustomStore = create<CustomStore>()(
       customFee: 0,
       debug: {
         dimensions: { height: 0, width: 0 },
-        blocks: { height: 0, width: 0, total: 0 },
+        squares: { height: 0, width: 0, total: 0 },
       },
     },
     colorPattern: "fade",
@@ -458,13 +423,10 @@ export const useCustomStore = create<CustomStore>()(
     useMini: false,
     isReversed: false,
     savedPalettes: [],
-    savedDesigns: [],
     folders: [],
     paletteFolders: [],
-    designFolders: [],
     activeTab: "create",
     editingPaletteId: null,
-    editingDesignId: null,
     viewSettings: {
       showRuler: true,
       showWoodGrain: true,
@@ -521,18 +483,6 @@ export const useCustomStore = create<CustomStore>()(
               );
             }
 
-            if (parsedState.savedDesigns) {
-              parsedState.savedDesigns = parsedState.savedDesigns.map(
-                (d: any) => ({
-                  ...d,
-                  customPalette: d.customPalette.map((c: any) => ({
-                    ...c,
-                    id: c.id || nanoid(),
-                  })),
-                })
-              );
-            }
-
             if (parsedState.draftSet) {
               parsedState.draftSet = parsedState.draftSet.map((item: any) => ({
                 ...item,
@@ -568,50 +518,14 @@ export const useCustomStore = create<CustomStore>()(
               parsedState.folders &&
               parsedState.folders.length > 0 &&
               (!parsedState.paletteFolders ||
-                parsedState.paletteFolders.length === 0) &&
-              (!parsedState.designFolders ||
-                parsedState.designFolders.length === 0)
+                parsedState.paletteFolders.length === 0)
             ) {
-              const paletteFolderIds = new Set<string>();
-              const designFolderIds = new Set<string>();
-
-              if (parsedState.savedPalettes) {
-                parsedState.savedPalettes.forEach((palette: SavedPalette) => {
-                  if (palette.folderId) {
-                    paletteFolderIds.add(palette.folderId);
-                  }
-                });
-              }
-
-              if (parsedState.savedDesigns) {
-                parsedState.savedDesigns.forEach((design: SavedDesign) => {
-                  if (design.folderId) {
-                    designFolderIds.add(design.folderId);
-                  }
-                });
-              }
-
-              const paletteFolders = parsedState.folders.filter(
-                (folder: Folder) => paletteFolderIds.has(folder.id)
-              );
-
-              const designFolders = parsedState.folders.filter(
-                (folder: Folder) => designFolderIds.has(folder.id)
-              );
-
-              const unassignedFolders = parsedState.folders.filter(
-                (folder: Folder) =>
-                  !paletteFolderIds.has(folder.id) &&
-                  !designFolderIds.has(folder.id)
-              );
-
               set({
-                paletteFolders: [...paletteFolders, ...unassignedFolders],
-                designFolders,
+                paletteFolders: parsedState.folders,
               });
 
               console.log(
-                `Migrated ${paletteFolders.length} palette folders and ${designFolders.length} design folders from ${parsedState.folders.length} total folders.`
+                `Migrated ${parsedState.folders.length} folders into paletteFolders.`
               );
             }
 
@@ -1383,7 +1297,6 @@ export const useCustomStore = create<CustomStore>()(
                 ...data,
                 viewSettings,
                 paletteFolders: data.paletteFolders || [],
-                designFolders: data.designFolders || [],
                 currentColors:
                   data.customPalette && data.customPalette.length > 0
                     ? createColorMap(data.customPalette)
@@ -1445,9 +1358,7 @@ export const useCustomStore = create<CustomStore>()(
           isRotated: get().isRotated,
           style: get().style,
           savedPalettes: get().savedPalettes,
-          savedDesigns: get().savedDesigns,
           paletteFolders: get().paletteFolders,
-          designFolders: get().designFolders,
           useMini: get().useMini,
           viewSettings: get().viewSettings,
           activeCustomMode: get().activeCustomMode,
@@ -1500,9 +1411,7 @@ export const useCustomStore = create<CustomStore>()(
               isRotated: get().isRotated,
               style: get().style,
               savedPalettes: get().savedPalettes,
-              savedDesigns: get().savedDesigns,
               paletteFolders: get().paletteFolders,
-              designFolders: get().designFolders,
               useMini: get().useMini,
               viewSettings: get().viewSettings,
               activeCustomMode: get().activeCustomMode,
@@ -1511,9 +1420,7 @@ export const useCustomStore = create<CustomStore>()(
 
             const hasNoLocalData =
               stateToSave.savedPalettes.length === 0 &&
-              stateToSave.savedDesigns.length === 0 &&
-              stateToSave.paletteFolders.length === 0 &&
-              stateToSave.designFolders.length === 0;
+              stateToSave.paletteFolders.length === 0;
             const isKnownFreshStart = get().lastSaved === 0;
 
             if (hasNoLocalData && !isKnownFreshStart) {
@@ -1534,17 +1441,13 @@ export const useCustomStore = create<CustomStore>()(
 
                   if (
                     currentData.savedPalettes?.length > 0 ||
-                    currentData.savedDesigns?.length > 0 ||
-                    currentData.paletteFolders?.length > 0 ||
-                    currentData.designFolders?.length > 0
+                    currentData.paletteFolders?.length > 0
                   ) {
                     stateToSave.savedPalettes = currentData.savedPalettes || [];
-                    stateToSave.savedDesigns = currentData.savedDesigns || [];
                     stateToSave.paletteFolders =
                       currentData.paletteFolders || [];
-                    stateToSave.designFolders = currentData.designFolders || [];
                     console.log(
-                      "Preserved existing palettes, designs, and folders during save"
+                      "Preserved existing palettes and folders during save"
                     );
                   }
                 }
@@ -1643,13 +1546,6 @@ export const useCustomStore = create<CustomStore>()(
           }
 
           if (
-            currentState.savedDesigns.length > (data.savedDesigns?.length || 0)
-          ) {
-            console.log("Using local designs which appear more complete");
-            mergedState.savedDesigns = currentState.savedDesigns;
-          }
-
-          if (
             currentState.paletteFolders.length >
             (data.paletteFolders?.length || 0)
           ) {
@@ -1657,16 +1553,6 @@ export const useCustomStore = create<CustomStore>()(
               "Using local palette folders which appear more complete"
             );
             mergedState.paletteFolders = currentState.paletteFolders;
-          }
-
-          if (
-            currentState.designFolders.length >
-            (data.designFolders?.length || 0)
-          ) {
-            console.log(
-              "Using local design folders which appear more complete"
-            );
-            mergedState.designFolders = currentState.designFolders;
           }
         }
 
@@ -1683,9 +1569,7 @@ export const useCustomStore = create<CustomStore>()(
           activeCustomMode:
             mergedState.activeCustomMode || get().activeCustomMode,
           savedPalettes: mergedState.savedPalettes || [],
-          savedDesigns: mergedState.savedDesigns || [],
           paletteFolders: mergedState.paletteFolders || [],
-          designFolders: mergedState.designFolders || [],
           useMini: mergedState.useMini ?? get().useMini,
           viewSettings: {
             showRuler:
@@ -1833,178 +1717,6 @@ export const useCustomStore = create<CustomStore>()(
         ),
         lastSaved: Date.now(),
       }));
-    },
-    createDesignFolder: (name: string) => {
-      const id = Date.now().toString();
-      const newFolder: Folder = {
-        id,
-        name,
-        createdAt: new Date().toISOString(),
-      };
-
-      set((state) => ({
-        designFolders: [...state.designFolders, newFolder],
-        lastSaved: Date.now(),
-      }));
-
-      return id;
-    },
-    updateDesignFolder: (id: string, updates: Partial<Folder>) => {
-      set((state) => ({
-        designFolders: state.designFolders.map((folder) =>
-          folder.id === id
-            ? {
-                ...folder,
-                ...updates,
-                updatedAt: new Date().toISOString(),
-              }
-            : folder
-        ),
-        lastSaved: Date.now(),
-      }));
-    },
-    deleteDesignFolder: (id: string) => {
-      set((state) => ({
-        designFolders: state.designFolders.filter((folder) => folder.id !== id),
-        savedDesigns: state.savedDesigns.map((design) =>
-          design.folderId === id ? { ...design, folderId: undefined } : design
-        ),
-        lastSaved: Date.now(),
-      }));
-    },
-    moveDesignToFolder: (designId: string, folderId: string | null) => {
-      set((state) => ({
-        savedDesigns: state.savedDesigns.map((design) =>
-          design.id === designId
-            ? {
-                ...design,
-                folderId: folderId || undefined,
-                updatedAt: new Date().toISOString(),
-              }
-            : design
-        ),
-        lastSaved: Date.now(),
-      }));
-
-      if (get().autoSaveEnabled) {
-        get().saveToDatabase();
-      }
-    },
-    saveDesign: (name: string, folderId?: string) => {
-      const id = nanoid();
-      const now = new Date().toISOString();
-
-      const newDesign: SavedDesign = {
-        id,
-        name,
-        dimensions: get().dimensions,
-        selectedDesign: get().selectedDesign,
-        shippingSpeed: get().shippingSpeed,
-        colorPattern: get().colorPattern,
-        orientation: get().orientation,
-        isReversed: get().isReversed,
-        customPalette: get().customPalette,
-        isRotated: get().isRotated,
-        style: get().style,
-        useMini: get().useMini,
-        createdAt: now,
-        folderId,
-      };
-
-      set((state) => ({
-        savedDesigns: [...state.savedDesigns, newDesign],
-        editingDesignId: null,
-      }));
-
-      if (get().autoSaveEnabled) {
-        get().saveToDatabase();
-      }
-
-      return id;
-    },
-    updateDesign: (id: string, updates: Partial<SavedDesign>) => {
-      const now = new Date().toISOString();
-
-      set((state) => ({
-        savedDesigns: state.savedDesigns.map((design) =>
-          design.id === id ? { ...design, ...updates, updatedAt: now } : design
-        ),
-      }));
-
-      if (get().autoSaveEnabled) {
-        get().saveToDatabase();
-      }
-    },
-    deleteDesign: (id: string) => {
-      set((state) => ({
-        savedDesigns: state.savedDesigns.filter((design) => design.id !== id),
-        editingDesignId:
-          state.editingDesignId === id ? null : state.editingDesignId,
-      }));
-
-      if (get().autoSaveEnabled) {
-        get().saveToDatabase();
-      }
-    },
-    applyDesign: (designId: string) => {
-      const design = get().savedDesigns.find((d) => d.id === designId);
-
-      if (!design) {
-        console.error(`Design with ID ${designId} not found`);
-        return;
-      }
-
-      set({
-        dimensions: design.dimensions,
-        selectedDesign: design.selectedDesign,
-        shippingSpeed: design.shippingSpeed,
-        colorPattern: design.colorPattern,
-        orientation: design.orientation,
-        isReversed: design.isReversed,
-        customPalette: design.customPalette,
-        isRotated: design.isRotated,
-        style: design.style,
-        useMini: design.useMini,
-        currentColors:
-          design.selectedDesign === ItemDesigns.Custom &&
-          design.customPalette.length > 0
-            ? createColorMap(design.customPalette)
-            : DESIGN_COLORS[design.selectedDesign] || null,
-        pricing: calculatePrice(design.dimensions, design.shippingSpeed),
-      });
-    },
-    loadDesignForEditing: (designId: string) => {
-      const design = get().savedDesigns.find((d) => d.id === designId);
-
-      if (!design) {
-        console.error(`Design with ID ${designId} not found`);
-        return;
-      }
-
-      set({
-        editingDesignId: designId,
-        dimensions: design.dimensions,
-        selectedDesign: design.selectedDesign,
-        shippingSpeed: design.shippingSpeed,
-        colorPattern: design.colorPattern,
-        orientation: design.orientation,
-        isReversed: design.isReversed,
-        customPalette: design.customPalette,
-        isRotated: design.isRotated,
-        style: design.style,
-        useMini: design.useMini,
-        currentColors:
-          design.selectedDesign === ItemDesigns.Custom &&
-          design.customPalette.length > 0
-            ? createColorMap(design.customPalette)
-            : DESIGN_COLORS[design.selectedDesign] || null,
-        pricing: calculatePrice(design.dimensions, design.shippingSpeed),
-      });
-    },
-    resetDesignEditor: () => {
-      set({
-        editingDesignId: null,
-      });
     },
     togglePalettePublic: (id: string) =>
       set((state) => ({

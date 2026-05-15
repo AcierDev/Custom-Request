@@ -5,7 +5,6 @@ import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import {
   Palette,
-  SquareStack,
   Truck,
   Paintbrush,
   ArrowRight,
@@ -63,13 +62,6 @@ export default function WelcomePage() {
 
   const features = [
     {
-      title: "Design Explorer",
-      description: "Browse our collection of designs ready for customization.",
-      icon: <SquareStack className="h-8 w-8" />,
-      color: "bg-gradient-to-r from-emerald-500 to-teal-500",
-      link: "/designs",
-    },
-    {
       title: "Color Studio",
       description: "Create and save custom color palettes for your projects.",
       icon: <Palette className="h-8 w-8" />,
@@ -88,14 +80,7 @@ export default function WelcomePage() {
       description: "Review and place orders for your custom creations.",
       icon: <Truck className="h-8 w-8" />,
       color: "bg-gradient-to-r from-pink-500 to-rose-500",
-      link: "/order",
-    },
-    {
-      title: "3D Preview",
-      description: "See your design from every angle with our 3D viewer.",
-      icon: <SquareStack className="h-8 w-8" />,
-      color: "bg-gradient-to-r from-purple-500 to-pink-500",
-      link: "/preview",
+      link: "/design",
     },
     {
       title: "Profile & Favorites",

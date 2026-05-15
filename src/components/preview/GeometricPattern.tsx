@@ -6,7 +6,7 @@ import { useRef, useEffect, useState, useMemo, memo, useCallback } from "react";
 import { Html } from "@react-three/drei";
 import { hoverStore } from "@/store/customStore";
 import { useStore } from "zustand";
-import { Block } from "./Block";
+import { Square } from "./Square";
 import { PlywoodBase } from "./PlywoodBase";
 import { ItemDesigns } from "@/typings/types";
 import {
@@ -19,12 +19,12 @@ import {
   initializeRotationSeeds,
   initializeTextureVariations,
   generateColorMap,
-  calculateBlockLayout,
+  calculateSquareLayout,
 } from "./patternUtils";
 import { useSpring, animated } from "@react-spring/three";
 
-// Memoized Block component to prevent unnecessary re-renders
-const MemoizedBlock = memo(Block);
+// Memoized Square component to prevent unnecessary re-renders
+const MemoizedSquare = memo(Square);
 
 export function GeometricPattern({
   showColorInfo = true,
@@ -104,7 +104,7 @@ export function GeometricPattern({
 
   // Determine the dimensions based on whether a drawn pattern is available
   const { width: originalModelWidth, height: originalModelHeight } =
-    details.blocks;
+    details.squares;
 
   // If drawn pattern is available, use its dimensions instead
   const modelWidth = hasDrawnPattern
@@ -116,28 +116,28 @@ export function GeometricPattern({
 
   // Use memoization for layout calculations to prevent recalculation on every render
   const layoutDetails = useMemo(() => {
-    const blockSize = 0.5;
-    const blockSpacing = useMini ? 0.9 : 1; // Extract the spacing factor
+    const squareSize = 0.5;
+    const squareSpacing = useMini ? 0.9 : 1; // Extract the spacing factor
 
     // Calculate layout dimensions
     return {
       modelWidth,
       modelHeight,
-      blockSize,
-      blockSpacing,
-      ...calculateBlockLayout(
+      squareSize,
+      squareSpacing,
+      ...calculateSquareLayout(
         modelWidth,
         modelHeight,
-        blockSize,
-        blockSpacing,
+        squareSize,
+        squareSpacing,
         useMini
       ),
     };
-  }, [details.blocks, useMini]);
+  }, [details.squares, useMini]);
 
   const {
-    blockSize,
-    blockSpacing,
+    squareSize,
+    squareSpacing,
     adjustedModelWidth,
     adjustedModelHeight,
     totalWidth,
@@ -226,7 +226,7 @@ export function GeometricPattern({
     return {
       oneThirdWidth: Math.floor(adjustedModelWidth / 3),
       twoThirdsWidth: Math.floor(adjustedModelWidth / 3) * 2,
-      driftAmount: blockSize * 2,
+      driftAmount: squareSize * 2,
     };
   }, [
     adjustedModelWidth,
@@ -239,7 +239,7 @@ export function GeometricPattern({
     customPalette,
     customPalette.length,
     colorEntries,
-    blockSize,
+    squareSize,
     customStore.scatterEase,
     customStore.scatterWidth,
     customStore.scatterAmount,
@@ -290,7 +290,7 @@ export function GeometricPattern({
   }, []);
 
   // Memoize event handlers to prevent recreation on each render
-  const handleBlockHover = useCallback(
+  const handleSquareHover = useCallback(
     (x: number, y: number, color: string, name?: string) => {
       setHoverInfo({
         position: [x, y],
@@ -301,11 +301,11 @@ export function GeometricPattern({
     [setHoverInfo]
   );
 
-  const handleBlockUnhover = useCallback(() => {
+  const handleSquareUnhover = useCallback(() => {
     setHoverInfo(null);
   }, [setHoverInfo]);
 
-  const handleBlockClick = useCallback(
+  const handleSquareClick = useCallback(
     (x: number, y: number, color: string, name?: string) => {
       // Check if we're in pattern editing mode
       const { patternEditingMode } = customStore;
@@ -343,14 +343,14 @@ export function GeometricPattern({
     [customStore, patternOverride, setPatternOverride, setPinnedInfo]
   );
 
-  // Optimize the block grid generation using useMemo
-  const blockGrid = useMemo(() => {
+  // Optimize the square grid generation using useMemo
+  const squareGrid = useMemo(() => {
     // Create a flattened array rather than nested arrays to improve performance
-    const blocks = [];
+    const squares = [];
 
-    // Limit the maximum number of blocks to render based on device capability
-    const maxBlocks = 2500; // Adjust this threshold based on testing
-    // Ensure modelWidth and modelHeight (derived from drawnPatternGridSize if hasDrawnPattern) are used for totalBlocks
+    // Limit the maximum number of squares to render based on device capability
+    const maxSquares = 2500; // Adjust this threshold based on testing
+    // Ensure modelWidth and modelHeight (derived from drawnPatternGridSize if hasDrawnPattern) are used for totalSquares
     const currentGridWidth =
       hasDrawnPattern && drawnPatternGridSize
         ? drawnPatternGridSize.width
@@ -360,18 +360,18 @@ export function GeometricPattern({
         ? drawnPatternGridSize.height
         : adjustedModelHeight;
 
-    const totalBlocks = currentGridWidth * currentGridHeight;
-    const shouldLimitBlocks = totalBlocks > maxBlocks;
+    const totalSquares = currentGridWidth * currentGridHeight;
+    const shouldLimitSquares = totalSquares > maxSquares;
 
-    // If there are too many blocks, skip rendering some in a grid pattern
-    const skipFactor = shouldLimitBlocks
-      ? Math.ceil(Math.sqrt(totalBlocks / maxBlocks)) // Use Math.sqrt for more even skipping
+    // If there are too many squares, skip rendering some in a grid pattern
+    const skipFactor = shouldLimitSquares
+      ? Math.ceil(Math.sqrt(totalSquares / maxSquares)) // Use Math.sqrt for more even skipping
       : 1;
 
     for (let x = 0; x < currentGridWidth; x++) {
       for (let y = 0; y < currentGridHeight; y++) {
-        // Skip blocks in a grid pattern for performance if necessary
-        if (shouldLimitBlocks && (x % skipFactor !== 0 || y % skipFactor !== 0))
+        // Skip squares in a grid pattern for performance if necessary
+        if (shouldLimitSquares && (x % skipFactor !== 0 || y % skipFactor !== 0))
           continue;
 
         // Get color information based on whether we have a drawn pattern
@@ -402,7 +402,7 @@ export function GeometricPattern({
             colorName = "Error: Out of Bounds";
           }
 
-          // Skip rendering completely transparent blocks from the drawn pattern
+          // Skip rendering completely transparent squares from the drawn pattern
           if (color === "#FFFFFF00") continue;
         } else {
           // Use the procedurally generated color (existing logic)
@@ -420,9 +420,9 @@ export function GeometricPattern({
         }
 
         // Calculate base position without drift
-        const baseXPos = x * blockSpacing * blockSize + offsetX + blockSize / 2;
-        const yPos = y * blockSpacing * blockSize + offsetY + blockSize / 2;
-        const zPos = blockSize / 2 - (useMini ? 0.41 : 0.401);
+        const baseXPos = x * squareSpacing * squareSize + offsetX + squareSize / 2;
+        const yPos = y * squareSpacing * squareSize + offsetY + squareSize / 2;
+        const zPos = squareSize / 2 - (useMini ? 0.41 : 0.401);
 
         const isHorizontal = shouldBeHorizontal(x, y);
         const rotation = getRotation(
@@ -433,7 +433,7 @@ export function GeometricPattern({
         );
         const textureVariation = textureVariationsRef.current![x][y];
 
-        const isBlockHovered =
+        const isSquareHovered =
           hoverInfo &&
           hoverInfo.position[0] === x &&
           hoverInfo.position[1] === y;
@@ -445,21 +445,21 @@ export function GeometricPattern({
 
         // Only render if color is not null
         if (color && color !== "null") {
-          blocks.push(
+          squares.push(
             <animated.group
-              key={`block-${x}-${y}`}
+              key={`square-${x}-${y}`}
               position={driftFactor.to((d) => [
                 baseXPos + calculateDrift(x, d),
                 yPos,
                 zPos,
               ])}
             >
-              <MemoizedBlock
+              <MemoizedSquare
                 position={[0, 0, 0]} // Position is handled by the parent group
-                size={blockSize}
-                height={blockSize}
+                size={squareSize}
+                height={squareSize}
                 color={color}
-                isHovered={!!(isBlockHovered || isPinned)} // Convert to boolean to fix type error
+                isHovered={!!(isSquareHovered || isPinned)} // Convert to boolean to fix type error
                 showWoodGrain={showWoodGrain}
                 showColorInfo={showColorInfo}
                 isGeometric={true}
@@ -467,19 +467,19 @@ export function GeometricPattern({
                 textureVariation={textureVariation}
                 onHover={(isHovering) => {
                   if (isHovering) {
-                    handleBlockHover(x, y, color, colorName);
+                    handleSquareHover(x, y, color, colorName);
                   } else {
-                    handleBlockUnhover();
+                    handleSquareUnhover();
                   }
                 }}
-                onClick={() => handleBlockClick(x, y, color, colorName)}
+                onClick={() => handleSquareClick(x, y, color, colorName)}
               />
             </animated.group>
           );
         }
       }
     }
-    return blocks;
+    return squares;
   }, [
     adjustedModelWidth,
     adjustedModelHeight,
@@ -488,8 +488,8 @@ export function GeometricPattern({
     colorPattern,
     isReversed,
     isRotated,
-    blockSpacing,
-    blockSize,
+    squareSpacing,
+    squareSize,
     offsetX,
     offsetY,
     useMini,
@@ -502,9 +502,9 @@ export function GeometricPattern({
     showColorInfo,
     getColorIndexDebug,
     calculateDrift,
-    handleBlockHover,
-    handleBlockUnhover,
-    handleBlockClick,
+    handleSquareHover,
+    handleSquareUnhover,
+    handleSquareClick,
     hasDrawnPattern,
     drawnPatternGrid,
     drawnPatternGridSize,
@@ -549,14 +549,14 @@ export function GeometricPattern({
           width={totalWidth}
           height={totalHeight}
           showWoodGrain={showWoodGrain}
-          blockSize={blockSize}
+          squareSize={squareSize}
           adjustedModelWidth={adjustedModelWidth}
           adjustedModelHeight={adjustedModelHeight}
           useMini={useMini}
         />
 
-        {/* Use the pre-computed block grid */}
-        {blockGrid}
+        {/* Use the pre-computed square grid */}
+        {squareGrid}
       </group>
 
       {/* Only render info panels when needed */}

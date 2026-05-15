@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/button";
 
 const sizeOptions = [...Object.values(ItemSizes), "custom"];
 
-type Unit = "blocks" | "inches" | "feet";
+type Unit = "squares" | "inches" | "feet";
 
 interface SizeCardProps {
   compact?: boolean;
@@ -33,7 +33,7 @@ export function SizeCard({ compact = false }: SizeCardProps) {
   const [customHeight, setCustomHeight] = useState(
     dimensions.height.toString()
   );
-  const [unit, setUnit] = useState<Unit>("blocks");
+  const [unit, setUnit] = useState<Unit>("squares");
 
   // Find the current size based on dimensions
   const currentSize =
@@ -46,20 +46,20 @@ export function SizeCard({ compact = false }: SizeCardProps) {
       );
     }) || "custom";
 
-  // Convert blocks to the selected unit
-  const convertFromBlocks = (blocks: number, unit: Unit) => {
+  // Convert squares to the selected unit
+  const convertFromSquares = (squares: number, unit: Unit) => {
     switch (unit) {
       case "inches":
-        return (blocks * 3).toString();
+        return (squares * 3).toString();
       case "feet":
-        return ((blocks * 3) / 12).toFixed(1);
+        return ((squares * 3) / 12).toFixed(1);
       default:
-        return blocks.toString();
+        return squares.toString();
     }
   };
 
-  // Convert from the selected unit to blocks
-  const convertToBlocks = (value: string, unit: Unit) => {
+  // Convert from the selected unit to squares
+  const convertToSquares = (value: string, unit: Unit) => {
     const numValue = parseFloat(value);
     switch (unit) {
       case "inches":
@@ -73,8 +73,8 @@ export function SizeCard({ compact = false }: SizeCardProps) {
 
   // Update displayed values when unit changes
   useEffect(() => {
-    setCustomWidth(convertFromBlocks(dimensions.width, unit));
-    setCustomHeight(convertFromBlocks(dimensions.height, unit));
+    setCustomWidth(convertFromSquares(dimensions.width, unit));
+    setCustomHeight(convertFromSquares(dimensions.height, unit));
   }, [unit, dimensions.width, dimensions.height]);
 
   const handleCustomDimensionChange = (
@@ -101,13 +101,13 @@ export function SizeCard({ compact = false }: SizeCardProps) {
       unit === "feet" ? numValue.toFixed(1) : numValue.toString();
     setter(formattedValue);
 
-    // Calculate blocks
+    // Calculate squares
     const width = dimension === "width" ? formattedValue : customWidth;
     const height = dimension === "height" ? formattedValue : customHeight;
 
     if (width && height) {
-      const numWidth = convertToBlocks(width, unit);
-      const numHeight = convertToBlocks(height, unit);
+      const numWidth = convertToSquares(width, unit);
+      const numHeight = convertToSquares(height, unit);
       if (numWidth > 0 && numHeight > 0) {
         setDimensions({ width: numWidth, height: numHeight });
       }
@@ -148,7 +148,7 @@ export function SizeCard({ compact = false }: SizeCardProps) {
             </span>
             <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 truncate">
               {currentSize === "custom"
-                ? `${dimensions.width}×${dimensions.height} blocks`
+                ? `${dimensions.width}×${dimensions.height} squares`
                 : SIZE_STRING[currentSize as ItemSizes]}
             </span>
           </div>
@@ -223,7 +223,7 @@ export function SizeCard({ compact = false }: SizeCardProps) {
               <SelectValue placeholder="Select unit" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="blocks">Blocks</SelectItem>
+              <SelectItem value="squares">Squares</SelectItem>
               <SelectItem value="inches">Inches</SelectItem>
               <SelectItem value="feet">Feet</SelectItem>
             </SelectContent>

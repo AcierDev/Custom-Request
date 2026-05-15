@@ -19,31 +19,26 @@ import {
   Maximize2,
   Eye,
   EyeOff,
-  Save,
   Sparkles,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
-import { GeometricPattern } from "../order/components/preview/GeometricPattern";
-import { TiledPattern } from "../order/components/preview/TiledPattern";
-import {
-  GeometricLighting,
-  TiledLighting,
-  StripedLighting,
-} from "../order/components/preview/LightingSetups";
-import { ViewControls } from "../order/components/preview/ViewControls";
-import { ColorInfoHint } from "../order/components/preview/ColorInfoHint";
-import { Ruler3D } from "../order/components/preview/Ruler3D";
+import { GeometricPattern } from "@/components/preview/GeometricPattern";
+import { TiledPattern } from "@/components/preview/TiledPattern";
+import { RotatableLighting } from "@/components/preview/RotatableLighting";
+import { LightingControls } from "@/components/preview/LightingControls";
+import { ViewControls } from "@/components/preview/ViewControls";
+import { ColorInfoHint } from "@/components/preview/ColorInfoHint";
+import { Ruler3D } from "@/components/preview/Ruler3D";
 import { ItemDesigns } from "@/typings/types";
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { SizeCard } from "../order/components/SizeCard";
-import { StyleCard } from "../order/components/StyleCard";
-import { DesignCard } from "../order/components/DesignCard";
+import { SizeCard } from "@/components/cards/SizeCard";
+import { StyleCard } from "@/components/cards/StyleCard";
+import { DesignCard } from "@/components/cards/DesignCard";
 import { ShareDialog } from "@/components/ShareDialog";
 import { DraftSetControls } from "@/components/DraftSetControls";
 import { DesignTutorial } from "@/components/DesignTutorial";
@@ -58,6 +53,8 @@ import {
 } from "@/components/ui/tooltip";
 import { PatternEditor } from "./components/PatternEditor";
 import { Slider } from "@/components/ui/slider";
+
+type TimeOfDay = "morning" | "afternoon" | "night";
 
 export default function DesignPage() {
   const router = useRouter();
@@ -84,6 +81,7 @@ export default function DesignPage() {
     showUIControls,
   } = viewSettings;
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>("morning");
 
   // Custom choice dialog hook
   const {
@@ -131,18 +129,7 @@ export default function DesignPage() {
           3D Preview
         </h1>
         <div className="flex items-center gap-2">
-          {showUIControls && (
-            <>
-              <DraftSetControls compact={false} />
-              <Link href="/designs">
-                <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white flex items-center gap-2 text-sm save-button">
-                  <Save className="w-4 h-4" />
-                  <span className="hidden sm:inline">Save Design</span>
-                  <span className="sm:hidden">Save</span>
-                </Button>
-              </Link>
-            </>
-          )}
+          {showUIControls && <DraftSetControls compact={false} />}
         </div>
       </div>
 
@@ -174,6 +161,13 @@ export default function DesignPage() {
         {showUIControls && (
           <div className="flex flex-col gap-3">
             <ViewControls />
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <LightingControls value={timeOfDay} onChange={setTimeOfDay} />
+            </motion.div>
             <div className="design-card">
               <DesignCard compact />
             </div>
@@ -212,10 +206,8 @@ export default function DesignPage() {
             zoom: 1.4,
           }}
         >
-          {/* Lighting based on style */}
-          {style === "geometric" && <GeometricLighting />}
-          {style === "tiled" && <TiledLighting />}
-          {style === "striped" && <StripedLighting />}
+          {/* Rotatable lighting driven by time-of-day */}
+          <RotatableLighting timeOfDay={timeOfDay} style={style} />
 
           {/* Pattern based on style */}
           {style === "geometric" && (
@@ -337,7 +329,7 @@ function MiniCard({ compact = false }: { compact?: boolean }) {
     <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200 dark:border-gray-700 shadow-lg">
       <div className="p-3 space-y-2">
         <Label className="text-sm text-gray-700 dark:text-gray-300">
-          Block Size
+          Square Size
         </Label>
         <div className="flex gap-2">
           <Button
@@ -467,7 +459,7 @@ function PatternControls() {
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <Label className="text-xs text-gray-500 dark:text-gray-400">
-                  Scatter Width (blocks)
+                  Scatter Width (squares)
                 </Label>
                 <span className="text-xs font-mono text-gray-700 dark:text-gray-300">
                   {scatterWidth ?? 10}

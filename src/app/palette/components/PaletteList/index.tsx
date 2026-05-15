@@ -91,7 +91,7 @@ export function PaletteList({ onOpenImport, onImportById }: PaletteListProps) {
 
   const handleVisualize = (palette: SavedPalette) => {
     applyPalette(palette.id);
-    router.push("/preview");
+    router.push("/design");
     toast.success(
       `Applied "${palette.name}" palette and navigating to preview`
     );
@@ -99,7 +99,7 @@ export function PaletteList({ onOpenImport, onImportById }: PaletteListProps) {
 
   const handleOrder = (palette: SavedPalette) => {
     applyPalette(palette.id);
-    router.push("/order");
+    router.push("/design");
     toast.success(
       `Applied "${palette.name}" palette and navigating to order page`
     );

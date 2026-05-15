@@ -240,7 +240,7 @@ export default function ProfilePage() {
                   <Button
                     variant="outline"
                     className="justify-between"
-                    onClick={() => router.push("/order")}
+                    onClick={() => router.push("/design")}
                   >
                     <span className="flex items-center">
                       <ShoppingCart className="mr-2 h-4 w-4" />
@@ -508,7 +508,7 @@ export default function ProfilePage() {
                       <Button
                         variant="outline"
                         className="justify-start"
-                        onClick={() => router.push("/order")}
+                        onClick={() => router.push("/design")}
                       >
                         <ShoppingCart className="mr-2 h-4 w-4" />
                         Create New Design
@@ -568,7 +568,7 @@ export default function ProfilePage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => router.push("/order")}
+                            onClick={() => router.push("/design")}
                           >
                             Edit
                           </Button>

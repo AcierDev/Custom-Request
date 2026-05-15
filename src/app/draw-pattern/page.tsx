@@ -65,7 +65,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { PreviewCard } from "@/app/order/components/PreviewCard";
+import { PreviewCard } from "@/components/cards/PreviewCard";
 import { usePaletteLoadConfirm } from "@/hooks/usePaletteLoadConfirm";
 import { PaletteLoadConfirmDialog } from "@/components/PaletteLoadConfirmDialog";
 
@@ -358,7 +358,7 @@ export default function DrawPatternPage() {
     }
 
     // Pattern is already in the store
-    router.push("/preview");
+    router.push("/design");
   };
 
   // Handle selecting a color from the palette

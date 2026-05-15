@@ -32,7 +32,7 @@ function FacebookAuthHandlerContent() {
       localStorage.setItem("everwood_user", JSON.stringify(userData));
 
       // Redirect to the app
-      router.push("/order");
+      router.push("/design");
     } catch (error) {
       console.error("Error processing authentication:", error);
       router.push("/sign-in?error=processing");

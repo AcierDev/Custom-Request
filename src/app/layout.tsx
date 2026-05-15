@@ -37,7 +37,7 @@ function LayoutContentInner({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen bg-gray-300 dark:bg-gray-700">
       <SpeedInsights />
       <MobileWarning />
-      <Navbar onOpenSettings={() => {}} />
+      <Navbar />
       <div className="flex-1 flex flex-col min-w-0">
         <div
           className={`mt-14 lg:mt-0 transition-[margin] duration-300 flex flex-col h-full ${

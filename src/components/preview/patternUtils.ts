@@ -63,7 +63,7 @@ export function shouldBeHorizontal(x: number, y: number): boolean {
 }
 
 /**
- * Get rotation for a block based on position and orientation
+ * Get rotation for a square based on position and orientation
  */
 export function getRotation(
   x: number,
@@ -81,7 +81,7 @@ export function getRotation(
 }
 
 /**
- * Initialize rotation seeds for blocks
+ * Initialize rotation seeds for squares
  */
 export function initializeRotationSeeds(
   width: number,
@@ -97,7 +97,7 @@ export function initializeRotationSeeds(
 }
 
 /**
- * Initialize texture variations for blocks
+ * Initialize texture variations for squares
  */
 export function initializeTextureVariations(
   width: number,
@@ -118,11 +118,11 @@ export function initializeTextureVariations(
 }
 
 /**
- * Compute per-color block counts using optional extra-percent weights.
- * Weights are 1 + extraPercent/100; uses largest-remainder so counts sum to totalBlocks.
+ * Compute per-color square counts using optional extra-percent weights.
+ * Weights are 1 + extraPercent/100; uses largest-remainder so counts sum to totalSquares.
  */
-export function getWeightedBlockCounts(
-  totalBlocks: number,
+export function getWeightedSquareCounts(
+  totalSquares: number,
   numColors: number,
   extraPercentByIndex?: number[]
 ): number[] {
@@ -137,11 +137,11 @@ export function getWeightedBlockCounts(
     );
 
   if (!hasWeights) {
-    const blocksPerColor = Math.floor(totalBlocks / n);
-    const extraBlocks = totalBlocks % n;
+    const squaresPerColor = Math.floor(totalSquares / n);
+    const extraSquares = totalSquares % n;
     return Array.from(
       { length: n },
-      (_, i) => blocksPerColor + (i < extraBlocks ? 1 : 0)
+      (_, i) => squaresPerColor + (i < extraSquares ? 1 : 0)
     );
   }
 
@@ -150,21 +150,21 @@ export function getWeightedBlockCounts(
   );
   const totalWeight = weights.reduce((a, b) => a + b, 0);
   if (totalWeight <= 0) {
-    const blocksPerColor = Math.floor(totalBlocks / n);
-    const extraBlocks = totalBlocks % n;
+    const squaresPerColor = Math.floor(totalSquares / n);
+    const extraSquares = totalSquares % n;
     return Array.from(
       { length: n },
-      (_, i) => blocksPerColor + (i < extraBlocks ? 1 : 0)
+      (_, i) => squaresPerColor + (i < extraSquares ? 1 : 0)
     );
   }
 
-  const ideal = weights.map((w) => (totalBlocks * w) / totalWeight);
+  const ideal = weights.map((w) => (totalSquares * w) / totalWeight);
   const floors = ideal.map((x) => Math.floor(x));
   const sumFloors = floors.reduce((a, b) => a + b, 0);
   const remainders = ideal.map((x, i) => ({ i, r: x - Math.floor(x) }));
   remainders.sort((a, b) => b.r - a.r);
   const counts = [...floors];
-  let need = totalBlocks - sumFloors;
+  let need = totalSquares - sumFloors;
   for (let k = 0; k < need && k < n; k++) {
     counts[remainders[k].i]++;
   }
@@ -216,8 +216,8 @@ export function generateColorMap(
   scatterAmount: number = 50,
   extraPercentByIndex?: number[]
 ): ColorMapRef {
-  // Total number of blocks
-  const totalBlocks = adjustedModelWidth * adjustedModelHeight;
+  // Total number of squares
+  const totalSquares = adjustedModelWidth * adjustedModelHeight;
 
   // Create the 2D color map
   const colorMap: ColorMapRef = Array(adjustedModelWidth)
@@ -233,18 +233,18 @@ export function generateColorMap(
 
   if (colorPattern === "fade") {
     // For fade patterns, use the new column-based distribution approach
-    const totalBlocks = adjustedModelWidth * adjustedModelHeight;
+    const totalSquares = adjustedModelWidth * adjustedModelHeight;
 
-    const blockCounts = getWeightedBlockCounts(
-      totalBlocks,
+    const squareCounts = getWeightedSquareCounts(
+      totalSquares,
       colorEntries.length,
       extraPercentByIndex
     );
 
     const allColorIndices: number[] = [];
     for (let i = 0; i < colorEntries.length; i++) {
-      const blockCount = blockCounts[i] ?? 0;
-      for (let j = 0; j < blockCount; j++) {
+      const squareCount = squareCounts[i] ?? 0;
+      for (let j = 0; j < squareCount; j++) {
         allColorIndices.push(i);
       }
     }
@@ -354,7 +354,7 @@ export function generateColorMap(
           nextRowSingleColor &&
           currentColor !== nextColor
         ) {
-          const blocksToSwap = Math.floor(adjustedModelWidth * 0.25); // 25% of blocks
+          const squaresToSwap = Math.floor(adjustedModelWidth * 0.25); // 25% of squares
 
           // Choose random positions from the first row
           const allPositions = Array.from(
@@ -368,18 +368,18 @@ export function generateColorMap(
           );
           const positionsFromFirstRow = shuffledPositions.slice(
             0,
-            blocksToSwap
+            squaresToSwap
           );
 
           // Choose random positions from the second row (excluding the ones from first row)
-          const remainingPositions = shuffledPositions.slice(blocksToSwap);
+          const remainingPositions = shuffledPositions.slice(squaresToSwap);
           const positionsFromSecondRow = remainingPositions.slice(
             0,
-            blocksToSwap
+            squaresToSwap
           );
 
-          // Swap the blocks
-          for (let i = 0; i < blocksToSwap; i++) {
+          // Swap the squares
+          for (let i = 0; i < squaresToSwap; i++) {
             const firstX = positionsFromFirstRow[i];
             const secondX = positionsFromSecondRow[i];
 
@@ -495,7 +495,7 @@ export function generateColorMap(
     }
 
     // After distributing all colors, check for adjacent columns with different single colors
-    // and blend them by swapping 25% of blocks
+    // and blend them by swapping 25% of squares
     // Skip blending for rotated mode as requested
     if (!isRotated && effectiveOrientation === "horizontal") {
       for (let x = 0; x < adjustedModelWidth - 1; x++) {
@@ -531,7 +531,7 @@ export function generateColorMap(
           nextColumnSingleColor &&
           currentColor !== nextColor
         ) {
-          const blocksToSwap = Math.floor(adjustedModelHeight * 0.25); // 25% of blocks
+          const squaresToSwap = Math.floor(adjustedModelHeight * 0.25); // 25% of squares
 
           // Choose random positions from the first column
           const allPositions = Array.from(
@@ -545,18 +545,18 @@ export function generateColorMap(
           );
           const positionsFromFirstColumn = shuffledPositions.slice(
             0,
-            blocksToSwap
+            squaresToSwap
           );
 
           // Choose random positions from the second column (excluding the ones from first column)
-          const remainingPositions = shuffledPositions.slice(blocksToSwap);
+          const remainingPositions = shuffledPositions.slice(squaresToSwap);
           const positionsFromSecondColumn = remainingPositions.slice(
             0,
-            blocksToSwap
+            squaresToSwap
           );
 
-          // Swap the blocks
-          for (let i = 0; i < blocksToSwap; i++) {
+          // Swap the squares
+          for (let i = 0; i < squaresToSwap; i++) {
             const firstY = positionsFromFirstColumn[i];
             const secondY = positionsFromSecondColumn[i];
 
@@ -608,7 +608,7 @@ export function generateColorMap(
           nextRowSingleColor &&
           currentColor !== nextColor
         ) {
-          const blocksToSwap = Math.floor(adjustedModelWidth * 0.25); // 25% of blocks
+          const squaresToSwap = Math.floor(adjustedModelWidth * 0.25); // 25% of squares
 
           // Choose random positions from the first row
           const allPositions = Array.from(
@@ -622,18 +622,18 @@ export function generateColorMap(
           );
           const positionsFromFirstRow = shuffledPositions.slice(
             0,
-            blocksToSwap
+            squaresToSwap
           );
 
           // Choose random positions from the second row (excluding the ones from first row)
-          const remainingPositions = shuffledPositions.slice(blocksToSwap);
+          const remainingPositions = shuffledPositions.slice(squaresToSwap);
           const positionsFromSecondRow = remainingPositions.slice(
             0,
-            blocksToSwap
+            squaresToSwap
           );
 
-          // Swap the blocks
-          for (let i = 0; i < blocksToSwap; i++) {
+          // Swap the squares
+          for (let i = 0; i < squaresToSwap; i++) {
             const firstX = positionsFromFirstRow[i];
             const secondX = positionsFromSecondRow[i];
 
@@ -647,7 +647,7 @@ export function generateColorMap(
     }
   } else if (colorPattern === "center-fade") {
     // For center-fade patterns, create a mirrored color array
-    const totalBlocks = adjustedModelWidth * adjustedModelHeight;
+    const totalSquares = adjustedModelWidth * adjustedModelHeight;
 
     // Create the mirrored color array based on reversal
     const mirroredColorIndices: number[] = [];
@@ -687,16 +687,16 @@ export function generateColorMap(
             (idx) => extraPercentByIndex[idx] ?? 0
           )
         : undefined;
-    const blockCounts = getWeightedBlockCounts(
-      totalBlocks,
+    const squareCounts = getWeightedSquareCounts(
+      totalSquares,
       totalColors,
       extraPercentForMirrored
     );
 
     const allColorIndices: number[] = [];
     for (let i = 0; i < totalColors; i++) {
-      const blockCount = blockCounts[i] ?? 0;
-      for (let j = 0; j < blockCount; j++) {
+      const squareCount = squareCounts[i] ?? 0;
+      for (let j = 0; j < squareCount; j++) {
         allColorIndices.push(mirroredColorIndices[i]);
       }
     }
@@ -806,7 +806,7 @@ export function generateColorMap(
           nextRowSingleColor &&
           currentColor !== nextColor
         ) {
-          const blocksToSwap = Math.floor(adjustedModelWidth * 0.25); // 25% of blocks
+          const squaresToSwap = Math.floor(adjustedModelWidth * 0.25); // 25% of squares
 
           // Choose random positions from the first row
           const allPositions = Array.from(
@@ -820,18 +820,18 @@ export function generateColorMap(
           );
           const positionsFromFirstRow = shuffledPositions.slice(
             0,
-            blocksToSwap
+            squaresToSwap
           );
 
           // Choose random positions from the second row (excluding the ones from first row)
-          const remainingPositions = shuffledPositions.slice(blocksToSwap);
+          const remainingPositions = shuffledPositions.slice(squaresToSwap);
           const positionsFromSecondRow = remainingPositions.slice(
             0,
-            blocksToSwap
+            squaresToSwap
           );
 
-          // Swap the blocks
-          for (let i = 0; i < blocksToSwap; i++) {
+          // Swap the squares
+          for (let i = 0; i < squaresToSwap; i++) {
             const firstX = positionsFromFirstRow[i];
             const secondX = positionsFromSecondRow[i];
 
@@ -947,7 +947,7 @@ export function generateColorMap(
     }
 
     // After distributing all colors, check for adjacent columns with different single colors
-    // and blend them by swapping 25% of blocks
+    // and blend them by swapping 25% of squares
     // Skip blending for rotated mode as requested
     if (!isRotated && effectiveOrientation === "horizontal") {
       for (let x = 0; x < adjustedModelWidth - 1; x++) {
@@ -983,7 +983,7 @@ export function generateColorMap(
           nextColumnSingleColor &&
           currentColor !== nextColor
         ) {
-          const blocksToSwap = Math.floor(adjustedModelHeight * 0.25); // 25% of blocks
+          const squaresToSwap = Math.floor(adjustedModelHeight * 0.25); // 25% of squares
 
           // Choose random positions from the first column
           const allPositions = Array.from(
@@ -997,18 +997,18 @@ export function generateColorMap(
           );
           const positionsFromFirstColumn = shuffledPositions.slice(
             0,
-            blocksToSwap
+            squaresToSwap
           );
 
           // Choose random positions from the second column (excluding the ones from first column)
-          const remainingPositions = shuffledPositions.slice(blocksToSwap);
+          const remainingPositions = shuffledPositions.slice(squaresToSwap);
           const positionsFromSecondColumn = remainingPositions.slice(
             0,
-            blocksToSwap
+            squaresToSwap
           );
 
-          // Swap the blocks
-          for (let i = 0; i < blocksToSwap; i++) {
+          // Swap the squares
+          for (let i = 0; i < squaresToSwap; i++) {
             const firstY = positionsFromFirstColumn[i];
             const secondY = positionsFromSecondColumn[i];
 
@@ -1060,7 +1060,7 @@ export function generateColorMap(
           nextRowSingleColor &&
           currentColor !== nextColor
         ) {
-          const blocksToSwap = Math.floor(adjustedModelWidth * 0.25); // 25% of blocks
+          const squaresToSwap = Math.floor(adjustedModelWidth * 0.25); // 25% of squares
 
           // Choose random positions from the first row
           const allPositions = Array.from(
@@ -1074,18 +1074,18 @@ export function generateColorMap(
           );
           const positionsFromFirstRow = shuffledPositions.slice(
             0,
-            blocksToSwap
+            squaresToSwap
           );
 
           // Choose random positions from the second row (excluding the ones from first row)
-          const remainingPositions = shuffledPositions.slice(blocksToSwap);
+          const remainingPositions = shuffledPositions.slice(squaresToSwap);
           const positionsFromSecondRow = remainingPositions.slice(
             0,
-            blocksToSwap
+            squaresToSwap
           );
 
-          // Swap the blocks
-          for (let i = 0; i < blocksToSwap; i++) {
+          // Swap the squares
+          for (let i = 0; i < squaresToSwap; i++) {
             const firstX = positionsFromFirstRow[i];
             const secondX = positionsFromSecondRow[i];
 
@@ -1102,18 +1102,18 @@ export function generateColorMap(
     // We achieve this by calculating exact counts, assigning scores to positions,
     // sorting positions by score, and filling with the fixed color supply.
 
-    const totalBlocks = adjustedModelWidth * adjustedModelHeight;
+    const totalSquares = adjustedModelWidth * adjustedModelHeight;
 
-    const blockCounts = getWeightedBlockCounts(
-      totalBlocks,
+    const squareCounts = getWeightedSquareCounts(
+      totalSquares,
       colorEntries.length,
       extraPercentByIndex
     );
 
     const supplyColors: number[] = [];
     for (let i = 0; i < colorEntries.length; i++) {
-      const blockCount = blockCounts[i] ?? 0;
-      for (let j = 0; j < blockCount; j++) {
+      const squareCount = squareCounts[i] ?? 0;
+      for (let j = 0; j < squareCount; j++) {
         supplyColors.push(i);
       }
     }
@@ -1122,13 +1122,13 @@ export function generateColorMap(
     // Base score is position along the gradient axis.
     // Noise is added based on scatterWidth and scatterAmount.
     
-    interface BlockScore {
+    interface SquareScore {
       x: number;
       y: number;
       score: number;
     }
 
-    const blockScores: BlockScore[] = [];
+    const squareScores: SquareScore[] = [];
     const amount = scatterAmount / 100;
     
     // Seeded random helper
@@ -1157,9 +1157,9 @@ export function generateColorMap(
         }
 
         // Calculate Noise
-        // ScatterWidth is in blocks. 
-        // We want noise to be able to shift a block by +/- scatterWidth/2 roughly.
-        // If scatterAmount < 100%, we only apply noise to some blocks.
+        // ScatterWidth is in squares.
+        // We want noise to be able to shift a square by +/- scatterWidth/2 roughly.
+        // If scatterAmount < 100%, we only apply noise to some squares.
         
         let noise = 0;
         
@@ -1167,7 +1167,7 @@ export function generateColorMap(
         const seed1 = x * adjustedModelHeight + y + (isReversed ? 1000 : 0);
         const randTrigger = random(seed1);
         
-        // Decide whether to scatter this block
+        // Decide whether to scatter this square
         if (randTrigger < amount) {
             // Apply noise
             const seed2 = seed1 + 100000; // different seed for value
@@ -1177,7 +1177,7 @@ export function generateColorMap(
             noise = (random(seed2) - 0.5) * scatterWidth;
         }
 
-        blockScores.push({
+        squareScores.push({
             x,
             y,
             score: basePos + noise
@@ -1185,12 +1185,12 @@ export function generateColorMap(
       }
     }
 
-    // 3. Sort blocks by Score
-    blockScores.sort((a, b) => a.score - b.score);
+    // 3. Sort squares by Score
+    squareScores.sort((a, b) => a.score - b.score);
 
     // 4. Assign colors from supply to the sorted positions
-    for (let i = 0; i < totalBlocks; i++) {
-        const { x, y } = blockScores[i];
+    for (let i = 0; i < totalSquares; i++) {
+        const { x, y } = squareScores[i];
         // Safety check if supply mismatch (shouldn't happen)
         const colorIdx = i < supplyColors.length ? supplyColors[i] : supplyColors[supplyColors.length - 1];
         colorMap[x][y] = colorIdx;
@@ -1198,16 +1198,16 @@ export function generateColorMap(
 
   } else if (colorPattern === "random") {
     // For random pattern, distribute colors by weight but randomly
-    const blockCounts = getWeightedBlockCounts(
-      totalBlocks,
+    const squareCounts = getWeightedSquareCounts(
+      totalSquares,
       colorEntries.length,
       extraPercentByIndex
     );
 
     const allColorIndices: number[] = [];
     for (let i = 0; i < colorEntries.length; i++) {
-      const blockCount = blockCounts[i] ?? 0;
-      for (let j = 0; j < blockCount; j++) {
+      const squareCount = squareCounts[i] ?? 0;
+      for (let j = 0; j < squareCount; j++) {
         allColorIndices.push(i);
       }
     }
@@ -1314,13 +1314,13 @@ export function generateColorMap(
 }
 
 /**
- * Calculate block positions and dimensions
+ * Calculate square positions and dimensions
  */
-export function calculateBlockLayout(
+export function calculateSquareLayout(
   modelWidth: number,
   modelHeight: number,
-  blockSize: number,
-  blockSpacing: number,
+  squareSize: number,
+  squareSpacing: number,
   useMini: boolean = false
 ) {
   // Calculate adjusted dimensions for mini mode
@@ -1329,9 +1329,9 @@ export function calculateBlockLayout(
     ? Math.ceil(modelHeight * 1.1)
     : modelHeight;
 
-  // Calculate total dimensions based on actual block spacing
-  const totalWidth = adjustedModelWidth * blockSize * blockSpacing;
-  const totalHeight = adjustedModelHeight * blockSize * blockSpacing;
+  // Calculate total dimensions based on actual square spacing
+  const totalWidth = adjustedModelWidth * squareSize * squareSpacing;
+  const totalHeight = adjustedModelHeight * squareSize * squareSpacing;
 
   // Calculate offsets with adjustment for mini mode
   const offsetX = -totalWidth / 2 - 0.25 + (useMini ? 0.03 : 0);

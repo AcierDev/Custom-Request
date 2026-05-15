@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { useEffect, useMemo, useRef } from "react";
 import { useCustomStore } from "@/store/customStore";
 
-interface BlockProps {
+interface SquareProps {
   position: [number, number, number];
   size: number;
   height: number;
@@ -146,7 +146,7 @@ const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
 // Create texture loader outside components to reuse
 let textureCache: Record<string, THREE.Texture> = {};
 
-export function Block({
+export function Square({
   position,
   size,
   height,
@@ -164,7 +164,7 @@ export function Block({
     offsetY: 0,
     rotation: 0,
   },
-}: BlockProps) {
+}: SquareProps) {
   const [x, y, z] = position;
   const adjustedPosition: [number, number, number] = [x, y, z + height / 2];
   const meshRef = useRef<THREE.Mesh>(null);
@@ -217,7 +217,7 @@ export function Block({
   // Create materials with better memoization pattern
   const materialKey = `${color}-${isHovered}-${showWoodGrain}-${showColorInfo}`;
 
-  // Create a single material for geometric blocks
+  // Create a single material for geometric squares
   const geometricMaterial = useMemo(
     () =>
       new THREE.MeshStandardMaterial({

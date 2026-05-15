@@ -1,7 +1,7 @@
 import { ShippingSpeed } from "@/store/customStore";
 import { ItemSizes } from "@/typings/types";
 
-const BLOCK_SIZE = 3; // Block size in inches
+const SQUARE_SIZE = 3; // Square size in inches
 
 const PRICE_DATA_POINTS = [
   { squares: 67, price: 385.0 },
@@ -53,7 +53,7 @@ export interface PriceBreakdown {
   customFee: number;
   debug: {
     dimensions: { height: number; width: number };
-    blocks: { height: number; width: number; total: number };
+    squares: { height: number; width: number; total: number };
   };
 }
 
@@ -70,7 +70,7 @@ export function calculatePrice(
       total: 0,
       debug: {
         dimensions: { height: 0, width: 0 },
-        blocks: { height: 0, width: 0, total: 0 },
+        squares: { height: 0, width: 0, total: 0 },
       },
     };
   }
@@ -78,12 +78,11 @@ export function calculatePrice(
   // Parse dimensions from size string (e.g., "14 x 7")
   const { width, height } = dimensions;
 
-  // Convert dimensions to blocks (3 inches per block)
-  // Convert dimensions to blocks (3 inches per block)
-  const totalBlocks = height * width;
+  // Convert dimensions to squares (3 inches per square)
+  const totalSquares = height * width;
 
   // Calculate base price using interpolation
-  const basePrice = interpolatePrice(totalBlocks);
+  const basePrice = interpolatePrice(totalSquares);
 
   // Calculate shipping
   const baseShipping = 0;
@@ -127,10 +126,10 @@ export function calculatePrice(
     customFee: 0,
     debug: {
       dimensions: { height, width },
-      blocks: {
+      squares: {
         height: height,
         width: width,
-        total: totalBlocks,
+        total: totalSquares,
       },
     },
   };
