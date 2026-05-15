@@ -1,19 +1,23 @@
 "use client";
 
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { motion, AnimatePresence } from "framer-motion";
-import Image from "next/image";
+import { useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Paintbrush,
-  ArrowRight,
-} from "lucide-react";
+import { Paintbrush, ArrowRight } from "lucide-react";
 import { useCustomStore } from "@/store/customStore";
 import Link from "next/link";
-import { DESIGN_IMAGES } from "@/typings/color-maps";
 import { ItemDesigns } from "@/typings/types";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  createDesignBackground,
+  DESIGN_PILL_FULL,
+  DESIGN_PILL_INTERACTIVE,
+  DESIGN_PILL_SELECTED_RING,
+} from "@/lib/design-pills";
 
 interface DesignCardProps {
   className?: string;
@@ -54,68 +58,53 @@ export function DesignCard({
   className = "",
   compact = false,
 }: DesignCardProps) {
-  const { selectedDesign, setSelectedDesign, customPalette } = useCustomStore();
-
-  const nextDesign = () => {
-    // Get array of design keys for cycling
-    const designKeys = Object.values(ItemDesigns);
-    const currentIndex = designKeys.indexOf(selectedDesign);
-    const nextIndex = (currentIndex + 1) % designKeys.length;
-    setSelectedDesign(designKeys[nextIndex]);
-  };
-
-  const previousDesign = () => {
-    // Get array of design keys for cycling
-    const designKeys = Object.values(ItemDesigns);
-    const currentIndex = designKeys.indexOf(selectedDesign);
-    const prevIndex =
-      (currentIndex - 1 + designKeys.length) % designKeys.length;
-    setSelectedDesign(designKeys[prevIndex]);
-  };
-
-  const getDesignName = (path: string) => {
-    if (path.includes("custom")) {
-      return customPalette.length > 0 ? "Custom" : "Custom (Empty)";
-    }
-    const fileName = path.split("/").pop()?.split(".")[0] || "";
-    return fileName
-      .split("-")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ");
-  };
+  const { selectedDesign, setSelectedDesign } = useCustomStore();
+  const [isOpen, setIsOpen] = useState(false);
 
   if (compact) {
     return (
       <Card
         className={`dark:bg-gray-800/95 backdrop-blur-sm border border-white/10 shadow-lg ${className}`}
       >
-        <CardContent className="py-3 px-4 flex items-center justify-between gap-6">
-          <div className="flex flex-col min-w-0">
-            <span className="text-xs font-medium text-slate-400">
-              Design
-            </span>
-            <span className="text-sm font-semibold text-slate-200 truncate">
-              {selectedDesign}
-            </span>
-          </div>
-          <div className="flex gap-1 shrink-0">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700/50"
-              onClick={previousDesign}
+        <CardContent className="py-3 px-4">
+          <Popover open={isOpen} onOpenChange={setIsOpen}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className={`${DESIGN_PILL_FULL} ${DESIGN_PILL_INTERACTIVE} w-auto`}
+                style={{ background: createDesignBackground(selectedDesign) }}
+              >
+                <span className="truncate leading-none">{selectedDesign}</span>
+              </button>
+            </PopoverTrigger>
+            <PopoverContent
+              align="start"
+              sideOffset={8}
+              className="w-72 p-3 bg-gray-900 border border-white/10"
             >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700/50"
-              onClick={nextDesign}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
+              <div className="flex flex-wrap gap-1.5">
+                {Object.values(ItemDesigns).map((design) => {
+                  const isActive = selectedDesign === design;
+                  return (
+                    <button
+                      key={design}
+                      type="button"
+                      onClick={() => {
+                        setSelectedDesign(design);
+                        setIsOpen(false);
+                      }}
+                      className={`${DESIGN_PILL_FULL} ${DESIGN_PILL_INTERACTIVE} ${
+                        isActive ? DESIGN_PILL_SELECTED_RING : ""
+                      }`}
+                      style={{ background: createDesignBackground(design) }}
+                    >
+                      <span className="truncate leading-none">{design}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </PopoverContent>
+          </Popover>
         </CardContent>
       </Card>
     );

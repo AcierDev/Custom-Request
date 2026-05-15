@@ -12,6 +12,7 @@ export const SIZE_STRING = {
   [ItemSizes.TwentyEight_By_Sixteen]: `48" x 7 Feet`,
   [ItemSizes.ThirtyTwo_By_Sixteen]: `48" x 8 Feet`,
   [ItemSizes.ThirtySix_By_Sixteen]: `48" x 9 Feet`,
+  [ItemSizes.Forty_By_Sixteen]: `48" x 10 Feet`,
 };
 
 export enum SquareSize {
