@@ -5,7 +5,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import {
   GeometricLighting,
-  TiledLighting,
+  // TiledLighting, // Tiled option hidden from UI — preserved for potential re-enable.
   StripedLighting,
 } from "./LightingSetups";
 
@@ -45,7 +45,7 @@ export function RotatableLighting({
   return (
     <group ref={groupRef}>
       {style === "geometric" && <GeometricLighting />}
-      {style === "tiled" && <TiledLighting />}
+      {/* {style === "tiled" && <TiledLighting />} */}
       {style === "striped" && <StripedLighting />}
     </group>
   );

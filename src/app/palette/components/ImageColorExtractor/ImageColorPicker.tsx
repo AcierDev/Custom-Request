@@ -350,7 +350,7 @@ export function ImageColorPicker({
             <RotateCcw className="h-4 w-4" />
           </Button>
         </div>
-        <div className="text-xs text-gray-500 dark:text-gray-400">
+        <div className="text-xs text-slate-400">
           Shift + drag to pan
         </div>
       </div>
@@ -360,7 +360,7 @@ export function ImageColorPicker({
         <div className="flex-1">
           <div
             ref={containerRef}
-            className={`relative rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden ${
+            className={`relative rounded-lg border border-white/10 overflow-hidden ${
               isDragging
                 ? "cursor-grabbing"
                 : zoomLevel > 1
@@ -426,18 +426,18 @@ export function ImageColorPicker({
         {/* Magnifier */}
         {position && magnifierPixels && (
           <motion.div
-            className="w-36 h-36 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800"
+            className="w-36 h-36 border border-white/10 rounded-lg overflow-hidden bg-gray-900"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.2 }}
           >
             <div className="p-2">
-              <div className="text-xs text-gray-500 dark:text-gray-400 mb-1 text-center">
+              <div className="text-xs text-slate-400 mb-1 text-center">
                 Magnifier
               </div>
               <canvas
                 ref={magnifierCanvasRef}
-                className="w-full h-full border border-gray-200 dark:border-gray-700 rounded"
+                className="w-full h-full border border-white/10 rounded"
                 style={{ imageRendering: "pixelated" }}
               />
             </div>
@@ -446,13 +446,13 @@ export function ImageColorPicker({
       </div>
 
       {selectedColor && (
-        <div className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
+        <div className="flex items-center gap-2 p-2 bg-gray-800/40 rounded-md">
           <div
-            className="w-6 h-6 rounded-md border border-gray-300 dark:border-gray-700"
+            className="w-6 h-6 rounded-md border border-white/10"
             style={{ backgroundColor: selectedColor }}
           />
           <span className="text-sm font-mono">{selectedColor}</span>
-          <span className="text-xs text-gray-500 dark:text-gray-400 ml-auto">
+          <span className="text-xs text-slate-400 ml-auto">
             Click to add more colors
           </span>
         </div>

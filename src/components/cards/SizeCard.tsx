@@ -140,13 +140,13 @@ export function SizeCard({ compact = false }: SizeCardProps) {
 
   if (compact) {
     return (
-      <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200 dark:border-gray-700 shadow-lg">
+      <Card className="glass-surface shadow-lg">
         <CardContent className="py-3 px-4 flex items-center justify-between gap-6">
           <div className="flex flex-col min-w-0">
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+            <span className="text-xs font-medium text-slate-400">
               Size
             </span>
-            <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 truncate">
+            <span className="text-sm font-semibold text-slate-200 truncate">
               {currentSize === "custom"
                 ? `${dimensions.width}×${dimensions.height} squares`
                 : SIZE_STRING[currentSize as ItemSizes]}
@@ -176,9 +176,9 @@ export function SizeCard({ compact = false }: SizeCardProps) {
   }
 
   return (
-    <Card className="h-1/3 dark:bg-gray-800/50 backdrop-blur-sm border-2 border-gray-200 dark:border-gray-700">
+    <Card className="h-1/3 dark:bg-gray-800/50 backdrop-blur-sm border-2 border-white/10">
       <CardHeader className="pb-2">
-        <CardTitle className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+        <CardTitle className="text-xl font-bold bg-gradient-to-r from-blue-500 to-sky-500 bg-clip-text text-transparent">
           Size
         </CardTitle>
       </CardHeader>
@@ -189,7 +189,7 @@ export function SizeCard({ compact = false }: SizeCardProps) {
             setDimensions(sizeToDimensions(value as ItemSizes))
           }
         >
-          <SelectTrigger className="w-full bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+          <SelectTrigger className="w-full bg-gray-900 border-white/10">
             <SelectValue placeholder="Select a size">
               {currentSize === "custom"
                 ? "Custom Size"
@@ -219,7 +219,7 @@ export function SizeCard({ compact = false }: SizeCardProps) {
             value={unit}
             onValueChange={(value) => setUnit(value as Unit)}
           >
-            <SelectTrigger className="w-full bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+            <SelectTrigger className="w-full bg-gray-900 border-white/10">
               <SelectValue placeholder="Select unit" />
             </SelectTrigger>
             <SelectContent>
@@ -233,7 +233,7 @@ export function SizeCard({ compact = false }: SizeCardProps) {
             <div className="space-y-2">
               <Label
                 htmlFor="width"
-                className="text-sm text-gray-600 dark:text-gray-400"
+                className="text-sm text-slate-400"
               >
                 Width ({unit})
               </Label>
@@ -260,13 +260,13 @@ export function SizeCard({ compact = false }: SizeCardProps) {
                     setCustomWidth(formattedValue);
                   }
                 }}
-                className="bg-white dark:bg-gray-800"
+                className="bg-gray-900"
               />
             </div>
             <div className="space-y-2">
               <Label
                 htmlFor="height"
-                className="text-sm text-gray-600 dark:text-gray-400"
+                className="text-sm text-slate-400"
               >
                 Height ({unit})
               </Label>
@@ -293,7 +293,7 @@ export function SizeCard({ compact = false }: SizeCardProps) {
                     setCustomHeight(formattedValue);
                   }
                 }}
-                className="bg-white dark:bg-gray-800"
+                className="bg-gray-900"
               />
             </div>
           </div>

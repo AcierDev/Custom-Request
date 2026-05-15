@@ -67,8 +67,8 @@ export function ImageUploader({ onImageUpload }: ImageUploaderProps) {
     <div
       className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors duration-200 ${
         isDragging
-          ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20"
-          : "border-gray-300 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-600"
+          ? "border-blue-500 bg-blue-500/5 dark:bg-blue-900/20"
+          : "border-white/10 hover:border-blue-400 dark:hover:border-blue-500"
       }`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -80,13 +80,13 @@ export function ImageUploader({ onImageUpload }: ImageUploaderProps) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
       >
-        <div className="w-20 h-20 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-          <ImageIcon className="h-10 w-10 text-purple-600 dark:text-purple-400" />
+        <div className="w-20 h-20 rounded-full bg-blue-500/10 dark:bg-blue-900/30 flex items-center justify-center">
+          <ImageIcon className="h-10 w-10 text-blue-300" />
         </div>
 
         <div className="space-y-2">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Upload an Image</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+          <h3 className="text-lg font-medium text-white">Upload an Image</h3>
+          <p className="text-sm text-slate-400 max-w-md mx-auto">
             Drag and drop an image, or click to browse your files
           </p>
         </div>
@@ -94,13 +94,13 @@ export function ImageUploader({ onImageUpload }: ImageUploaderProps) {
         <div className="space-y-3">
           <Button
             onClick={() => fileInputRef.current?.click()}
-            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+            className="bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
           >
             <Upload className="mr-2 h-4 w-4" />
             Browse Files
           </Button>
 
-          <p className="text-xs text-gray-500 dark:text-gray-400">Supported formats: JPG, PNG, GIF, WebP (max 5MB)</p>
+          <p className="text-xs text-slate-400">Supported formats: JPG, PNG, GIF, WebP (max 5MB)</p>
         </div>
 
         <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />

@@ -19,10 +19,11 @@ import {
   Check,
 } from "lucide-react";
 import { GeometricPattern } from "@/components/preview/GeometricPattern";
-import { TiledPattern } from "@/components/preview/TiledPattern";
+// Tiled option hidden from UI — preserved for potential re-enable.
+// import { TiledPattern } from "@/components/preview/TiledPattern";
 import {
   GeometricLighting,
-  TiledLighting,
+  // TiledLighting,
   StripedLighting,
 } from "@/components/preview/LightingSetups";
 import { ViewControls } from "@/components/preview/ViewControls";
@@ -124,8 +125,8 @@ export default function SharedDesignPage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-purple-600 dark:text-purple-400 mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-400">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-300 mx-auto mb-4" />
+          <p className="text-slate-400">
             Loading shared design...
           </p>
         </div>
@@ -152,10 +153,10 @@ export default function SharedDesignPage() {
               />
             </svg>
           </div>
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+          <h2 className="text-xl font-semibold text-white mb-2">
             Design Not Found
           </h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">{error}</p>
+          <p className="text-slate-400 mb-6">{error}</p>
           <Link href="/">
             <Button>
               <ArrowLeft className="w-4 h-4 mr-2" />
@@ -179,7 +180,7 @@ export default function SharedDesignPage() {
           <Link href="/">
             <Button
               variant="outline"
-              className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm"
+              className="glass-surface"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Home
@@ -190,7 +191,7 @@ export default function SharedDesignPage() {
             <Button
               variant="outline"
               onClick={handleCopyLink}
-              className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm"
+              className="glass-surface"
             >
               {copied ? (
                 <Check className="w-4 h-4 mr-2" />
@@ -205,37 +206,37 @@ export default function SharedDesignPage() {
 
       {/* Design Info Card */}
       <div className="absolute top-20 left-6 z-40 max-w-sm">
-        <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200 dark:border-gray-700 shadow-lg p-4">
+        <Card className="glass-surface shadow-lg p-4">
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <Share className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-              <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+              <Share className="w-4 h-4 text-blue-300" />
+              <h3 className="font-semibold text-white">
                 Shared Design
               </h3>
             </div>
 
             <div className="space-y-2 text-sm">
-              <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+              <div className="flex items-center gap-2 text-slate-400">
                 <Calendar className="w-4 h-4" />
                 <span>Created {formatDate(sharedDesign.createdAt)}</span>
               </div>
 
-              <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+              <div className="flex items-center gap-2 text-slate-400">
                 <Eye className="w-4 h-4" />
                 <span>{sharedDesign.accessCount} views</span>
               </div>
             </div>
 
-            <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+            <div className="pt-2 border-t border-white/10">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <span className="text-sm font-medium text-slate-300">
                   Design:
                 </span>
                 <Badge variant="secondary">{selectedDesign}</Badge>
               </div>
 
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <span className="text-sm font-medium text-slate-300">
                   Size:
                 </span>
                 <Badge variant="outline">
@@ -244,7 +245,7 @@ export default function SharedDesignPage() {
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <span className="text-sm font-medium text-slate-300">
                   Style:
                 </span>
                 <Badge variant="outline">{style}</Badge>
@@ -262,12 +263,12 @@ export default function SharedDesignPage() {
         >
           {/* Lighting setup based on pattern style */}
           {style === "geometric" && <GeometricLighting />}
-          {style === "tiled" && <TiledLighting />}
+          {/* {style === "tiled" && <TiledLighting />} */}
           {style === "striped" && <StripedLighting />}
 
           {/* Pattern components */}
           {style === "geometric" && <GeometricPattern />}
-          {style === "tiled" && <TiledPattern />}
+          {/* {style === "tiled" && <TiledPattern />} */}
 
           <Ruler3D width={dimensions.width} height={dimensions.height} />
           <OrbitControls
@@ -294,7 +295,7 @@ export default function SharedDesignPage() {
           variant="outline"
           size="sm"
           onClick={() => setShowUIControls(!showUIControls)}
-          className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm"
+          className="glass-surface"
         >
           {showUIControls ? "Hide UI" : "Show UI"}
         </Button>

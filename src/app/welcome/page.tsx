@@ -65,28 +65,28 @@ export default function WelcomePage() {
       title: "Color Studio",
       description: "Create and save custom color palettes for your projects.",
       icon: <Palette className="h-8 w-8" />,
-      color: "bg-gradient-to-r from-blue-500 to-violet-500",
+      color: "bg-gradient-to-br from-blue-500 to-indigo-600",
       link: "/palette",
     },
     {
       title: "Custom Designer",
       description: "Design your own unique wooden art piece from scratch.",
       icon: <Paintbrush className="h-8 w-8" />,
-      color: "bg-gradient-to-r from-amber-500 to-orange-500",
-      link: "/design",
+      color: "bg-gradient-to-br from-sky-500 to-blue-600",
+      link: "/viewer",
     },
     {
       title: "Order Center",
       description: "Review and place orders for your custom creations.",
       icon: <Truck className="h-8 w-8" />,
-      color: "bg-gradient-to-r from-pink-500 to-rose-500",
-      link: "/design",
+      color: "bg-gradient-to-br from-emerald-500 to-teal-600",
+      link: "/viewer",
     },
     {
       title: "Profile & Favorites",
       description: "Manage your account and favorite designs.",
       icon: <Heart className="h-8 w-8" />,
-      color: "bg-gradient-to-r from-red-500 to-pink-500",
+      color: "bg-gradient-to-br from-indigo-500 to-violet-600",
       link: "/profile",
     },
   ];
@@ -110,7 +110,7 @@ export default function WelcomePage() {
             repeatType: "reverse",
             ease: "easeInOut",
           }}
-          className="absolute -top-[30%] -left-[20%] w-[80%] h-[80%] rounded-full bg-gradient-to-br from-blue-400/30 via-indigo-500/20 to-violet-500/30 blur-3xl"
+          className="absolute -top-[30%] -left-[20%] w-[80%] h-[80%] rounded-full bg-gradient-to-br from-blue-600/30 via-indigo-700/25 to-sky-700/20 blur-3xl"
         />
 
         {/* Secondary gradient blob */}
@@ -129,7 +129,7 @@ export default function WelcomePage() {
             ease: "easeInOut",
             delay: 2,
           }}
-          className="absolute top-[10%] right-[0%] w-[70%] h-[70%] rounded-full bg-gradient-to-bl from-cyan-400/20 via-sky-500/15 to-blue-600/20 blur-3xl"
+          className="absolute top-[10%] right-[0%] w-[70%] h-[70%] rounded-full bg-gradient-to-bl from-sky-600/20 via-blue-700/15 to-indigo-800/20 blur-3xl"
         />
 
         {/* Accent blob for color variation */}
@@ -148,7 +148,7 @@ export default function WelcomePage() {
             ease: "easeInOut",
             delay: 1,
           }}
-          className="absolute bottom-[0%] left-[10%] w-[60%] h-[60%] rounded-full bg-gradient-to-tr from-purple-400/20 via-fuchsia-500/15 to-pink-500/20 blur-3xl"
+          className="absolute bottom-[0%] left-[10%] w-[60%] h-[60%] rounded-full bg-gradient-to-tr from-indigo-600/20 via-blue-700/15 to-sky-700/20 blur-3xl"
         />
 
         {/* Bottom right accent blob */}
@@ -167,7 +167,7 @@ export default function WelcomePage() {
             ease: "easeInOut",
             delay: 3,
           }}
-          className="absolute bottom-[0%] right-[0%] w-[55%] h-[55%] rounded-full bg-gradient-to-tl from-amber-400/20 via-orange-500/15 to-rose-500/20 blur-3xl"
+          className="absolute bottom-[0%] right-[0%] w-[55%] h-[55%] rounded-full bg-gradient-to-tl from-emerald-600/15 via-teal-700/10 to-sky-700/15 blur-3xl"
         />
       </div>
 
@@ -186,10 +186,8 @@ export default function WelcomePage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, ease: "easeOut" }}
             >
-              <h1 className="text-5xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-violet-600 drop-shadow-sm">
-                Welcome to Everwood
-              </h1>
-              <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+              <h1 className="heading-hero mb-6">Welcome to Everwood</h1>
+              <p className="text-xl text-slate-400 max-w-2xl mx-auto leading-relaxed">
                 Get started creating beautiful wooden art pieces customized to
                 your style and space.
               </p>
@@ -209,10 +207,10 @@ export default function WelcomePage() {
                 }}
               >
                 <Link href={feature.link} className="block h-full">
-                  <Card className="h-full border-muted/30 overflow-hidden hover:shadow-lg transition-all duration-300 group bg-background/70 backdrop-blur-md hover:border-opacity-50 hover:border-blue-200 dark:hover:border-blue-800">
+                  <Card className="h-full rounded-2xl glass-surface overflow-hidden hover:border-blue-400/30 hover:shadow-blue-500/10 transition-all duration-300 group">
                     <CardHeader>
                       <div
-                        className={`w-16 h-16 rounded-2xl flex items-center justify-center ${feature.color} text-white mb-4 shadow-md transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg`}
+                        className={`w-16 h-16 rounded-2xl flex items-center justify-center ${feature.color} text-white mb-4 shadow-md shadow-blue-900/30 transition-all duration-300 group-hover:scale-110 group-hover:shadow-blue-500/30`}
                       >
                         <motion.div
                           animate={{ rotate: [0, 5, 0, -5, 0] }}
@@ -226,11 +224,11 @@ export default function WelcomePage() {
                           {feature.icon}
                         </motion.div>
                       </div>
-                      <CardTitle className="text-xl flex items-center justify-between group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300">
+                      <CardTitle className="text-xl flex items-center justify-between text-white group-hover:text-blue-300 transition-colors duration-300">
                         {feature.title}
                         <ArrowRight className="h-5 w-5 opacity-0 -translate-x-4 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0" />
                       </CardTitle>
-                      <CardDescription className="text-muted-foreground group-hover:text-muted-foreground/80 transition-colors duration-300">
+                      <CardDescription className="text-slate-400 group-hover:text-slate-300 transition-colors duration-300">
                         {feature.description}
                       </CardDescription>
                     </CardHeader>
@@ -247,11 +245,11 @@ export default function WelcomePage() {
               transition={{ delay: 0.8, duration: 0.7 }}
             >
               <Button
-                onClick={() => router.push("/design")}
+                onClick={() => router.push("/viewer")}
                 size="lg"
-                className="bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-700 hover:to-violet-700 text-white px-10 py-6 text-lg shadow-xl hover:shadow-blue-500/20 transition-all duration-300 relative overflow-hidden group"
+                className="bg-blue-600 hover:bg-blue-500 text-white px-10 py-6 text-lg shadow-xl shadow-blue-600/30 hover:shadow-blue-500/40 ring-1 ring-blue-400/40 transition-all duration-300 relative overflow-hidden group"
               >
-                <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-blue-400/10 to-violet-400/10 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-500"></span>
+                <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-blue-400/10 to-sky-400/10 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-500"></span>
                 <span className="relative z-10 flex items-center">
                   Start Designing Now
                   <motion.span

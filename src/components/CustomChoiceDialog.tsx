@@ -58,12 +58,12 @@ export function CustomChoiceDialog({
           />
         ))}
         {customPalette.length > 8 && (
-          <div className="flex-1 h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs text-gray-600 dark:text-gray-400">
+          <div className="flex-1 h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs text-slate-400">
             +{customPalette.length - 8}
           </div>
         )}
       </div>
-      <p className="text-sm text-gray-600 dark:text-gray-400">
+      <p className="text-sm text-slate-400">
         {customPalette.length} colors in your custom palette
       </p>
     </div>
@@ -109,7 +109,7 @@ export function CustomChoiceDialog({
             ))}
           </div>
         </div>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
+        <p className="text-sm text-slate-400">
           {drawnPatternGridSize.width} × {drawnPatternGridSize.height} custom
           drawn pattern
         </p>
@@ -122,7 +122,7 @@ export function CustomChoiceDialog({
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Grid3X3 className="w-5 h-5 text-purple-600" />
+            <Grid3X3 className="w-5 h-5 text-blue-400" />
             Choose Your Custom Design View
           </DialogTitle>
           <DialogDescription>
@@ -138,27 +138,27 @@ export function CustomChoiceDialog({
             <Card
               className={`p-4 cursor-pointer transition-all border-2 ${
                 selectedChoice === "palette"
-                  ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20"
-                  : "border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-600"
+                  ? "border-blue-500 bg-blue-500/5 dark:bg-blue-900/20"
+                  : "border-white/10 hover:border-blue-400"
               }`}
               onClick={() => setSelectedChoice("palette")}
             >
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-full">
-                    <Palette className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                  <div className="p-2 bg-blue-500/10 dark:bg-blue-900/30 rounded-full">
+                    <Palette className="w-5 h-5 text-blue-300" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                    <h3 className="font-semibold text-white">
                       Custom Palette
                     </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <p className="text-sm text-slate-400">
                       View your color palette with pattern generation
                     </p>
                   </div>
                 </div>
                 <PalettePreview />
-                <div className="text-xs text-gray-500 dark:text-gray-400">
+                <div className="text-xs text-slate-400">
                   Colors will be arranged using your selected pattern style
                   (fade, random, etc.)
                 </div>
@@ -171,27 +171,27 @@ export function CustomChoiceDialog({
             <Card
               className={`p-4 cursor-pointer transition-all border-2 ${
                 selectedChoice === "pattern"
-                  ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20"
-                  : "border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-600"
+                  ? "border-blue-500 bg-blue-500/5 dark:bg-blue-900/20"
+                  : "border-white/10 hover:border-blue-400"
               }`}
               onClick={() => setSelectedChoice("pattern")}
             >
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-full">
-                    <Grid3X3 className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                  <div className="p-2 bg-blue-500/10 dark:bg-blue-900/30 rounded-full">
+                    <Grid3X3 className="w-5 h-5 text-blue-300" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                    <h3 className="font-semibold text-white">
                       Drawn Pattern
                     </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <p className="text-sm text-slate-400">
                       View your hand-drawn pattern exactly as created
                     </p>
                   </div>
                 </div>
                 <PatternPreview />
-                <div className="text-xs text-gray-500 dark:text-gray-400">
+                <div className="text-xs text-slate-400">
                   Your exact pattern will be displayed with the colors you chose
                 </div>
               </div>
@@ -206,7 +206,7 @@ export function CustomChoiceDialog({
           <Button
             onClick={handleConfirm}
             disabled={!selectedChoice}
-            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+            className="bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
           >
             {selectedChoice && (
               <>

@@ -141,7 +141,7 @@ export default function ProfilePage() {
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <h1 className="text-3xl font-bold tracking-tight">
+                    <h1 className="heading-page tracking-tight">
                       Guest User
                     </h1>
                     <p className="text-muted-foreground mt-1">
@@ -240,7 +240,7 @@ export default function ProfilePage() {
                   <Button
                     variant="outline"
                     className="justify-between"
-                    onClick={() => router.push("/design")}
+                    onClick={() => router.push("/viewer")}
                   >
                     <span className="flex items-center">
                       <ShoppingCart className="mr-2 h-4 w-4" />
@@ -508,7 +508,7 @@ export default function ProfilePage() {
                       <Button
                         variant="outline"
                         className="justify-start"
-                        onClick={() => router.push("/design")}
+                        onClick={() => router.push("/viewer")}
                       >
                         <ShoppingCart className="mr-2 h-4 w-4" />
                         Create New Design
@@ -568,7 +568,7 @@ export default function ProfilePage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => router.push("/design")}
+                            onClick={() => router.push("/viewer")}
                           >
                             Edit
                           </Button>

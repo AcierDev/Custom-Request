@@ -9,10 +9,11 @@ import { useEffect, useState, useRef, ReactNode } from "react";
 import { Maximize, ExternalLink, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GeometricPattern } from "@/components/preview/GeometricPattern";
-import { TiledPattern } from "@/components/preview/TiledPattern";
+// Tiled option hidden from UI — preserved for potential re-enable.
+// import { TiledPattern } from "@/components/preview/TiledPattern";
 import {
   GeometricLighting,
-  TiledLighting,
+  // TiledLighting,
   StripedLighting,
 } from "@/components/preview/LightingSetups";
 import { useRouter } from "next/navigation";
@@ -64,7 +65,7 @@ export function PreviewCard({ zoom = 1.4 }: { zoom?: number }) {
   }, []);
 
   const handleNavigateToPreview = () => {
-    router.push("/design");
+    router.push("/viewer");
   };
 
   if (!mounted) return null;
@@ -83,28 +84,28 @@ export function PreviewCard({ zoom = 1.4 }: { zoom?: number }) {
       <Card className="h-full overflow-hidden border-0 bg-gradient-to-br from-white/80 to-white/40 dark:from-gray-800/80 dark:to-gray-900/40 backdrop-blur-md shadow-xl transition-all duration-300">
         <div className="absolute inset-0  z-0" />
 
-        <div className="absolute inset-0 border-2 border-transparent group-hover:border-purple-500/50 dark:group-hover:border-purple-400/50 rounded-lg transition-all duration-300 z-10" />
+        <div className="absolute inset-0 border-2 border-transparent group-hover:border-blue-500/50 dark:group-hover:border-blue-400/50 rounded-lg transition-all duration-300 z-10" />
 
         <CardHeader className="relative z-20 pb-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="bg-purple-600 p-1.5 rounded-md shadow-md">
+              <div className="bg-blue-600 p-1.5 rounded-md shadow-md">
                 <Eye className="w-4 h-4 text-white" />
               </div>
-              <CardTitle className="text-xl font-bold text-purple-600 dark:text-purple-400">
+              <CardTitle className="text-xl font-bold text-blue-300">
                 3D Preview
               </CardTitle>
             </div>
 
             {/* Hint text that shows when not hovering */}
             <motion.div
-              className="flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-800"
+              className="flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full bg-gray-800/60"
               initial={{ opacity: 0.9 }}
               animate={{ opacity: isHovered ? 0 : 0.9 }}
               transition={{ duration: 0.2 }}
             >
-              <ExternalLink className="w-3 h-3 text-purple-500 dark:text-purple-400" />
-              <span className="text-gray-600 dark:text-gray-300">
+              <ExternalLink className="w-3 h-3 text-blue-300" />
+              <span className="text-slate-300">
                 Click for full view
               </span>
             </motion.div>
@@ -123,7 +124,7 @@ export function PreviewCard({ zoom = 1.4 }: { zoom?: number }) {
 
               {/* Lighting based on style */}
               {style === "geometric" && <GeometricLighting />}
-              {style === "tiled" && <TiledLighting />}
+              {/* {style === "tiled" && <TiledLighting />} */}
               {style === "striped" && <StripedLighting />}
 
               {/* Limited rotation wrapper around patterns */}
@@ -135,6 +136,7 @@ export function PreviewCard({ zoom = 1.4 }: { zoom?: number }) {
                     showColorInfo={showColorInfo}
                   />
                 )}
+                {/* Tiled / striped rendering preserved for potential re-enable.
                 {style === "tiled" && (
                   <TiledPattern
                     showWoodGrain={showWoodGrain}
@@ -147,6 +149,7 @@ export function PreviewCard({ zoom = 1.4 }: { zoom?: number }) {
                     showColorInfo={showColorInfo}
                   />
                 )}
+                */}
               </LimitedRotation>
 
               {/* Orbit controls for manual interaction, but without autoRotate */}
@@ -188,7 +191,7 @@ export function PreviewCard({ zoom = 1.4 }: { zoom?: number }) {
             >
               <Button
                 size="lg"
-                className="bg-purple-600 hover:bg-purple-700 text-white shadow-xl transition-all hover:shadow-purple-500/20 hover:scale-105"
+                className="bg-blue-600 hover:bg-blue-500 text-white shadow-xl transition-all hover:shadow-blue-500/30 hover:scale-105"
                 onClick={(e) => {
                   e.stopPropagation(); // Prevent double navigation
                   handleNavigateToPreview();
@@ -202,12 +205,12 @@ export function PreviewCard({ zoom = 1.4 }: { zoom?: number }) {
         </CardContent>
 
         {/* Decorative elements */}
-        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-500/10 to-purple-300/5 rounded-full blur-2xl -mr-10 -mt-10 z-0" />
-        <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-indigo-500/10 to-purple-500/5 rounded-full blur-xl -ml-8 -mb-8 z-0" />
+        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-500/10 to-sky-500/5 rounded-full blur-2xl -mr-10 -mt-10 z-0" />
+        <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-indigo-500/10 to-blue-500/5 rounded-full blur-xl -ml-8 -mb-8 z-0" />
 
         {/* Subtle pulse effect on the corner to draw attention */}
         <motion.div
-          className="absolute top-3 right-3 w-2 h-2 rounded-full bg-purple-500 z-30 ring-4 ring-purple-500/20"
+          className="absolute top-3 right-3 w-2 h-2 rounded-full bg-blue-500 z-30 ring-4 ring-blue-500/20"
           initial={{ opacity: 0.7, scale: 0.8 }}
           animate={{
             opacity: [0.7, 1, 0.7],

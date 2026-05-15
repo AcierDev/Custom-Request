@@ -562,17 +562,17 @@ export function GeometricPattern({
       {/* Only render info panels when needed */}
       {hoverInfo && showColorInfo && (
         <Html position={[hoverInfo.position[0], hoverInfo.position[1], 0.5]}>
-          <div className="bg-white dark:bg-gray-800 p-2 rounded shadow-md text-xs whitespace-nowrap">
+          <div className="bg-gray-900 p-2 rounded shadow-md text-xs whitespace-nowrap">
             <div className="flex items-center gap-2">
               <div
                 className="w-3 h-3 rounded-full"
                 style={{ backgroundColor: hoverInfo.color }}
               ></div>
-              <span className="font-medium text-gray-800 dark:text-gray-200">
+              <span className="font-medium text-slate-200">
                 {hoverInfo.colorName || "Custom Color"}
               </span>
             </div>
-            <div className="text-gray-500 dark:text-gray-400 mt-1">
+            <div className="text-slate-400 mt-1">
               {hoverInfo.color.toUpperCase()}
             </div>
           </div>
@@ -582,13 +582,13 @@ export function GeometricPattern({
       {/* Render pinned info */}
       {pinnedInfo && showColorInfo && (
         <Html position={[pinnedInfo.position[0], pinnedInfo.position[1], 0.5]}>
-          <div className="bg-white dark:bg-gray-800 border-2 border-blue-500 p-2 rounded shadow-md text-xs whitespace-nowrap">
+          <div className="bg-gray-900 border-2 border-blue-500 p-2 rounded shadow-md text-xs whitespace-nowrap">
             <div className="flex items-center gap-2">
               <div
                 className="w-3 h-3 rounded-full"
                 style={{ backgroundColor: pinnedInfo.color }}
               ></div>
-              <span className="font-medium text-gray-800 dark:text-gray-200">
+              <span className="font-medium text-slate-200">
                 {pinnedInfo.colorName || "Custom Color"}
               </span>
               <button
@@ -598,7 +598,7 @@ export function GeometricPattern({
                 ✕
               </button>
             </div>
-            <div className="text-gray-500 dark:text-gray-400 mt-1">
+            <div className="text-slate-400 mt-1">
               {pinnedInfo.color.toUpperCase()}
             </div>
           </div>

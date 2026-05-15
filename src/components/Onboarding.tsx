@@ -147,7 +147,7 @@ const ColorsAnimation = () => (
           "bg-amber-400",
           "bg-emerald-500",
           "bg-blue-400",
-          "bg-purple-500",
+          "bg-blue-500",
           "bg-rose-500",
           "bg-indigo-500",
         ].map((color, index) => (
@@ -293,7 +293,7 @@ const onboardingSteps: OnboardingStep[] = [
     description:
       "Design beautiful, custom wooden art pieces tailored to your space and style.",
     icon: <Palette className="h-6 w-6" />,
-    accent: "from-blue-600 to-violet-600",
+    accent: "from-blue-500 to-indigo-600",
     animationComponent: <WelcomeAnimation />,
   },
   {
@@ -309,7 +309,7 @@ const onboardingSteps: OnboardingStep[] = [
     description:
       "Select from pre-made palettes or create your own unique color combinations.",
     icon: <Paintbrush className="h-6 w-6" />,
-    accent: "from-amber-600 to-orange-600",
+    accent: "from-sky-500 to-blue-600",
     animationComponent: <ColorsAnimation />,
   },
   {
@@ -317,7 +317,7 @@ const onboardingSteps: OnboardingStep[] = [
     description:
       "See your creation from every angle with our interactive 3D preview.",
     icon: <SquareStack className="h-6 w-6" />,
-    accent: "from-purple-600 to-pink-600",
+    accent: "from-blue-500 to-sky-500",
     animationComponent: <PreviewAnimation />,
   },
   {
@@ -325,7 +325,7 @@ const onboardingSteps: OnboardingStep[] = [
     description:
       "Share your design with friends or place an order to bring it to life.",
     icon: <Share2 className="h-6 w-6" />,
-    accent: "from-red-600 to-pink-600",
+    accent: "from-blue-500 to-sky-500",
     animationComponent: <ShareAnimation />,
   },
 ];
@@ -463,7 +463,7 @@ export function Onboarding() {
                 ease: "easeInOut",
                 delay: 1,
               }}
-              className="absolute bottom-[0%] left-[10%] w-[60%] h-[60%] rounded-full bg-gradient-to-tr from-purple-400/20 via-fuchsia-500/15 to-pink-500/20 blur-3xl"
+              className="absolute bottom-[0%] left-[10%] w-[60%] h-[60%] rounded-full bg-gradient-to-tr from-indigo-600/20 via-blue-700/15 to-sky-700/20 blur-3xl"
             />
 
             {/* Bottom right accent blob */}
@@ -482,7 +482,7 @@ export function Onboarding() {
                 ease: "easeInOut",
                 delay: 3,
               }}
-              className="absolute bottom-[0%] right-[0%] w-[55%] h-[55%] rounded-full bg-gradient-to-tl from-amber-400/20 via-orange-500/15 to-rose-500/20 blur-3xl"
+              className="absolute bottom-[0%] right-[0%] w-[55%] h-[55%] rounded-full bg-gradient-to-tl from-emerald-600/15 via-teal-700/10 to-sky-700/15 blur-3xl"
             />
           </div>
 

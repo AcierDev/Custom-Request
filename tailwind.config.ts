@@ -62,6 +62,21 @@ const config: Config = {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      boxShadow: {
+        glass:
+          "0 1px 2px rgba(0,0,0,0.03), inset 0 1px 0 rgba(255,255,255,0.5)",
+        "glass-dark":
+          "0 1px 2px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05)",
+      },
+      spacing: {
+        "page-x": "1.5rem",
+        "page-y": "2rem",
+        "page-y-tight": "0.75rem",
+        "section-y": "1.5rem",
+        "stack-md": "1rem",
+        "stack-sm": "0.5rem",
+        "stack-lg": "1.5rem",
+      },
       keyframes: {
         "google-btn": {
           "0%": { transform: "translateX(-100%) skewX(-20deg)" },

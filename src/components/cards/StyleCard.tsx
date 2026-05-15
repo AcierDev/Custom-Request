@@ -19,12 +19,13 @@ const styles: {
     icon: <Hexagon className="w-4 h-4" />,
     description: "Modern geometric patterns with dynamic depth and shadows",
   },
-  {
-    value: "tiled",
-    label: "Tiled",
-    icon: <Grid className="w-4 h-4" />,
-    description: "Classic tiled arrangement with varying heights",
-  },
+  // Tiled option hidden from UI — preserved for potential re-enable.
+  // {
+  //   value: "tiled",
+  //   label: "Tiled",
+  //   icon: <Grid className="w-4 h-4" />,
+  //   description: "Classic tiled arrangement with varying heights",
+  // },
   // {
   //   value: "striped",
   //   label: "Striped",
@@ -42,10 +43,10 @@ export function StyleCard({ compact = false }: StyleCardProps) {
 
   if (compact) {
     return (
-      <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200 dark:border-gray-700 shadow-lg">
+      <Card className="glass-surface shadow-lg">
         <CardContent className="p-3">
           <div className="space-y-2">
-            <Label className="text-sm text-gray-700 dark:text-gray-300">
+            <Label className="text-sm text-slate-300">
               Style
             </Label>
             <RadioGroup
@@ -62,8 +63,8 @@ export function StyleCard({ compact = false }: StyleCardProps) {
                   <div
                     className={`flex flex-col items-center justify-center p-2 rounded-md text-xs transition-colors ${
                       style === value
-                        ? "bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400"
-                        : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                        ? "bg-blue-500/10 dark:bg-blue-900/30 text-blue-300"
+                        : "bg-gray-800/60 text-slate-400 hover:bg-gray-800"
                     }`}
                   >
                     <RadioGroupItem
@@ -84,9 +85,9 @@ export function StyleCard({ compact = false }: StyleCardProps) {
   }
 
   return (
-    <Card className="h-1/2 dark:bg-gray-800/50 backdrop-blur-sm border-2 border-gray-200 dark:border-gray-700">
+    <Card className="h-1/2 dark:bg-gray-800/50 backdrop-blur-sm border-2 border-white/10">
       <CardHeader className="pb-2">
-        <CardTitle className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+        <CardTitle className="text-xl font-bold bg-gradient-to-r from-blue-500 to-sky-500 bg-clip-text text-transparent">
           Style
         </CardTitle>
       </CardHeader>
@@ -110,8 +111,8 @@ export function StyleCard({ compact = false }: StyleCardProps) {
                 }}
                 className={`flex items-start space-x-4 rounded-lg border p-4 transition-colors ${
                   style === value
-                    ? "border-purple-500 dark:border-purple-400"
-                    : "border-gray-200 dark:border-gray-700"
+                    ? "border-blue-500 dark:border-blue-400"
+                    : "border-white/10"
                 }`}
               >
                 <RadioGroupItem
@@ -122,11 +123,11 @@ export function StyleCard({ compact = false }: StyleCardProps) {
                 <div className="flex-1 space-y-1">
                   <div className="flex items-center">
                     {icon}
-                    <span className="ml-2 text-sm font-medium text-gray-900 dark:text-gray-100">
+                    <span className="ml-2 text-sm font-medium text-white">
                       {label}
                     </span>
                   </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                  <p className="text-xs text-slate-400">
                     {description}
                   </p>
                 </div>

@@ -91,7 +91,7 @@ export function PaletteList({ onOpenImport, onImportById }: PaletteListProps) {
 
   const handleVisualize = (palette: SavedPalette) => {
     applyPalette(palette.id);
-    router.push("/design");
+    router.push("/viewer");
     toast.success(
       `Applied "${palette.name}" palette and navigating to preview`
     );
@@ -99,7 +99,7 @@ export function PaletteList({ onOpenImport, onImportById }: PaletteListProps) {
 
   const handleOrder = (palette: SavedPalette) => {
     applyPalette(palette.id);
-    router.push("/design");
+    router.push("/viewer");
     toast.success(
       `Applied "${palette.name}" palette and navigating to order page`
     );
@@ -129,12 +129,12 @@ export function PaletteList({ onOpenImport, onImportById }: PaletteListProps) {
       {/* Search and filter */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
             placeholder="Search palettes..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700"
+            className="pl-9 bg-gray-800/40 border-white/10"
           />
         </div>
         <Button variant="outline" className="flex items-center gap-2">
@@ -164,7 +164,7 @@ export function PaletteList({ onOpenImport, onImportById }: PaletteListProps) {
             </span>
           </Button>
           {selectionMode && (
-            <div className="text-xs text-gray-600 dark:text-gray-400">
+            <div className="text-xs text-slate-400">
               {selectedIds.length} selected
             </div>
           )}
@@ -174,7 +174,7 @@ export function PaletteList({ onOpenImport, onImportById }: PaletteListProps) {
           <Button
             onClick={() => setIsShareSetOpen(true)}
             disabled={selectedIds.length === 0}
-            className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
           >
             <Check className="h-4 w-4" />
             Share selected
@@ -207,13 +207,13 @@ export function PaletteList({ onOpenImport, onImportById }: PaletteListProps) {
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-full mb-4">
-              <Palette className="h-8 w-8 text-gray-500 dark:text-gray-400" />
+            <div className="bg-gray-800/60 p-4 rounded-full mb-4">
+              <Palette className="h-8 w-8 text-slate-400" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">
+            <h3 className="text-lg font-medium text-white mb-1">
               No palettes found
             </h3>
-            <p className="text-gray-500 dark:text-gray-400 max-w-md">
+            <p className="text-slate-400 max-w-md">
               No palettes match "{searchQuery}". Try a different search term.
             </p>
           </div>
@@ -242,12 +242,12 @@ export function PaletteList({ onOpenImport, onImportById }: PaletteListProps) {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="bg-white dark:bg-gray-900 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl border-2 border-gray-200 dark:border-gray-700"
+            className="bg-gray-900 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl border-2 border-white/10"
           >
-            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+            <h3 className="text-xl font-bold text-white mb-2">
               Delete Palette
             </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
+            <p className="text-slate-400 mb-6">
               Are you sure you want to delete this palette? This action cannot
               be undone.
             </p>

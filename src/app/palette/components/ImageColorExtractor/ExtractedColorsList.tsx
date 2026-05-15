@@ -14,17 +14,17 @@ interface ExtractedColorsListProps {
 export function ExtractedColorsList({ colors, selectedColor, onColorSelect, onColorRemove }: ExtractedColorsListProps) {
   if (colors.length === 0) {
     return (
-      <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg text-center">
-        <p className="text-sm text-gray-500 dark:text-gray-400">No colors extracted yet</p>
+      <div className="p-4 border border-white/10 rounded-lg text-center">
+        <p className="text-sm text-slate-400">No colors extracted yet</p>
         <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Click on the image to extract colors</p>
       </div>
     )
   }
 
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-      <div className="p-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">Extracted Colors ({colors.length})</h3>
+    <div className="border border-white/10 rounded-lg overflow-hidden">
+      <div className="p-3 bg-gray-800/40 border-b border-white/10">
+        <h3 className="text-sm font-medium text-white">Extracted Colors ({colors.length})</h3>
       </div>
 
       <div className="p-2 max-h-[300px] overflow-y-auto">
@@ -38,13 +38,13 @@ export function ExtractedColorsList({ colors, selectedColor, onColorSelect, onCo
                 exit={{ opacity: 0, scale: 0.9 }}
                 className={`flex items-center p-2 rounded-md cursor-pointer ${
                   selectedColor === color
-                    ? "bg-purple-100 dark:bg-purple-900/30 ring-1 ring-purple-400 dark:ring-purple-700"
-                    : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                    ? "bg-blue-500/10 dark:bg-blue-900/30 ring-1 ring-blue-400/60"
+                    : "hover:bg-gray-800"
                 }`}
                 onClick={() => onColorSelect(color)}
               >
                 <div
-                  className="w-8 h-8 rounded-md border border-gray-300 dark:border-gray-700"
+                  className="w-8 h-8 rounded-md border border-white/10"
                   style={{ backgroundColor: color }}
                 />
                 <span className="ml-2 text-sm font-mono">{color}</span>

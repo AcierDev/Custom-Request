@@ -105,21 +105,19 @@ export function AddColorButton({
           damping: 30,
           opacity: { duration: 0.2 },
         }}
-        className="h-24 sm:h-28 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-700 flex items-center justify-center cursor-pointer hover:border-purple-400 dark:hover:border-purple-500 transition-colors"
+        className="h-14 sm:h-16 w-full border-2 border-dashed border-white/10 flex items-center justify-center gap-2 cursor-pointer hover:border-blue-400 dark:hover:border-blue-500 transition-colors text-slate-400"
         onClick={() => setIsOpen(true)}
       >
-        <div className="flex flex-col items-center gap-2 text-gray-500 dark:text-gray-400">
-          <motion.div
-            whileHover={{ scale: 1.1, rotate: 90 }}
-            whileTap={{ scale: 0.9 }}
-            className="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-full"
-          >
-            <Plus className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-          </motion.div>
-          <span className="text-sm font-medium">
-            {isEmpty ? "Add your first color" : "Add color"}
-          </span>
-        </div>
+        <motion.div
+          whileHover={{ scale: 1.1, rotate: 90 }}
+          whileTap={{ scale: 0.9 }}
+          className="bg-blue-500/10 dark:bg-blue-900/30 p-1.5 rounded-full"
+        >
+          <Plus className="h-4 w-4 text-blue-300" />
+        </motion.div>
+        <span className="text-sm font-medium">
+          {isEmpty ? "Add your first color" : "Add color"}
+        </span>
       </motion.div>
 
       {isOpen && (
@@ -128,9 +126,9 @@ export function AddColorButton({
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="bg-white dark:bg-gray-900 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl border border-gray-200 dark:border-gray-700"
+            className="bg-gray-900 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl border border-white/10"
           >
-            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+            <h3 className="text-xl font-bold text-white mb-4">
               Add New Color
             </h3>
 
@@ -212,7 +210,7 @@ export function AddColorButton({
                           className="pl-8 font-mono"
                         />
                         <div
-                          className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 rounded-full border border-gray-200 dark:border-gray-700"
+                          className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 rounded-full border border-white/10"
                           style={{ backgroundColor: color }}
                         />
                         <Button
@@ -242,7 +240,7 @@ export function AddColorButton({
               <TabsContent value="suggestions" className="space-y-4">
                 {Object.entries(colorSuggestions).map(([category, colors]) => (
                   <div key={category} className="space-y-2">
-                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 capitalize">
+                    <h4 className="text-sm font-medium text-slate-300 capitalize">
                       {category}
                     </h4>
                     <div className="grid grid-cols-6 gap-2">
@@ -258,7 +256,7 @@ export function AddColorButton({
                                   "w-full aspect-square rounded-md transition-all",
                                   "hover:scale-110 hover:shadow-lg",
                                   color === colorOption.hex &&
-                                    "ring-2 ring-purple-500 dark:ring-purple-400 shadow-md"
+                                    "ring-2 ring-blue-400/60 shadow-md"
                                 )}
                                 style={{ backgroundColor: colorOption.hex }}
                                 onClick={() => setColor(colorOption.hex)}
@@ -287,7 +285,7 @@ export function AddColorButton({
               </Button>
               <Button
                 onClick={handleAddColor}
-                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+                className="bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
               >
                 Add Color
               </Button>

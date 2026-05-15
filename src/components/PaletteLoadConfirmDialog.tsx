@@ -113,11 +113,11 @@ export function PaletteLoadConfirmDialog({
 
         <div className="space-y-4 py-4">
           {/* Current palette preview */}
-          <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-md">
-            <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <div className="bg-gray-800/40/50 p-3 rounded-md">
+            <p className="text-sm font-medium text-slate-300 mb-2">
               Current palette ({customPalette.length} colors):
             </p>
-            <div className="flex h-6 w-full rounded-sm overflow-hidden border border-gray-200 dark:border-gray-700">
+            <div className="flex h-6 w-full rounded-sm overflow-hidden border border-white/10">
               {customPalette.map((color, index) => (
                 <div
                   key={`${color.hex}-${index}`}
@@ -167,7 +167,7 @@ export function PaletteLoadConfirmDialog({
           <Button
             onClick={handleSaveAndContinue}
             disabled={!saveName.trim() || isSaving}
-            className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
           >
             {isSaving ? (
               <motion.div

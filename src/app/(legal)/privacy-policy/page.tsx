@@ -11,12 +11,12 @@ export default function PrivacyPolicy() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h1 className="text-4xl font-bold mb-6 text-center">Privacy Policy</h1>
+        <h1 className="heading-hero mb-6 text-center">Privacy Policy</h1>
         <p className="text-muted-foreground text-center mb-8">
           Last updated: {new Date().toLocaleDateString()}
         </p>
 
-        <Card className="mb-8 shadow-lg">
+        <Card className="mb-8 glass-surface rounded-2xl">
           <CardHeader>
             <CardTitle className="text-xl">Introduction</CardTitle>
           </CardHeader>
@@ -35,7 +35,7 @@ export default function PrivacyPolicy() {
           </CardContent>
         </Card>
 
-        <Card className="mb-8 shadow-lg">
+        <Card className="mb-8 glass-surface rounded-2xl">
           <CardHeader>
             <CardTitle className="text-xl">Information We Collect</CardTitle>
           </CardHeader>
@@ -73,7 +73,7 @@ export default function PrivacyPolicy() {
           </CardContent>
         </Card>
 
-        <Card className="mb-8 shadow-lg">
+        <Card className="mb-8 glass-surface rounded-2xl">
           <CardHeader>
             <CardTitle className="text-xl">
               How We Use Your Information
@@ -95,7 +95,7 @@ export default function PrivacyPolicy() {
           </CardContent>
         </Card>
 
-        <Card className="mb-8 shadow-lg">
+        <Card className="mb-8 glass-surface rounded-2xl">
           <CardHeader>
             <CardTitle className="text-xl">Data Storage and Security</CardTitle>
           </CardHeader>
@@ -115,7 +115,7 @@ export default function PrivacyPolicy() {
           </CardContent>
         </Card>
 
-        <Card className="mb-8 shadow-lg">
+        <Card className="mb-8 glass-surface rounded-2xl">
           <CardHeader>
             <CardTitle className="text-xl">Third-Party Services</CardTitle>
           </CardHeader>
@@ -138,7 +138,7 @@ export default function PrivacyPolicy() {
           </CardContent>
         </Card>
 
-        <Card className="mb-8 shadow-lg">
+        <Card className="mb-8 glass-surface rounded-2xl">
           <CardHeader>
             <CardTitle className="text-xl">Your Rights</CardTitle>
           </CardHeader>
@@ -162,7 +162,7 @@ export default function PrivacyPolicy() {
           </CardContent>
         </Card>
 
-        <Card className="mb-8 shadow-lg">
+        <Card className="mb-8 glass-surface rounded-2xl">
           <CardHeader>
             <CardTitle className="text-xl">Children's Privacy</CardTitle>
           </CardHeader>
@@ -177,7 +177,7 @@ export default function PrivacyPolicy() {
           </CardContent>
         </Card>
 
-        <Card className="mb-8 shadow-lg">
+        <Card className="mb-8 glass-surface rounded-2xl">
           <CardHeader>
             <CardTitle className="text-xl">
               Changes to This Privacy Policy
@@ -197,7 +197,7 @@ export default function PrivacyPolicy() {
           </CardContent>
         </Card>
 
-        <Card className="mb-8 shadow-lg">
+        <Card className="mb-8 glass-surface rounded-2xl">
           <CardHeader>
             <CardTitle className="text-xl">Contact Us</CardTitle>
           </CardHeader>

@@ -191,7 +191,7 @@ function SignInContent() {
           transition={{ duration: 0.5 }}
           className="w-full max-w-md"
         >
-          <Card className="border-muted/30 shadow-lg backdrop-blur-sm bg-background/95">
+          <Card className="glass-surface rounded-2xl">
             <CardHeader className="space-y-1">
               <CardTitle className="text-2xl font-bold text-center">
                 Welcome to Everwood
@@ -407,7 +407,7 @@ export default function SignIn() {
       fallback={
         <div className="flex min-h-screen items-center justify-center p-4">
           <div className="w-full max-w-md">
-            <Card className="border-muted/30 shadow-lg backdrop-blur-sm bg-background/95">
+            <Card className="glass-surface rounded-2xl">
               <CardHeader className="space-y-1">
                 <CardTitle className="text-2xl font-bold text-center">
                   Welcome to Everwood

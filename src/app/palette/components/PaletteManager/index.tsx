@@ -15,7 +15,7 @@ import {
 import {
   arrayMove,
   SortableContext,
-  rectSortingStrategy,
+  verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { HexColorPicker } from "react-colorful";
 import { useCustomStore } from "@/store/customStore";
@@ -42,8 +42,8 @@ import {
 } from "@/components/ui/tooltip";
 import {
   X,
-  ArrowLeft,
-  ArrowRight,
+  ArrowUp,
+  ArrowDown,
   Info,
   Palette,
   Blend,
@@ -301,14 +301,14 @@ export function PaletteManager() {
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            <h3 className="text-lg font-semibold text-white">
               {editingPaletteId ? "Edit Palette" : "Your Palette"}
             </h3>
-            <span className="text-sm text-gray-500 dark:text-gray-400">
+            <span className="text-sm text-slate-400">
               ({customPalette.length} colors)
             </span>
             {editingPaletteId && (
-              <span className="ml-2 text-xs px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full">
+              <span className="ml-2 text-xs px-2 py-1 bg-blue-500/10 dark:bg-blue-900/30 text-blue-300 rounded-full">
                 Editing
               </span>
             )}
@@ -317,7 +317,7 @@ export function PaletteManager() {
           <div className="flex flex-wrap items-center gap-2">
             {/* Primary Actions Group */}
             {selectedColors.length > 0 && (
-              <div className="flex items-center rounded-md border border-gray-200 dark:border-gray-800 p-0.5 bg-white dark:bg-gray-900 shadow-sm">
+              <div className="flex items-center rounded-md border border-gray-200 dark:border-gray-800 p-0.5 bg-gray-900 shadow-sm">
                 <TooltipProvider delayDuration={300}>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -330,7 +330,7 @@ export function PaletteManager() {
                         }
                         className="h-8 w-8 p-0 rounded-none rounded-l-sm"
                       >
-                        <ArrowLeft className="h-4 w-4" />
+                        <ArrowUp className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom">
@@ -339,8 +339,8 @@ export function PaletteManager() {
                         : selectedColors.length > 1
                         ? "Select only one color to move"
                         : selectedColorIndex <= 0
-                        ? "Color is at the start"
-                        : "Move color left"}
+                        ? "Color is at the top"
+                        : "Move color up"}
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -359,7 +359,7 @@ export function PaletteManager() {
                         }
                         className="h-8 w-8 p-0 rounded-none rounded-r-sm border-l border-gray-200 dark:border-gray-800"
                       >
-                        <ArrowRight className="h-4 w-4" />
+                        <ArrowDown className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom">
@@ -368,8 +368,8 @@ export function PaletteManager() {
                         : selectedColors.length > 1
                         ? "Select only one color to move"
                         : selectedColorIndex === customPalette.length - 1
-                        ? "Color is at the end"
-                        : "Move color right"}
+                        ? "Color is at the bottom"
+                        : "Move color down"}
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -387,10 +387,10 @@ export function PaletteManager() {
                       onClick={() =>
                         setShowHarmonyGenerator(!showHarmonyGenerator)
                       }
-                      className="h-8 px-3 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800/50"
+                      className="h-8 px-3 dark:bg-blue-900/20 border-blue-500/30/50"
                     >
-                      <Palette className="h-4 w-4 mr-1 text-purple-600 dark:text-purple-400" />
-                      <span className="text-xs font-medium text-purple-700 dark:text-purple-300">
+                      <Palette className="h-4 w-4 mr-1 text-blue-300" />
+                      <span className="text-xs font-medium text-blue-300">
                         Harmony
                       </span>
                     </Button>
@@ -451,14 +451,14 @@ export function PaletteManager() {
                           onClick={resetAllTips}
                           className={`h-7 w-7 rounded-full ${
                             showBlendingGuide
-                              ? "bg-purple-100 dark:bg-purple-900/30"
-                              : "bg-gray-100 dark:bg-gray-800"
+                              ? "bg-blue-500/10 dark:bg-blue-900/30"
+                              : "bg-gray-800/60"
                           }`}
                         >
                           {showBlendingGuide ? (
-                            <X className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                            <X className="h-3.5 w-3.5 text-blue-300" />
                           ) : (
-                            <Info className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                            <Info className="h-3.5 w-3.5 text-blue-300" />
                           )}
                         </Button>
                       )}
@@ -491,7 +491,7 @@ export function PaletteManager() {
                 exit={{ opacity: 0, y: -10 }}
                 className="mb-2 text-center pointer-events-none"
               >
-                <div className="inline-block bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-sm px-3 py-1.5 rounded-full">
+                <div className="inline-block bg-blue-500/10 dark:bg-blue-900/30 text-blue-300 text-sm px-3 py-1.5 rounded-full">
                   <motion.div
                     animate={{ scale: [1, 1.05, 1] }}
                     transition={{
@@ -517,9 +517,9 @@ export function PaletteManager() {
         >
           <SortableContext
             items={customPalette.map((c) => c.id)}
-            strategy={rectSortingStrategy}
+            strategy={verticalListSortingStrategy}
           >
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 list-none p-0 m-0">
+            <div className="flex flex-col gap-1 list-none p-0 m-0 rounded-lg overflow-hidden">
               <AnimatePresence>
                 {customPalette.map((color, index) => (
                   <SortableColorSwatch
@@ -542,12 +542,10 @@ export function PaletteManager() {
                 ))}
               </AnimatePresence>
 
-              <div className="h-full min-h-[6rem]">
-                <AddColorButton
-                  onColorAdd={handleAddColor}
-                  isEmpty={customPalette.length === 0}
-                />
-              </div>
+              <AddColorButton
+                onColorAdd={handleAddColor}
+                isEmpty={customPalette.length === 0}
+              />
             </div>
           </SortableContext>
         </DndContext>
@@ -565,7 +563,7 @@ export function PaletteManager() {
             stiffness: 300,
             damping: 25,
           }}
-          className="p-4 border border-purple-200 dark:border-purple-900/50 rounded-lg bg-purple-50 dark:bg-purple-900/20 backdrop-blur-sm shadow-md"
+          className="p-4 border border-blue-500/30 dark:border-blue-900/50 rounded-lg bg-blue-500/5 dark:bg-blue-900/20 backdrop-blur-sm shadow-md"
         >
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <motion.div
@@ -574,15 +572,15 @@ export function PaletteManager() {
               animate={{ scale: [1, 1.05, 1] }}
               transition={{ duration: 0.5, delay: 0.3 }}
             >
-              <Blend className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-              <span className="font-medium text-purple-700 dark:text-purple-300">
+              <Blend className="h-5 w-5 text-blue-300" />
+              <span className="font-medium text-blue-300">
                 Blend Colors
               </span>
             </motion.div>
 
             <div className="flex-1 flex items-center gap-4">
               <div className="w-full max-w-xs flex items-center gap-4">
-                <span className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                <span className="text-sm text-slate-400 whitespace-nowrap">
                   Steps:
                 </span>
                 <Slider
@@ -593,7 +591,7 @@ export function PaletteManager() {
                   onValueChange={(value) => setBlendCount(value[0])}
                   className="flex-1"
                 />
-                <span className="text-sm font-medium text-gray-900 dark:text-gray-100 w-6 text-center">
+                <span className="text-sm font-medium text-white w-6 text-center">
                   {blendCount}
                 </span>
               </div>
@@ -607,7 +605,7 @@ export function PaletteManager() {
                     setHasSeenBlendingGuide(true);
                     addBlendedColors(blendCount);
                   }}
-                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white whitespace-nowrap shadow-md hover:shadow-lg transition-all"
+                  className="bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white whitespace-nowrap shadow-md hover:shadow-lg transition-all"
                 >
                   <Blend className="mr-2 h-4 w-4" />
                   Create Blend
@@ -625,9 +623,9 @@ export function PaletteManager() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="bg-white dark:bg-gray-900 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl border-2 border-gray-200 dark:border-gray-700"
+            className="bg-gray-900 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl border-2 border-white/10"
           >
-            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+            <h3 className="text-xl font-bold text-white mb-4">
               Edit Color
             </h3>
 
@@ -660,7 +658,7 @@ export function PaletteManager() {
                     className="pl-8"
                   />
                   <div
-                    className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 rounded-full border border-gray-200 dark:border-gray-700"
+                    className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 rounded-full border border-white/10"
                     style={{ backgroundColor: editColorHex }}
                   />
                 </div>
@@ -682,7 +680,7 @@ export function PaletteManager() {
                 </Button>
                 <Button
                   onClick={handleSaveEdit}
-                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+                  className="bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
                 >
                   Save Changes
                 </Button>

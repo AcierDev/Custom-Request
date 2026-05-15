@@ -26,7 +26,8 @@ import { Card } from "@/components/ui/card";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { GeometricPattern } from "@/components/preview/GeometricPattern";
-import { TiledPattern } from "@/components/preview/TiledPattern";
+// Tiled option hidden from UI — preserved for potential re-enable.
+// import { TiledPattern } from "@/components/preview/TiledPattern";
 import { RotatableLighting } from "@/components/preview/RotatableLighting";
 import { LightingControls } from "@/components/preview/LightingControls";
 import { ViewControls } from "@/components/preview/ViewControls";
@@ -216,6 +217,7 @@ export default function DesignPage() {
               showColorInfo={showColorInfo}
             />
           )}
+          {/* Tiled / striped rendering preserved for potential re-enable.
           {style === "tiled" && (
             <TiledPattern
               showWoodGrain={showWoodGrain}
@@ -228,6 +230,7 @@ export default function DesignPage() {
               showColorInfo={showColorInfo}
             />
           )}
+          */}
 
           {/* Ruler if enabled */}
           {showRuler && (
