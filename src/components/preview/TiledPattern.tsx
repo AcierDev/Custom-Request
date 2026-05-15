@@ -439,32 +439,32 @@ export function TiledPattern({
         {squares}
         {showColorInfo && (hoverInfo || pinnedInfo) && (
           <Html position={[0, 0, 1]}>
-            <div className="min-w-[140px] px-3 py-2 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+            <div className="min-w-[140px] px-3 py-2 glass-surface rounded-lg shadow-lg border border-white/10">
               <div className="space-y-2">
                 <div className="flex items-center gap-3">
                   <div
-                    className="w-6 h-6 rounded-md shadow-sm border border-gray-200 dark:border-gray-700"
+                    className="w-6 h-6 rounded-md shadow-sm border border-white/10"
                     style={{
                       backgroundColor:
                         pinnedInfo?.color || hoverInfo?.color || "#8B5E3B",
                     }}
                   />
-                  <span className="font-medium text-sm text-gray-900 dark:text-gray-100">
+                  <span className="font-medium text-sm text-white">
                     {pinnedInfo?.colorName ||
                       hoverInfo?.colorName ||
                       "Custom Color"}
                   </span>
                 </div>
                 <div className="grid grid-cols-[auto,1fr] items-center gap-x-3 gap-y-1 text-xs">
-                  <span className="text-gray-500 dark:text-gray-400">
+                  <span className="text-slate-400">
                     Position:
                   </span>
-                  <span className="font-mono text-gray-700 dark:text-gray-300">
+                  <span className="font-mono text-slate-300">
                     [{pinnedInfo?.position[0] || hoverInfo?.position[0]},{" "}
                     {pinnedInfo?.position[1] || hoverInfo?.position[1]}]
                   </span>
-                  <span className="text-gray-500 dark:text-gray-400">Hex:</span>
-                  <span className="font-mono text-purple-600 dark:text-purple-400">
+                  <span className="text-slate-400">Hex:</span>
+                  <span className="font-mono text-blue-300">
                     {(pinnedInfo?.color || hoverInfo?.color)?.toUpperCase() ||
                       "Custom Color"}
                   </span>

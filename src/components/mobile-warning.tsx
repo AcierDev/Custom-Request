@@ -31,7 +31,7 @@ export function MobileWarning() {
         exit={{ opacity: 0, y: 50 }}
         className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
       >
-        <Card className="relative max-w-md w-full dark:bg-gray-800/90 border-2 border-purple-500/50">
+        <Card className="relative max-w-md w-full dark:bg-gray-800/90 border-2 border-blue-500/50">
           <Button
             variant="ghost"
             size="icon"
@@ -42,20 +42,20 @@ export function MobileWarning() {
           </Button>
           <CardContent className="pt-6 px-4 pb-4">
             <div className="flex flex-col items-center text-center space-y-4">
-              <div className="p-3 rounded-full bg-purple-100 dark:bg-purple-900/30">
-                <Laptop className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+              <div className="p-3 rounded-full bg-blue-500/10 dark:bg-blue-900/30">
+                <Laptop className="w-8 h-8 text-blue-300" />
               </div>
-              <h2 className="text-xl font-semibold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+              <h2 className="text-xl font-semibold bg-gradient-to-r from-blue-500 to-sky-500 bg-clip-text text-transparent">
                 Best Viewed on Desktop
               </h2>
-              <p className="text-gray-600 dark:text-gray-300">
+              <p className="text-slate-300">
                 Our brand new website is optimized for desktop viewing. For the
                 best experience, please visit us on a computer. Mobile
                 optimization is coming soon!
               </p>
               <Button
                 onClick={() => setIsDismissed(true)}
-                className="bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700"
+                className="bg-gradient-to-r from-blue-500 to-sky-500 text-white hover:from-blue-600 hover:to-sky-600"
               >
                 Continue Anyway
               </Button>

@@ -363,20 +363,20 @@ export function ColorHarmonyGenerator({
       <motion.div
         initial={{ scale: 0.9 }}
         animate={{ scale: 1 }}
-        className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
+        className="bg-gray-900 rounded-xl shadow-2xl border border-white/10 w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="p-5 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="bg-gradient-to-r from-purple-500 to-pink-500 p-2 rounded-lg shadow-md">
+            <div className="bg-gradient-to-r from-blue-500 to-sky-500 p-2 rounded-lg shadow-md">
               <Palette className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+              <h2 className="text-xl font-bold text-white">
                 Color Harmony Generator
               </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-slate-400">
                 Create beautiful color combinations based on color theory
               </p>
             </div>
@@ -419,7 +419,7 @@ export function ColorHarmonyGenerator({
                       className="pl-8 font-mono text-sm"
                     />
                     <div
-                      className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 rounded-full border border-gray-200 dark:border-gray-700"
+                      className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 rounded-full border border-white/10"
                       style={{ backgroundColor: baseColor }}
                     />
                     <TooltipProvider delayDuration={300}>
@@ -508,7 +508,7 @@ export function ColorHarmonyGenerator({
                     variant="ghost"
                     size="sm"
                     onClick={handleRandomizeBaseColor}
-                    className="text-xs flex items-center gap-1.5 text-purple-600 dark:text-purple-400"
+                    className="text-xs flex items-center gap-1.5 text-blue-300"
                   >
                     <Sparkles className="h-3.5 w-3.5" />
                     <span>Generate a random color</span>
@@ -575,7 +575,7 @@ export function ColorHarmonyGenerator({
                   onValueChange={setSelectedHarmony}
                   className="w-full"
                 >
-                  <TabsList className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 h-auto mb-4 bg-gray-100 dark:bg-gray-800/50 p-1 rounded-lg">
+                  <TabsList className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 h-auto mb-4 bg-gray-800/60/50 p-1 rounded-lg">
                     {harmonyOptions.map((harmony) => (
                       <TabsTrigger
                         key={harmony.id}
@@ -588,11 +588,11 @@ export function ColorHarmonyGenerator({
                   </TabsList>
 
                   {/* Harmony Description */}
-                  <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800/30 rounded-lg border border-gray-200 dark:border-gray-800 flex items-center gap-3">
-                    <div className="bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 p-2 rounded-md">
-                      <Palette className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                  <div className="mb-4 p-3 bg-gray-800/40/30 rounded-lg border border-gray-200 dark:border-gray-800 flex items-center gap-3">
+                    <div className="bg-gradient-to-r from-blue-500/10 to-sky-500/10 p-2 rounded-md">
+                      <Palette className="h-4 w-4 text-blue-300" />
                     </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <p className="text-sm text-slate-400">
                       {currentHarmony?.description}
                     </p>
                   </div>
@@ -604,7 +604,7 @@ export function ColorHarmonyGenerator({
                         <Label htmlFor="color-count" className="text-sm">
                           Number of Colors
                         </Label>
-                        <span className="text-sm font-medium bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-md">
+                        <span className="text-sm font-medium bg-gray-800/60 px-2 py-0.5 rounded-md">
                           {colorCount}
                         </span>
                       </div>
@@ -616,7 +616,7 @@ export function ColorHarmonyGenerator({
                           step={1}
                           value={[colorCount]}
                           onValueChange={(value) => setColorCount(value[0])}
-                          className="[&_[role=slider]]:h-4 [&_[role=slider]]:w-4 [&_[role=slider]]:bg-gradient-to-r [&_[role=slider]]:from-purple-500 [&_[role=slider]]:to-pink-500"
+                          className="[&_[role=slider]]:h-4 [&_[role=slider]]:w-4 [&_[role=slider]]:bg-gradient-to-r [&_[role=slider]]:from-blue-500 [&_[role=slider]]:to-sky-500"
                         />
                         <div className="flex justify-between mt-1 text-xs text-gray-500">
                           <span>3</span>
@@ -637,8 +637,8 @@ export function ColorHarmonyGenerator({
                           className={cn(
                             "relative group cursor-pointer rounded-lg overflow-hidden transition-all shadow-sm hover:shadow-md",
                             selectedColors.includes(color)
-                              ? "ring-2 ring-purple-500 dark:ring-purple-400 shadow-md"
-                              : "hover:ring-2 hover:ring-purple-300 dark:hover:ring-purple-600"
+                              ? "ring-2 ring-blue-400/60 shadow-md"
+                              : "hover:ring-2 hover:ring-blue-400/40"
                           )}
                           onClick={() => toggleColorSelection(color)}
                         >
@@ -646,7 +646,7 @@ export function ColorHarmonyGenerator({
                             className="h-20 w-full transition-transform group-hover:scale-105"
                             style={{ backgroundColor: color }}
                           />
-                          <div className="p-2 text-xs font-mono bg-white/95 dark:bg-gray-800/95 text-gray-800 dark:text-gray-200 flex justify-between items-center">
+                          <div className="p-2 text-xs font-mono bg-gray-900/70 backdrop-blur-md text-slate-200 flex justify-between items-center">
                             <span>{color}</span>
                             <TooltipProvider delayDuration={300}>
                               <Tooltip>
@@ -678,7 +678,7 @@ export function ColorHarmonyGenerator({
                             </TooltipProvider>
                           </div>
                           {selectedColors.includes(color) && (
-                            <div className="absolute top-2 right-2 bg-purple-500 dark:bg-purple-400 rounded-full p-0.5 shadow-md">
+                            <div className="absolute top-2 right-2 bg-blue-500 dark:bg-blue-400 rounded-full p-0.5 shadow-md">
                               <Check className="h-3 w-3 text-white" />
                             </div>
                           )}
@@ -693,8 +693,8 @@ export function ColorHarmonyGenerator({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 flex justify-between items-center">
-          <div className="text-sm text-gray-500 dark:text-gray-400">
+        <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-gray-900/50 flex justify-between items-center">
+          <div className="text-sm text-slate-400">
             {selectedColors.length} of {generatedColors.length} colors selected
           </div>
           <div className="flex gap-2">
@@ -704,7 +704,7 @@ export function ColorHarmonyGenerator({
             <Button
               onClick={handleAddSelectedColors}
               disabled={selectedColors.length === 0}
-              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+              className="bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
             >
               <Palette className="h-4 w-4 mr-2" />
               Add {selectedColors.length}{" "}

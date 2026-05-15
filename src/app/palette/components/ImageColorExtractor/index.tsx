@@ -171,9 +171,9 @@ export function ImageColorExtractor() {
   };
 
   return (
-    <Card className="border-2 border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm shadow-lg">
+    <Card className="glass-surface rounded-2xl shadow-lg">
       <CardHeader className="pb-3">
-        <CardTitle className="text-xl font-bold text-gray-900 dark:text-gray-100">
+        <CardTitle className="text-xl font-bold text-white">
           Extract Colors from Image
         </CardTitle>
         <CardDescription>
@@ -222,10 +222,10 @@ export function ImageColorExtractor() {
                     />
 
                     {selectedColor && (
-                      <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg space-y-3">
+                      <div className="p-4 border border-white/10 rounded-lg space-y-3">
                         <div className="flex items-center gap-2">
                           <div
-                            className="w-8 h-8 rounded-md border border-gray-300 dark:border-gray-700"
+                            className="w-8 h-8 rounded-md border border-white/10"
                             style={{ backgroundColor: selectedColor }}
                           />
                           <div className="font-mono text-sm">
@@ -247,7 +247,7 @@ export function ImageColorExtractor() {
 
                         <Button
                           onClick={handleAddToPalette}
-                          className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+                          className="w-full bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
                         >
                           <Plus className="mr-2 h-4 w-4" />
                           Add to Palette
@@ -266,7 +266,7 @@ export function ImageColorExtractor() {
                         ref={imageRef}
                         src={image || "/placeholder.svg"}
                         alt="Uploaded image"
-                        className="w-full h-auto rounded-lg border border-gray-200 dark:border-gray-700 object-contain max-h-[400px]"
+                        className="w-full h-auto rounded-lg border border-white/10 object-contain max-h-[400px]"
                       />
                       <canvas ref={canvasRef} className="hidden" />
                     </div>
@@ -290,7 +290,7 @@ export function ImageColorExtractor() {
 
                       <Button
                         onClick={extractDominantColors}
-                        className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+                        className="w-full bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
                         disabled={isExtracting}
                       >
                         {isExtracting ? (
@@ -343,7 +343,7 @@ export function ImageColorExtractor() {
               <Button
                 variant="outline"
                 onClick={() => setImage(null)}
-                className="border-gray-300 dark:border-gray-700"
+                className="border-white/10"
               >
                 <Upload className="mr-2 h-4 w-4" />
                 Upload New Image
@@ -362,7 +362,7 @@ export function ImageColorExtractor() {
 
                   <Button
                     onClick={handleAddAllToPalette}
-                    className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+                    className="bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
                   >
                     <Palette className="mr-2 h-4 w-4" />
                     Add All to Palette
@@ -375,13 +375,13 @@ export function ImageColorExtractor() {
       </CardContent>
 
       {image && (
-        <CardFooter className="border-t border-gray-200 dark:border-gray-800 pt-4 flex justify-between">
-          <div className="text-sm text-gray-500 dark:text-gray-400">
+        <CardFooter className="border-t border-white/10 pt-4 flex justify-between">
+          <div className="text-sm text-slate-400">
             {extractionMethod === "manual"
               ? "Click on the image to extract colors"
               : "Extract dominant colors automatically"}
           </div>
-          <div className="text-sm text-gray-500 dark:text-gray-400">
+          <div className="text-sm text-slate-400">
             {extractedColors.length} colors extracted
           </div>
         </CardFooter>

@@ -3,8 +3,6 @@
 import { useState, useEffect } from "react";
 import { useSidebar } from "@/contexts/sidebar-context";
 import {
-  Moon,
-  Sun,
   ChevronLeft,
   ChevronRight,
   Menu,
@@ -17,7 +15,6 @@ import {
   Pencil,
   Paintbrush,
 } from "lucide-react";
-import { useTheme } from "next-themes";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
@@ -55,8 +52,8 @@ type DividerItem = NavItemBase & {
 type NavItem = NavLinkItem | DividerItem;
 
 const mainNavItems: NavItem[] = [
-  { href: "/design", icon: PencilRuler, label: "Design", hotkey: "1" },
   { href: "/palette", icon: Palette, label: "Palette", hotkey: "5" },
+  { href: "/viewer", icon: PencilRuler, label: "Viewer", hotkey: "1" },
 ];
 
 const bottomNavItems: NavItem[] = [
@@ -73,10 +70,11 @@ interface NavLinkProps {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   label: string;
+  isCollapsed: boolean;
+  outlined?: boolean;
 }
 
 export function Navbar() {
-  const { theme, setTheme } = useTheme();
   const pathname = usePathname();
   const router = useRouter();
   const { user, signOut, isGuest } = useAuth();
@@ -87,7 +85,8 @@ export function Navbar() {
   const sidebarContext = useSidebar();
   const [localSidebarOpen, setLocalSidebarOpen] = useState(true);
   const isSidebarOpen = sidebarContext?.isSidebarOpen ?? localSidebarOpen;
-  const setIsSidebarOpen = sidebarContext?.setIsSidebarOpen ?? setLocalSidebarOpen;
+  const setIsSidebarOpen =
+    sidebarContext?.setIsSidebarOpen ?? setLocalSidebarOpen;
 
   useEffect(() => {
     setActiveTab(pathname);
@@ -95,7 +94,6 @@ export function Navbar() {
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-  // Get user initials for avatar fallback
   const getUserInitials = () => {
     if (!user || !user.name) return "U";
 
@@ -124,17 +122,20 @@ export function Navbar() {
     }
   };
 
-  const NavLink = ({ href, icon: Icon, label }: NavLinkProps) => {
+  const NavLink = ({
+    href,
+    icon: Icon,
+    label,
+    isCollapsed,
+    outlined,
+  }: NavLinkProps) => {
     if (!href) return null;
 
     const handleClick = (e: React.MouseEvent) => {
-      e.preventDefault(); // Prevent default Link navigation
-
-      // Update sequence by keeping last 3 items and adding new href
+      e.preventDefault();
       const newSequence = [...navigationSequence.slice(-3), href];
       setNavigationSequence(newSequence);
-
-      router.push(href); // Normal navigation if sequence doesn't match
+      router.push(href);
     };
 
     const isActive = activeTab === href;
@@ -142,23 +143,27 @@ export function Navbar() {
     return (
       <Link
         href={href}
-        className={cn(
-          "flex items-center rounded-lg px-3 py-4 text-sm font-medium transition-all duration-200 ease-in-out group",
-          isActive
-            ? "bg-gradient-to-r from-blue-500/90 to-violet-500/90 text-white shadow-sm"
-            : "text-muted-foreground hover:bg-muted hover:text-primary",
-          !isSidebarOpen ? "justify-center" : ""
-        )}
         onClick={handleClick}
+        className={cn(
+          "relative flex items-center w-full rounded-lg text-sm font-medium px-3 py-3 transition-colors duration-200 group",
+          outlined && "border border-white/10 bg-white/[0.03]",
+          isCollapsed ? "justify-center" : "",
+          isActive
+            ? "bg-blue-900/30 text-blue-200"
+            : "text-muted-foreground hover:bg-gray-800/50 hover:text-primary"
+        )}
       >
+        {isActive && (
+          <span className="absolute inset-y-0 left-0 w-1 bg-blue-500 rounded-r-full" />
+        )}
         <Icon
           className={cn(
-            "h-5 w-5 flex-shrink-0 transition-transform duration-200 ease-in-out",
+            "h-5 w-5 flex-shrink-0 transition-transform duration-200",
             isActive ? "scale-110" : "group-hover:scale-105",
-            !isSidebarOpen ? "mr-0" : "mr-3"
+            isCollapsed ? "mr-0" : "mr-3"
           )}
         />
-        {isSidebarOpen && <span>{label}</span>}
+        {!isCollapsed && <span>{label}</span>}
       </Link>
     );
   };
@@ -168,14 +173,14 @@ export function Navbar() {
       {/* Desktop Sidebar */}
       <aside
         className={cn(
-          "fixed h-screen transition-all duration-300 ease-in-out border-r dark:border-gray-800/50 border-gray-200/80 bg-white/95 dark:bg-gradient-to-b dark:from-gray-950/95 dark:via-gray-900/90 dark:to-gray-800/80 dark:backdrop-blur-sm hidden lg:block z-30",
-          isSidebarOpen ? "w-64" : "w-16"
+          "fixed inset-y-0 left-0 h-screen transition-[width] duration-300 ease-in-out hidden lg:block z-30 overflow-hidden bg-[hsl(var(--sidebar)/0.55)] backdrop-blur-xl backdrop-saturate-150 border-r border-white/10 shadow-glass-dark",
+          isSidebarOpen ? "w-36" : "w-12"
         )}
       >
-        <div className="h-16 flex items-center justify-between px-4 bg-white/80 dark:bg-gray-950/80 border-b border-gray-200/80 dark:border-gray-800/50">
+        <div className="h-16 flex items-center justify-between px-4 border-b border-white/5">
           {isSidebarOpen && (
             <span
-              className="text-lg font-bold cursor-pointer text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-violet-600 hover:opacity-80 transition-opacity"
+              className="text-lg font-bold cursor-pointer bg-clip-text text-transparent bg-gradient-to-br from-white to-blue-300 [-webkit-text-fill-color:transparent] hover:opacity-80 transition-opacity tracking-tight"
               onClick={() => router.push("/welcome")}
             >
               Everwood
@@ -186,7 +191,7 @@ export function Navbar() {
             size="icon"
             onClick={toggleSidebar}
             className={cn(
-              "hover:bg-muted/80 dark:hover:bg-gray-800/60",
+              "hover:bg-gray-800/60 text-gray-300",
               isSidebarOpen ? "" : "mx-auto"
             )}
           >
@@ -198,14 +203,15 @@ export function Navbar() {
             <span className="sr-only">Toggle sidebar</span>
           </Button>
         </div>
+        <div className="mx-4 my-2 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
         <div className="h-[calc(100vh-4rem)] flex flex-col">
-          <div className="flex-1 overflow-y-auto no-scrollbar px-3">
+          <div className="flex-1 overflow-hidden px-3 flex flex-col justify-center">
             <div className="flex flex-col space-y-1 py-2">
               {mainNavItems.map((item, index) =>
                 item.type === "divider" ? (
                   <Separator
                     key={index}
-                    className="my-2 bg-gray-200/80 dark:bg-gray-700/50"
+                    className="my-2 bg-white/10"
                     decorative
                   />
                 ) : (
@@ -214,18 +220,20 @@ export function Navbar() {
                     href={"href" in item ? item.href : ""}
                     icon={"icon" in item ? item.icon : Menu}
                     label={"label" in item ? item.label : ""}
+                    isCollapsed={!isSidebarOpen}
                   />
                 )
               )}
             </div>
           </div>
-          <div className="px-3 pt-2 pb-2 border-t border-gray-200/80 dark:border-gray-700/50">
-            <div className="flex flex-col space-y-1">
+          <div className="mx-4 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+          <div className="px-3 pt-2 pb-2">
+            <div className="flex flex-col space-y-2">
               {bottomNavItems.map((item, index) =>
                 item.type === "divider" ? (
                   <Separator
                     key={index}
-                    className="my-2 bg-gray-200/80 dark:bg-gray-700/50"
+                    className="my-2 bg-white/10"
                     decorative
                   />
                 ) : (
@@ -234,44 +242,32 @@ export function Navbar() {
                     href={"href" in item ? item.href : ""}
                     icon={"icon" in item ? item.icon : Menu}
                     label={"label" in item ? item.label : ""}
+                    isCollapsed={!isSidebarOpen}
+                    outlined
                   />
                 )
               )}
             </div>
           </div>
-          <div className="p-3 border-t border-gray-200/80 dark:border-gray-700/50 bg-white/80 dark:bg-gray-950/60">
-            <div className={cn("flex gap-2", !isSidebarOpen && "flex-col")}>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                className="flex-shrink-0 hover:bg-muted/80 dark:hover:bg-gray-800/60"
-              >
-                {theme === "dark" ? (
-                  <Sun className="h-5 w-5" />
-                ) : (
-                  <Moon className="h-5 w-5" />
-                )}
-                <span className="sr-only">
-                  {theme === "dark"
-                    ? "Switch to light theme"
-                    : "Switch to dark theme"}
-                </span>
-              </Button>
+          <div className="mx-4 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+          <div className="p-3">
+            <div
+              className={cn("flex gap-2", !isSidebarOpen && "flex-col")}
+            >
               {user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="flex-shrink-0 p-0 h-9 w-9 rounded-full hover:bg-muted/80 dark:hover:bg-gray-800/60"
+                      className="flex-shrink-0 p-0 h-9 w-9 rounded-full hover:bg-gray-800/60"
                     >
-                      <Avatar className="h-8 w-8">
+                      <Avatar className="h-8 w-8 ring-1 ring-white/15">
                         <AvatarImage
                           src={user.image || ""}
                           alt={user.name || user.email}
                         />
-                        <AvatarFallback className="text-xs bg-gradient-to-br from-blue-100 to-violet-100 dark:from-blue-900/50 dark:to-violet-900/50 text-primary dark:text-blue-300">
+                        <AvatarFallback className="text-xs bg-blue-900/40 text-blue-200">
                           {getUserInitials()}
                         </AvatarFallback>
                       </Avatar>
@@ -279,19 +275,19 @@ export function Navbar() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
                     align="end"
-                    className="w-56 bg-background/95 backdrop-blur-sm border-border/50"
+                    className="w-56 glass-surface rounded-xl"
                   >
                     <DropdownMenuLabel>My Account</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      className="cursor-pointer focus:bg-muted/80"
+                      className="cursor-pointer focus:bg-white/10"
                       onClick={() => router.push("/profile")}
                     >
                       <User className="mr-2 h-4 w-4" />
                       <span>Profile</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      className="cursor-pointer focus:bg-muted/80"
+                      className="cursor-pointer focus:bg-white/10"
                       onClick={handleSaveData}
                       disabled={isSaving}
                     >
@@ -314,10 +310,10 @@ export function Navbar() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="flex-shrink-0 p-0 h-9 w-9 rounded-full hover:bg-muted/80 dark:hover:bg-gray-800/60"
+                      className="flex-shrink-0 p-0 h-9 w-9 rounded-full hover:bg-gray-800/60"
                     >
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className="text-xs bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-300">
+                      <Avatar className="h-8 w-8 ring-1 ring-white/15">
+                        <AvatarFallback className="text-xs bg-blue-900/40 text-blue-200">
                           G
                         </AvatarFallback>
                       </Avatar>
@@ -325,19 +321,19 @@ export function Navbar() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
                     align="end"
-                    className="w-56 bg-background/95 backdrop-blur-sm border-border/50"
+                    className="w-56 glass-surface rounded-xl"
                   >
                     <DropdownMenuLabel>Guest User</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      className="cursor-pointer focus:bg-muted/80"
+                      className="cursor-pointer focus:bg-white/10"
                       onClick={() => router.push("/profile")}
                     >
                       <User className="mr-2 h-4 w-4" />
                       <span>Profile</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      className="cursor-pointer focus:bg-muted/80"
+                      className="cursor-pointer focus:bg-white/10"
                       onClick={handleSaveData}
                       disabled={isSaving}
                     >
@@ -346,7 +342,7 @@ export function Navbar() {
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      className="cursor-pointer text-primary focus:text-primary focus:bg-primary/10"
+                      className="cursor-pointer text-blue-300 focus:text-blue-200 focus:bg-blue-500/10"
                       onClick={() => router.push("/sign-in")}
                     >
                       <LogIn className="mr-2 h-4 w-4" />
@@ -356,10 +352,9 @@ export function Navbar() {
                 </DropdownMenu>
               ) : (
                 <Button
-                  variant="outline"
                   size="icon"
                   onClick={() => router.push("/sign-in")}
-                  className="flex-shrink-0 hover:bg-muted/80 dark:hover:bg-gray-800/60 border-border/50"
+                  className="sidebar-action-btn"
                 >
                   <LogIn className="h-5 w-5" />
                   <span className="sr-only">Sign in</span>
@@ -371,22 +366,22 @@ export function Navbar() {
       </aside>
 
       {/* Mobile Navbar */}
-      <nav className="lg:hidden fixed top-0 left-0 right-0 z-40 border-b border-gray-200/80 dark:border-gray-800/50 bg-white/90 dark:bg-gray-950/90 backdrop-blur-sm">
+      <nav className="lg:hidden fixed top-0 left-0 right-0 z-40 border-b border-white/10 bg-[hsl(var(--sidebar)/0.55)] backdrop-blur-xl backdrop-saturate-150 shadow-glass-dark">
         <div className="w-full flex h-14 items-center px-4">
           <Sheet>
             <SheetTrigger asChild>
               <Button
                 size="icon"
                 variant="ghost"
-                className="hover:bg-muted/80 dark:hover:bg-gray-800/60"
+                className="hover:bg-gray-800/60 text-gray-200"
               >
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Toggle menu</span>
               </Button>
             </SheetTrigger>
             <span
-              className="text-xl font-bold mr-auto cursor-pointer text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-violet-600 hover:opacity-80 transition-opacity ml-2"
-              onClick={() => router.push("/design")}
+              className="text-xl font-bold mr-auto cursor-pointer bg-clip-text text-transparent bg-gradient-to-br from-white to-blue-300 [-webkit-text-fill-color:transparent] tracking-tight ml-2"
+              onClick={() => router.push("/viewer")}
             >
               Everwood
             </span>
@@ -397,14 +392,14 @@ export function Navbar() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="ml-auto mr-2 p-0 h-9 w-9 rounded-full hover:bg-muted/80 dark:hover:bg-gray-800/60"
+                    className="ml-auto mr-2 p-0 h-9 w-9 rounded-full hover:bg-gray-800/60"
                   >
-                    <Avatar className="h-8 w-8">
+                    <Avatar className="h-8 w-8 ring-1 ring-white/15">
                       <AvatarImage
                         src={user.image || ""}
                         alt={user.name || user.email}
                       />
-                      <AvatarFallback className="text-xs bg-gradient-to-br from-blue-100 to-violet-100 dark:from-blue-900/50 dark:to-violet-900/50 text-primary dark:text-blue-300">
+                      <AvatarFallback className="text-xs bg-blue-900/40 text-blue-200">
                         {getUserInitials()}
                       </AvatarFallback>
                     </Avatar>
@@ -412,19 +407,19 @@ export function Navbar() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="end"
-                  className="w-56 bg-background/95 backdrop-blur-sm border-border/50"
+                  className="w-56 glass-surface rounded-xl"
                 >
                   <DropdownMenuLabel>My Account</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    className="cursor-pointer focus:bg-muted/80"
+                    className="cursor-pointer focus:bg-white/10"
                     onClick={() => router.push("/profile")}
                   >
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    className="cursor-pointer focus:bg-muted/80"
+                    className="cursor-pointer focus:bg-white/10"
                     onClick={handleSaveData}
                     disabled={isSaving}
                   >
@@ -447,10 +442,10 @@ export function Navbar() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="ml-auto mr-2 p-0 h-9 w-9 rounded-full hover:bg-muted/80 dark:hover:bg-gray-800/60"
+                    className="ml-auto mr-2 p-0 h-9 w-9 rounded-full hover:bg-gray-800/60"
                   >
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="text-xs bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-300">
+                    <Avatar className="h-8 w-8 ring-1 ring-white/15">
+                      <AvatarFallback className="text-xs bg-blue-900/40 text-blue-200">
                         G
                       </AvatarFallback>
                     </Avatar>
@@ -458,12 +453,12 @@ export function Navbar() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="end"
-                  className="w-56 bg-background/95 backdrop-blur-sm border-border/50"
+                  className="w-56 glass-surface rounded-xl"
                 >
                   <DropdownMenuLabel>Guest User</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    className="cursor-pointer focus:bg-muted/80"
+                    className="cursor-pointer focus:bg-white/10"
                     onClick={handleSaveData}
                     disabled={isSaving}
                   >
@@ -471,7 +466,7 @@ export function Navbar() {
                     <span>{isSaving ? "Saving..." : "Save My Data"}</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    className="cursor-pointer focus:bg-muted/80"
+                    className="cursor-pointer focus:bg-white/10"
                     onClick={() => router.push("/profile")}
                   >
                     <User className="mr-2 h-4 w-4" />
@@ -479,7 +474,7 @@ export function Navbar() {
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    className="cursor-pointer text-primary focus:text-primary focus:bg-primary/10"
+                    className="cursor-pointer text-blue-300 focus:text-blue-200 focus:bg-blue-500/10"
                     onClick={() => router.push("/sign-in")}
                   >
                     <LogIn className="mr-2 h-4 w-4" />
@@ -489,10 +484,9 @@ export function Navbar() {
               </DropdownMenu>
             ) : (
               <Button
-                variant="outline"
                 size="sm"
                 onClick={() => router.push("/sign-in")}
-                className="ml-auto border-border/50 hover:bg-muted/80"
+                className="ml-auto sidebar-action-btn w-auto"
               >
                 <LogIn className="mr-2 h-4 w-4" />
                 Sign in
@@ -501,10 +495,10 @@ export function Navbar() {
 
             <SheetContent
               side="left"
-              className="w-64 p-0 bg-white/95 dark:bg-gradient-to-b dark:from-gray-950/95 dark:via-gray-900/90 dark:to-gray-850/95 dark:backdrop-blur-sm border-r dark:border-gray-800/50"
+              className="w-64 p-0 bg-[hsl(var(--sidebar)/0.7)] backdrop-blur-xl backdrop-saturate-150 border-r border-white/10 shadow-glass-dark"
             >
-              <div className="h-16 flex items-center px-4 border-b border-gray-200/80 dark:border-gray-800/50 bg-white/80 dark:bg-gray-950/80">
-                <span className="text-lg font-bold cursor-pointer text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-violet-600">
+              <div className="h-16 flex items-center px-4 border-b border-white/5">
+                <span className="text-lg font-bold cursor-pointer bg-clip-text text-transparent bg-gradient-to-br from-white to-blue-300 [-webkit-text-fill-color:transparent] tracking-tight">
                   Everwood
                 </span>
               </div>
@@ -514,7 +508,7 @@ export function Navbar() {
                     item.type === "divider" ? (
                       <Separator
                         key={index}
-                        className="my-2 bg-gray-200/80 dark:bg-gray-700/50"
+                        className="my-2 bg-white/10"
                       />
                     ) : (
                       <NavLink
@@ -522,17 +516,19 @@ export function Navbar() {
                         href={"href" in item ? item.href : ""}
                         icon={"icon" in item ? item.icon : Menu}
                         label={"label" in item ? item.label : ""}
+                        isCollapsed={false}
                       />
                     )
                   )}
                 </div>
-                <div className="px-3 pt-2 pb-2 border-t border-gray-200/80 dark:border-gray-700/50">
-                  <div className="flex flex-col space-y-1">
+                <div className="mx-4 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+                <div className="px-3 pt-2 pb-2">
+                  <div className="flex flex-col space-y-2">
                     {bottomNavItems.map((item, index) =>
                       item.type === "divider" ? (
                         <Separator
                           key={index}
-                          className="my-2 bg-gray-200/80 dark:bg-gray-700/50"
+                          className="my-2 bg-white/10"
                         />
                       ) : (
                         <NavLink
@@ -540,31 +536,12 @@ export function Navbar() {
                           href={"href" in item ? item.href : ""}
                           icon={"icon" in item ? item.icon : Menu}
                           label={"label" in item ? item.label : ""}
+                          isCollapsed={false}
+                          outlined
                         />
                       )
                     )}
                   </div>
-                </div>
-                <div className="p-4 border-t border-gray-200/80 dark:border-gray-700/50 bg-white/80 dark:bg-gray-950/60">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      setTheme(theme === "dark" ? "light" : "dark");
-                    }}
-                    className="flex-shrink-0 hover:bg-muted/80 dark:hover:bg-gray-800/60"
-                  >
-                    {theme === "dark" ? (
-                      <Sun className="h-5 w-5" />
-                    ) : (
-                      <Moon className="h-5 w-5" />
-                    )}
-                    <span className="sr-only">
-                      {theme === "dark"
-                        ? "Switch to light theme"
-                        : "Switch to dark theme"}
-                    </span>
-                  </Button>
                 </div>
               </div>
             </SheetContent>

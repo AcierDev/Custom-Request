@@ -62,7 +62,7 @@ export function EmptyPaletteWarning() {
             delay: 0.1,
           }}
         >
-          <Card className="relative max-w-md w-full dark:bg-gray-800/90 border-2 border-purple-500/50 shadow-xl">
+          <Card className="relative max-w-md w-full dark:bg-gray-800/90 border-2 border-blue-500/50 shadow-xl">
             <Button
               variant="ghost"
               size="icon"
@@ -74,17 +74,17 @@ export function EmptyPaletteWarning() {
             <CardContent className="pt-6 px-4 pb-4">
               <div className="flex flex-col items-center text-center space-y-4">
                 <motion.div
-                  className="p-3 rounded-full bg-purple-100 dark:bg-purple-900/30"
+                  className="p-3 rounded-full bg-blue-500/10 dark:bg-blue-900/30"
                   initial={{ rotate: -10 }}
                   animate={{ rotate: 0 }}
                   transition={{ type: "spring", stiffness: 200 }}
                 >
-                  <Palette className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+                  <Palette className="w-8 h-8 text-blue-300" />
                 </motion.div>
-                <h2 className="text-xl font-semibold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                <h2 className="text-xl font-semibold bg-gradient-to-r from-blue-500 to-sky-500 bg-clip-text text-transparent">
                   No Color Palette Selected
                 </h2>
-                <p className="text-gray-600 dark:text-gray-300">
+                <p className="text-slate-300">
                   You need to create or select a color palette before you can
                   preview your design. Head over to the palette page to choose
                   your colors and bring your design to life!
@@ -92,7 +92,7 @@ export function EmptyPaletteWarning() {
                 <div className="flex gap-3">
                   <Button
                     onClick={handleNavigateToPalette}
-                    className="bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700"
+                    className="bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
                   >
                     Create Palette
                   </Button>

@@ -15,10 +15,11 @@ import {
 import {
   arrayMove,
   SortableContext,
-  rectSortingStrategy,
+  horizontalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { HexColorPicker } from "react-colorful";
 import { useCustomStore } from "@/store/customStore";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -42,8 +43,6 @@ import {
 } from "@/components/ui/tooltip";
 import {
   X,
-  ArrowLeft,
-  ArrowRight,
   Info,
   Palette,
   Blend,
@@ -58,6 +57,37 @@ import { AddColorButton } from "./AddColorButton";
 import { BlendingGuide } from "./BlendingGuide";
 import { ColorHarmonyGenerator } from "./ColorHarmonyGenerator";
 
+// Hex -> readable RGB / HSL strings for the color info readout.
+function describeColor(hex: string): { rgb: string; hsl: string } | null {
+  if (!/^#[0-9A-Fa-f]{6}$/.test(hex)) return null;
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const rn = r / 255;
+  const gn = g / 255;
+  const bn = b / 255;
+  const max = Math.max(rn, gn, bn);
+  const min = Math.min(rn, gn, bn);
+  const delta = max - min;
+  const l = (max + min) / 2;
+  let h = 0;
+  let s = 0;
+  if (delta !== 0) {
+    s = delta / (1 - Math.abs(2 * l - 1));
+    if (max === rn) h = ((gn - bn) / delta) % 6;
+    else if (max === gn) h = (bn - rn) / delta + 2;
+    else h = (rn - gn) / delta + 4;
+    h *= 60;
+    if (h < 0) h += 360;
+  }
+  return {
+    rgb: `rgb(${r}, ${g}, ${b})`,
+    hsl: `hsl(${Math.round(h)}, ${Math.round(s * 100)}%, ${Math.round(
+      l * 100
+    )}%)`,
+  };
+}
+
 export function PaletteManager() {
   const {
     customPalette,
@@ -66,18 +96,17 @@ export function PaletteManager() {
     removeCustomColor,
     duplicateCustomColor,
     toggleColorSelection,
+    clearSelectedColors,
     addBlendedColors,
-    moveColorLeft,
-    moveColorRight,
     updateColorName,
     updateColorHex,
-    updateColorExtraPercent,
     reorderPalette,
     commitPaletteToHistory,
     editingPaletteId,
     resetPaletteEditor,
   } = useCustomStore();
 
+  const [mixMode, setMixMode] = useState(false);
   const [blendCount, setBlendCount] = useState(3);
   const [editingColor, setEditingColor] = useState<number | null>(null);
   const [editColorHex, setEditColorHex] = useState("#000000");
@@ -152,14 +181,8 @@ export function PaletteManager() {
 
   // Show blending guide when there are at least 2 colors but none are selected
   useEffect(() => {
-    if (
-      customPalette.length >= 2 &&
-      selectedColors.length === 0 &&
-      !hasSeenBlendingGuide
-    ) {
+    if (customPalette.length >= 2 && !hasSeenBlendingGuide) {
       setShowBlendingGuide(true);
-    } else if (selectedColors.length > 0) {
-      setShowBlendingGuide(false);
     }
 
     // Only hide selection hint after user has selected TWO colors
@@ -248,11 +271,6 @@ export function PaletteManager() {
     }
   };
 
-  const selectedColorIndex =
-    selectedColors.length === 1
-      ? customPalette.findIndex((color) => color.id === selectedColors[0])
-      : -1;
-
   const handleAddHarmonyColors = (colors: string[]) => {
     // Add the harmony colors to the palette
     const newColors = colors.map((hex) => ({
@@ -264,6 +282,11 @@ export function PaletteManager() {
       customPalette: [...customPalette, ...newColors],
     });
     toast.success(`Added ${colors.length} harmony colors to your palette!`);
+  };
+
+  const toggleMixMode = () => {
+    if (mixMode) clearSelectedColors();
+    setMixMode((prev) => !prev);
   };
 
   const handleClearPalette = () => {
@@ -301,81 +324,20 @@ export function PaletteManager() {
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            <h3 className="text-lg font-semibold text-white">
               {editingPaletteId ? "Edit Palette" : "Your Palette"}
             </h3>
-            <span className="text-sm text-gray-500 dark:text-gray-400">
+            <span className="text-sm text-slate-400">
               ({customPalette.length} colors)
             </span>
             {editingPaletteId && (
-              <span className="ml-2 text-xs px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full">
+              <span className="ml-2 text-xs px-2 py-1 bg-blue-500/10 dark:bg-blue-900/30 text-blue-300 rounded-full">
                 Editing
               </span>
             )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {/* Primary Actions Group */}
-            {selectedColors.length > 0 && (
-              <div className="flex items-center rounded-md border border-gray-200 dark:border-gray-800 p-0.5 bg-white dark:bg-gray-900 shadow-sm">
-                <TooltipProvider delayDuration={300}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => moveColorLeft(selectedColorIndex)}
-                        disabled={
-                          selectedColors.length !== 1 || selectedColorIndex <= 0
-                        }
-                        className="h-8 w-8 p-0 rounded-none rounded-l-sm"
-                      >
-                        <ArrowLeft className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom">
-                      {selectedColors.length === 0
-                        ? "Select a color to move"
-                        : selectedColors.length > 1
-                        ? "Select only one color to move"
-                        : selectedColorIndex <= 0
-                        ? "Color is at the start"
-                        : "Move color left"}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-
-                <TooltipProvider delayDuration={300}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => moveColorRight(selectedColorIndex)}
-                        disabled={
-                          selectedColors.length !== 1 ||
-                          selectedColorIndex === customPalette.length - 1 ||
-                          selectedColorIndex === -1
-                        }
-                        className="h-8 w-8 p-0 rounded-none rounded-r-sm border-l border-gray-200 dark:border-gray-800"
-                      >
-                        <ArrowRight className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom">
-                      {selectedColors.length === 0
-                        ? "Select a color to move"
-                        : selectedColors.length > 1
-                        ? "Select only one color to move"
-                        : selectedColorIndex === customPalette.length - 1
-                        ? "Color is at the end"
-                        : "Move color right"}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-            )}
-
             {/* Main Actions Group */}
             <div className="flex items-center gap-2">
               <TooltipProvider delayDuration={300}>
@@ -387,10 +349,10 @@ export function PaletteManager() {
                       onClick={() =>
                         setShowHarmonyGenerator(!showHarmonyGenerator)
                       }
-                      className="h-8 px-3 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800/50"
+                      className="h-8 px-3 dark:bg-blue-900/20 border-blue-500/30/50"
                     >
-                      <Palette className="h-4 w-4 mr-1 text-purple-600 dark:text-purple-400" />
-                      <span className="text-xs font-medium text-purple-700 dark:text-purple-300">
+                      <Palette className="h-4 w-4 mr-1 text-blue-300" />
+                      <span className="text-xs font-medium text-blue-300">
                         Harmony
                       </span>
                     </Button>
@@ -451,14 +413,14 @@ export function PaletteManager() {
                           onClick={resetAllTips}
                           className={`h-7 w-7 rounded-full ${
                             showBlendingGuide
-                              ? "bg-purple-100 dark:bg-purple-900/30"
-                              : "bg-gray-100 dark:bg-gray-800"
+                              ? "bg-blue-500/10 dark:bg-blue-900/30"
+                              : "bg-gray-800/60"
                           }`}
                         >
                           {showBlendingGuide ? (
-                            <X className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                            <X className="h-3.5 w-3.5 text-blue-300" />
                           ) : (
-                            <Info className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                            <Info className="h-3.5 w-3.5 text-blue-300" />
                           )}
                         </Button>
                       )}
@@ -482,7 +444,8 @@ export function PaletteManager() {
 
         {/* Selection Hint */}
         <AnimatePresence>
-          {showSelectionHint &&
+          {mixMode &&
+            showSelectionHint &&
             customPalette.length >= 2 &&
             selectedColors.length === 0 && (
               <motion.div
@@ -491,7 +454,7 @@ export function PaletteManager() {
                 exit={{ opacity: 0, y: -10 }}
                 className="mb-2 text-center pointer-events-none"
               >
-                <div className="inline-block bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-sm px-3 py-1.5 rounded-full">
+                <div className="inline-block bg-blue-500/10 dark:bg-blue-900/30 text-blue-300 text-sm px-3 py-1.5 rounded-full">
                   <motion.div
                     animate={{ scale: [1, 1.05, 1] }}
                     transition={{
@@ -517,44 +480,89 @@ export function PaletteManager() {
         >
           <SortableContext
             items={customPalette.map((c) => c.id)}
-            strategy={rectSortingStrategy}
+            strategy={horizontalListSortingStrategy}
           >
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 list-none p-0 m-0">
-              <AnimatePresence>
-                {customPalette.map((color, index) => (
-                  <SortableColorSwatch
-                    key={color.id}
-                    id={color.id}
-                    color={color.hex}
-                    name={color.name}
-                    index={index}
-                    extraPercent={color.extraPercent ?? 0}
-                    onExtraPercentChange={(v) =>
-                      updateColorExtraPercent(index, v)
-                    }
-                    isSelected={selectedColors.includes(color.id)}
-                    onSelect={() => toggleColorSelection(color.id)}
-                    onRemove={() => removeCustomColor(index)}
-                    onEdit={() => handleEditColor(index)}
-                    onDuplicate={() => handleDuplicateColor(index)}
-                    showBlendHint={selectedColors.length === 1}
-                  />
-                ))}
-              </AnimatePresence>
+            <div className="flex w-full items-stretch gap-2 list-none p-0 m-0">
+              {customPalette.length > 0 && (
+                <div
+                  className="flex min-w-0 basis-0 gap-1"
+                  style={{ flexGrow: customPalette.length }}
+                >
+                  <AnimatePresence>
+                    {customPalette.map((color, index) => (
+                      <SortableColorSwatch
+                        key={color.id}
+                        id={color.id}
+                        color={color.hex}
+                        name={color.name}
+                        index={index}
+                        isSelected={
+                          mixMode && selectedColors.includes(color.id)
+                        }
+                        selectionOrder={
+                          mixMode && selectedColors.indexOf(color.id) >= 0
+                            ? selectedColors.indexOf(color.id) + 1
+                            : undefined
+                        }
+                        onSelect={() =>
+                          mixMode
+                            ? toggleColorSelection(color.id)
+                            : handleEditColor(index)
+                        }
+                        onRemove={() => removeCustomColor(index)}
+                        onEdit={() => handleEditColor(index)}
+                        onDuplicate={() => handleDuplicateColor(index)}
+                        showBlendHint={
+                          mixMode && selectedColors.length === 1
+                        }
+                      />
+                    ))}
+                  </AnimatePresence>
+                </div>
+              )}
 
-              <div className="h-full min-h-[6rem]">
-                <AddColorButton
-                  onColorAdd={handleAddColor}
-                  isEmpty={customPalette.length === 0}
-                />
-              </div>
+              <AddColorButton
+                onColorAdd={handleAddColor}
+                isEmpty={customPalette.length === 0}
+              />
+
+              {/* Mix toggle - color selection for blending is only
+                  enabled while mix mode is active */}
+              {customPalette.length >= 2 && (
+                <button
+                  type="button"
+                  onClick={toggleMixMode}
+                  className={cn(
+                    "h-64 sm:h-80 w-16 sm:w-20 flex-shrink-0 rounded-lg",
+                    "flex flex-col items-center justify-center gap-2",
+                    "cursor-pointer transition-colors duration-300 border-2",
+                    mixMode
+                      ? "bg-blue-600 hover:bg-blue-500 border-blue-400/60 text-white"
+                      : "bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/30 hover:border-blue-400/70 text-blue-300"
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full ring-1 transition-colors duration-300",
+                      mixMode
+                        ? "bg-white/15 ring-white/40"
+                        : "bg-white/5 ring-white/15"
+                    )}
+                  >
+                    <Blend className="h-5 w-5 sm:h-6 sm:w-6" />
+                  </div>
+                  <span className="text-[10px] sm:text-xs font-medium tracking-wide">
+                    {mixMode ? "Cancel Mix" : "Mix"}
+                  </span>
+                </button>
+              )}
             </div>
           </SortableContext>
         </DndContext>
       </div>
 
       {/* Blend Controls - Only show when 2 colors are selected */}
-      {selectedColors.length === 2 && (
+      {mixMode && selectedColors.length === 2 && (
         <motion.div
           initial={{ opacity: 0, height: 0, y: -10 }}
           animate={{ opacity: 1, height: "auto", y: 0 }}
@@ -565,7 +573,7 @@ export function PaletteManager() {
             stiffness: 300,
             damping: 25,
           }}
-          className="p-4 border border-purple-200 dark:border-purple-900/50 rounded-lg bg-purple-50 dark:bg-purple-900/20 backdrop-blur-sm shadow-md"
+          className="p-4 border border-blue-500/30 dark:border-blue-900/50 rounded-lg bg-blue-500/5 dark:bg-blue-900/20 backdrop-blur-sm shadow-md"
         >
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <motion.div
@@ -574,15 +582,15 @@ export function PaletteManager() {
               animate={{ scale: [1, 1.05, 1] }}
               transition={{ duration: 0.5, delay: 0.3 }}
             >
-              <Blend className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-              <span className="font-medium text-purple-700 dark:text-purple-300">
+              <Blend className="h-5 w-5 text-blue-300" />
+              <span className="font-medium text-blue-300">
                 Blend Colors
               </span>
             </motion.div>
 
             <div className="flex-1 flex items-center gap-4">
               <div className="w-full max-w-xs flex items-center gap-4">
-                <span className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                <span className="text-sm text-slate-400 whitespace-nowrap">
                   Steps:
                 </span>
                 <Slider
@@ -593,7 +601,7 @@ export function PaletteManager() {
                   onValueChange={(value) => setBlendCount(value[0])}
                   className="flex-1"
                 />
-                <span className="text-sm font-medium text-gray-900 dark:text-gray-100 w-6 text-center">
+                <span className="text-sm font-medium text-white w-6 text-center">
                   {blendCount}
                 </span>
               </div>
@@ -606,8 +614,9 @@ export function PaletteManager() {
                   onClick={() => {
                     setHasSeenBlendingGuide(true);
                     addBlendedColors(blendCount);
+                    setMixMode(false);
                   }}
-                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white whitespace-nowrap shadow-md hover:shadow-lg transition-all"
+                  className="bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white whitespace-nowrap shadow-md hover:shadow-lg transition-all"
                 >
                   <Blend className="mr-2 h-4 w-4" />
                   Create Blend
@@ -625,9 +634,9 @@ export function PaletteManager() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="bg-white dark:bg-gray-900 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl border-2 border-gray-200 dark:border-gray-700"
+            className="bg-gray-900 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl border-2 border-white/10"
           >
-            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+            <h3 className="text-xl font-bold text-white mb-4">
               Edit Color
             </h3>
 
@@ -660,7 +669,7 @@ export function PaletteManager() {
                     className="pl-8"
                   />
                   <div
-                    className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 rounded-full border border-gray-200 dark:border-gray-700"
+                    className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 rounded-full border border-white/10"
                     style={{ backgroundColor: editColorHex }}
                   />
                 </div>
@@ -676,13 +685,30 @@ export function PaletteManager() {
                 />
               </div>
 
+              {(() => {
+                const info = describeColor(editColorHex);
+                if (!info) return null;
+                return (
+                  <div className="rounded-md bg-white/5 px-3 py-2 text-xs font-mono text-slate-300 space-y-1">
+                    <div className="flex justify-between gap-4">
+                      <span className="text-slate-500">RGB</span>
+                      <span>{info.rgb}</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span className="text-slate-500">HSL</span>
+                      <span>{info.hsl}</span>
+                    </div>
+                  </div>
+                );
+              })()}
+
               <div className="flex justify-end gap-2 mt-6">
                 <Button variant="outline" onClick={() => setEditingColor(null)}>
                   Cancel
                 </Button>
                 <Button
                   onClick={handleSaveEdit}
-                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+                  className="bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
                 >
                   Save Changes
                 </Button>

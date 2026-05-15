@@ -358,7 +358,7 @@ export default function DrawPatternPage() {
     }
 
     // Pattern is already in the store
-    router.push("/design");
+    router.push("/viewer");
   };
 
   // Handle selecting a color from the palette
@@ -547,7 +547,7 @@ export default function DrawPatternPage() {
       <>
         {mirrorHorizontal && (
           <div
-            className="absolute pointer-events-none border-l-2 border-dashed border-purple-500 dark:border-purple-400 h-full z-10"
+            className="absolute pointer-events-none border-l-2 border-dashed border-blue-500 dark:border-blue-400 h-full z-10"
             style={{
               left: `calc(50% + ${gridSize.width % 2 === 0 ? "0.5px" : "0px"})`,
               top: "0",
@@ -557,7 +557,7 @@ export default function DrawPatternPage() {
         )}
         {mirrorVertical && (
           <div
-            className="absolute pointer-events-none border-t-2 border-dashed border-purple-500 dark:border-purple-400 w-full z-10"
+            className="absolute pointer-events-none border-t-2 border-dashed border-blue-500 dark:border-blue-400 w-full z-10"
             style={{
               top: `calc(50% + ${gridSize.height % 2 === 0 ? "0.5px" : "0px"})`,
               left: "0",
@@ -642,7 +642,7 @@ export default function DrawPatternPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-2xl font-bold text-white">
             Draw Pattern
           </h1>
         </div>
@@ -670,7 +670,7 @@ export default function DrawPatternPage() {
               variant="outline"
               size="icon"
               onClick={() => setIsPaletteVisible(true)}
-              className="h-12 w-12 bg-white dark:bg-gray-800 shadow-lg border-2 hover:shadow-xl transition-all"
+              className="h-12 w-12 bg-gray-900 shadow-lg border-2 hover:shadow-xl transition-all"
             >
               <ChevronRight className="w-5 h-5" />
             </Button>
@@ -680,7 +680,7 @@ export default function DrawPatternPage() {
         {/* Left column - Palette selector */}
         {isPaletteVisible && (
           <div className="lg:col-span-2">
-            <Card className="bg-white dark:bg-gray-800 shadow-sm">
+            <Card className="bg-gray-900 shadow-sm">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div>
@@ -753,7 +753,7 @@ export default function DrawPatternPage() {
                   >
                     {savedPalettes.length === 0 ? (
                       <div className="text-center py-8">
-                        <p className="text-gray-500 dark:text-gray-400 mb-4">
+                        <p className="text-slate-400 mb-4">
                           You don't have any saved palettes yet.
                         </p>
                         <Link href="/palette">
@@ -803,7 +803,7 @@ export default function DrawPatternPage() {
                         : []
                       ).length === 0 ? (
                         <div className="text-center py-8 w-full">
-                          <p className="text-gray-500 dark:text-gray-400 mb-4">
+                          <p className="text-slate-400 mb-4">
                             No colors in your current palette.
                           </p>
                           <Link href="/palette">
@@ -832,7 +832,7 @@ export default function DrawPatternPage() {
                               onPressedChange={() =>
                                 handleSelectColor(color.hex, color.name)
                               }
-                              className="h-14 w-14 p-0 border-2 data-[state=on]:border-purple-500"
+                              className="h-14 w-14 p-0 border-2 data-[state=on]:border-blue-500"
                               style={{ backgroundColor: color.hex }}
                               aria-label={color.name || `Color ${index + 1}`}
                             >
@@ -920,7 +920,7 @@ export default function DrawPatternPage() {
         >
           <div className="grid grid-cols-1 gap-6">
             {/* Drawing Grid */}
-            <Card className="bg-white dark:bg-gray-800 shadow-sm">
+            <Card className="bg-gray-900 shadow-sm">
               <CardHeader className="pb-3">
                 <div className="flex justify-between items-start mb-1">
                   <CardTitle className="text-xl">Pattern Editor</CardTitle>
@@ -963,7 +963,7 @@ export default function DrawPatternPage() {
                     {gridSize.height}
                   </span>
                   <div className="flex items-center gap-2 mt-2">
-                    <span className="text-xs text-gray-500 dark:text-gray-400 mr-1">
+                    <span className="text-xs text-slate-400 mr-1">
                       Mirror:
                     </span>
                     <div className="flex items-center space-x-1">
@@ -977,7 +977,7 @@ export default function DrawPatternPage() {
                               className={cn(
                                 "h-8 px-2",
                                 mirrorHorizontal &&
-                                  "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
+                                  "bg-blue-500/15 text-blue-200"
                               )}
                             >
                               <FlipHorizontal className="h-4 w-4" />
@@ -999,7 +999,7 @@ export default function DrawPatternPage() {
                               className={cn(
                                 "h-8 px-2",
                                 mirrorVertical &&
-                                  "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
+                                  "bg-blue-500/15 text-blue-200"
                               )}
                             >
                               <FlipVertical className="h-4 w-4" />
@@ -1020,7 +1020,7 @@ export default function DrawPatternPage() {
                   style={{ maxHeight: "calc(100vh - 300px)" }}
                 >
                   <div
-                    className="mx-auto bg-gray-50 dark:bg-gray-900 rounded-md p-2 relative"
+                    className="mx-auto bg-gray-900/50 rounded-md p-2 relative"
                     style={{
                       minWidth: gridSize.width > 20 ? "800px" : "auto",
                       width: "100%",
@@ -1047,9 +1047,9 @@ export default function DrawPatternPage() {
                             <div
                               key={`${x}-${y}`}
                               className={cn(
-                                "border border-gray-200 dark:border-gray-700 rounded-sm cursor-pointer transition-all hover:opacity-90",
+                                "border border-white/10 rounded-sm cursor-pointer transition-all hover:opacity-90",
                                 activeTool === "paint"
-                                  ? "hover:border-purple-500 dark:hover:border-purple-400"
+                                  ? "hover:border-blue-500 dark:hover:border-blue-400"
                                   : "hover:border-red-500 dark:hover:border-red-400"
                               )}
                               style={{

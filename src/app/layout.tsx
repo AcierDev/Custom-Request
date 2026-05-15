@@ -22,7 +22,6 @@ const geistMono = localFont({
   weight: "100 900",
 });
 
-// Create a client component for the content
 function LayoutContent({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider>
@@ -32,48 +31,58 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
 }
 
 function LayoutContentInner({ children }: { children: React.ReactNode }) {
-  const { isSidebarOpen } = useSidebar();
+  const sidebar = useSidebar();
+  const isSidebarOpen = sidebar?.isSidebarOpen ?? true;
   return (
-    <div className="flex h-screen bg-gray-300 dark:bg-gray-700">
+    <div className="flex h-screen overflow-hidden bg-gray-900 text-gray-100">
       <SpeedInsights />
       <MobileWarning />
       <Navbar />
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 overflow-auto no-scrollbar border-t border-sky-400/40">
         <div
           className={`mt-14 lg:mt-0 transition-[margin] duration-300 flex flex-col h-full ${
-            isSidebarOpen ? "lg:ml-64" : "lg:ml-16"
+            isSidebarOpen ? "lg:ml-36" : "lg:ml-12"
           }`}
         >
-          <main className="flex-1 w-full overflow-y-auto pb-16">
-            {children}
-          </main>
+          <main className="flex-1 w-full pb-16">{children}</main>
         </div>
       </div>
-      {/* <Footer /> */}
     </div>
   );
 }
 
-// Keep RootLayout as a server component
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html
+      lang="en"
+      className="dark"
+      style={{ colorScheme: "dark" }}
+      suppressHydrationWarning
+    >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{document.documentElement.classList.add('dark');document.documentElement.style.colorScheme='dark';}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-900 text-gray-100`}
       >
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
-          enableSystem
+          forcedTheme="dark"
+          enableSystem={false}
           disableTransitionOnChange
         >
           <AuthProvider>
             <AuthContextProvider>
-              <Toaster richColors position="top-right" />
+              <Toaster richColors theme="dark" position="top-right" />
               <LayoutContent>{children}</LayoutContent>
             </AuthContextProvider>
           </AuthProvider>

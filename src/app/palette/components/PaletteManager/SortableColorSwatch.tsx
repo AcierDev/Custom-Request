@@ -28,9 +28,9 @@ export function SortableColorSwatch({ id, ...props }: SortableColorSwatchProps) 
     <div 
       ref={setNodeRef} 
       style={style} 
-      {...attributes} 
+      {...attributes}
       {...listeners}
-      className="touch-none"
+      className="flex-1 min-w-0 touch-none"
     >
       <ColorSwatch 
         id={id} 

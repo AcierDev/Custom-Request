@@ -437,10 +437,10 @@ export default function PaintSelectorPage() {
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
         className={cn(
-          "relative group cursor-pointer rounded-lg overflow-hidden border-2 transition-all bg-white dark:bg-gray-800",
+          "relative group cursor-pointer rounded-lg overflow-hidden border-2 transition-all bg-gray-900",
           isSelected
             ? "border-blue-500 shadow-lg"
-            : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+            : "border-white/10 hover:border-gray-300 dark:hover:border-gray-600"
         )}
         onClick={() => openComparisonDialog(originalColor, color)}
       >
@@ -500,8 +500,8 @@ export default function PaintSelectorPage() {
           </button>
 
           {/* Expand icon */}
-          <div className="absolute bottom-2 right-2 w-6 h-6 bg-white/90 dark:bg-gray-800/90 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-            <Maximize2 className="w-3 h-3 text-gray-700 dark:text-gray-300" />
+          <div className="absolute bottom-2 right-2 w-6 h-6 bg-gray-900/70 backdrop-blur-md rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <Maximize2 className="w-3 h-3 text-slate-300" />
           </div>
 
           {/* Action buttons */}
@@ -510,7 +510,7 @@ export default function PaintSelectorPage() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
-                    className="flex-1 h-6 bg-white/90 dark:bg-gray-800/90 rounded text-xs flex items-center justify-center hover:bg-white dark:hover:bg-gray-700 transition-colors"
+                    className="flex-1 h-6 bg-gray-900/70 backdrop-blur-md rounded text-xs flex items-center justify-center hover:bg-white dark:hover:bg-gray-700 transition-colors"
                     onClick={(e) => {
                       e.stopPropagation();
                       copyColorToClipboard(color.hex);
@@ -529,7 +529,7 @@ export default function PaintSelectorPage() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
-                    className="flex-1 h-6 bg-white/90 dark:bg-gray-800/90 rounded text-xs flex items-center justify-center hover:bg-white dark:hover:bg-gray-700 transition-colors"
+                    className="flex-1 h-6 bg-gray-900/70 backdrop-blur-md rounded text-xs flex items-center justify-center hover:bg-white dark:hover:bg-gray-700 transition-colors"
                     onClick={(e) => {
                       e.stopPropagation();
                       toggleColorSelection(color.hex);
@@ -588,15 +588,15 @@ export default function PaintSelectorPage() {
         </div>
 
         {/* Color info */}
-        <div className="p-2 bg-white dark:bg-gray-800 border-t">
-          <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+        <div className="p-2 bg-gray-900 border-t">
+          <div className="text-xs text-slate-400 mb-1">
             Found Color
           </div>
-          <p className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate">
+          <p className="text-xs font-medium text-white truncate">
             {color.name}
           </p>
           <div className="flex items-center justify-between mt-1">
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+            <p className="text-xs text-slate-400">
               {color.hex.toUpperCase()}
             </p>
             <Badge variant="secondary" className="text-xs">
@@ -672,7 +672,7 @@ export default function PaintSelectorPage() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
-                    className="flex-1 h-6 bg-white/90 dark:bg-gray-800/90 rounded text-xs flex items-center justify-center hover:bg-white dark:hover:bg-gray-700 transition-colors"
+                    className="flex-1 h-6 bg-gray-900/70 backdrop-blur-md rounded text-xs flex items-center justify-center hover:bg-white dark:hover:bg-gray-700 transition-colors"
                     onClick={(e) => {
                       e.stopPropagation();
                       copyColorToClipboard(color.hex);
@@ -731,12 +731,12 @@ export default function PaintSelectorPage() {
         </div>
 
         {/* Color info */}
-        <div className="p-2 bg-white dark:bg-gray-800 border-t">
-          <p className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate">
+        <div className="p-2 bg-gray-900 border-t">
+          <p className="text-xs font-medium text-white truncate">
             {color.name}
           </p>
           <div className="flex items-center justify-between mt-1">
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+            <p className="text-xs text-slate-400">
               {color.hex.toUpperCase()}
             </p>
             <Badge variant="secondary" className="text-xs">
@@ -753,10 +753,10 @@ export default function PaintSelectorPage() {
       <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+          <h2 className="text-xl font-semibold text-white">
             Loading Paint Colors...
           </h2>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">
+          <p className="text-slate-400 mt-2">
             Loading thousands of colors from major paint brands
           </p>
         </div>
@@ -779,10 +779,8 @@ export default function PaintSelectorPage() {
               Back
             </Button>
             <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Paint Color Selector
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400 mt-1">
+              <h1 className="heading-hero">Paint Color Selector</h1>
+              <p className="text-slate-400 mt-1">
                 Browse and select from thousands of paint colors
               </p>
             </div>
@@ -792,7 +790,7 @@ export default function PaintSelectorPage() {
             {selectedColors.size > 0 && (
               <Button
                 onClick={addSelectedToPalette}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                className="bg-gradient-to-r bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Add {selectedColors.size} to Palette
@@ -824,7 +822,7 @@ export default function PaintSelectorPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Search & Filter</CardTitle>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                <p className="text-sm text-slate-400 mt-1">
                   Search by color name
                 </p>
               </CardHeader>
@@ -901,7 +899,7 @@ export default function PaintSelectorPage() {
                 </div>
 
                 <div className="flex items-center justify-between mt-4">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <p className="text-sm text-slate-400">
                     Showing {currentColors.length} of{" "}
                     {filteredAndSortedColors.length} colors
                     {searchTerm && (
@@ -958,7 +956,7 @@ export default function PaintSelectorPage() {
                 >
                   Previous
                 </Button>
-                <span className="text-sm text-gray-600 dark:text-gray-400">
+                <span className="text-sm text-slate-400">
                   Page {currentPage} of {totalPages}
                 </span>
                 <Button
@@ -978,16 +976,16 @@ export default function PaintSelectorPage() {
             {favoriteColors.length === 0 ? (
               <div className="text-center py-12">
                 <Heart className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                <h3 className="text-lg font-semibold text-white mb-2">
                   No Favorites Yet
                 </h3>
-                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                <p className="text-slate-400 mb-4">
                   Start browsing colors and click the heart icon to save your
                   favorites
                 </p>
                 <Button
                   onClick={() => setActiveTab("browse")}
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                  className="bg-gradient-to-r bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
                 >
                   Browse Colors
                 </Button>
@@ -1010,7 +1008,7 @@ export default function PaintSelectorPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Find Similar Colors</CardTitle>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                <p className="text-sm text-slate-400 mt-1">
                   Enter a hex color code to find similar paint colors
                 </p>
               </CardHeader>
@@ -1037,7 +1035,7 @@ export default function PaintSelectorPage() {
                     />
                     {similarToHex && isValidHex(similarToHex) && (
                       <div
-                        className="absolute right-2 top-2 w-6 h-6 rounded border border-gray-300 dark:border-gray-600"
+                        className="absolute right-2 top-2 w-6 h-6 rounded border border-white/10"
                         style={{
                           backgroundColor: similarToHex.startsWith("#")
                             ? similarToHex
@@ -1061,7 +1059,7 @@ export default function PaintSelectorPage() {
                       }
                     }}
                     disabled={!isValidHex(similarToHex)}
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                    className="bg-gradient-to-r bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
                   >
                     <Search className="w-4 h-4 mr-2" />
                     Find Similar
@@ -1082,7 +1080,7 @@ export default function PaintSelectorPage() {
 
                 {/* Quick hex examples */}
                 <div className="mt-4">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                  <p className="text-sm text-slate-400 mb-2">
                     Try these examples:
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -1105,7 +1103,7 @@ export default function PaintSelectorPage() {
                         className="flex items-center gap-2"
                       >
                         <div
-                          className="w-4 h-4 rounded border border-gray-300 dark:border-gray-600"
+                          className="w-4 h-4 rounded border border-white/10"
                           style={{ backgroundColor: example.hex }}
                         />
                         <span className="font-mono text-xs">{example.hex}</span>
@@ -1116,8 +1114,8 @@ export default function PaintSelectorPage() {
 
                 {/* Find similar to palette colors */}
                 {customPalette.length > 0 && (
-                  <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                  <div className="mt-6 pt-4 border-t border-white/10">
+                    <p className="text-sm text-slate-400 mb-2">
                       Find similar colors to your palette:
                     </p>
                     <div className="flex flex-wrap gap-2">
@@ -1133,7 +1131,7 @@ export default function PaintSelectorPage() {
                           className="flex items-center gap-2"
                         >
                           <div
-                            className="w-4 h-4 rounded border border-gray-300 dark:border-gray-600"
+                            className="w-4 h-4 rounded border border-white/10"
                             style={{ backgroundColor: paletteColor.hex }}
                           />
                           <span className="font-mono text-xs">
@@ -1159,10 +1157,10 @@ export default function PaintSelectorPage() {
                   return similarColors.length === 0 ? (
                     <div className="text-center py-12">
                       <Sparkles className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                      <h3 className="text-lg font-semibold text-white mb-2">
                         No Similar Colors Found
                       </h3>
-                      <p className="text-gray-600 dark:text-gray-400 mb-4">
+                      <p className="text-slate-400 mb-4">
                         Try adjusting your search or try a different hex color
                       </p>
                     </div>
@@ -1171,14 +1169,14 @@ export default function PaintSelectorPage() {
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3">
                           <div
-                            className="w-8 h-8 rounded border border-gray-300 dark:border-gray-600"
+                            className="w-8 h-8 rounded border border-white/10"
                             style={{ backgroundColor: similarToHex }}
                           />
                           <div>
-                            <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                            <h3 className="font-semibold text-white">
                               Colors similar to {similarToHex}
                             </h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                            <p className="text-sm text-slate-400">
                               Found {similarColors.length} similar colors
                             </p>
                           </div>
@@ -1242,18 +1240,18 @@ export default function PaintSelectorPage() {
                 <div className="grid grid-cols-2 gap-4 mb-6">
                   {/* Original Color */}
                   <div className="space-y-3">
-                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    <div className="text-sm font-medium text-white">
                       Searched Color
                     </div>
-                    <div className="relative rounded-lg overflow-hidden border-2 border-gray-200 dark:border-gray-700">
+                    <div className="relative rounded-lg overflow-hidden border-2 border-white/10">
                       <div
                         className="h-32 w-full"
                         style={{
                           backgroundColor: comparisonData.originalColor,
                         }}
                       />
-                      <div className="p-3 bg-white dark:bg-gray-800">
-                        <p className="font-mono text-sm text-gray-900 dark:text-gray-100">
+                      <div className="p-3 bg-gray-900">
+                        <p className="font-mono text-sm text-white">
                           {comparisonData.originalColor.toUpperCase()}
                         </p>
                       </div>
@@ -1262,22 +1260,22 @@ export default function PaintSelectorPage() {
 
                   {/* Similar Color */}
                   <div className="space-y-3">
-                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    <div className="text-sm font-medium text-white">
                       Similar Paint Color
                     </div>
-                    <div className="relative rounded-lg overflow-hidden border-2 border-gray-200 dark:border-gray-700">
+                    <div className="relative rounded-lg overflow-hidden border-2 border-white/10">
                       <div
                         className="h-32 w-full"
                         style={{
                           backgroundColor: comparisonData.similarColor.hex,
                         }}
                       />
-                      <div className="p-3 bg-white dark:bg-gray-800">
-                        <p className="font-medium text-sm text-gray-900 dark:text-gray-100 mb-1">
+                      <div className="p-3 bg-gray-900">
+                        <p className="font-medium text-sm text-white mb-1">
                           {comparisonData.similarColor.name}
                         </p>
                         <div className="flex items-center justify-between">
-                          <p className="font-mono text-sm text-gray-600 dark:text-gray-400">
+                          <p className="font-mono text-sm text-slate-400">
                             {comparisonData.similarColor.hex.toUpperCase()}
                           </p>
                           <Badge variant="secondary" className="text-xs">
@@ -1291,10 +1289,10 @@ export default function PaintSelectorPage() {
 
                 {/* Side-by-side comparison */}
                 <div className="mb-6">
-                  <div className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
+                  <div className="text-sm font-medium text-white mb-3">
                     Side-by-Side Comparison
                   </div>
-                  <div className="relative rounded-lg overflow-hidden border-2 border-gray-200 dark:border-gray-700">
+                  <div className="relative rounded-lg overflow-hidden border-2 border-white/10">
                     <div className="h-24 flex">
                       <div
                         className="flex-1"
@@ -1309,11 +1307,11 @@ export default function PaintSelectorPage() {
                         }}
                       />
                     </div>
-                    <div className="p-3 bg-white dark:bg-gray-800 flex justify-between text-xs">
-                      <span className="text-gray-600 dark:text-gray-400">
+                    <div className="p-3 bg-gray-900 flex justify-between text-xs">
+                      <span className="text-slate-400">
                         Searched: {comparisonData.originalColor.toUpperCase()}
                       </span>
-                      <span className="text-gray-600 dark:text-gray-400">
+                      <span className="text-slate-400">
                         Found: {comparisonData.similarColor.hex.toUpperCase()}
                       </span>
                     </div>
@@ -1322,13 +1320,13 @@ export default function PaintSelectorPage() {
 
                 {/* Color Information */}
                 <div className="space-y-4">
-                  <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  <div className="text-sm font-medium text-white">
                     Color Details
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <div className="flex justify-between">
-                        <span className="text-xs text-gray-600 dark:text-gray-400">
+                        <span className="text-xs text-slate-400">
                           Color Distance:
                         </span>
                         <span className="text-xs font-mono">
@@ -1336,7 +1334,7 @@ export default function PaintSelectorPage() {
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-xs text-gray-600 dark:text-gray-400">
+                        <span className="text-xs text-slate-400">
                           Brand:
                         </span>
                         <span className="text-xs">
@@ -1346,7 +1344,7 @@ export default function PaintSelectorPage() {
                     </div>
                     <div className="space-y-2">
                       <div className="flex justify-between">
-                        <span className="text-xs text-gray-600 dark:text-gray-400">
+                        <span className="text-xs text-slate-400">
                           Paint Name:
                         </span>
                         <span className="text-xs truncate ml-2">
@@ -1358,7 +1356,7 @@ export default function PaintSelectorPage() {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex gap-3 mt-6 pt-4 border-t border-white/10">
                   <Button
                     onClick={() => {
                       copyColorToClipboard(comparisonData.similarColor.hex);
@@ -1396,7 +1394,7 @@ export default function PaintSelectorPage() {
                       toast.success("Added to palette");
                       setComparisonDialogOpen(false);
                     }}
-                    className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                    className="flex items-center gap-2 bg-gradient-to-r bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
                   >
                     <Plus className="w-4 h-4" />
                     Add to Palette

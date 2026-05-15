@@ -223,7 +223,7 @@ export function DraftSetSheet({ isOpen, onOpenChange }: DraftSetSheetProps) {
                   </Button>
                 )}
                 <Button
-                  className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white gap-2"
+                  className="flex-1 bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white gap-2"
                   onClick={handleShare}
                   disabled={draftSet.length === 0 || isSharing}
                 >

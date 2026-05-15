@@ -14,6 +14,8 @@ export interface ColorSwatchProps {
   name?: string;
   index: number;
   isSelected: boolean;
+  /** 1-based selection order when blending (1 = first selected, 2 = second). */
+  selectionOrder?: number;
   showBlendHint?: boolean;
   /** Extra proportion of squares for this color (e.g. 50 = +50%). 0–500. */
   extraPercent?: number;

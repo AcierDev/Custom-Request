@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { ItemSizes } from "@/typings/types";
 import { SIZE_STRING } from "@/typings/constants";
 import { sizeToDimensions } from "@/lib/utils";
@@ -15,9 +15,20 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Columns3 } from "lucide-react";
+import {
+  PILL_INTERACTIVE,
+  PILL_SELECTED_RING,
+  SizeTilePrefix,
+  parseSizeWh,
+  sizePillFullClass,
+} from "@/lib/size-pills";
 
 const sizeOptions = [...Object.values(ItemSizes), "custom"];
 
@@ -25,10 +36,16 @@ type Unit = "squares" | "inches" | "feet";
 
 interface SizeCardProps {
   compact?: boolean;
+  /** Render only the trigger/popover without the surrounding glass Card. */
+  bare?: boolean;
 }
 
-export function SizeCard({ compact = false }: SizeCardProps) {
-  const { dimensions, setDimensions } = useCustomStore();
+// 14x7 is a mini-square panel by definition (14x7 mini squares ≈ 36" x 18").
+// Picking it should switch the model into mini squares automatically.
+const MINI_DEFAULT_SIZE = ItemSizes.Fourteen_By_Seven;
+
+export function SizeCard({ compact = false, bare = false }: SizeCardProps) {
+  const { dimensions, setDimensions, setUseMini } = useCustomStore();
   const [customWidth, setCustomWidth] = useState(dimensions.width.toString());
   const [customHeight, setCustomHeight] = useState(
     dimensions.height.toString()
@@ -114,82 +131,27 @@ export function SizeCard({ compact = false }: SizeCardProps) {
     }
   };
 
-  // Cycle through predefined sizes
-  const cycleSize = (direction: "next" | "prev") => {
-    const standardSizes = Object.values(ItemSizes);
-    const currentIndex = standardSizes.indexOf(currentSize as ItemSizes);
-
-    // If current size is custom or not found, start from the beginning or end
-    if (currentIndex === -1) {
-      const newSize =
-        direction === "next"
-          ? standardSizes[0]
-          : standardSizes[standardSizes.length - 1];
-      setDimensions(sizeToDimensions(newSize));
-      return;
-    }
-
-    // Calculate next or previous index
-    const newIndex =
-      direction === "next"
-        ? (currentIndex + 1) % standardSizes.length
-        : (currentIndex - 1 + standardSizes.length) % standardSizes.length;
-
-    setDimensions(sizeToDimensions(standardSizes[newIndex]));
-  };
-
   if (compact) {
-    return (
-      <Card className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200 dark:border-gray-700 shadow-lg">
-        <CardContent className="py-3 px-4 flex items-center justify-between gap-6">
-          <div className="flex flex-col min-w-0">
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-              Size
-            </span>
-            <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 truncate">
-              {currentSize === "custom"
-                ? `${dimensions.width}×${dimensions.height} squares`
-                : SIZE_STRING[currentSize as ItemSizes]}
-            </span>
-          </div>
-          <div className="flex gap-1 shrink-0">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700/50"
-              onClick={() => cycleSize("prev")}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700/50"
-              onClick={() => cycleSize("next")}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
+    return <CompactSizeCard bare={bare} />;
   }
 
   return (
-    <Card className="h-1/3 dark:bg-gray-800/50 backdrop-blur-sm border-2 border-gray-200 dark:border-gray-700">
+    <Card className="h-1/3 glass-surface rounded-[0.7rem]">
       <CardHeader className="pb-2">
-        <CardTitle className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+        <CardTitle className="heading-section flex items-center gap-2">
+          <Columns3 className="h-5 w-5" />
           Size
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <Select
           value={currentSize}
-          onValueChange={(value) =>
-            setDimensions(sizeToDimensions(value as ItemSizes))
-          }
+          onValueChange={(value) => {
+            setDimensions(sizeToDimensions(value as ItemSizes));
+            if (value === MINI_DEFAULT_SIZE) setUseMini(true);
+          }}
         >
-          <SelectTrigger className="w-full bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+          <SelectTrigger className="w-full bg-gray-900 border-white/10">
             <SelectValue placeholder="Select a size">
               {currentSize === "custom"
                 ? "Custom Size"
@@ -219,7 +181,7 @@ export function SizeCard({ compact = false }: SizeCardProps) {
             value={unit}
             onValueChange={(value) => setUnit(value as Unit)}
           >
-            <SelectTrigger className="w-full bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+            <SelectTrigger className="w-full bg-gray-900 border-white/10">
               <SelectValue placeholder="Select unit" />
             </SelectTrigger>
             <SelectContent>
@@ -233,7 +195,7 @@ export function SizeCard({ compact = false }: SizeCardProps) {
             <div className="space-y-2">
               <Label
                 htmlFor="width"
-                className="text-sm text-gray-600 dark:text-gray-400"
+                className="text-sm text-slate-400"
               >
                 Width ({unit})
               </Label>
@@ -260,13 +222,13 @@ export function SizeCard({ compact = false }: SizeCardProps) {
                     setCustomWidth(formattedValue);
                   }
                 }}
-                className="bg-white dark:bg-gray-800"
+                className="bg-gray-900"
               />
             </div>
             <div className="space-y-2">
               <Label
                 htmlFor="height"
-                className="text-sm text-gray-600 dark:text-gray-400"
+                className="text-sm text-slate-400"
               >
                 Height ({unit})
               </Label>
@@ -293,12 +255,150 @@ export function SizeCard({ compact = false }: SizeCardProps) {
                     setCustomHeight(formattedValue);
                   }
                 }}
-                className="bg-white dark:bg-gray-800"
+                className="bg-gray-900"
               />
             </div>
           </div>
         </motion.div>
       </CardContent>
+    </Card>
+  );
+}
+
+// 14x7 is built from mini squares, so its true panel is ~36" x 18" —
+// the same ~18" height as the 16x6 (height 6) group. Bucket it there
+// so it lists alongside (and ahead of) 16x6 instead of in its own row.
+const GROUP_HEIGHT_OVERRIDES: Partial<Record<ItemSizes, number>> = {
+  [ItemSizes.Fourteen_By_Seven]: 6,
+};
+
+function groupSizesByHeight(sizes: ItemSizes[]) {
+  const map = new Map<number, ItemSizes[]>();
+  for (const size of sizes) {
+    const parsed = parseSizeWh(size);
+    if (!parsed) continue;
+    const groupHeight = GROUP_HEIGHT_OVERRIDES[size] ?? parsed.h;
+    const arr = map.get(groupHeight) ?? [];
+    arr.push(size);
+    map.set(groupHeight, arr);
+  }
+  return [...map.entries()].sort((a, b) => a[0] - b[0]);
+}
+
+function CompactSizeCard({ bare = false }: { bare?: boolean }) {
+  const { dimensions, setDimensions, setUseMini } = useCustomStore();
+  const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState("");
+
+  const currentSize: ItemSizes | "custom" =
+    (Object.values(ItemSizes).find((size) => {
+      const sizeDims = sizeToDimensions(size);
+      return (
+        sizeDims.width === dimensions.width &&
+        sizeDims.height === dimensions.height
+      );
+    }) as ItemSizes | undefined) ?? "custom";
+
+  const triggerLabel =
+    currentSize === "custom"
+      ? `${dimensions.width} x ${dimensions.height}`
+      : currentSize;
+
+  const grouped = groupSizesByHeight(Object.values(ItemSizes));
+
+  const trimmed = query.trim();
+  const parsedCustom = parseSizeWh(trimmed);
+  const isKnownSize = (Object.values(ItemSizes) as string[]).includes(trimmed);
+  const showCustomOption = parsedCustom !== null && !isKnownSize;
+
+  const applyCustom = () => {
+    if (!parsedCustom) return;
+    setDimensions({ width: parsedCustom.w, height: parsedCustom.h });
+    setQuery("");
+    setIsOpen(false);
+  };
+
+  const inner = (
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className={`${sizePillFullClass(triggerLabel)} ${PILL_INTERACTIVE} w-auto !h-7 leading-none`}
+            >
+              <SizeTilePrefix size={triggerLabel} />
+              <span className="truncate leading-none">{triggerLabel}</span>
+            </button>
+          </PopoverTrigger>
+          <PopoverContent
+            align="start"
+            sideOffset={8}
+            className="w-72 p-3 bg-gray-900 border border-white/10 space-y-2"
+          >
+            <input
+              size={1}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  applyCustom();
+                }
+              }}
+              placeholder="Custom size (e.g. 30 x 14)"
+              className="box-border block w-full min-w-0 px-3 h-8 rounded-md text-sm bg-gray-800 text-gray-100 placeholder:text-gray-400 border border-white/10 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            />
+            {showCustomOption && (
+              <button
+                type="button"
+                onClick={applyCustom}
+                className={`${sizePillFullClass(trimmed)} ${PILL_INTERACTIVE}`}
+              >
+                <SizeTilePrefix size={trimmed} />
+                <span className="truncate leading-none">
+                  Use &ldquo;{trimmed}&rdquo;
+                </span>
+              </button>
+            )}
+            {grouped.map(([height, sizes]) => (
+              <div key={height}>
+                <div className="text-[0.625rem] font-semibold uppercase tracking-wider text-slate-400 mb-1.5 px-0.5">
+                  {height} Tall
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {sizes.map((size) => {
+                    const isActive = currentSize === size;
+                    return (
+                      <button
+                        key={size}
+                        type="button"
+                        onClick={() => {
+                          setDimensions(sizeToDimensions(size));
+                          if (size === MINI_DEFAULT_SIZE) setUseMini(true);
+                          setIsOpen(false);
+                        }}
+                        className={`${sizePillFullClass(size)} ${PILL_INTERACTIVE} ${
+                          isActive ? PILL_SELECTED_RING : ""
+                        }`}
+                      >
+                        <SizeTilePrefix size={size} />
+                        <span className="truncate leading-none">{size}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </PopoverContent>
+    </Popover>
+  );
+
+  if (bare) {
+    return inner;
+  }
+
+  return (
+    <Card className="glass-surface shadow-lg rounded-[0.7rem]">
+      <CardContent className="py-3 px-4">{inner}</CardContent>
     </Card>
   );
 }

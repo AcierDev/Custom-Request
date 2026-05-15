@@ -2,11 +2,11 @@
 
 import { ColorPattern, useCustomStore, PatternCell } from "@/store/customStore";
 import { getDimensionsDetails } from "@/lib/utils";
-import { useRef, useEffect, useState, useMemo, memo, useCallback } from "react";
+import { useRef, useEffect, useState, useMemo, useCallback } from "react";
 import { Html } from "@react-three/drei";
 import { hoverStore } from "@/store/customStore";
 import { useStore } from "zustand";
-import { Square } from "./Square";
+import { InstancedSquares, SquareInstance } from "./InstancedSquares";
 import { PlywoodBase } from "./PlywoodBase";
 import { ItemDesigns } from "@/typings/types";
 import {
@@ -21,10 +21,7 @@ import {
   generateColorMap,
   calculateSquareLayout,
 } from "./patternUtils";
-import { useSpring, animated } from "@react-spring/three";
-
-// Memoized Square component to prevent unnecessary re-renders
-const MemoizedSquare = memo(Square);
+import { useSpring } from "@react-spring/three";
 
 export function GeometricPattern({
   showColorInfo = true,
@@ -52,13 +49,25 @@ export function GeometricPattern({
 
   // Use values from customDesign when provided, otherwise use store values
   const dimensions = customDesign?.dimensions || storeDimensions;
-  const selectedDesign = customDesign?.selectedDesign || storeSelectedDesign;
+  const rawSelectedDesign =
+    customDesign?.selectedDesign || storeSelectedDesign;
+  // When Custom is selected but there's nothing to preview (no palette
+  // colors and no drawn pattern), fall back to Coastal Dream so the
+  // viewer never renders an empty / white screen.
+  const customPaletteSource =
+    customDesign?.customPalette || storeCustomPalette;
+  const selectedDesign =
+    rawSelectedDesign === ItemDesigns.Custom &&
+    customPaletteSource.length === 0 &&
+    (!drawnPatternGrid || !drawnPatternGridSize)
+      ? ItemDesigns.Coastal
+      : rawSelectedDesign;
   const colorPattern = customDesign?.colorPattern || storeColorPattern;
   const orientation = customDesign?.orientation || storeOrientation;
   const isReversed = customDesign?.isReversed || storeIsReversed;
   const isRotated = customDesign?.isRotated || storeIsRotated;
   const useMini = customDesign?.useMini || storeUseMini;
-  const customPalette = customDesign?.customPalette || storeCustomPalette;
+  const customPalette = customPaletteSource;
 
   const { showSplitPanel } = viewSettings;
 
@@ -254,27 +263,21 @@ export function GeometricPattern({
   });
   const { driftFactor } = driftFactorSpring;
 
-  // Memoize functions to prevent recreation on each render
-  const calculateDrift = useCallback(
-    (xIndex: number, driftValue: number) => {
-      if (xIndex < oneThirdWidth) {
-        // Left section - drift left
-        return -driftAmount * driftValue;
-      } else if (xIndex >= twoThirdsWidth) {
-        // Right section - drift right
-        return driftAmount * driftValue;
-      }
-      // Center section - no drift
+  // Which way a column drifts when the panel splits: left third → -1,
+  // right third → +1, middle → 0. The actual offset is applied per-frame
+  // inside <InstancedSquares /> so it never re-renders React.
+  const driftDirForColumn = useCallback(
+    (xIndex: number) => {
+      if (xIndex < oneThirdWidth) return -1;
+      if (xIndex >= twoThirdsWidth) return 1;
       return 0;
     },
-    [oneThirdWidth, twoThirdsWidth, driftAmount]
+    [oneThirdWidth, twoThirdsWidth]
   );
 
-  const getSplitPanelAdjustment = useCallback(
-    (xIndex: number) => {
-      return calculateDrift(xIndex, driftFactor.get());
-    },
-    [calculateDrift, driftFactor]
+  const getDriftFactor = useCallback(
+    () => driftFactor.get(),
+    [driftFactor]
   );
 
   // Memoize the getColorIndex function to prevent recreation on every render
@@ -343,10 +346,12 @@ export function GeometricPattern({
     [customStore, patternOverride, setPatternOverride, setPinnedInfo]
   );
 
-  // Optimize the square grid generation using useMemo
-  const squareGrid = useMemo(() => {
-    // Create a flattened array rather than nested arrays to improve performance
-    const squares = [];
+  // Build a flat list of per-square instance descriptors. One pass; the
+  // GPU work (transform/colour/grain) is carried as instance attributes
+  // by <InstancedSquares /> rather than as ~2500 React meshes.
+  const instances = useMemo(() => {
+    const squares: SquareInstance[] = [];
+    const sizeScale = useMini ? 0.9 : 1.0;
 
     // Limit the maximum number of squares to render based on device capability
     const maxSquares = 2500; // Adjust this threshold based on testing
@@ -433,49 +438,27 @@ export function GeometricPattern({
         );
         const textureVariation = textureVariationsRef.current![x][y];
 
-        const isSquareHovered =
-          hoverInfo &&
-          hoverInfo.position[0] === x &&
-          hoverInfo.position[1] === y;
-
-        const isPinned =
-          pinnedInfo &&
-          pinnedInfo.position[0] === x &&
-          pinnedInfo.position[1] === y;
-
         // Only render if color is not null
         if (color && color !== "null") {
-          squares.push(
-            <animated.group
-              key={`square-${x}-${y}`}
-              position={driftFactor.to((d) => [
-                baseXPos + calculateDrift(x, d),
-                yPos,
-                zPos,
-              ])}
-            >
-              <MemoizedSquare
-                position={[0, 0, 0]} // Position is handled by the parent group
-                size={squareSize}
-                height={squareSize}
-                color={color}
-                isHovered={!!(isSquareHovered || isPinned)} // Convert to boolean to fix type error
-                showWoodGrain={showWoodGrain}
-                showColorInfo={showColorInfo}
-                isGeometric={true}
-                rotation={rotation}
-                textureVariation={textureVariation}
-                onHover={(isHovering) => {
-                  if (isHovering) {
-                    handleSquareHover(x, y, color, colorName);
-                  } else {
-                    handleSquareUnhover();
-                  }
-                }}
-                onClick={() => handleSquareClick(x, y, color, colorName)}
-              />
-            </animated.group>
-          );
+          squares.push({
+            x,
+            y,
+            color,
+            colorName,
+            px: baseXPos,
+            py: yPos,
+            // Square.tsx places the wedge at z + height/2 on top of the
+            // group's zPos; fold that in so the instance matrix is final.
+            pz: zPos + squareSize / 2,
+            baseX: baseXPos,
+            driftDir: driftDirForColumn(x),
+            rotationZ: rotation,
+            scaleXY: squareSize * sizeScale,
+            scaleZ: squareSize * sizeScale,
+            uvOffsetX: textureVariation.offsetX,
+            uvOffsetY: textureVariation.offsetY,
+            uvRot: textureVariation.rotation,
+          });
         }
       }
     }
@@ -495,16 +478,10 @@ export function GeometricPattern({
     useMini,
     rotationSeedsRef,
     textureVariationsRef,
-    hoverInfo,
-    pinnedInfo,
-    driftFactor,
     showWoodGrain,
     showColorInfo,
     getColorIndexDebug,
-    calculateDrift,
-    handleSquareHover,
-    handleSquareUnhover,
-    handleSquareClick,
+    driftDirForColumn,
     hasDrawnPattern,
     drawnPatternGrid,
     drawnPatternGridSize,
@@ -536,11 +513,7 @@ export function GeometricPattern({
           customStore.scatterWidth ?? 10
         }-${customStore.scatterAmount ?? 50}`}
         rotation={
-          orientation === "vertical"
-            ? isReversed
-              ? [0, 0, -Math.PI / 2]
-              : [0, 0, Math.PI / 2]
-            : [0, 0, 0]
+          orientation === "vertical" ? [0, 0, Math.PI / 2] : [0, 0, 0]
         }
         position={[0, 0, 0]}
         onClick={handleGroupClick}
@@ -555,24 +528,33 @@ export function GeometricPattern({
           useMini={useMini}
         />
 
-        {/* Use the pre-computed square grid */}
-        {squareGrid}
+        {/* Single instanced draw call for the whole square grid */}
+        <InstancedSquares
+          instances={instances}
+          showWoodGrain={showWoodGrain}
+          showColorInfo={showColorInfo}
+          driftAmount={driftAmount}
+          getDriftFactor={getDriftFactor}
+          onHover={handleSquareHover}
+          onUnhover={handleSquareUnhover}
+          onClick={handleSquareClick}
+        />
       </group>
 
       {/* Only render info panels when needed */}
       {hoverInfo && showColorInfo && (
         <Html position={[hoverInfo.position[0], hoverInfo.position[1], 0.5]}>
-          <div className="bg-white dark:bg-gray-800 p-2 rounded shadow-md text-xs whitespace-nowrap">
+          <div className="bg-gray-900 p-2 rounded shadow-md text-xs whitespace-nowrap">
             <div className="flex items-center gap-2">
               <div
                 className="w-3 h-3 rounded-full"
                 style={{ backgroundColor: hoverInfo.color }}
               ></div>
-              <span className="font-medium text-gray-800 dark:text-gray-200">
+              <span className="font-medium text-slate-200">
                 {hoverInfo.colorName || "Custom Color"}
               </span>
             </div>
-            <div className="text-gray-500 dark:text-gray-400 mt-1">
+            <div className="text-slate-400 mt-1">
               {hoverInfo.color.toUpperCase()}
             </div>
           </div>
@@ -582,13 +564,13 @@ export function GeometricPattern({
       {/* Render pinned info */}
       {pinnedInfo && showColorInfo && (
         <Html position={[pinnedInfo.position[0], pinnedInfo.position[1], 0.5]}>
-          <div className="bg-white dark:bg-gray-800 border-2 border-blue-500 p-2 rounded shadow-md text-xs whitespace-nowrap">
+          <div className="bg-gray-900 border-2 border-blue-500 p-2 rounded shadow-md text-xs whitespace-nowrap">
             <div className="flex items-center gap-2">
               <div
                 className="w-3 h-3 rounded-full"
                 style={{ backgroundColor: pinnedInfo.color }}
               ></div>
-              <span className="font-medium text-gray-800 dark:text-gray-200">
+              <span className="font-medium text-slate-200">
                 {pinnedInfo.colorName || "Custom Color"}
               </span>
               <button
@@ -598,7 +580,7 @@ export function GeometricPattern({
                 ✕
               </button>
             </div>
-            <div className="text-gray-500 dark:text-gray-400 mt-1">
+            <div className="text-slate-400 mt-1">
               {pinnedInfo.color.toUpperCase()}
             </div>
           </div>

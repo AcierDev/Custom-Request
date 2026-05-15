@@ -208,7 +208,7 @@ export function DesignTutorial() {
                 left: tooltipPosition.x,
                 top: tooltipPosition.y,
               }}
-              className={`w-64 bg-white dark:bg-gray-800 rounded-lg shadow-xl p-4 pointer-events-auto ${getPositionClasses(
+              className={`w-64 bg-gray-900 rounded-lg shadow-xl p-4 pointer-events-auto ${getPositionClasses(
                 currentStep.position
               )}`}
             >

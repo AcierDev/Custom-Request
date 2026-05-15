@@ -64,7 +64,7 @@ export function Ruler3D({ width, height }: Ruler3DProps) {
             position={[measurement / 6 - horizontalOffset, rulerWidth, 0]}
             center
           >
-            <div className="text-xs text-purple-600 dark:text-purple-400 bg-white/90 dark:bg-gray-800/90 px-1 rounded-sm">
+            <div className="text-xs text-blue-300 bg-gray-900/70 backdrop-blur-md px-1 rounded-sm">
               {measurement.toFixed(0)}"
             </div>
           </Html>
@@ -88,7 +88,7 @@ export function Ruler3D({ width, height }: Ruler3DProps) {
             ]}
             center
           >
-            <div className="text-xs text-purple-600 dark:text-purple-400 bg-white/90 dark:bg-gray-800/90 px-1 rounded-sm">
+            <div className="text-xs text-blue-300 bg-gray-900/70 backdrop-blur-md px-1 rounded-sm">
               {measurement.toFixed(0)}"
             </div>
           </Html>

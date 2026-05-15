@@ -281,22 +281,22 @@ export const PaletteCard = ({
         className={`overflow-hidden border h-full flex flex-col ${
           selectionMode
             ? isSelected
-              ? "border-purple-500 dark:border-purple-400 border-2 shadow-md"
+              ? "border-blue-500 dark:border-blue-400 border-2 shadow-md"
               : "border-gray-200 dark:border-gray-800"
             : isEditing
-            ? "border-purple-400 dark:border-purple-600 border-2"
+            ? "border-blue-400 dark:border-blue-500 border-2"
             : "border-gray-200 dark:border-gray-800"
-        } bg-white dark:bg-gray-900 hover:shadow-md transition-shadow ${
+        } bg-gray-900 hover:shadow-md transition-shadow ${
           selectionMode ? "cursor-pointer" : ""
         }`}
       >
         <CardHeader className="p-4 pb-2">
           <div className="flex justify-between items-start">
-            <CardTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
+            <CardTitle className="text-lg font-semibold text-white flex items-center">
               {selectionMode && (
                 <button
                   type="button"
-                  className="mr-2 text-purple-600 dark:text-purple-400"
+                  className="mr-2 text-blue-300"
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -321,7 +321,7 @@ export const PaletteCard = ({
                     onChange={(e) => setEditingName(e.target.value)}
                     onKeyDown={handleKeyDown}
                     onBlur={handleNameSave}
-                    className="flex-1 bg-transparent border-b border-purple-400 focus:outline-none focus:border-purple-600 text-lg font-semibold text-gray-900 dark:text-gray-100"
+                    className="flex-1 bg-transparent border-b border-blue-400 focus:outline-none focus:border-blue-500 text-lg font-semibold text-white"
                     autoFocus
                     maxLength={100}
                   />
@@ -331,7 +331,7 @@ export const PaletteCard = ({
                   className={`flex items-center transition-colors group ${
                     selectionMode
                       ? ""
-                      : "cursor-pointer hover:text-purple-600 dark:hover:text-purple-400"
+                      : "cursor-pointer hover:text-blue-400 dark:hover:text-blue-300"
                   }`}
                   onClick={(e) => {
                     if (selectionMode) return;
@@ -345,13 +345,13 @@ export const PaletteCard = ({
                 </div>
               )}
               {isEditing && (
-                <span className="ml-2 text-xs font-normal text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/30 px-2 py-0.5 rounded-full">
+                <span className="ml-2 text-xs font-normal text-blue-300 bg-blue-500/10 dark:bg-blue-900/30 px-2 py-0.5 rounded-full">
                   Editing
                 </span>
               )}
             </CardTitle>
           </div>
-          <CardDescription className="text-xs text-gray-500 dark:text-gray-400">
+          <CardDescription className="text-xs text-slate-400">
             {new Date(palette.createdAt).toLocaleDateString()} •{" "}
             {palette.colors.length} colors
           </CardDescription>
@@ -395,7 +395,7 @@ export const PaletteCard = ({
                   </TooltipTrigger>
                   <TooltipContent side="bottom" className="text-xs">
                     <p>{color.name || color.hex}</p>
-                    <p className="text-gray-500 dark:text-gray-400">
+                    <p className="text-slate-400">
                       {color.hex}
                     </p>
                     <p className="text-xs text-blue-500 dark:text-blue-400 mt-1">
@@ -412,13 +412,13 @@ export const PaletteCard = ({
             }).map((_, index) => (
               <div
                 key={`placeholder-${index}`}
-                className="w-full aspect-square rounded-md  bg-gray-50 dark:bg-gray-800/20"
+                className="w-full aspect-square rounded-md  bg-gray-800/40/20"
               />
             ))}
 
             {/* Show indicator if there are more colors */}
             {palette.colors.length > 10 && (
-              <div className="absolute -bottom-1 right-4 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-xs px-2 py-0.5 rounded-full">
+              <div className="absolute -bottom-1 right-4 bg-blue-500/10 dark:bg-blue-900/30 text-blue-300 text-xs px-2 py-0.5 rounded-full">
                 +{palette.colors.length - 10} more
               </div>
             )}
@@ -426,7 +426,7 @@ export const PaletteCard = ({
         </CardContent>
         <CardFooter className="p-3 pt-0 flex justify-between">
           {selectionMode ? (
-            <div className="w-full text-xs text-gray-600 dark:text-gray-400">
+            <div className="w-full text-xs text-slate-400">
               {isSelected ? "Selected" : "Click to select"}
             </div>
           ) : (
@@ -438,7 +438,7 @@ export const PaletteCard = ({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-gray-500 hover:text-purple-600 dark:text-gray-400 dark:hover:text-purple-400"
+                        className="h-8 w-8 text-gray-500 hover:text-blue-400 dark:text-gray-400 dark:hover:text-blue-300"
                         onClick={() => onEdit(palette.id)}
                       >
                         <Edit className="h-4 w-4" />
@@ -563,7 +563,7 @@ export const PaletteCard = ({
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-8 text-xs font-medium text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-900/30 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                        className="h-8 text-xs font-medium text-blue-300 border-blue-500/30 hover:bg-blue-500/10"
                         onClick={() => onOrder(palette)}
                       >
                         <ShoppingCart className="h-3 w-3 mr-1" />
@@ -588,25 +588,25 @@ export const PaletteCard = ({
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="bg-white dark:bg-gray-900 rounded-lg max-w-md w-full mx-4 shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+            className="bg-gray-900 rounded-lg max-w-md w-full mx-4 shadow-2xl border border-white/10 overflow-hidden"
           >
-            <div className="p-5 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            <div className="p-5 border-b border-white/10">
+              <h3 className="text-lg font-semibold text-white">
                 {activeTab === "export" ? "Export" : "Share"} "{palette.name}"
               </h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              <p className="text-sm text-slate-400 mt-1">
                 {palette.colors.length} colors in this palette
               </p>
             </div>
 
             <div className="p-5 space-y-5">
               {/* Format tabs */}
-              <div className="flex space-x-2 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex space-x-2 border-b border-white/10">
                 <button
                   className={`px-4 py-2 text-sm font-medium ${
                     activeTab === "export"
-                      ? "text-gray-900 dark:text-gray-100 border-b-2 border-purple-500 dark:border-purple-400"
-                      : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                      ? "text-white border-b-2 border-blue-500 dark:border-blue-400"
+                      : "text-slate-400 hover:text-gray-700 dark:hover:text-gray-300"
                   }`}
                   onClick={() => setActiveTab("export")}
                 >
@@ -615,8 +615,8 @@ export const PaletteCard = ({
                 <button
                   className={`px-4 py-2 text-sm font-medium ${
                     activeTab === "share"
-                      ? "text-gray-900 dark:text-gray-100 border-b-2 border-purple-500 dark:border-purple-400"
-                      : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                      ? "text-white border-b-2 border-blue-500 dark:border-blue-400"
+                      : "text-slate-400 hover:text-gray-700 dark:hover:text-gray-300"
                   }`}
                   onClick={() => setActiveTab("share")}
                 >
@@ -627,9 +627,9 @@ export const PaletteCard = ({
               {activeTab === "export" ? (
                 <>
                   {/* JSON Format */}
-                  <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-md space-y-3">
+                  <div className="bg-gray-800/40/50 p-4 rounded-md space-y-3">
                     <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center">
+                      <h4 className="text-sm font-medium text-white flex items-center">
                         <span className="inline-block w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
                         JSON Format
                       </h4>
@@ -642,7 +642,7 @@ export const PaletteCard = ({
                         {copied ? "Copied!" : "Copy JSON"}
                       </Button>
                     </div>
-                    <div className="p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 overflow-auto max-h-24">
+                    <div className="p-3 bg-gray-900 rounded border border-white/10 overflow-auto max-h-24">
                       <pre className="text-xs text-gray-800 dark:text-gray-300 whitespace-pre-wrap">
                         {JSON.stringify(
                           palette.colors.map((color) => ({
@@ -657,9 +657,9 @@ export const PaletteCard = ({
                   </div>
 
                   {/* Trycolors Format */}
-                  <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-md space-y-3">
+                  <div className="bg-gray-800/40/50 p-4 rounded-md space-y-3">
                     <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center">
+                      <h4 className="text-sm font-medium text-white flex items-center">
                         <span className="inline-block w-3 h-3 bg-green-500 rounded-full mr-2"></span>
                         Trycolors CSV
                       </h4>
@@ -672,7 +672,7 @@ export const PaletteCard = ({
                         {copyTrycolors ? "Copied!" : "Copy CSV"}
                       </Button>
                     </div>
-                    <div className="p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 overflow-auto max-h-24">
+                    <div className="p-3 bg-gray-900 rounded border border-white/10 overflow-auto max-h-24">
                       <pre className="text-xs text-gray-800 dark:text-gray-300 whitespace-pre-wrap">
                         {palette.colors
                           .map(
@@ -687,9 +687,9 @@ export const PaletteCard = ({
 
 
                   {/* Image Download */}
-                  <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-md space-y-3">
+                  <div className="bg-gray-800/40/50 p-4 rounded-md space-y-3">
                     <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center">
+                      <h4 className="text-sm font-medium text-white flex items-center">
                         <span className="inline-block w-3 h-3 bg-indigo-500 rounded-full mr-2"></span>
                         Image Export
                       </h4>
@@ -704,16 +704,16 @@ export const PaletteCard = ({
                   </div>
 
                   {/* File Download */}
-                  <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-md">
+                  <div className="bg-gray-800/40/50 p-4 rounded-md">
                     <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center">
-                        <span className="inline-block w-3 h-3 bg-purple-500 rounded-full mr-2"></span>
+                      <h4 className="text-sm font-medium text-white flex items-center">
+                        <span className="inline-block w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
                         File Download
                       </h4>
                       <Button
                         onClick={handleDownloadPalette}
                         size="sm"
-                        className="h-7 text-xs px-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+                        className="h-7 text-xs px-3 bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
                       >
                         Download .palette
                       </Button>
@@ -723,36 +723,36 @@ export const PaletteCard = ({
               ) : (
                 <>
                   {/* Palette ID sharing */}
-                  <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-md space-y-3">
+                  <div className="bg-gray-800/40/50 p-4 rounded-md space-y-3">
                     <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center">
-                        <span className="inline-block w-3 h-3 bg-purple-500 rounded-full mr-2"></span>
+                      <h4 className="text-sm font-medium text-white flex items-center">
+                        <span className="inline-block w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
                         Palette ID
                       </h4>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={handleCopyPaletteId}
-                        className="h-7 text-xs px-3 border-purple-200 dark:border-purple-900/30 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                        className="h-7 text-xs px-3 border-blue-500/30 text-blue-300 hover:bg-blue-500/10"
                       >
                         {copiedId ? "Copied!" : "Copy ID"}
                       </Button>
                     </div>
-                    <div className="p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 overflow-auto">
+                    <div className="p-3 bg-gray-900 rounded border border-white/10 overflow-auto">
                       <p className="text-xs text-gray-800 dark:text-gray-300 font-mono break-all">
                         {palette.id}
                       </p>
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <p className="text-xs text-slate-400">
                       Share this ID with others to let them import your exact
                       palette.
                     </p>
                   </div>
 
                   {/* Share Link */}
-                  <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-md space-y-3">
+                  <div className="bg-gray-800/40/50 p-4 rounded-md space-y-3">
                     <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center">
+                      <h4 className="text-sm font-medium text-white flex items-center">
                         <span className="inline-block w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
                         Share Link
                       </h4>
@@ -765,7 +765,7 @@ export const PaletteCard = ({
                         {copiedLink ? "Copied!" : "Copy Link"}
                       </Button>
                     </div>
-                    <div className="p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 overflow-auto">
+                    <div className="p-3 bg-gray-900 rounded border border-white/10 overflow-auto">
                       <p className="text-xs text-gray-800 dark:text-gray-300 break-all">
                         {getShareUrl()}
                       </p>
@@ -773,8 +773,8 @@ export const PaletteCard = ({
                   </div>
 
                   {/* Share on Social */}
-                  <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-md space-y-3">
-                    <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center">
+                  <div className="bg-gray-800/40/50 p-4 rounded-md space-y-3">
+                    <h4 className="text-sm font-medium text-white flex items-center">
                       <span className="inline-block w-3 h-3 bg-green-500 rounded-full mr-2"></span>
                       Share via
                     </h4>
@@ -784,7 +784,7 @@ export const PaletteCard = ({
                         href={getEmailShareLink()}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-2 p-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md text-sm text-gray-700 dark:text-gray-300 transition-colors"
+                        className="flex items-center justify-center gap-2 p-2 bg-gray-700/60 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md text-sm text-slate-300 transition-colors"
                         onClick={(e) => {
                           if (!palette.isPublic) {
                             e.preventDefault();
@@ -800,7 +800,7 @@ export const PaletteCard = ({
                         href={getSmsShareLink()}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-2 p-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md text-sm text-gray-700 dark:text-gray-300 transition-colors"
+                        className="flex items-center justify-center gap-2 p-2 bg-gray-700/60 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md text-sm text-slate-300 transition-colors"
                         onClick={(e) => {
                           if (!palette.isPublic) {
                             e.preventDefault();
@@ -875,14 +875,14 @@ export const PaletteCard = ({
                   </div>
 
                   {/* Visibility Toggle */}
-                  <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-md">
+                  <div className="bg-gray-800/40/50 p-4 rounded-md">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center">
+                        <h4 className="text-sm font-medium text-white flex items-center">
                           <span className="inline-block w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
                           Visibility
                         </h4>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        <p className="text-xs text-slate-400 mt-1">
                           {palette.isPublic
                             ? "Anyone with the ID can import this palette"
                             : "Only you can see this palette"}
@@ -916,7 +916,7 @@ export const PaletteCard = ({
               )}
             </div>
 
-            <div className="p-4 bg-gray-50 dark:bg-gray-800 flex justify-end">
+            <div className="p-4 bg-gray-800/40 flex justify-end">
               <Button
                 variant="outline"
                 size="sm"

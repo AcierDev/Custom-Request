@@ -104,21 +104,21 @@ const FolderItem = ({
 
   return (
     <div className="mb-4">
-      <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800/50 rounded-lg p-2 mb-2">
+      <div className="flex items-center justify-between bg-gray-800/40/50 rounded-lg p-2 mb-2">
         <div
           className="flex items-center flex-1 cursor-pointer"
           onClick={handleToggle}
         >
           {isOpen ? (
-            <ChevronDown className="h-4 w-4 text-gray-500 dark:text-gray-400 mr-2" />
+            <ChevronDown className="h-4 w-4 text-slate-400 mr-2" />
           ) : (
-            <ChevronRight className="h-4 w-4 text-gray-500 dark:text-gray-400 mr-2" />
+            <ChevronRight className="h-4 w-4 text-slate-400 mr-2" />
           )}
           <FolderIcon className="h-5 w-5 text-amber-500 dark:text-amber-400 mr-2" />
-          <span className="font-medium text-gray-800 dark:text-gray-200">
+          <span className="font-medium text-slate-200">
             {folder.name}
           </span>
-          <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+          <span className="ml-2 text-xs text-slate-400">
             ({palettes.length} {palettes.length === 1 ? "palette" : "palettes"})
           </span>
         </div>
@@ -126,7 +126,7 @@ const FolderItem = ({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8">
-              <MoreHorizontal className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+              <MoreHorizontal className="h-4 w-4 text-slate-400" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
@@ -175,7 +175,7 @@ const FolderItem = ({
                 </div>
               ))}
               {palettes.length === 0 && (
-                <div className="col-span-full py-4 text-center text-gray-500 dark:text-gray-400 italic">
+                <div className="col-span-full py-4 text-center text-slate-400 italic">
                   This folder is empty. Move palettes here by selecting "Move to
                   folder" from a palette's menu.
                 </div>
@@ -288,18 +288,18 @@ const UnorganizedPalettes = ({
   return (
     <div className="mb-4">
       <div
-        className="flex items-center bg-gray-50 dark:bg-gray-800/50 rounded-lg p-2 mb-2 cursor-pointer"
+        className="flex items-center bg-gray-800/40/50 rounded-lg p-2 mb-2 cursor-pointer"
         onClick={handleToggle}
       >
         {isOpen ? (
-          <ChevronDown className="h-4 w-4 text-gray-500 dark:text-gray-400 mr-2" />
+          <ChevronDown className="h-4 w-4 text-slate-400 mr-2" />
         ) : (
-          <ChevronRight className="h-4 w-4 text-gray-500 dark:text-gray-400 mr-2" />
+          <ChevronRight className="h-4 w-4 text-slate-400 mr-2" />
         )}
-        <span className="font-medium text-gray-800 dark:text-gray-200">
+        <span className="font-medium text-slate-200">
           Uncategorized
         </span>
-        <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+        <span className="ml-2 text-xs text-slate-400">
           ({palettes.length} {palettes.length === 1 ? "palette" : "palettes"})
         </span>
       </div>
@@ -338,7 +338,7 @@ const UnorganizedPalettes = ({
               </div>
 
               {palettes.length === 0 && (
-                <div className="col-span-full py-4 text-center text-gray-500 dark:text-gray-400 italic">
+                <div className="col-span-full py-4 text-center text-slate-400 italic">
                   All your palettes are organized in folders.
                 </div>
               )}
@@ -392,10 +392,10 @@ const MovePaletteDialog = ({
         </DialogHeader>
         <div className="space-y-2 py-4">
           <div
-            className="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
+            className="flex items-center p-2 rounded-md hover:bg-gray-800 cursor-pointer"
             onClick={() => handleMove(null)}
           >
-            <FileSymlink className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
+            <FileSymlink className="h-4 w-4 mr-2 text-slate-400" />
             <span
               className={`${currentFolderId === undefined ? "font-bold" : ""}`}
             >
@@ -406,7 +406,7 @@ const MovePaletteDialog = ({
           {paletteFolders.map((folder) => (
             <div
               key={folder.id}
-              className="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
+              className="flex items-center p-2 rounded-md hover:bg-gray-800 cursor-pointer"
               onClick={() => handleMove(folder.id)}
             >
               <FolderIcon className="h-4 w-4 mr-2 text-amber-500 dark:text-amber-400" />
@@ -492,7 +492,7 @@ export const FolderSection = ({
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+        <h2 className="text-xl font-bold text-white">
           Palettes
         </h2>
         <Button
@@ -541,13 +541,13 @@ export const FolderSection = ({
 
       {paletteFolders.length === 0 && unorganizedPalettes.length === 0 && (
         <div className="text-center py-8">
-          <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-full inline-block mb-4">
+          <div className="bg-gray-800/60 p-4 rounded-full inline-block mb-4">
             <FolderIcon className="h-8 w-8 text-gray-400 dark:text-gray-500" />
           </div>
-          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">
+          <h3 className="text-lg font-medium text-white mb-1">
             No palettes saved
           </h3>
-          <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+          <p className="text-slate-400 max-w-md mx-auto">
             Create and save palettes to organize them in folders.
           </p>
         </div>

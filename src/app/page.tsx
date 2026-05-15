@@ -35,9 +35,9 @@ export default function Home() {
       console.log("Onboarding completed:", onboardingCompleted);
 
       if (onboardingCompleted === "true") {
-        // User has completed onboarding, send to design
-        console.log("Redirecting to design");
-        router.push("/design");
+        // User has completed onboarding, send to viewer
+        console.log("Redirecting to viewer");
+        router.push("/viewer");
       } else {
         // To prevent circular redirect when coming back to home,
         // check if we're coming from sign-in

@@ -19,6 +19,13 @@ interface PlywoodBaseProps {
   useMini: boolean;
 }
 
+const INCHES_PER_SCENE_UNIT = 6;
+const BACKBOARD_INSET_INCHES = 0.5;
+const BACKBOARD_INSET = BACKBOARD_INSET_INCHES / INCHES_PER_SCENE_UNIT;
+const HANGER_INCHES_FROM_TOP = 12;
+const HANGER_OFFSET_FROM_TOP =
+  HANGER_INCHES_FROM_TOP / INCHES_PER_SCENE_UNIT;
+
 // Component to handle the hanger model - memoized to prevent unnecessary rerenders
 const HangerModel = memo(
   ({ position }: { position: [number, number, number] }) => {
@@ -303,23 +310,37 @@ export function PlywoodBase({
   const { driftFactor } = driftFactorSpring;
 
   // Create position calculation functions for animated panels
+  // Outer panels shrink only on their outer edge — shift center inward by inset/2
   const leftPanelPosition = useMemo(
     () => (d: number) =>
-      [leftPanelX - driftDistance * d - 0.249, centerY, -baseThickness / 2],
+      [
+        leftPanelX - driftDistance * d - 0.249 + BACKBOARD_INSET / 2,
+        centerY,
+        -baseThickness / 2,
+      ],
     [leftPanelX, driftDistance, centerY, baseThickness]
   );
 
   const rightPanelPosition = useMemo(
     () => (d: number) =>
-      [rightPanelX + driftDistance * d - 0.25, centerY, -baseThickness / 2],
+      [
+        rightPanelX + driftDistance * d - 0.25 - BACKBOARD_INSET / 2,
+        centerY,
+        -baseThickness / 2,
+      ],
     [rightPanelX, driftDistance, centerY, baseThickness]
   );
 
-  // Create position calculation functions for the side panels
+  // Side edge caps follow the new (inset) backboard edges
   const leftSidePosition = useMemo(
     () => (d: number) =>
       [
-        (useMini ? 0.03 : 0) - 0.248 - totalWidth / 2 - driftDistance * d + 0.0,
+        (useMini ? 0.03 : 0) -
+          0.248 -
+          totalWidth / 2 -
+          driftDistance * d +
+          0.0 +
+          BACKBOARD_INSET,
         (useMini ? 0.03 : 0) - 0.25,
         -0.035,
       ],
@@ -333,7 +354,8 @@ export function PlywoodBase({
           0.248 +
           totalWidth / 2 +
           driftDistance * d +
-          0.001,
+          0.001 -
+          BACKBOARD_INSET,
         (useMini ? 0.03 : 0) - 0.25,
         -0.035,
       ],
@@ -345,7 +367,11 @@ export function PlywoodBase({
       {/* Hanger model positioned behind the plywood - only render if needed */}
       {showHanger && (
         <HangerModel
-          position={[centerX - 3, centerY, -baseThickness - 0.1145]}
+          position={[
+            centerX - 3,
+            centerY + totalHeight / 2 - HANGER_OFFSET_FROM_TOP,
+            -baseThickness - 0.1145,
+          ]}
         />
       )}
 
@@ -354,7 +380,11 @@ export function PlywoodBase({
         {/* Left panel */}
         <AnimatedPlywoodPanel
           positionFn={driftFactor.to(leftPanelPosition)}
-          args={[leftPanelWidth, totalHeight, baseThickness]}
+          args={[
+            leftPanelWidth - BACKBOARD_INSET,
+            totalHeight - 2 * BACKBOARD_INSET,
+            baseThickness,
+          ]}
           texture={texture}
           showWoodGrain={showWoodGrain}
         />
@@ -362,7 +392,11 @@ export function PlywoodBase({
         {/* Center panel */}
         <PlywoodPanel
           position={[centerPanelX - 0.249, centerY, -baseThickness / 2]}
-          args={[centerPanelWidth, totalHeight, baseThickness]}
+          args={[
+            centerPanelWidth,
+            totalHeight - 2 * BACKBOARD_INSET,
+            baseThickness,
+          ]}
           texture={texture}
           showWoodGrain={showWoodGrain}
         />
@@ -370,7 +404,11 @@ export function PlywoodBase({
         {/* Right panel */}
         <AnimatedPlywoodPanel
           positionFn={driftFactor.to(rightPanelPosition)}
-          args={[rightPanelWidth, totalHeight, baseThickness]}
+          args={[
+            rightPanelWidth - BACKBOARD_INSET,
+            totalHeight - 2 * BACKBOARD_INSET,
+            baseThickness,
+          ]}
           texture={texture}
           showWoodGrain={showWoodGrain}
         />
@@ -379,7 +417,11 @@ export function PlywoodBase({
       {/* Left side - now animated */}
       <AnimatedPlywoodPanel
         positionFn={driftFactor.to(leftSidePosition)}
-        args={[baseThickness + 0.001, totalHeight + 0.001, 0.005]}
+        args={[
+          baseThickness + 0.001,
+          totalHeight + 0.001 - 2 * BACKBOARD_INSET,
+          0.005,
+        ]}
         texture={null}
         showWoodGrain={false}
         color={leftColor}
@@ -389,7 +431,11 @@ export function PlywoodBase({
       {/* Right side - now animated */}
       <AnimatedPlywoodPanel
         positionFn={driftFactor.to(rightSidePosition)}
-        args={[baseThickness + 0.001, totalHeight + 0.001, 0.005]}
+        args={[
+          baseThickness + 0.001,
+          totalHeight + 0.001 - 2 * BACKBOARD_INSET,
+          0.005,
+        ]}
         texture={null}
         showWoodGrain={false}
         color={rightColor}

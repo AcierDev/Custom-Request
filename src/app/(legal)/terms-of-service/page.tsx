@@ -11,14 +11,14 @@ export default function TermsOfService() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h1 className="text-4xl font-bold mb-6 text-center">
+        <h1 className="heading-hero mb-6 text-center">
           Terms of Service
         </h1>
         <p className="text-muted-foreground text-center mb-8">
           Last updated: {new Date().toLocaleDateString()}
         </p>
 
-        <Card className="mb-8 shadow-lg">
+        <Card className="mb-8 glass-surface rounded-2xl">
           <CardHeader>
             <CardTitle className="text-xl">Introduction</CardTitle>
           </CardHeader>
@@ -37,7 +37,7 @@ export default function TermsOfService() {
           </CardContent>
         </Card>
 
-        <Card className="mb-8 shadow-lg">
+        <Card className="mb-8 glass-surface rounded-2xl">
           <CardHeader>
             <CardTitle className="text-xl">Account Registration</CardTitle>
           </CardHeader>
@@ -65,7 +65,7 @@ export default function TermsOfService() {
           </CardContent>
         </Card>
 
-        <Card className="mb-8 shadow-lg">
+        <Card className="mb-8 glass-surface rounded-2xl">
           <CardHeader>
             <CardTitle className="text-xl">User Content</CardTitle>
           </CardHeader>
@@ -94,7 +94,7 @@ export default function TermsOfService() {
           </CardContent>
         </Card>
 
-        <Card className="mb-8 shadow-lg">
+        <Card className="mb-8 glass-surface rounded-2xl">
           <CardHeader>
             <CardTitle className="text-xl">Prohibited Conduct</CardTitle>
           </CardHeader>
@@ -137,7 +137,7 @@ export default function TermsOfService() {
           </CardContent>
         </Card>
 
-        <Card className="mb-8 shadow-lg">
+        <Card className="mb-8 glass-surface rounded-2xl">
           <CardHeader>
             <CardTitle className="text-xl">Intellectual Property</CardTitle>
           </CardHeader>
@@ -157,7 +157,7 @@ export default function TermsOfService() {
           </CardContent>
         </Card>
 
-        <Card className="mb-8 shadow-lg">
+        <Card className="mb-8 glass-surface rounded-2xl">
           <CardHeader>
             <CardTitle className="text-xl">Termination</CardTitle>
           </CardHeader>
@@ -176,7 +176,7 @@ export default function TermsOfService() {
           </CardContent>
         </Card>
 
-        <Card className="mb-8 shadow-lg">
+        <Card className="mb-8 glass-surface rounded-2xl">
           <CardHeader>
             <CardTitle className="text-xl">Disclaimer of Warranties</CardTitle>
           </CardHeader>
@@ -202,7 +202,7 @@ export default function TermsOfService() {
           </CardContent>
         </Card>
 
-        <Card className="mb-8 shadow-lg">
+        <Card className="mb-8 glass-surface rounded-2xl">
           <CardHeader>
             <CardTitle className="text-xl">Limitation of Liability</CardTitle>
           </CardHeader>
@@ -230,7 +230,7 @@ export default function TermsOfService() {
           </CardContent>
         </Card>
 
-        <Card className="mb-8 shadow-lg">
+        <Card className="mb-8 glass-surface rounded-2xl">
           <CardHeader>
             <CardTitle className="text-xl">Indemnification</CardTitle>
           </CardHeader>
@@ -246,7 +246,7 @@ export default function TermsOfService() {
           </CardContent>
         </Card>
 
-        <Card className="mb-8 shadow-lg">
+        <Card className="mb-8 glass-surface rounded-2xl">
           <CardHeader>
             <CardTitle className="text-xl">Governing Law</CardTitle>
           </CardHeader>
@@ -265,7 +265,7 @@ export default function TermsOfService() {
           </CardContent>
         </Card>
 
-        <Card className="mb-8 shadow-lg">
+        <Card className="mb-8 glass-surface rounded-2xl">
           <CardHeader>
             <CardTitle className="text-xl">Changes to Terms</CardTitle>
           </CardHeader>
@@ -284,7 +284,7 @@ export default function TermsOfService() {
           </CardContent>
         </Card>
 
-        <Card className="mb-8 shadow-lg">
+        <Card className="mb-8 glass-surface rounded-2xl">
           <CardHeader>
             <CardTitle className="text-xl">Contact Us</CardTitle>
           </CardHeader>

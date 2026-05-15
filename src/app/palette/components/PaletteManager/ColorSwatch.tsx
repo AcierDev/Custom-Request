@@ -1,10 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { motion } from "framer-motion";
 import { Edit, Trash2, Sparkles, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Tooltip,
   TooltipContent,
@@ -14,44 +12,33 @@ import {
 import { cn } from "@/lib/utils";
 import { ColorSwatchProps } from "./types";
 
-const EXTRA_PERCENT_MIN = 0;
-const EXTRA_PERCENT_MAX = 500;
+const BAR_HEIGHT_CLASS = "h-64 sm:h-80";
 
 export function ColorSwatch({
   id,
   color,
   name,
   isSelected,
-  showBlendHint = false,
-  extraPercent = 0,
-  onExtraPercentChange,
   onSelect,
   onRemove,
   onEdit,
   onDuplicate,
 }: ColorSwatchProps) {
-  const [isHovering, setIsHovering] = useState(false);
-
-  // Function to determine if text should be light or dark based on background color
-  const getContrastYIQ = (hexcolor: string) => {
-    // Remove the # if it exists
-    hexcolor = hexcolor.replace("#", "");
-
-    // Convert to RGB
-    const r = parseInt(hexcolor.substr(0, 2), 16);
-    const g = parseInt(hexcolor.substr(2, 2), 16);
-    const b = parseInt(hexcolor.substr(4, 2), 16);
-
-    // Calculate YIQ ratio
+  const DARK_THRESHOLD = 110;
+  const DARK_TEXT_COLOR = "#111827";
+  const LIGHT_TEXT_COLOR = "#ffffff";
+  const getContrastTextColor = (hexcolor: string) => {
+    const hex = hexcolor.replace("#", "");
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
     const yiq = (r * 299 + g * 587 + b * 114) / 1000;
-
-    // Return black or white depending on YIQ ratio
-    return yiq >= 128 ? "text-gray-900" : "text-white";
+    return yiq >= DARK_THRESHOLD ? DARK_TEXT_COLOR : LIGHT_TEXT_COLOR;
   };
 
-  const textColorClass = getContrastYIQ(color);
+  const textColor = getContrastTextColor(color);
+  const textColorStyle = { color: textColor };
 
-  // Function to open the harmony generator with this color as base
   const openHarmonyGenerator = () => {
     document.dispatchEvent(
       new CustomEvent("openHarmonyGenerator", {
@@ -62,180 +49,161 @@ export function ColorSwatch({
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.8 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.8, y: 20 }}
+      initial={{ opacity: 0, scaleX: 0, scaleY: 0.55, y: -28 }}
+      animate={{
+        opacity: 1,
+        scaleX: 1,
+        scaleY: [0.55, 1.12, 0.94, 1],
+        y: [-28, 0, -6, 0],
+      }}
+      exit={{ opacity: 0, scaleX: 0, scaleY: 0.6, y: 20 }}
       transition={{
-        type: "spring",
-        stiffness: 500,
-        damping: 30,
-        opacity: { duration: 0.2 },
+        scaleX: { type: "spring", stiffness: 420, damping: 22 },
+        scaleY: { duration: 0.55, times: [0, 0.45, 0.72, 1], ease: "easeOut" },
+        y: { duration: 0.55, times: [0, 0.45, 0.72, 1], ease: "easeOut" },
+        opacity: { duration: 0.18 },
       }}
       className={cn(
-        "relative group rounded-lg overflow-hidden shadow-md",
-        isSelected
-          ? "ring-4 ring-purple-500 dark:ring-purple-400 shadow-lg"
-          : "hover:shadow-lg",
-        showBlendHint && !isSelected
-          ? "ring-2 ring-purple-300 dark:ring-purple-600 ring-opacity-70 dark:ring-opacity-70"
-          : ""
+        "relative group flex-1 min-w-0 cursor-pointer rounded-md overflow-hidden",
+        BAR_HEIGHT_CLASS,
+        isSelected ? "z-10" : ""
       )}
       style={{ backgroundColor: color }}
       onClick={onSelect}
-      onMouseEnter={() => setIsHovering(true)}
-      onMouseLeave={() => setIsHovering(false)}
     >
-      <div className="h-24 sm:h-28 w-full p-3 flex flex-col justify-between">
-        {/* Color name or hex */}
-        <div className={cn("font-medium text-sm", textColorClass)}>
-          {name || color}
+      {/* Selection / blend-hint outline (static layer so the
+          entrance scale animation can't make it jitter) */}
+      <div
+        aria-hidden
+        className={cn(
+          "pointer-events-none absolute inset-0 z-20 rounded-md transition-all duration-300",
+          isSelected
+            ? "ring-4 ring-inset ring-blue-600 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.25),0_0_8px_rgba(37,99,235,0.45)]"
+            : "ring-0 ring-inset ring-transparent"
+        )}
+      />
+
+      {/* One-shot entrance flash */}
+      <motion.div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 z-30 bg-white"
+        initial={{ opacity: 0.85 }}
+        animate={{ opacity: 0 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+      />
+
+      <div className="h-full p-2 flex flex-col justify-between overflow-hidden">
+        {/* Top: name + hex */}
+        <div className="min-w-0">
+          <div
+            className="font-semibold text-xs sm:text-sm truncate"
+            style={textColorStyle}
+          >
+            {name || color}
+          </div>
+          {name && (
+            <div
+              className="font-mono text-[10px] opacity-80 truncate"
+              style={textColorStyle}
+            >
+              {color}
+            </div>
+          )}
         </div>
 
-        {/* Extra % - compact row */}
-        {onExtraPercentChange && (
-          <div
-            className="flex items-center gap-1.5 mt-1"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <span
-              className={cn(
-                "text-[10px] sm:text-xs font-medium opacity-90",
-                textColorClass
-              )}
-            >
-              +%
-            </span>
-            <Input
-              type="number"
-              min={EXTRA_PERCENT_MIN}
-              max={EXTRA_PERCENT_MAX}
-              step={10}
-              value={extraPercent}
-              onChange={(e) => {
-                const raw = e.target.value === "" ? 0 : Number(e.target.value);
-                const clamped = Math.max(
-                  EXTRA_PERCENT_MIN,
-                  Math.min(EXTRA_PERCENT_MAX, Number.isNaN(raw) ? 0 : raw)
-                );
-                onExtraPercentChange(clamped);
-              }}
-              className={cn(
-                "h-6 w-12 sm:w-14 text-xs px-1.5 bg-white/20 dark:bg-white/10 border-white/30 dark:border-white/20",
-                textColorClass
-              )}
-            />
+        {/* Bottom: hover actions */}
+        <div className="flex flex-col gap-1">
+          <div className="flex flex-wrap items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            <TooltipProvider delayDuration={225}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-6 w-6 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30"
+                    style={textColorStyle}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openHarmonyGenerator();
+                    }}
+                  >
+                    <Sparkles className="h-3 w-3" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>Generate harmonies from this color</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider delayDuration={225}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-6 w-6 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30"
+                    style={textColorStyle}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDuplicate();
+                    }}
+                  >
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>Duplicate color</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider delayDuration={225}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-6 w-6 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30"
+                    style={textColorStyle}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit();
+                    }}
+                  >
+                    <Edit className="h-3 w-3" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Edit color</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider delayDuration={225}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-6 w-6 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30"
+                    style={textColorStyle}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRemove();
+                    }}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Remove color</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
-        )}
-
-        {/* Actions */}
-        <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className={cn(
-                    "h-7 w-7 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30",
-                    textColorClass
-                  )}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openHarmonyGenerator();
-                  }}
-                >
-                  <Sparkles className="h-3.5 w-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>Generate harmonies from this color</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className={cn(
-                    "h-7 w-7 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30",
-                    textColorClass
-                  )}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDuplicate();
-                  }}
-                >
-                  <Copy className="h-3.5 w-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>Duplicate color</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className={cn(
-                    "h-7 w-7 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30",
-                    textColorClass
-                  )}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit();
-                  }}
-                >
-                  <Edit className="h-3.5 w-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>Edit color</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className={cn(
-                    "h-7 w-7 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30",
-                    textColorClass
-                  )}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onRemove();
-                  }}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>Remove color</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
         </div>
       </div>
-
-      {/* Selection indicator */}
-      {isSelected && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="absolute inset-0 bg-purple-500/10 dark:bg-purple-400/10 pointer-events-none"
-        />
-      )}
     </motion.div>
   );
 }

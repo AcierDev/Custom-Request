@@ -43,7 +43,7 @@ export function DraftSetControls({ compact = false }: DraftSetControlsProps) {
         <Button
           variant="outline"
           size={compact ? "icon" : "default"}
-          className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm relative"
+          className="glass-surface relative"
           onClick={() => setIsSheetOpen(true)}
           title="View Design Set"
         >
@@ -62,7 +62,7 @@ export function DraftSetControls({ compact = false }: DraftSetControlsProps) {
         <Button
           variant="secondary"
           size={compact ? "icon" : "default"}
-          className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border border-input shadow-sm hover:bg-accent hover:text-accent-foreground"
+          className="glass-surface border border-input shadow-sm hover:bg-accent hover:text-accent-foreground"
           onClick={handleAddToSet}
           title="Add current design to set"
         >

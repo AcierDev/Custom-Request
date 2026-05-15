@@ -68,6 +68,15 @@ export default function PalettePage() {
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   const [paletteName, setPaletteName] = useState("");
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Default to the "official" tab only on a fresh start. If the user
+  // already has work in progress, keep them where they left off so
+  // navigating away and back doesn't discard their palette.
+  useEffect(() => {
+    if (customPalette.length === 0 && !editingPaletteId) {
+      setActiveTab("official");
+    }
+  }, []);
   
   // Paint color grounding
   const [allPaintColors, setAllPaintColors] = useState<any[]>([]);
@@ -351,6 +360,20 @@ export default function PalettePage() {
     }
   }, [searchParams, savedPalettes, setActiveTab, router]);
 
+  // Warn before leaving/refreshing when there's an in-progress palette
+  useEffect(() => {
+    if (customPalette.length === 0) return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () =>
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [customPalette.length]);
+
   // Add keyboard shortcut handlers
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -369,11 +392,8 @@ export default function PalettePage() {
         }
       }
 
-      // Handle Ctrl+Y / Command+Y or Ctrl+Shift+Z / Command+Shift+Z for redo
-      if (
-        (e.ctrlKey || e.metaKey) &&
-        (e.key === "y" || (e.key === "z" && e.shiftKey))
-      ) {
+      // Handle Ctrl+Shift+Z / Command+Shift+Z for redo
+      if ((e.ctrlKey || e.metaKey) && e.key === "z" && e.shiftKey) {
         e.preventDefault();
         const success = redoPaletteAction();
         if (success) {
@@ -711,21 +731,21 @@ export default function PalettePage() {
           <div className="flex justify-center py-6">
             {importLoading ? (
               <div className="flex flex-col items-center space-y-4">
-                <Loader2 className="w-16 h-16 text-purple-600 dark:text-purple-400 animate-spin" />
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <Loader2 className="w-16 h-16 text-blue-300 animate-spin" />
+                <p className="text-sm text-slate-400">
                   Loading palette data...
                 </p>
               </div>
             ) : importError ? (
               <Button
                 onClick={() => setShowImportDialog(false)}
-                className="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 px-8 py-2"
+                className="bg-gray-200 dark:bg-gray-700 text-slate-200 hover:bg-gray-300 dark:hover:bg-gray-600 px-8 py-2"
               >
                 Close
               </Button>
             ) : (
               <div className="flex flex-col items-center space-y-4">
-                <div className="w-16 h-16 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center">
+                <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-sky-500 rounded-full flex items-center justify-center">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     className="h-10 w-10 text-white"
@@ -754,19 +774,19 @@ export default function PalettePage() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="bg-white dark:bg-gray-900 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl border-2 border-gray-200 dark:border-gray-700"
+            className="bg-gray-900 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl border-2 border-white/10"
           >
-            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+            <h3 className="text-xl font-bold text-white mb-2">
               Import Palette
             </h3>
 
             {/* Tab navigation */}
-            <div className="flex mb-4 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex mb-4 border-b border-white/10">
               <button
                 className={`px-4 py-2 font-medium text-sm ${
                   !importById
-                    ? "border-b-2 border-purple-500 text-gray-900 dark:text-gray-100"
-                    : "text-gray-500 dark:text-gray-400"
+                    ? "border-b-2 border-blue-500 text-white"
+                    : "text-slate-400"
                 }`}
                 onClick={() => setImportById(false)}
               >
@@ -775,8 +795,8 @@ export default function PalettePage() {
               <button
                 className={`px-4 py-2 font-medium text-sm ${
                   importById
-                    ? "border-b-2 border-purple-500 text-gray-900 dark:text-gray-100"
-                    : "text-gray-500 dark:text-gray-400"
+                    ? "border-b-2 border-blue-500 text-white"
+                    : "text-slate-400"
                 }`}
                 onClick={() => setImportById(true)}
               >
@@ -787,12 +807,12 @@ export default function PalettePage() {
             <div className="space-y-4">
               {importById ? (
                 <div className="space-y-4">
-                  <p className="text-gray-600 dark:text-gray-400">
+                  <p className="text-slate-400">
                     Enter a palette ID that was shared with you to import it
                     directly.
                   </p>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <label className="text-sm font-medium text-slate-300">
                       Palette ID
                     </label>
                     <div className="flex gap-2">
@@ -801,24 +821,24 @@ export default function PalettePage() {
                         value={importIdValue}
                         onChange={(e) => setImportIdValue(e.target.value)}
                         placeholder="Enter palette ID"
-                        className="flex-1 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        className="flex-1 px-3 py-2 bg-gray-900 border border-white/10 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <p className="text-xs text-slate-400">
                       IDs are unique identifiers for shared palettes.
                     </p>
                   </div>
                 </div>
               ) : (
                 <>
-                  <p className="text-gray-600 dark:text-gray-400">
+                  <p className="text-slate-400">
                     Paste JSON data or upload a palette file (.evpal or .json or
                     .palette)
                   </p>
 
                   <div className="space-y-2">
                     <textarea
-                      className="w-full h-40 p-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="w-full h-40 p-3 text-sm bg-gray-800/40 border border-white/10 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder='Paste JSON here, e.g. [{"hex":"#ff0000","name":"Red"},{"hex":"#00ff00","name":"Green"}] or TryColors format'
                       value={importText}
                       onChange={(e) => setImportText(e.target.value)}
@@ -831,15 +851,15 @@ export default function PalettePage() {
                   <div className="flex items-center justify-center w-full">
                     <label
                       htmlFor="dropzone-file"
-                      className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-lg cursor-pointer bg-gray-800/40 border-white/10 hover:bg-gray-100 dark:hover:bg-gray-700"
                     >
                       <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <Upload className="w-8 h-8 mb-2 text-gray-500 dark:text-gray-400" />
-                        <p className="mb-1 text-sm text-gray-500 dark:text-gray-400">
+                        <Upload className="w-8 h-8 mb-2 text-slate-400" />
+                        <p className="mb-1 text-sm text-slate-400">
                           <span className="font-semibold">Click to upload</span>{" "}
                           or drag and drop
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                        <p className="text-xs text-slate-400">
                           JSON or EVPAL or Palette files
                         </p>
                       </div>
@@ -873,7 +893,7 @@ export default function PalettePage() {
                     ? !importIdValue.trim()
                     : !importText.trim() || isImportLoading
                 }
-                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white sm:order-2"
+                className="bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white sm:order-2"
               >
                 {isImportLoading ? "Importing..." : "Import Palette"}
               </Button>
@@ -882,12 +902,12 @@ export default function PalettePage() {
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="max-w-[1800px] mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between space-x-4">
           <div className="space-y-2">
             <motion.h1
-              className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent"
+              className="heading-hero"
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
@@ -895,7 +915,7 @@ export default function PalettePage() {
               Color Palette Studio
             </motion.h1>
             <motion.p
-              className="text-gray-600 dark:text-gray-400 max-w-3xl"
+              className="text-slate-400 max-w-3xl"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.2 }}
@@ -941,17 +961,16 @@ export default function PalettePage() {
             <TabsList className="grid w-full max-w-md grid-cols-4">
               <TabsTrigger
                 value="create"
-                className="data-[state=active]:bg-purple-100 dark:data-[state=active]:bg-purple-900/30"
+                className="data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-200"
               >
                 <div className="flex items-center gap-2">
-                  <Plus className="h-4 w-4" />
-                  <span>{editingPaletteId ? "Edit" : "Create"}</span>
+                  <span>{editingPaletteId ? "Edit" : "Custom"}</span>
                 </div>
               </TabsTrigger>
 
               <TabsTrigger
                 value="saved"
-                className="data-[state=active]:bg-purple-100 dark:data-[state=active]:bg-purple-900/30"
+                className="data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-200"
               >
                 <div className="flex items-center gap-2">
                   <Palette className="h-4 w-4" />
@@ -960,11 +979,11 @@ export default function PalettePage() {
               </TabsTrigger>
               <TabsTrigger
                 value="official"
-                className="data-[state=active]:bg-purple-100 dark:data-[state=active]:bg-purple-900/30 group"
+                className="data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-200 group"
               >
                 <div className="flex items-center gap-2 relative">
                   <motion.div
-                    className="absolute inset-0 bg-gradient-to-r from-purple-400/10 via-pink-400/20 to-purple-400/10 rounded-sm opacity-0 group-hover:opacity-100 -z-10"
+                    className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-sky-500/20 to-blue-500/10 rounded-sm opacity-0 group-hover:opacity-100 -z-10"
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{
                       opacity: [0.1, 0.8, 0.1],
@@ -982,41 +1001,23 @@ export default function PalettePage() {
                       ease: "easeInOut",
                     }}
                   />
-                  <BookOpen className="h-4 w-4 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors duration-300" />
+                  <BookOpen className="h-4 w-4 group-hover:text-blue-400 dark:group-hover:text-blue-300 transition-colors duration-300" />
                   <motion.span
-                    className="group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors duration-300"
+                    className="group-hover:text-blue-400 dark:group-hover:text-blue-300 transition-colors duration-300"
                     whileHover={{ scale: 1.03 }}
                     transition={{ type: "spring", stiffness: 400, damping: 17 }}
                   >
                     Official
                   </motion.span>
-                  {activeTab !== "official" && (
-                    <motion.div
-                      className="absolute -top-1 -right-1 flex h-2.5 w-2.5 items-center justify-center"
-                      initial={{ opacity: 0.7 }}
-                      animate={{
-                        opacity: [0.7, 1, 0.7],
-                      }}
-                      transition={{
-                        repeat: Infinity,
-                        duration: 2,
-                        repeatType: "loop",
-                        ease: "easeInOut",
-                      }}
-                    >
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-purple-400 opacity-75"></span>
-                      <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-gradient-to-r from-purple-500 to-pink-500"></span>
-                    </motion.div>
-                  )}
                 </div>
               </TabsTrigger>
               <TabsTrigger
                 value="extract"
-                className="data-[state=active]:bg-purple-100 dark:data-[state=active]:bg-purple-900/30"
+                className="data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-200"
               >
                 <div className="flex items-center gap-2">
                   <ImageIcon className="h-4 w-4" />
-                  <span>Extract</span>
+                  <span>Photo</span>
                 </div>
               </TabsTrigger>
             </TabsList>
@@ -1026,7 +1027,7 @@ export default function PalettePage() {
               <div className="hidden md:flex gap-2">
                 <Button
                   onClick={() => setActiveTab("official")}
-                  className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                  className="flex items-center gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-500 ring-1 ring-indigo-400/40 text-white"
                   size="sm"
                 >
                   <Lightbulb className="h-3.5 w-3.5" />
@@ -1034,7 +1035,7 @@ export default function PalettePage() {
                 </Button>
                 <Button
                   onClick={handleImport}
-                  className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white"
+                  className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 ring-1 ring-emerald-400/40 text-white"
                   size="sm"
                 >
                   <Upload className="h-3.5 w-3.5" />
@@ -1045,7 +1046,7 @@ export default function PalettePage() {
               <div className="hidden md:flex gap-2">
                 <Button
                   onClick={() => setActiveTab("official")}
-                  className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                  className="flex items-center gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-500 ring-1 ring-indigo-400/40 text-white"
                   size="sm"
                 >
                   <Lightbulb className="h-3.5 w-3.5" />
@@ -1053,7 +1054,7 @@ export default function PalettePage() {
                 </Button>
                 <Button
                   onClick={() => setActiveTab("create")}
-                  className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white"
+                  className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
                   size="sm"
                 >
                   <Plus className="h-3.5 w-3.5" />
@@ -1061,7 +1062,7 @@ export default function PalettePage() {
                 </Button>
                 <Button
                   onClick={handleImport}
-                  className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white"
+                  className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 ring-1 ring-emerald-400/40 text-white"
                   size="sm"
                 >
                   <Upload className="h-3.5 w-3.5" />
@@ -1072,7 +1073,7 @@ export default function PalettePage() {
               <div className="hidden md:flex gap-2">
                 <Button
                   onClick={() => setActiveTab("create")}
-                  className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white"
+                  className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
                   size="sm"
                 >
                   <Plus className="h-3.5 w-3.5" />
@@ -1080,7 +1081,7 @@ export default function PalettePage() {
                 </Button>
                 <Button
                   onClick={() => setActiveTab("official")}
-                  className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                  className="flex items-center gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-500 ring-1 ring-indigo-400/40 text-white"
                   size="sm"
                 >
                   <Lightbulb className="h-3.5 w-3.5" />
@@ -1088,7 +1089,7 @@ export default function PalettePage() {
                 </Button>
                 <Button
                   onClick={handleImport}
-                  className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white"
+                  className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 ring-1 ring-emerald-400/40 text-white"
                   size="sm"
                 >
                   <Upload className="h-3.5 w-3.5" />
@@ -1099,7 +1100,7 @@ export default function PalettePage() {
               <div className="hidden md:flex gap-2">
                 <Button
                   onClick={() => setActiveTab("create")}
-                  className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white"
+                  className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
                   size="sm"
                 >
                   <Plus className="h-3.5 w-3.5" />
@@ -1107,7 +1108,7 @@ export default function PalettePage() {
                 </Button>
                 <Button
                   onClick={handleImport}
-                  className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white"
+                  className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 ring-1 ring-emerald-400/40 text-white"
                   size="sm"
                 >
                   <Upload className="h-3.5 w-3.5" />
@@ -1122,15 +1123,15 @@ export default function PalettePage() {
             <div className="flex md:hidden justify-end mb-2 gap-2">
               <Button
                 onClick={() => setActiveTab("extract")}
-                className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white"
+                className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
                 size="sm"
               >
                 <ImageIcon className="h-3.5 w-3.5" />
-                Extract
+                Photo
               </Button>
               <Button
                 onClick={() => setActiveTab("official")}
-                className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                className="flex items-center gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-500 ring-1 ring-indigo-400/40 text-white"
                 size="sm"
               >
                 <Lightbulb className="h-3.5 w-3.5" />
@@ -1138,7 +1139,7 @@ export default function PalettePage() {
               </Button>
               <Button
                 onClick={handleImport}
-                className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white"
+                className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 ring-1 ring-emerald-400/40 text-white"
                 size="sm"
               >
                 <Upload className="h-3.5 w-3.5" />
@@ -1152,9 +1153,9 @@ export default function PalettePage() {
               exit={{ opacity: 0, y: 20 }}
               transition={{ duration: 0.4 }}
             >
-              <Card className="border-2 border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm shadow-lg">
+              <Card className="bg-gray-900 border border-white/10 rounded-2xl shadow-lg">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                  <CardTitle className="text-xl font-bold text-white">
                     {editingPaletteId
                       ? `Edit Palette: ${paletteName}`
                       : "Palette Designer"}
@@ -1168,7 +1169,7 @@ export default function PalettePage() {
                 <CardContent>
                   <PaletteManager />
                 </CardContent>
-                <CardFooter className="flex justify-between border-t border-gray-200 dark:border-gray-800 pt-4">
+                <CardFooter className="flex justify-between border-t border-white/10 pt-4">
                   <div className="flex items-center gap-2">
                     <motion.div whileTap={{ scale: 0.9 }}>
                       <Button
@@ -1177,7 +1178,7 @@ export default function PalettePage() {
                         className="h-8 w-8"
                         onClick={handleUndoAction}
                         disabled={paletteHistoryIndex <= 0}
-                        title="Undo (Ctrl+Z)"
+                        title="Undo (Ctrl/⌘+Z)"
                       >
                         <Undo2 className="h-4 w-4" />
                       </Button>
@@ -1191,17 +1192,22 @@ export default function PalettePage() {
                         disabled={
                           paletteHistoryIndex >= paletteHistory.length - 1
                         }
-                        title="Redo (Ctrl+Y)"
+                        title="Redo (Ctrl/⌘+Shift+Z)"
                       >
                         <Redo2 className="h-4 w-4" />
                       </Button>
                     </motion.div>
-                    <span className="text-xs text-gray-500 dark:text-gray-400 ml-1 hidden sm:inline-block">
-                      Keyboard shortcuts: Ctrl+Z (Undo), Ctrl+Y (Redo)
+                    <span className="text-xs text-slate-400 ml-1 hidden sm:inline-block">
+                      Keyboard shortcuts: Ctrl/⌘+Z (Undo), Ctrl/⌘+Shift+Z
+                      (Redo)
                     </span>
                   </div>
                   {editingPaletteId ? (
                     <div className="flex items-center gap-4">
+                      <span className="text-sm text-slate-400 tabular-nums">
+                        {customPalette.length}{" "}
+                        {customPalette.length === 1 ? "color" : "colors"}
+                      </span>
                       {saveSuccess && (
                         <motion.div
                           initial={{ opacity: 0, x: -10 }}
@@ -1213,7 +1219,7 @@ export default function PalettePage() {
                         </motion.div>
                       )}
                       <Button
-                        className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+                        className="bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
                         disabled={customPalette.length === 0 || saveSuccess}
                         onClick={handleSavePalette}
                       >
@@ -1222,13 +1228,18 @@ export default function PalettePage() {
                       </Button>
                     </div>
                   ) : (
-                    <Dialog
-                      open={isSaveDialogOpen}
-                      onOpenChange={setIsSaveDialogOpen}
-                    >
-                      <DialogTrigger asChild>
+                    <div className="flex items-center gap-4">
+                      <span className="text-sm text-slate-400 tabular-nums">
+                        {customPalette.length}{" "}
+                        {customPalette.length === 1 ? "color" : "colors"}
+                      </span>
+                      <Dialog
+                        open={isSaveDialogOpen}
+                        onOpenChange={setIsSaveDialogOpen}
+                      >
+                        <DialogTrigger asChild>
                         <Button
-                          className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+                          className="bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
                           disabled={customPalette.length === 0}
                         >
                           <Save className="mr-2 h-4 w-4" />
@@ -1274,7 +1285,7 @@ export default function PalettePage() {
                           </Button>
                           <Button
                             type="button"
-                            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+                            className="bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
                             onClick={handleSavePalette}
                             disabled={!paletteName.trim()}
                           >
@@ -1282,7 +1293,8 @@ export default function PalettePage() {
                           </Button>
                         </DialogFooter>
                       </DialogContent>
-                    </Dialog>
+                      </Dialog>
+                    </div>
                   )}
                 </CardFooter>
               </Card>
@@ -1293,7 +1305,7 @@ export default function PalettePage() {
             <div className="flex md:hidden justify-end mb-2">
               <Button
                 onClick={() => setActiveTab("create")}
-                className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white mr-2"
+                className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white mr-2"
                 size="sm"
               >
                 <Plus className="h-3.5 w-3.5" />
@@ -1301,7 +1313,7 @@ export default function PalettePage() {
               </Button>
               <Button
                 onClick={() => setActiveTab("official")}
-                className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                className="flex items-center gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-500 ring-1 ring-indigo-400/40 text-white"
                 size="sm"
               >
                 <Lightbulb className="h-3.5 w-3.5" />
@@ -1309,7 +1321,7 @@ export default function PalettePage() {
               </Button>
               <Button
                 onClick={handleImport}
-                className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white ml-2"
+                className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 ring-1 ring-emerald-400/40 text-white ml-2"
                 size="sm"
               >
                 <Upload className="h-3.5 w-3.5" />
@@ -1332,7 +1344,7 @@ export default function PalettePage() {
             <div className="flex md:hidden justify-end gap-2 mb-2">
               <Button
                 onClick={() => setActiveTab("create")}
-                className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white"
+                className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
                 size="sm"
               >
                 <Plus className="h-3.5 w-3.5" />
@@ -1340,15 +1352,15 @@ export default function PalettePage() {
               </Button>
               <Button
                 onClick={() => setActiveTab("extract")}
-                className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white"
+                className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
                 size="sm"
               >
                 <ImageIcon className="h-3.5 w-3.5" />
-                Extract
+                Photo
               </Button>
               <Button
                 onClick={() => setActiveTab("official")}
-                className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                className="flex items-center gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-500 ring-1 ring-indigo-400/40 text-white"
                 size="sm"
               >
                 <Lightbulb className="h-3.5 w-3.5" />
@@ -1356,7 +1368,7 @@ export default function PalettePage() {
               </Button>
               <Button
                 onClick={handleImport}
-                className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white"
+                className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 ring-1 ring-emerald-400/40 text-white"
                 size="sm"
               >
                 <Upload className="h-3.5 w-3.5" />
@@ -1378,14 +1390,14 @@ export default function PalettePage() {
               ) : (
                 <div className="mt-10 flex flex-col items-center justify-center text-center">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl mx-auto">
-                    <div className="border border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6 flex flex-col items-center justify-center bg-white/50 dark:bg-gray-800/20 hover:bg-white dark:hover:bg-gray-800/30 transition-colors">
-                      <div className="w-16 h-16 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center mb-4">
-                        <FolderIcon className="h-8 w-8 text-purple-600 dark:text-purple-400" />
+                    <div className="border border-dashed border-white/10 rounded-lg p-6 flex flex-col items-center justify-center bg-white/50 dark:bg-gray-800/20 hover:bg-white dark:hover:bg-gray-800/30 transition-colors">
+                      <div className="w-16 h-16 rounded-full bg-blue-500/10 dark:bg-blue-900/30 flex items-center justify-center mb-4">
+                        <FolderIcon className="h-8 w-8 text-blue-300" />
                       </div>
                       <h3 className="text-lg font-medium text-gray-900 dark:text-gray-200 mb-2">
                         No Saved Palettes
                       </h3>
-                      <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">
+                      <p className="text-slate-400 text-sm mb-4">
                         Create and save your custom color palettes to see them
                         here
                       </p>
@@ -1398,15 +1410,15 @@ export default function PalettePage() {
                       </Button>
                     </div>
 
-                    <div className="border border-dashed border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden bg-white/50 dark:bg-gray-800/20 hover:bg-white dark:hover:bg-gray-800/30 transition-colors">
+                    <div className="border border-dashed border-white/10 rounded-lg overflow-hidden bg-white/50 dark:bg-gray-800/20 hover:bg-white dark:hover:bg-gray-800/30 transition-colors">
                       <div className="p-6 flex flex-col items-center">
-                        <div className="w-16 h-16 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center mb-4">
-                          <Upload className="h-8 w-8 text-purple-600 dark:text-purple-400" />
+                        <div className="w-16 h-16 rounded-full bg-blue-500/10 dark:bg-blue-900/30 flex items-center justify-center mb-4">
+                          <Upload className="h-8 w-8 text-blue-300" />
                         </div>
                         <h3 className="text-lg font-medium text-gray-900 dark:text-gray-200 mb-2">
                           Import Palette
                         </h3>
-                        <p className="text-gray-500 dark:text-gray-400 text-sm mb-4 text-center">
+                        <p className="text-slate-400 text-sm mb-4 text-center">
                           Import color palettes from file or JSON
                         </p>
                       </div>
@@ -1420,12 +1432,12 @@ export default function PalettePage() {
                   </div>
 
                   {/* Small inspiration hint */}
-                  <div className="mt-8 text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2 justify-center">
-                    <Lightbulb className="h-4 w-4 text-purple-500 dark:text-purple-400" />
+                  <div className="mt-8 text-sm text-slate-400 flex items-center gap-2 justify-center">
+                    <Lightbulb className="h-4 w-4 text-blue-300" />
                     <span>Need inspiration?</span>
                     <button
                       onClick={() => setActiveTab("official")}
-                      className="text-purple-600 dark:text-purple-400 hover:underline font-medium"
+                      className="text-blue-300 hover:underline font-medium"
                     >
                       Browse official palettes
                     </button>
@@ -1440,7 +1452,7 @@ export default function PalettePage() {
             <div className="flex md:hidden justify-end gap-2 mb-2">
               <Button
                 onClick={() => setActiveTab("create")}
-                className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white"
+                className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
                 size="sm"
               >
                 <Plus className="h-3.5 w-3.5" />
@@ -1448,15 +1460,15 @@ export default function PalettePage() {
               </Button>
               <Button
                 onClick={() => setActiveTab("extract")}
-                className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white"
+                className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
                 size="sm"
               >
                 <ImageIcon className="h-3.5 w-3.5" />
-                Extract
+                Photo
               </Button>
               <Button
                 onClick={handleImport}
-                className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white"
+                className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 ring-1 ring-emerald-400/40 text-white"
                 size="sm"
               >
                 <Upload className="h-3.5 w-3.5" />
