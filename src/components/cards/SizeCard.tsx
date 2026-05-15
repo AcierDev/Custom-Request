@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Columns3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const sizeOptions = [...Object.values(ItemSizes), "custom"];
@@ -143,7 +143,8 @@ export function SizeCard({ compact = false }: SizeCardProps) {
       <Card className="glass-surface shadow-lg">
         <CardContent className="py-3 px-4 flex items-center justify-between gap-6">
           <div className="flex flex-col min-w-0">
-            <span className="text-xs font-medium text-slate-400">
+            <span className="text-xs font-medium text-slate-400 flex items-center gap-1.5">
+              <Columns3 className="h-3.5 w-3.5" />
               Size
             </span>
             <span className="text-sm font-semibold text-slate-200 truncate">
@@ -178,7 +179,8 @@ export function SizeCard({ compact = false }: SizeCardProps) {
   return (
     <Card className="h-1/3 dark:bg-gray-800/50 backdrop-blur-sm border-2 border-white/10">
       <CardHeader className="pb-2">
-        <CardTitle className="text-xl font-bold bg-gradient-to-r from-blue-500 to-sky-500 bg-clip-text text-transparent">
+        <CardTitle className="heading-section flex items-center gap-2">
+          <Columns3 className="h-5 w-5" />
           Size
         </CardTitle>
       </CardHeader>
