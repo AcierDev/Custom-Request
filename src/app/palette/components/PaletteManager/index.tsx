@@ -19,6 +19,7 @@ import {
 } from "@dnd-kit/sortable";
 import { HexColorPicker } from "react-colorful";
 import { useCustomStore } from "@/store/customStore";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -42,8 +43,6 @@ import {
 } from "@/components/ui/tooltip";
 import {
   X,
-  ArrowUp,
-  ArrowDown,
   Info,
   Palette,
   Blend,
@@ -58,6 +57,37 @@ import { AddColorButton } from "./AddColorButton";
 import { BlendingGuide } from "./BlendingGuide";
 import { ColorHarmonyGenerator } from "./ColorHarmonyGenerator";
 
+// Hex -> readable RGB / HSL strings for the color info readout.
+function describeColor(hex: string): { rgb: string; hsl: string } | null {
+  if (!/^#[0-9A-Fa-f]{6}$/.test(hex)) return null;
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const rn = r / 255;
+  const gn = g / 255;
+  const bn = b / 255;
+  const max = Math.max(rn, gn, bn);
+  const min = Math.min(rn, gn, bn);
+  const delta = max - min;
+  const l = (max + min) / 2;
+  let h = 0;
+  let s = 0;
+  if (delta !== 0) {
+    s = delta / (1 - Math.abs(2 * l - 1));
+    if (max === rn) h = ((gn - bn) / delta) % 6;
+    else if (max === gn) h = (bn - rn) / delta + 2;
+    else h = (rn - gn) / delta + 4;
+    h *= 60;
+    if (h < 0) h += 360;
+  }
+  return {
+    rgb: `rgb(${r}, ${g}, ${b})`,
+    hsl: `hsl(${Math.round(h)}, ${Math.round(s * 100)}%, ${Math.round(
+      l * 100
+    )}%)`,
+  };
+}
+
 export function PaletteManager() {
   const {
     customPalette,
@@ -66,18 +96,17 @@ export function PaletteManager() {
     removeCustomColor,
     duplicateCustomColor,
     toggleColorSelection,
+    clearSelectedColors,
     addBlendedColors,
-    moveColorLeft,
-    moveColorRight,
     updateColorName,
     updateColorHex,
-    updateColorExtraPercent,
     reorderPalette,
     commitPaletteToHistory,
     editingPaletteId,
     resetPaletteEditor,
   } = useCustomStore();
 
+  const [mixMode, setMixMode] = useState(false);
   const [blendCount, setBlendCount] = useState(3);
   const [editingColor, setEditingColor] = useState<number | null>(null);
   const [editColorHex, setEditColorHex] = useState("#000000");
@@ -152,14 +181,8 @@ export function PaletteManager() {
 
   // Show blending guide when there are at least 2 colors but none are selected
   useEffect(() => {
-    if (
-      customPalette.length >= 2 &&
-      selectedColors.length === 0 &&
-      !hasSeenBlendingGuide
-    ) {
+    if (customPalette.length >= 2 && !hasSeenBlendingGuide) {
       setShowBlendingGuide(true);
-    } else if (selectedColors.length > 0) {
-      setShowBlendingGuide(false);
     }
 
     // Only hide selection hint after user has selected TWO colors
@@ -248,11 +271,6 @@ export function PaletteManager() {
     }
   };
 
-  const selectedColorIndex =
-    selectedColors.length === 1
-      ? customPalette.findIndex((color) => color.id === selectedColors[0])
-      : -1;
-
   const handleAddHarmonyColors = (colors: string[]) => {
     // Add the harmony colors to the palette
     const newColors = colors.map((hex) => ({
@@ -264,6 +282,11 @@ export function PaletteManager() {
       customPalette: [...customPalette, ...newColors],
     });
     toast.success(`Added ${colors.length} harmony colors to your palette!`);
+  };
+
+  const toggleMixMode = () => {
+    if (mixMode) clearSelectedColors();
+    setMixMode((prev) => !prev);
   };
 
   const handleClearPalette = () => {
@@ -315,67 +338,6 @@ export function PaletteManager() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {/* Primary Actions Group */}
-            {selectedColors.length > 0 && (
-              <div className="flex items-center rounded-md border border-gray-200 dark:border-gray-800 p-0.5 bg-gray-900 shadow-sm">
-                <TooltipProvider delayDuration={300}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => moveColorLeft(selectedColorIndex)}
-                        disabled={
-                          selectedColors.length !== 1 || selectedColorIndex <= 0
-                        }
-                        className="h-8 w-8 p-0 rounded-none rounded-l-sm"
-                      >
-                        <ArrowUp className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom">
-                      {selectedColors.length === 0
-                        ? "Select a color to move"
-                        : selectedColors.length > 1
-                        ? "Select only one color to move"
-                        : selectedColorIndex <= 0
-                        ? "Color is at the top"
-                        : "Move color up"}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-
-                <TooltipProvider delayDuration={300}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => moveColorRight(selectedColorIndex)}
-                        disabled={
-                          selectedColors.length !== 1 ||
-                          selectedColorIndex === customPalette.length - 1 ||
-                          selectedColorIndex === -1
-                        }
-                        className="h-8 w-8 p-0 rounded-none rounded-r-sm border-l border-gray-200 dark:border-gray-800"
-                      >
-                        <ArrowDown className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom">
-                      {selectedColors.length === 0
-                        ? "Select a color to move"
-                        : selectedColors.length > 1
-                        ? "Select only one color to move"
-                        : selectedColorIndex === customPalette.length - 1
-                        ? "Color is at the bottom"
-                        : "Move color down"}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-            )}
-
             {/* Main Actions Group */}
             <div className="flex items-center gap-2">
               <TooltipProvider delayDuration={300}>
@@ -482,7 +444,8 @@ export function PaletteManager() {
 
         {/* Selection Hint */}
         <AnimatePresence>
-          {showSelectionHint &&
+          {mixMode &&
+            showSelectionHint &&
             customPalette.length >= 2 &&
             selectedColors.length === 0 && (
               <motion.div
@@ -519,45 +482,87 @@ export function PaletteManager() {
             items={customPalette.map((c) => c.id)}
             strategy={horizontalListSortingStrategy}
           >
-            <div className="flex w-full gap-0 list-none p-0 m-0 rounded-lg overflow-hidden">
-              <AnimatePresence>
-                {customPalette.map((color, index) => (
-                  <SortableColorSwatch
-                    key={color.id}
-                    id={color.id}
-                    color={color.hex}
-                    name={color.name}
-                    index={index}
-                    extraPercent={color.extraPercent ?? 0}
-                    onExtraPercentChange={(v) =>
-                      updateColorExtraPercent(index, v)
-                    }
-                    isSelected={selectedColors.includes(color.id)}
-                    selectionOrder={
-                      selectedColors.indexOf(color.id) >= 0
-                        ? selectedColors.indexOf(color.id) + 1
-                        : undefined
-                    }
-                    onSelect={() => toggleColorSelection(color.id)}
-                    onRemove={() => removeCustomColor(index)}
-                    onEdit={() => handleEditColor(index)}
-                    onDuplicate={() => handleDuplicateColor(index)}
-                    showBlendHint={selectedColors.length === 1}
-                  />
-                ))}
-              </AnimatePresence>
+            <div className="flex w-full items-stretch gap-2 list-none p-0 m-0">
+              {customPalette.length > 0 && (
+                <div
+                  className="flex min-w-0 basis-0 gap-1"
+                  style={{ flexGrow: customPalette.length }}
+                >
+                  <AnimatePresence>
+                    {customPalette.map((color, index) => (
+                      <SortableColorSwatch
+                        key={color.id}
+                        id={color.id}
+                        color={color.hex}
+                        name={color.name}
+                        index={index}
+                        isSelected={
+                          mixMode && selectedColors.includes(color.id)
+                        }
+                        selectionOrder={
+                          mixMode && selectedColors.indexOf(color.id) >= 0
+                            ? selectedColors.indexOf(color.id) + 1
+                            : undefined
+                        }
+                        onSelect={() =>
+                          mixMode
+                            ? toggleColorSelection(color.id)
+                            : handleEditColor(index)
+                        }
+                        onRemove={() => removeCustomColor(index)}
+                        onEdit={() => handleEditColor(index)}
+                        onDuplicate={() => handleDuplicateColor(index)}
+                        showBlendHint={
+                          mixMode && selectedColors.length === 1
+                        }
+                      />
+                    ))}
+                  </AnimatePresence>
+                </div>
+              )}
 
               <AddColorButton
                 onColorAdd={handleAddColor}
                 isEmpty={customPalette.length === 0}
               />
+
+              {/* Mix toggle - color selection for blending is only
+                  enabled while mix mode is active */}
+              {customPalette.length >= 2 && (
+                <button
+                  type="button"
+                  onClick={toggleMixMode}
+                  className={cn(
+                    "h-64 sm:h-80 w-16 sm:w-20 flex-shrink-0 rounded-lg",
+                    "flex flex-col items-center justify-center gap-2",
+                    "cursor-pointer transition-colors duration-300 border-2",
+                    mixMode
+                      ? "bg-blue-600 hover:bg-blue-500 border-blue-400/60 text-white"
+                      : "bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/30 hover:border-blue-400/70 text-blue-300"
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full ring-1 transition-colors duration-300",
+                      mixMode
+                        ? "bg-white/15 ring-white/40"
+                        : "bg-white/5 ring-white/15"
+                    )}
+                  >
+                    <Blend className="h-5 w-5 sm:h-6 sm:w-6" />
+                  </div>
+                  <span className="text-[10px] sm:text-xs font-medium tracking-wide">
+                    {mixMode ? "Cancel Mix" : "Mix"}
+                  </span>
+                </button>
+              )}
             </div>
           </SortableContext>
         </DndContext>
       </div>
 
       {/* Blend Controls - Only show when 2 colors are selected */}
-      {selectedColors.length === 2 && (
+      {mixMode && selectedColors.length === 2 && (
         <motion.div
           initial={{ opacity: 0, height: 0, y: -10 }}
           animate={{ opacity: 1, height: "auto", y: 0 }}
@@ -609,6 +614,7 @@ export function PaletteManager() {
                   onClick={() => {
                     setHasSeenBlendingGuide(true);
                     addBlendedColors(blendCount);
+                    setMixMode(false);
                   }}
                   className="bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white whitespace-nowrap shadow-md hover:shadow-lg transition-all"
                 >
@@ -678,6 +684,23 @@ export function PaletteManager() {
                   placeholder="e.g. Deep Purple"
                 />
               </div>
+
+              {(() => {
+                const info = describeColor(editColorHex);
+                if (!info) return null;
+                return (
+                  <div className="rounded-md bg-white/5 px-3 py-2 text-xs font-mono text-slate-300 space-y-1">
+                    <div className="flex justify-between gap-4">
+                      <span className="text-slate-500">RGB</span>
+                      <span>{info.rgb}</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span className="text-slate-500">HSL</span>
+                      <span>{info.hsl}</span>
+                    </div>
+                  </div>
+                );
+              })()}
 
               <div className="flex justify-end gap-2 mt-6">
                 <Button variant="outline" onClick={() => setEditingColor(null)}>

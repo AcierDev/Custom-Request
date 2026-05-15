@@ -68,6 +68,15 @@ export default function PalettePage() {
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   const [paletteName, setPaletteName] = useState("");
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Default to the "official" tab only on a fresh start. If the user
+  // already has work in progress, keep them where they left off so
+  // navigating away and back doesn't discard their palette.
+  useEffect(() => {
+    if (customPalette.length === 0 && !editingPaletteId) {
+      setActiveTab("official");
+    }
+  }, []);
   
   // Paint color grounding
   const [allPaintColors, setAllPaintColors] = useState<any[]>([]);
@@ -351,6 +360,20 @@ export default function PalettePage() {
     }
   }, [searchParams, savedPalettes, setActiveTab, router]);
 
+  // Warn before leaving/refreshing when there's an in-progress palette
+  useEffect(() => {
+    if (customPalette.length === 0) return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () =>
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [customPalette.length]);
+
   // Add keyboard shortcut handlers
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -369,11 +392,8 @@ export default function PalettePage() {
         }
       }
 
-      // Handle Ctrl+Y / Command+Y or Ctrl+Shift+Z / Command+Shift+Z for redo
-      if (
-        (e.ctrlKey || e.metaKey) &&
-        (e.key === "y" || (e.key === "z" && e.shiftKey))
-      ) {
+      // Handle Ctrl+Shift+Z / Command+Shift+Z for redo
+      if ((e.ctrlKey || e.metaKey) && e.key === "z" && e.shiftKey) {
         e.preventDefault();
         const success = redoPaletteAction();
         if (success) {
@@ -882,7 +902,7 @@ export default function PalettePage() {
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="max-w-[1800px] mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between space-x-4">
           <div className="space-y-2">
@@ -944,8 +964,7 @@ export default function PalettePage() {
                 className="data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-200"
               >
                 <div className="flex items-center gap-2">
-                  <Plus className="h-4 w-4" />
-                  <span>{editingPaletteId ? "Edit" : "Create"}</span>
+                  <span>{editingPaletteId ? "Edit" : "Custom"}</span>
                 </div>
               </TabsTrigger>
 
@@ -990,24 +1009,6 @@ export default function PalettePage() {
                   >
                     Official
                   </motion.span>
-                  {activeTab !== "official" && (
-                    <motion.div
-                      className="absolute -top-1 -right-1 flex h-2.5 w-2.5 items-center justify-center"
-                      initial={{ opacity: 0.7 }}
-                      animate={{
-                        opacity: [0.7, 1, 0.7],
-                      }}
-                      transition={{
-                        repeat: Infinity,
-                        duration: 2,
-                        repeatType: "loop",
-                        ease: "easeInOut",
-                      }}
-                    >
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75"></span>
-                      <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-gradient-to-r from-blue-500 to-sky-500"></span>
-                    </motion.div>
-                  )}
                 </div>
               </TabsTrigger>
               <TabsTrigger
@@ -1152,7 +1153,7 @@ export default function PalettePage() {
               exit={{ opacity: 0, y: 20 }}
               transition={{ duration: 0.4 }}
             >
-              <Card className="glass-surface rounded-2xl shadow-lg">
+              <Card className="bg-gray-900 border border-white/10 rounded-2xl shadow-lg">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-xl font-bold text-white">
                     {editingPaletteId
@@ -1177,7 +1178,7 @@ export default function PalettePage() {
                         className="h-8 w-8"
                         onClick={handleUndoAction}
                         disabled={paletteHistoryIndex <= 0}
-                        title="Undo (Ctrl+Z)"
+                        title="Undo (Ctrl/⌘+Z)"
                       >
                         <Undo2 className="h-4 w-4" />
                       </Button>
@@ -1191,17 +1192,22 @@ export default function PalettePage() {
                         disabled={
                           paletteHistoryIndex >= paletteHistory.length - 1
                         }
-                        title="Redo (Ctrl+Y)"
+                        title="Redo (Ctrl/⌘+Shift+Z)"
                       >
                         <Redo2 className="h-4 w-4" />
                       </Button>
                     </motion.div>
                     <span className="text-xs text-slate-400 ml-1 hidden sm:inline-block">
-                      Keyboard shortcuts: Ctrl+Z (Undo), Ctrl+Y (Redo)
+                      Keyboard shortcuts: Ctrl/⌘+Z (Undo), Ctrl/⌘+Shift+Z
+                      (Redo)
                     </span>
                   </div>
                   {editingPaletteId ? (
                     <div className="flex items-center gap-4">
+                      <span className="text-sm text-slate-400 tabular-nums">
+                        {customPalette.length}{" "}
+                        {customPalette.length === 1 ? "color" : "colors"}
+                      </span>
                       {saveSuccess && (
                         <motion.div
                           initial={{ opacity: 0, x: -10 }}
@@ -1222,11 +1228,16 @@ export default function PalettePage() {
                       </Button>
                     </div>
                   ) : (
-                    <Dialog
-                      open={isSaveDialogOpen}
-                      onOpenChange={setIsSaveDialogOpen}
-                    >
-                      <DialogTrigger asChild>
+                    <div className="flex items-center gap-4">
+                      <span className="text-sm text-slate-400 tabular-nums">
+                        {customPalette.length}{" "}
+                        {customPalette.length === 1 ? "color" : "colors"}
+                      </span>
+                      <Dialog
+                        open={isSaveDialogOpen}
+                        onOpenChange={setIsSaveDialogOpen}
+                      >
+                        <DialogTrigger asChild>
                         <Button
                           className="bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
                           disabled={customPalette.length === 0}
@@ -1282,7 +1293,8 @@ export default function PalettePage() {
                           </Button>
                         </DialogFooter>
                       </DialogContent>
-                    </Dialog>
+                      </Dialog>
+                    </div>
                   )}
                 </CardFooter>
               </Card>

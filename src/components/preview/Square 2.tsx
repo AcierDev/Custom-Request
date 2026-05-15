@@ -4,7 +4,6 @@ import { useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import { useEffect, useMemo, useRef } from "react";
 import { useCustomStore } from "@/store/customStore";
-import { getWoodStyle } from "./woodStyles";
 
 interface SquareProps {
   position: [number, number, number];
@@ -170,12 +169,9 @@ export function Square({
   const adjustedPosition: [number, number, number] = [x, y, z + height / 2];
   const meshRef = useRef<THREE.Mesh>(null);
 
-  const woodStyleId = useCustomStore((s) => s.viewSettings.woodStyle);
-  const woodStyle = useMemo(() => getWoodStyle(woodStyleId), [woodStyleId]);
-
   // Load textures with caching - load only if wood grain is shown
   const texturePaths = showWoodGrain
-    ? [woodStyle.topTexture, woodStyle.sideTexture]
+    ? ["/textures/bw-wood-texture-4.jpg", "/textures/wood-side-grain.jpg"]
     : [];
 
   const textures = useTexture(texturePaths);
@@ -193,8 +189,8 @@ export function Square({
     if (top) {
       // Process top texture
       top.wrapS = top.wrapT = THREE.RepeatWrapping;
-      // Grain scale comes from the selected wood style
-      const topScale = woodStyle.topScale;
+      // Always use the provided textureVariation regardless of isGeometric
+      const topScale = textureVariation.scale;
       top.repeat.set(topScale, topScale);
       top.anisotropy = 8; // Reduced from 16 for performance
 
@@ -216,7 +212,7 @@ export function Square({
     }
 
     return { uniqueTopTexture: top, uniqueSideTexture: side };
-  }, [showWoodGrain, topTexture, sideTexture, textureVariation, woodStyle]);
+  }, [showWoodGrain, topTexture, sideTexture, textureVariation]);
 
   // Create materials with better memoization pattern
   const materialKey = `${color}-${isHovered}-${showWoodGrain}-${showColorInfo}`;
@@ -227,19 +223,12 @@ export function Square({
       new THREE.MeshStandardMaterial({
         map: showWoodGrain ? uniqueTopTexture : null,
         color,
-        roughness: woodStyle.roughness,
-        metalness: woodStyle.metalness,
+        roughness: 0.8,
+        metalness: 0.05,
         emissive: isHovered && showColorInfo ? color : "#000000",
         emissiveIntensity: isHovered && showColorInfo ? 0.5 : 0,
       }),
-    [
-      uniqueTopTexture,
-      color,
-      isHovered,
-      showWoodGrain,
-      showColorInfo,
-      woodStyle,
-    ]
+    [uniqueTopTexture, color, isHovered, showWoodGrain, showColorInfo]
   );
 
   // Update material properties for existing material instead of creating new materials
@@ -301,8 +290,8 @@ export function Square({
       new THREE.MeshStandardMaterial({
         map: showWoodGrain ? uniqueSideTexture : null,
         color,
-        roughness: woodStyle.roughness,
-        metalness: woodStyle.metalness,
+        roughness: 0.7,
+        metalness: 0.1,
         emissive: isHovered && showColorInfo ? color : "#000000",
         emissiveIntensity: isHovered && showColorInfo ? 0.5 : 0,
       }),
@@ -310,8 +299,8 @@ export function Square({
       new THREE.MeshStandardMaterial({
         map: showWoodGrain ? uniqueSideTexture : null,
         color,
-        roughness: woodStyle.roughness,
-        metalness: woodStyle.metalness,
+        roughness: 0.7,
+        metalness: 0.1,
         emissive: isHovered && showColorInfo ? color : "#000000",
         emissiveIntensity: isHovered && showColorInfo ? 0.5 : 0,
       }),
@@ -319,8 +308,8 @@ export function Square({
       new THREE.MeshStandardMaterial({
         map: showWoodGrain ? uniqueSideTexture : null,
         color,
-        roughness: woodStyle.roughness,
-        metalness: woodStyle.metalness,
+        roughness: 0.7,
+        metalness: 0.1,
         emissive: isHovered && showColorInfo ? color : "#000000",
         emissiveIntensity: isHovered && showColorInfo ? 0.5 : 0,
       }),
@@ -328,8 +317,8 @@ export function Square({
       new THREE.MeshStandardMaterial({
         map: showWoodGrain ? uniqueSideTexture : null,
         color,
-        roughness: woodStyle.roughness,
-        metalness: woodStyle.metalness,
+        roughness: 0.7,
+        metalness: 0.1,
         emissive: isHovered && showColorInfo ? color : "#000000",
         emissiveIntensity: isHovered && showColorInfo ? 0.5 : 0,
       }),
@@ -337,8 +326,8 @@ export function Square({
       new THREE.MeshStandardMaterial({
         map: showWoodGrain ? uniqueTopTexture : null,
         color,
-        roughness: woodStyle.roughness,
-        metalness: woodStyle.metalness,
+        roughness: 0.7,
+        metalness: 0.1,
         emissive: isHovered && showColorInfo ? color : "#000000",
         emissiveIntensity: isHovered && showColorInfo ? 0.5 : 0,
       }),
@@ -346,8 +335,8 @@ export function Square({
       new THREE.MeshStandardMaterial({
         map: showWoodGrain ? uniqueSideTexture : null,
         color,
-        roughness: woodStyle.roughness,
-        metalness: woodStyle.metalness,
+        roughness: 0.7,
+        metalness: 0.1,
         emissive: isHovered && showColorInfo ? color : "#000000",
         emissiveIntensity: isHovered && showColorInfo ? 0.5 : 0,
       }),
@@ -359,7 +348,6 @@ export function Square({
       isHovered,
       showWoodGrain,
       showColorInfo,
-      woodStyle,
     ]
   );
 

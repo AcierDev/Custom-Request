@@ -3,7 +3,6 @@
 import { motion } from "framer-motion";
 import { Edit, Trash2, Sparkles, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Tooltip,
   TooltipContent,
@@ -13,19 +12,13 @@ import {
 import { cn } from "@/lib/utils";
 import { ColorSwatchProps } from "./types";
 
-const EXTRA_PERCENT_MIN = 0;
-const EXTRA_PERCENT_MAX = 500;
-const BAR_HEIGHT_CLASS = "h-32 sm:h-40";
+const BAR_HEIGHT_CLASS = "h-64 sm:h-80";
 
 export function ColorSwatch({
   id,
   color,
   name,
   isSelected,
-  selectionOrder,
-  showBlendHint = false,
-  extraPercent = 0,
-  onExtraPercentChange,
   onSelect,
   onRemove,
   onEdit,
@@ -56,34 +49,48 @@ export function ColorSwatch({
 
   return (
     <motion.div
-      initial={{ opacity: 0, scaleX: 0 }}
-      animate={{ opacity: 1, scaleX: 1 }}
-      exit={{ opacity: 0, scaleX: 0 }}
+      initial={{ opacity: 0, scaleX: 0, scaleY: 0.55, y: -28 }}
+      animate={{
+        opacity: 1,
+        scaleX: 1,
+        scaleY: [0.55, 1.12, 0.94, 1],
+        y: [-28, 0, -6, 0],
+      }}
+      exit={{ opacity: 0, scaleX: 0, scaleY: 0.6, y: 20 }}
       transition={{
-        type: "spring",
-        stiffness: 500,
-        damping: 30,
-        opacity: { duration: 0.2 },
+        scaleX: { type: "spring", stiffness: 420, damping: 22 },
+        scaleY: { duration: 0.55, times: [0, 0.45, 0.72, 1], ease: "easeOut" },
+        y: { duration: 0.55, times: [0, 0.45, 0.72, 1], ease: "easeOut" },
+        opacity: { duration: 0.18 },
       }}
       className={cn(
-        "relative group flex-1 min-w-0 cursor-pointer transition-all duration-200",
+        "relative group flex-1 min-w-0 cursor-pointer rounded-md overflow-hidden",
         BAR_HEIGHT_CLASS,
-        isSelected
-          ? "ring-4 ring-amber-400 ring-inset shadow-[inset_0_0_24px_rgba(251,191,36,0.5)] z-10"
-          : "",
-        showBlendHint && !isSelected
-          ? "ring-2 ring-amber-300/60 ring-inset"
-          : ""
+        isSelected ? "z-10" : ""
       )}
       style={{ backgroundColor: color }}
       onClick={onSelect}
     >
-      {/* Selection order badge */}
-      {isSelected && selectionOrder && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-amber-400 text-gray-900 text-sm font-bold shadow-lg ring-2 ring-white">
-          {selectionOrder}
-        </div>
-      )}
+      {/* Selection / blend-hint outline (static layer so the
+          entrance scale animation can't make it jitter) */}
+      <div
+        aria-hidden
+        className={cn(
+          "pointer-events-none absolute inset-0 z-20 rounded-md transition-all duration-300",
+          isSelected
+            ? "ring-4 ring-inset ring-blue-600 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.25),0_0_8px_rgba(37,99,235,0.45)]"
+            : "ring-0 ring-inset ring-transparent"
+        )}
+      />
+
+      {/* One-shot entrance flash */}
+      <motion.div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 z-30 bg-white"
+        initial={{ opacity: 0.85 }}
+        animate={{ opacity: 0 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+      />
 
       <div className="h-full p-2 flex flex-col justify-between overflow-hidden">
         {/* Top: name + hex */}
@@ -104,42 +111,10 @@ export function ColorSwatch({
           )}
         </div>
 
-        {/* Bottom: extra % + hover actions */}
+        {/* Bottom: hover actions */}
         <div className="flex flex-col gap-1">
-          {onExtraPercentChange && (
-            <div
-              className="flex items-center gap-1"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <span
-                className="text-[10px] font-medium opacity-90"
-                style={textColorStyle}
-              >
-                +%
-              </span>
-              <Input
-                type="number"
-                min={EXTRA_PERCENT_MIN}
-                max={EXTRA_PERCENT_MAX}
-                step={10}
-                value={extraPercent}
-                onChange={(e) => {
-                  const raw =
-                    e.target.value === "" ? 0 : Number(e.target.value);
-                  const clamped = Math.max(
-                    EXTRA_PERCENT_MIN,
-                    Math.min(EXTRA_PERCENT_MAX, Number.isNaN(raw) ? 0 : raw)
-                  );
-                  onExtraPercentChange(clamped);
-                }}
-                className="h-6 min-w-0 flex-1 text-[10px] px-1 bg-white/20 dark:bg-white/10 border-white/30 dark:border-white/20"
-                style={textColorStyle}
-              />
-            </div>
-          )}
-
           <div className="flex flex-wrap items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-            <TooltipProvider delayDuration={300}>
+            <TooltipProvider delayDuration={225}>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -155,13 +130,13 @@ export function ColorSwatch({
                     <Sparkles className="h-3 w-3" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent side="bottom">
+                <TooltipContent side="top">
                   <p>Generate harmonies from this color</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
 
-            <TooltipProvider delayDuration={300}>
+            <TooltipProvider delayDuration={225}>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -177,13 +152,13 @@ export function ColorSwatch({
                     <Copy className="h-3 w-3" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent side="bottom">
+                <TooltipContent side="top">
                   <p>Duplicate color</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
 
-            <TooltipProvider delayDuration={300}>
+            <TooltipProvider delayDuration={225}>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -205,7 +180,7 @@ export function ColorSwatch({
               </Tooltip>
             </TooltipProvider>
 
-            <TooltipProvider delayDuration={300}>
+            <TooltipProvider delayDuration={225}>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button

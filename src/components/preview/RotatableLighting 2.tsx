@@ -5,7 +5,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import {
   GeometricLighting,
-  // TiledLighting, // Tiled option hidden from UI — preserved for potential re-enable.
+  TiledLighting,
   StripedLighting,
 } from "./LightingSetups";
 
@@ -44,19 +44,8 @@ export function RotatableLighting({
 
   return (
     <group ref={groupRef}>
-      {style === "geometric" && (
-        <GeometricLighting
-          intensityScale={timeOfDay === "night" ? 0.8 : 1}
-          lightColor={
-            timeOfDay === "afternoon"
-              ? "#fff0dd" // subtly warm afternoon
-              : timeOfDay === "night"
-              ? "#e2e7f5" // subtly cool moonlight
-              : "#fdfdff" // near-neutral morning
-          }
-        />
-      )}
-      {/* {style === "tiled" && <TiledLighting />} */}
+      {style === "geometric" && <GeometricLighting />}
+      {style === "tiled" && <TiledLighting />}
       {style === "striped" && <StripedLighting />}
     </group>
   );

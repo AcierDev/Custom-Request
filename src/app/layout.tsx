@@ -41,7 +41,7 @@ function LayoutContentInner({ children }: { children: React.ReactNode }) {
       <div className="flex-1 overflow-auto no-scrollbar border-t border-sky-400/40">
         <div
           className={`mt-14 lg:mt-0 transition-[margin] duration-300 flex flex-col h-full ${
-            isSidebarOpen ? "lg:ml-64" : "lg:ml-16"
+            isSidebarOpen ? "lg:ml-36" : "lg:ml-12"
           }`}
         >
           <main className="flex-1 w-full pb-16">{children}</main>

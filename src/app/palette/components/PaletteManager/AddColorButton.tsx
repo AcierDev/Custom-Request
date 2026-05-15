@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { HexColorPicker } from "react-colorful";
-import { Plus, Check, RefreshCw, Copy } from "lucide-react";
+import { Check, RefreshCw, Copy, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -95,10 +95,18 @@ export function AddColorButton({
 
   return (
     <>
-      <motion.div
-        layout
+      <div
+        className={cn(
+          "h-64 sm:h-80",
+          isEmpty ? "w-full" : "w-16 sm:w-20 flex-shrink-0"
+        )}
+      >
+      <motion.button
+        type="button"
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
+        whileHover="hover"
+        whileTap={{ scale: 0.97 }}
         transition={{
           type: "spring",
           stiffness: 500,
@@ -106,34 +114,59 @@ export function AddColorButton({
           opacity: { duration: 0.2 },
         }}
         className={cn(
-          "h-32 sm:h-40 flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors text-slate-400 border-2 border-dashed border-white/15 hover:border-blue-400 bg-white/5",
-          isEmpty ? "flex-1" : "w-16 sm:w-20 shrink-0"
+          "group relative h-full w-full flex flex-col items-center justify-center gap-2 cursor-pointer overflow-hidden",
+          "text-slate-400 hover:text-blue-300 border-2 border-dashed border-white/15 hover:border-blue-400/70",
+          "bg-white/5 hover:bg-blue-500/5 transition-colors duration-300",
+          "rounded-lg"
         )}
         onClick={() => setIsOpen(true)}
       >
+        {/* Hover sheen */}
         <motion.div
-          whileHover={{ scale: 1.1, rotate: 90 }}
-          whileTap={{ scale: 0.9 }}
-          className="bg-blue-500/10 dark:bg-blue-900/30 p-1.5 rounded-full"
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-0 bg-gradient-to-br from-sky-500/10 via-transparent to-indigo-500/10 opacity-0"
+          variants={{ hover: { opacity: 1 } }}
+          transition={{ duration: 0.3 }}
+        />
+        <motion.div
+          className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/15 group-hover:ring-blue-400/50 group-hover:bg-blue-500/15 transition-colors duration-300"
+          variants={{ hover: { scale: 1.12, rotate: 90 } }}
+          transition={{ type: "spring", stiffness: 400, damping: 18 }}
         >
-          <Plus className="h-4 w-4 text-blue-300" />
+          <Plus className="h-5 w-5 sm:h-6 sm:w-6" />
         </motion.div>
         {isEmpty && (
           <span className="text-sm font-medium">Add your first color</span>
         )}
-      </motion.div>
+        {!isEmpty && (
+          <span className="text-[10px] sm:text-xs font-medium tracking-wide opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            Add color
+          </span>
+        )}
+      </motion.button>
+      </div>
 
-      {isOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+      <AnimatePresence>
+        {isOpen && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            className="bg-gray-900 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl border border-white/10"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setIsOpen(false)}
           >
-            <h3 className="text-xl font-bold text-white mb-4">
-              Add New Color
-            </h3>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 16 }}
+              transition={{ type: "spring", stiffness: 380, damping: 30 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-gray-900 rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl border border-white/10"
+            >
+              <h3 className="text-xl font-bold text-white mb-4">
+                Add New Color
+              </h3>
 
             <Tabs
               defaultValue="picker"
@@ -247,17 +280,26 @@ export function AddColorButton({
                       {category}
                     </h4>
                     <div className="grid grid-cols-6 gap-2">
-                      {colors.map((colorOption) => (
+                      {colors.map((colorOption, i) => (
                         <TooltipProvider
                           key={colorOption.hex}
                           delayDuration={300}
                         >
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <button
+                              <motion.button
+                                initial={{ opacity: 0, scale: 0.6 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{
+                                  type: "spring",
+                                  stiffness: 500,
+                                  damping: 24,
+                                  delay: i * 0.03,
+                                }}
+                                whileHover={{ scale: 1.12 }}
+                                whileTap={{ scale: 0.92 }}
                                 className={cn(
-                                  "w-full aspect-square rounded-md transition-all",
-                                  "hover:scale-110 hover:shadow-lg",
+                                  "w-full aspect-square rounded-md shadow-sm hover:shadow-lg",
                                   color === colorOption.hex &&
                                     "ring-2 ring-blue-400/60 shadow-md"
                                 )}
@@ -293,9 +335,10 @@ export function AddColorButton({
                 Add Color
               </Button>
             </div>
+            </motion.div>
           </motion.div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </>
   );
 }

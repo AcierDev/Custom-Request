@@ -73,7 +73,6 @@ const OfficialPaletteCard = ({
   onCustomize: (design: ItemDesigns) => void;
 }) => {
   const colors = Object.values(DESIGN_COLORS[design]);
-  const [isCustomizeDialogOpen, setIsCustomizeDialogOpen] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [copied, setCopied] = useState(false);
   const [copyTrycolors, setCopyTrycolors] = useState(false);
@@ -207,66 +206,23 @@ const OfficialPaletteCard = ({
 
         <CardFooter className="p-3 flex justify-between border-t border-gray-100 dark:border-gray-800 mt-auto">
           <div className="flex gap-1">
-            <Dialog
-              open={isCustomizeDialogOpen}
-              onOpenChange={setIsCustomizeDialogOpen}
-            >
-              <TooltipProvider delayDuration={300}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <DialogTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-slate-300 hover:text-blue-400 dark:hover:text-blue-300"
-                      >
-                        <Edit className="h-3.5 w-3.5" />
-                      </Button>
-                    </DialogTrigger>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    <p>Customize</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Customize Official Palette</DialogTitle>
-                  <DialogDescription>
-                    Create a custom palette based on the {design} palette. Your
-                    customized version will be available in the "Create Palette"
-                    tab.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="py-4">
-                  <div className="mb-4">
-                    <PalettePreview design={design} />
-                  </div>
-                  <p className="text-sm text-slate-400">
-                    This will create a copy of the official palette that you can
-                    modify. The original official palette will remain unchanged.
-                  </p>
-                </div>
-                <DialogFooter>
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
                   <Button
-                    variant="outline"
-                    onClick={() => setIsCustomizeDialogOpen(false)}
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-slate-300 hover:text-blue-400 dark:hover:text-blue-300"
+                    onClick={() => onCustomize(design)}
                   >
-                    Cancel
+                    <Edit className="h-3.5 w-3.5" />
                   </Button>
-                  <Button
-                    className="bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
-                    onClick={() => {
-                      onCustomize(design);
-                      setIsCustomizeDialogOpen(false);
-                    }}
-                  >
-                    <Copy className="h-4 w-4 mr-2" />
-                    Create Custom Copy
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Customize</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
 
             <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
               <TooltipProvider delayDuration={300}>
@@ -431,9 +387,9 @@ const OfficialPaletteCard = ({
 
           {/* Colors Strip */}
           <div className="w-full h-64 rounded-xl overflow-hidden flex shadow-sm">
-            {colors.map((color) => (
+            {colors.map((color, index) => (
               <div
-                key={color.hex}
+                key={`${color.hex}-${index}`}
                 className="h-full flex-1"
                 style={{ backgroundColor: color.hex }}
               />
@@ -478,11 +434,6 @@ export function OfficialPalettes() {
 
     // Navigate to design page
     router.push("/viewer");
-
-    // Show success toast
-    toast.success(`${design} palette applied for preview`, {
-      description: "Navigating to the preview page.",
-    });
   };
 
   const handleCustomizeOfficialPalette = (design: ItemDesigns) => {
@@ -492,11 +443,6 @@ export function OfficialPalettes() {
       { name: designName, type: "official", design: design },
       () => {
         loadOfficialPalette(design);
-        // Show success toast
-        toast.success(`${designName} palette ready for customization!`, {
-          description:
-            "You can now edit this palette in the Create Palette tab.",
-        });
       }
     );
   };

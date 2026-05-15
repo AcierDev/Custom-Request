@@ -73,7 +73,10 @@
 
 @layer components {
   .glass-surface {
-    @apply bg-gray-900/25 backdrop-blur-md backdrop-saturate-150 border border-white/10 shadow-glass-dark;
+    /* !bg so a translucent surface wins over a base `bg-card`
+       (e.g. shadcn <Card>), whose utility-layer rule would
+       otherwise paint the panel solid and kill the glass effect. */
+    @apply !bg-gray-900/30 backdrop-blur-md backdrop-saturate-150 border border-white/10 shadow-glass-dark;
   }
 
   .sidebar-action-btn {

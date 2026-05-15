@@ -52,8 +52,8 @@ type DividerItem = NavItemBase & {
 type NavItem = NavLinkItem | DividerItem;
 
 const mainNavItems: NavItem[] = [
-  { href: "/viewer", icon: PencilRuler, label: "Viewer", hotkey: "1" },
   { href: "/palette", icon: Palette, label: "Palette", hotkey: "5" },
+  { href: "/viewer", icon: PencilRuler, label: "Viewer", hotkey: "1" },
 ];
 
 const bottomNavItems: NavItem[] = [
@@ -71,6 +71,7 @@ interface NavLinkProps {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   isCollapsed: boolean;
+  outlined?: boolean;
 }
 
 export function Navbar() {
@@ -121,7 +122,13 @@ export function Navbar() {
     }
   };
 
-  const NavLink = ({ href, icon: Icon, label, isCollapsed }: NavLinkProps) => {
+  const NavLink = ({
+    href,
+    icon: Icon,
+    label,
+    isCollapsed,
+    outlined,
+  }: NavLinkProps) => {
     if (!href) return null;
 
     const handleClick = (e: React.MouseEvent) => {
@@ -139,6 +146,7 @@ export function Navbar() {
         onClick={handleClick}
         className={cn(
           "relative flex items-center w-full rounded-lg text-sm font-medium px-3 py-3 transition-colors duration-200 group",
+          outlined && "border border-white/10 bg-white/[0.03]",
           isCollapsed ? "justify-center" : "",
           isActive
             ? "bg-blue-900/30 text-blue-200"
@@ -165,8 +173,8 @@ export function Navbar() {
       {/* Desktop Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 h-screen transition-[width] duration-300 ease-in-out hidden lg:block z-30 overflow-y-auto no-scrollbar bg-[hsl(var(--sidebar))]",
-          isSidebarOpen ? "w-64" : "w-16"
+          "fixed inset-y-0 left-0 h-screen transition-[width] duration-300 ease-in-out hidden lg:block z-30 overflow-hidden bg-[hsl(var(--sidebar)/0.55)] backdrop-blur-xl backdrop-saturate-150 border-r border-white/10 shadow-glass-dark",
+          isSidebarOpen ? "w-36" : "w-12"
         )}
       >
         <div className="h-16 flex items-center justify-between px-4 border-b border-white/5">
@@ -197,7 +205,7 @@ export function Navbar() {
         </div>
         <div className="mx-4 my-2 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
         <div className="h-[calc(100vh-4rem)] flex flex-col">
-          <div className="flex-1 overflow-y-auto no-scrollbar px-3">
+          <div className="flex-1 overflow-hidden px-3 flex flex-col justify-center">
             <div className="flex flex-col space-y-1 py-2">
               {mainNavItems.map((item, index) =>
                 item.type === "divider" ? (
@@ -220,7 +228,7 @@ export function Navbar() {
           </div>
           <div className="mx-4 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
           <div className="px-3 pt-2 pb-2">
-            <div className="flex flex-col space-y-1">
+            <div className="flex flex-col space-y-2">
               {bottomNavItems.map((item, index) =>
                 item.type === "divider" ? (
                   <Separator
@@ -235,6 +243,7 @@ export function Navbar() {
                     icon={"icon" in item ? item.icon : Menu}
                     label={"label" in item ? item.label : ""}
                     isCollapsed={!isSidebarOpen}
+                    outlined
                   />
                 )
               )}
@@ -357,7 +366,7 @@ export function Navbar() {
       </aside>
 
       {/* Mobile Navbar */}
-      <nav className="lg:hidden fixed top-0 left-0 right-0 z-40 border-b border-white/5 bg-[hsl(var(--sidebar))]/95 backdrop-blur-md">
+      <nav className="lg:hidden fixed top-0 left-0 right-0 z-40 border-b border-white/10 bg-[hsl(var(--sidebar)/0.55)] backdrop-blur-xl backdrop-saturate-150 shadow-glass-dark">
         <div className="w-full flex h-14 items-center px-4">
           <Sheet>
             <SheetTrigger asChild>
@@ -486,7 +495,7 @@ export function Navbar() {
 
             <SheetContent
               side="left"
-              className="w-64 p-0 bg-[hsl(var(--sidebar))] border-r border-white/5"
+              className="w-64 p-0 bg-[hsl(var(--sidebar)/0.7)] backdrop-blur-xl backdrop-saturate-150 border-r border-white/10 shadow-glass-dark"
             >
               <div className="h-16 flex items-center px-4 border-b border-white/5">
                 <span className="text-lg font-bold cursor-pointer bg-clip-text text-transparent bg-gradient-to-br from-white to-blue-300 [-webkit-text-fill-color:transparent] tracking-tight">
@@ -514,7 +523,7 @@ export function Navbar() {
                 </div>
                 <div className="mx-4 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
                 <div className="px-3 pt-2 pb-2">
-                  <div className="flex flex-col space-y-1">
+                  <div className="flex flex-col space-y-2">
                     {bottomNavItems.map((item, index) =>
                       item.type === "divider" ? (
                         <Separator
@@ -528,6 +537,7 @@ export function Navbar() {
                           icon={"icon" in item ? item.icon : Menu}
                           label={"label" in item ? item.label : ""}
                           isCollapsed={false}
+                          outlined
                         />
                       )
                     )}

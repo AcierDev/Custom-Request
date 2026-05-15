@@ -22,11 +22,13 @@ import {
 interface DesignCardProps {
   className?: string;
   compact?: boolean;
+  /** Render only the trigger/popover without the surrounding glass Card. */
+  bare?: boolean;
 }
 
 const EmptyCustomPaletteInfo = () => {
   return (
-    <div className="absolute inset-0 flex items-center justify-center p-4 bg-gray-800/40/50 rounded-lg">
+    <div className="absolute inset-0 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm rounded-lg">
       <div className="flex flex-col items-center text-center space-y-3">
         <div className="p-2 bg-blue-500/10 dark:bg-blue-900/30 rounded-full">
           <Paintbrush className="w-5 h-5 text-blue-300" />
@@ -57,21 +59,18 @@ const EmptyCustomPaletteInfo = () => {
 export function DesignCard({
   className = "",
   compact = false,
+  bare = false,
 }: DesignCardProps) {
   const { selectedDesign, setSelectedDesign } = useCustomStore();
   const [isOpen, setIsOpen] = useState(false);
 
   if (compact) {
-    return (
-      <Card
-        className={`dark:bg-gray-800/95 backdrop-blur-sm border border-white/10 shadow-lg ${className}`}
-      >
-        <CardContent className="py-3 px-4">
-          <Popover open={isOpen} onOpenChange={setIsOpen}>
+    const inner = (
+      <Popover open={isOpen} onOpenChange={setIsOpen}>
             <PopoverTrigger asChild>
               <button
                 type="button"
-                className={`${DESIGN_PILL_FULL} ${DESIGN_PILL_INTERACTIVE} w-auto`}
+                className={`${DESIGN_PILL_FULL} ${DESIGN_PILL_INTERACTIVE} w-auto !h-7 leading-none`}
                 style={{ background: createDesignBackground(selectedDesign) }}
               >
                 <span className="truncate leading-none">{selectedDesign}</span>
@@ -105,14 +104,22 @@ export function DesignCard({
               </div>
             </PopoverContent>
           </Popover>
-        </CardContent>
+    );
+
+    if (bare) {
+      return inner;
+    }
+
+    return (
+      <Card className={`glass-surface rounded-[0.7rem] shadow-lg ${className}`}>
+        <CardContent className="py-3 px-4">{inner}</CardContent>
       </Card>
     );
   }
 
   return (
     <Card
-      className={`h-1/3 dark:bg-gray-800/50 backdrop-blur-sm border-2 border-white/10 relative group ${className}`}
+      className={`h-1/3 glass-surface rounded-[0.7rem] relative group ${className}`}
     >
       <CardContent className="relative h-full">
         <EmptyCustomPaletteInfo />

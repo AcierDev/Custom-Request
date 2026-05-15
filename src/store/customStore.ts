@@ -13,6 +13,7 @@ import {
 } from "@/lib/urlUtils";
 import { subscribeWithSelector } from "zustand/middleware";
 import { shallow } from "zustand/shallow";
+import { DEFAULT_WOOD_STYLE_ID } from "@/components/preview/woodStyles";
 import { nanoid } from "nanoid";
 
 // Add debounce utility function
@@ -116,6 +117,7 @@ interface CustomState {
     showSplitPanel: boolean;
     showFPS: boolean;
     showUIControls: boolean;
+    woodStyle: string;
   };
   lastSaved: number;
   autoSaveEnabled: boolean;
@@ -170,6 +172,7 @@ interface CustomStore extends CustomState {
   setUseMini: (value: boolean) => void;
   setShowRuler: (value: boolean) => void;
   setShowWoodGrain: (value: boolean) => void;
+  setWoodStyle: (value: string) => void;
   setShowColorInfo: (value: boolean) => void;
   setShowHanger: (value: boolean) => void;
   setShowSplitPanel: (value: boolean) => void;
@@ -368,6 +371,7 @@ interface PersistentState extends ShareableState {
     showSplitPanel: boolean;
     showFPS: boolean;
     showUIControls: boolean;
+    woodStyle: string;
   };
   dataSyncVersion?: number;
   draftSet?: DraftSetItem[];
@@ -435,6 +439,7 @@ export const useCustomStore = create<CustomStore>()(
       showSplitPanel: false,
       showFPS: false,
       showUIControls: true,
+      woodStyle: DEFAULT_WOOD_STYLE_ID,
     },
     lastSaved: 0,
     autoSaveEnabled: true,
@@ -513,6 +518,24 @@ export const useCustomStore = create<CustomStore>()(
             }
 
             set({ activeTab: initialTab });
+
+            // If the restored design is Custom but there's nothing to
+            // preview (no palette colors and no drawn pattern), fall
+            // back to the Coastal Dream design so the viewer never
+            // renders an empty / white screen.
+            const hasDrawn =
+              parsedState.drawnPatternGrid &&
+              parsedState.drawnPatternGridSize;
+            if (
+              parsedState.selectedDesign === ItemDesigns.Custom &&
+              customPalette.length === 0 &&
+              !hasDrawn
+            ) {
+              set({
+                selectedDesign: ItemDesigns.Coastal,
+                currentColors: DESIGN_COLORS[ItemDesigns.Coastal],
+              });
+            }
 
             if (
               parsedState.folders &&
@@ -700,10 +723,18 @@ export const useCustomStore = create<CustomStore>()(
         const newPalette = [...state.customPalette];
         newPalette.splice(startIndex + 1, 0, ...blendedColors);
 
+        const newHistory = state.paletteHistory.slice(
+          0,
+          state.paletteHistoryIndex + 1
+        );
+        newHistory.push(newPalette);
+
         return {
           customPalette: newPalette,
           selectedColors: [],
           currentColors: createColorMap(newPalette),
+          paletteHistory: newHistory,
+          paletteHistoryIndex: newHistory.length - 1,
         };
       }),
     moveColorLeft: (index) =>
@@ -782,6 +813,10 @@ export const useCustomStore = create<CustomStore>()(
     setShowWoodGrain: (value) =>
       set((state) => ({
         viewSettings: { ...state.viewSettings, showWoodGrain: value },
+      })),
+    setWoodStyle: (value) =>
+      set((state) => ({
+        viewSettings: { ...state.viewSettings, woodStyle: value },
       })),
     setShowColorInfo: (value) =>
       set((state) => ({
@@ -1287,6 +1322,7 @@ export const useCustomStore = create<CustomStore>()(
               showSplitPanel: data.viewSettings?.showSplitPanel ?? false,
               showFPS: data.viewSettings?.showFPS ?? false,
               showUIControls: data.viewSettings?.showUIControls ?? true,
+              woodStyle: data.viewSettings?.woodStyle ?? DEFAULT_WOOD_STYLE_ID,
             };
 
             const localVersion = get().dataSyncVersion;
@@ -1592,6 +1628,9 @@ export const useCustomStore = create<CustomStore>()(
             showUIControls:
               mergedState.viewSettings?.showUIControls ??
               get().viewSettings.showUIControls,
+            woodStyle:
+              mergedState.viewSettings?.woodStyle ??
+              get().viewSettings.woodStyle,
           },
           currentColors:
             mergedState.selectedDesign === ItemDesigns.Custom &&
