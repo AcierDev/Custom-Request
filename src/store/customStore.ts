@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { ItemDesigns, Dimensions } from "@/typings/types";
 import { calculatePrice, PriceBreakdown } from "@/lib/pricing";
-import { mixPaintColors } from "@/lib/colorUtils";
+import { blendHexColors } from "@/lib/colorUtils";
 import { DESIGN_COLORS } from "@/typings/color-maps";
 import { createStore } from "zustand/vanilla";
 import { createWithEqualityFn } from "zustand/traditional";
@@ -709,15 +709,15 @@ export const useCustomStore = create<CustomStore>()(
 
         const blendedColors: CustomColor[] = [];
 
+        // Evenly spaced, symmetric steps between the two endpoints,
+        // interpolated perceptually in OKLab. t = i/(count+1) keeps the
+        // new colors strictly between color1 and color2 with equal gaps.
         for (let i = 1; i <= count; i++) {
-          const ratio = i / (count + 1);
-          const blendedHex = mixPaintColors([
-            color1,
-            ...Array(Math.floor(ratio * 100)).fill(color2),
-            ...Array(Math.floor((1 - ratio) * 100)).fill(color1),
-          ]);
-
-          blendedColors.push({ id: nanoid(), hex: blendedHex });
+          const t = i / (count + 1);
+          blendedColors.push({
+            id: nanoid(),
+            hex: blendHexColors(color1, color2, t),
+          });
         }
 
         const newPalette = [...state.customPalette];

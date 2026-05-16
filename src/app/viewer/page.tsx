@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { ColorPattern, useCustomStore } from "@/store/customStore";
 import { Button } from "@/components/ui/button";
@@ -21,21 +21,26 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
+import { useSpring, animated } from "@react-spring/three";
 import { GeometricPattern } from "@/components/preview/GeometricPattern";
 // Tiled option hidden from UI — preserved for potential re-enable.
 // import { TiledPattern } from "@/components/preview/TiledPattern";
-import { RotatableLighting } from "@/components/preview/RotatableLighting";
+import {
+  RotatableLighting,
+  type TimeOfDay,
+} from "@/components/preview/RotatableLighting";
 import {
   Room,
+  evenBackWallLayout,
   roomCameraMaxDistance,
   roomBounds,
   ORBIT_MIN_POLAR,
   ORBIT_MAX_POLAR,
   ORBIT_MAX_AZIMUTH,
+  WALL_COLOR,
 } from "@/components/preview/Room";
 import { LightingControls } from "@/components/preview/LightingControls";
 import { ViewControls } from "@/components/preview/ViewControls";
@@ -62,26 +67,51 @@ import {
 import { PatternEditor } from "./components/PatternEditor";
 import { Slider } from "@/components/ui/slider";
 
-type TimeOfDay = "morning" | "afternoon" | "night";
-
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ 🎥 ROOM COLLISION                                                     ║
 //╚═══╝ ════════════════════════════════════════════════════════════════ ╚═══╝
 
-// Fixed orbit pivot X. Constant (not size-derived) so changing the art
-// size never pans the camera. Small positive value keeps the long-
-// standing "art reads slightly left of center" framing.
+// Fixed orbit pivot X. The camera NEVER pans with size — a size-derived
+// pivot pushed the orbit target near a wall, which made RoomCollision
+// fight it every frame ("can't look around"). Instead, small art is
+// physically slid toward the right wall (art + plant + lamp move; see
+// ART_RIGHT_SHIFT_* and Room's artCenterX). Small constant keeps the
+// long-standing "reads slightly left of centre" framing.
 const ORBIT_TARGET_X = 0.4;
 
-// Keep the camera just shy of the surfaces it would actually intersect.
-const ROOM_COLLISION_INSET = 0.5;
-// Extra strictness for the ceiling specifically: cap the dolly 3%
-// closer when the view is heading up toward the ceiling, so a
-// zoomed-out top-down look can't clip through it.
-const CEILING_STRICTNESS_FACTOR = 0.97;
-// Extra strictness for the side walls: cap the dolly 1% closer when
-// the view is heading toward a side wall.
-const WALL_STRICTNESS_FACTOR = 0.99;
+// Pieces 24 squares WIDE or smaller don't fill the back wall, so the
+// art (with its flanking plant & lamp) spreads evenly between the
+// bookshelf and the right wall. The 24→14 ramp still drives the
+// bookshelf fade-in.
+const ART_RIGHT_SHIFT_W_HI = 24; // squares wide — even layout at/below
+const ART_RIGHT_SHIFT_W_LO = 14; // narrowest size — full bookshelf
+
+// The bookshelf shows for every piece 24 wide or smaller, but it must
+// never render smaller than it does for a 16-wide ("16x10") piece — a
+// tiny shelf looked wrong. Its fade ramp is therefore floored at the
+// ramp value for 16 wide.
+const BOOKCASE_MIN_REF_W = 16; // floor the bookshelf at this width's size
+
+// The room, its furnishings and the camera limits are sized off a
+// FIXED reference panel — the largest offered size (40 x 16 squares) —
+// not the live art dimensions. Changing the art size then only resizes
+// the art itself; the room, furniture and camera framing stay put. The
+// reference is the max size so the largest art never overflows the
+// room. Scene units are dimensions * 0.5 (see GeometricPattern).
+const ROOM_REF_WIDTH = 40 * 0.5;
+const ROOM_REF_HEIGHT = 16 * 0.5;
+
+// Keep the camera this far inside every surface it could intersect.
+// A fixed buffer (not a percentage of distance), so the reachable zoom
+// doesn't shrink with distance.
+const ROOM_COLLISION_INSET = 0.7;
+// The smooth `maxDistance` feed handles normal limiting. The hard
+// position clamp is a safety net for *fast* sweeps only: it engages
+// just when the camera overshoots the boundary by more than this many
+// units in a single frame. Keeping a slack here means a normal orbit
+// resting at the limit isn't yanked every frame (which pulses the
+// distance and feels laggy) — only a genuine fast overshoot is caught.
+const ROOM_COLLISION_HARD_CLAMP_SLACK = 0.6;
 
 /**
  * Per-frame dolly limiter. Instead of letting OrbitControls pull past a
@@ -121,50 +151,46 @@ function RoomCollision({
     // Fraction of the offset ray (from the target outward) at which it
     // first crosses a bounding plane it is heading toward.
     let f = Infinity;
-    if (ox > 0)
-      f = Math.min(f, ((maxX - t.x) / ox) * WALL_STRICTNESS_FACTOR);
-    if (ox < 0)
-      f = Math.min(f, ((-maxX - t.x) / ox) * WALL_STRICTNESS_FACTOR);
-    if (oy > 0)
-      f = Math.min(f, ((ceil - t.y) / oy) * CEILING_STRICTNESS_FACTOR);
+    if (ox > 0) f = Math.min(f, (maxX - t.x) / ox);
+    if (ox < 0) f = Math.min(f, (-maxX - t.x) / ox);
+    if (oy > 0) f = Math.min(f, (ceil - t.y) / oy);
     if (oy < 0) f = Math.min(f, (floor - t.y) / oy);
 
     const boundaryDist = Number.isFinite(f) ? offsetLen * f : fallbackMax;
-    // Cap the dolly here; OrbitControls won't move past it, so no
-    // overshoot and no forward snap.
-    controls.maxDistance = Math.max(1.2, Math.min(fallbackMax, boundaryDist));
+    const allowed = Math.max(1.2, Math.min(fallbackMax, boundaryDist));
+
+    // Feed OrbitControls the limit for next update (prevents the dolly
+    // from creeping out and avoids the forward snap on slow moves)...
+    controls.maxDistance = allowed;
+
+    // ...but a fast orbit changes the view angle by a large step in a
+    // single frame, so the camera can already be well past a surface for
+    // its *new* direction before OrbitControls re-clamps (maxDistance is
+    // always a frame late). Only when the overshoot exceeds the slack do
+    // we hard-clamp the position this same frame — small steady-state
+    // variation is left to the smooth maxDistance path so it doesn't
+    // pulse the distance frame-to-frame.
+    if (offsetLen > allowed + ROOM_COLLISION_HARD_CLAMP_SLACK) {
+      const s = allowed / offsetLen;
+      camera.position.set(t.x + ox * s, t.y + oy * s, t.z + oz * s);
+    }
   });
 
   return null;
 }
 
 export default function DesignPage() {
-  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const {
     viewSettings,
     dimensions,
     style,
     setShowUIControls,
-    selectedDesign,
-    customPalette,
-    drawnPatternGrid,
-    drawnPatternGridSize,
   } = useCustomStore();
 
-  // Nothing to preview (Custom selected, no palette colors, no drawn
-  // pattern): send the user to the palette page instead of rendering
-  // an empty / white viewer.
-  const nothingToPreview =
-    selectedDesign === ItemDesigns.Custom &&
-    customPalette.length === 0 &&
-    (!drawnPatternGrid || !drawnPatternGridSize);
-
-  useEffect(() => {
-    if (nothingToPreview) {
-      router.replace("/palette");
-    }
-  }, [nothingToPreview, router]);
+  // Custom with no palette colors and no drawn pattern no longer
+  // redirects away — GeometricPattern renders every square a single
+  // dark blue so the viewer is never empty.
   const {
     showRuler,
     showWoodGrain,
@@ -215,19 +241,53 @@ export default function DesignPage() {
   // Keep the camera inside the gallery room: cap how far it can pull
   // back (well within the room depth) and confine orbit to the open
   // front so it can't pass through the walls, floor or ceiling.
-  const sceneW = dimensions.width * 0.5;
-  const sceneH = dimensions.height * 0.5;
-  // Orbit pivot. The art is always centered at the world origin, so the
-  // target is a fixed constant — deriving it from the panel size made the
-  // camera pan sideways every time the size changed (jarring). Kept at a
-  // small constant X so the framing reads identically at every size.
+  // Derived from the FIXED reference panel, not the live art size, so
+  // the reachable zoom / framing never shifts when the size changes.
+  const sceneW = ROOM_REF_WIDTH;
+  const sceneH = ROOM_REF_HEIGHT;
+  // Orbit pivot is a fixed constant — the camera never pans with size.
   const rotationCenterX = ORBIT_TARGET_X;
+  // How "small" the piece is: 0 at/above 20 wide, ramping to 1 at the
+  // narrowest size (14 wide). Drives the rightward art slide and the
+  // bookshelf fade-in that fills the freed left of the back wall.
+  const smallFill = Math.min(
+    1,
+    Math.max(
+      0,
+      (ART_RIGHT_SHIFT_W_HI - dimensions.width) /
+        (ART_RIGHT_SHIFT_W_HI - ART_RIGHT_SHIFT_W_LO)
+    )
+  );
+  // World-X the art centre slides to. Pieces ≤24 wide vacate the back
+  // wall, so they (with their flanking plant & lamp, set in Room) sit
+  // evenly spaced between the bookshelf and the right wall; full-size
+  // pieces stay centred.
+  const artCenterX =
+    dimensions.width <= ART_RIGHT_SHIFT_W_HI
+      ? evenBackWallLayout(ROOM_REF_WIDTH).artX
+      : 0;
+  // Bookshelf fill: visible for every piece ≤ 24 wide (so 24 gets it
+  // too, even though it doesn't slide the art), but never smaller than
+  // its 16-wide size.
+  const bookcaseMinFill =
+    (ART_RIGHT_SHIFT_W_HI - BOOKCASE_MIN_REF_W) /
+    (ART_RIGHT_SHIFT_W_HI - ART_RIGHT_SHIFT_W_LO);
+  const bookcaseFill =
+    dimensions.width <= ART_RIGHT_SHIFT_W_HI
+      ? Math.max(smallFill, bookcaseMinFill)
+      : 0;
+  // Spring so the art glides over when the size changes (matches the
+  // plant/lamp slide spring in Room).
+  const { artX } = useSpring({
+    artX: artCenterX,
+    config: { tension: 120, friction: 26 },
+  });
   // Generous straight-back cap; the real per-angle ceiling/side-wall
   // limit is enforced live by <RoomCollision /> below.
   const maxCamDistance = roomCameraMaxDistance(sceneW, sceneH);
   const camBounds = roomBounds(sceneW, sceneH);
 
-  if (!mounted || nothingToPreview) return null;
+  if (!mounted) return null;
 
   return (
     <div className="w-full h-screen relative">
@@ -293,13 +353,21 @@ export default function DesignPage() {
         </div>
       )}
 
-      {/* Main canvas */}
-      <div className="w-full h-full canvas-container -translate-x-[6%]">
+      {/* Main canvas — a true full-viewport fixed layer painted BEHIND
+          the nav (z below the sidebar's z-30) and behind this page's
+          offset content. The app layout pushes page content right by
+          `lg:ml-36` and sits on a solid bg, so an in-flow canvas never
+          reaches under the sidebar; making it fixed/inset-0 lets the
+          room render edge-to-edge so the glass nav can blur it. */}
+      <div className="fixed inset-0 z-0 canvas-container">
         <Canvas
           shadows
           className={cn("w-full h-full", showEmptyCustomInfo && "opacity-25")}
           camera={{
-            position: [20, 20, 20],
+            // Load fully zoomed out and dead-centre on the art: in
+            // front (+Z), level with the art centre, at the max safe
+            // orbit distance.
+            position: [rotationCenterX, 0, maxCamDistance],
             fov: 40,
             zoom: 1,
           }}
@@ -320,15 +388,38 @@ export default function DesignPage() {
             );
           }}
         >
+          {/* Suspense backstop: texture loads (wood-style switches) must
+              never tear down the Canvas itself — that loses the WebGL
+              context and leaves a permanent white screen. */}
+          {/* Paint the scene clear color the same greige as the room
+              walls. The room geometry doesn't fill every pixel (the
+              leftward art nudge + wide aspect ratios leave a sliver
+              past the side wall); without this that sliver showed the
+              page's dark indigo backdrop. Matching the wall tone makes
+              any uncovered edge read as "more wall" instead of a void. */}
+          <color attach="background" args={[WALL_COLOR]} />
+          <Suspense fallback={null}>
           {/* Rotatable lighting driven by time-of-day */}
           <RotatableLighting timeOfDay={timeOfDay} style={style} />
 
-          {/* Gallery room behind the art */}
+          {/* Gallery room behind the art — fixed size, independent of
+              the art dimensions so resizing the art never moves the
+              room or camera. Only the flanking plant & lamp track the
+              live art width (they slide to stay 1 ft off its edge). */}
           <Room
-            width={dimensions.width * 0.5}
-            height={dimensions.height * 0.5}
+            width={ROOM_REF_WIDTH}
+            height={ROOM_REF_HEIGHT}
+            artWidth={dimensions.width * 0.5}
+            artCenterX={artCenterX}
+            fillFactor={bookcaseFill}
+            timeOfDay={timeOfDay}
           />
 
+          {/* The art (and its ruler) slide toward the right wall for
+              small pieces so they don't leave the back wall bare —
+              freeing the left of the wall for the bookshelf. The
+              camera itself never moves. */}
+          <animated.group position-x={artX}>
           {/* Pattern based on style */}
           {style === "geometric" && (
             <GeometricPattern
@@ -358,8 +449,15 @@ export default function DesignPage() {
               height={dimensions.height * 0.5}
             />
           )}
+          </animated.group>
+          </Suspense>
 
-          {/* Controls */}
+          {/* Controls live OUTSIDE the Suspense boundary. A texture
+              load (wood style, or first load with no palette) suspends
+              the scene; if the controls were inside, that whole subtree
+              falls back to null and the camera freezes ("can't look
+              around"). They load nothing async, so keeping them mounted
+              regardless is safe. */}
           <OrbitControls
             enablePan={false}
             minDistance={1.2}
@@ -678,12 +776,13 @@ function PatternControls() {
           <div className="flex gap-2">
             <Button
               size="sm"
-              variant={isReversed ? "default" : "outline"}
-              className={
+              variant="outline"
+              className={cn(
+                "border",
                 isReversed
-                  ? "bg-indigo-600 hover:bg-indigo-500 ring-1 ring-indigo-400/40 text-white"
+                  ? "bg-indigo-600 hover:bg-indigo-500 border-indigo-400/40 text-white"
                   : "border-white/15 bg-gray-900/40 text-gray-300 hover:bg-gray-900/60"
-              }
+              )}
               onClick={() => setIsReversed(!isReversed)}
             >
               <ArrowLeftRight className="w-4 h-4 mr-1" />
@@ -691,12 +790,13 @@ function PatternControls() {
             </Button>
             <Button
               size="sm"
-              variant={isRotated ? "default" : "outline"}
-              className={
+              variant="outline"
+              className={cn(
+                "border",
                 isRotated
-                  ? "bg-indigo-600 hover:bg-indigo-500 ring-1 ring-indigo-400/40 text-white"
+                  ? "bg-indigo-600 hover:bg-indigo-500 border-indigo-400/40 text-white"
                   : "border-white/15 bg-gray-900/40 text-gray-300 hover:bg-gray-900/60"
-              }
+              )}
               onClick={() => setIsRotated(!isRotated)}
             >
               <RotateCcw className="w-4 h-4 mr-1" />

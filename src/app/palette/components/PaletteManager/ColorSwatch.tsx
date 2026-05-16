@@ -10,6 +10,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { ColorSwatchProps } from "./types";
 
 const BAR_HEIGHT_CLASS = "h-64 sm:h-80";
@@ -38,6 +39,15 @@ export function ColorSwatch({
 
   const textColor = getContrastTextColor(color);
   const textColorStyle = { color: textColor };
+
+  const copyHex = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(color);
+    toast.success(`Copied ${color}`, {
+      duration: 1500,
+      position: "bottom-right",
+    });
+  };
 
   const openHarmonyGenerator = () => {
     document.dispatchEvent(
@@ -93,8 +103,13 @@ export function ColorSwatch({
       />
 
       <div className="h-full p-2 flex flex-col justify-between overflow-hidden">
-        {/* Top: name + hex */}
-        <div className="min-w-0">
+        {/* Top: name + hex — click to copy the hex */}
+        <button
+          type="button"
+          onClick={copyHex}
+          title="Click to copy hex"
+          className="min-w-0 text-left cursor-pointer rounded-sm hover:opacity-80 transition-opacity"
+        >
           <div
             className="font-semibold text-xs sm:text-sm truncate"
             style={textColorStyle}
@@ -109,7 +124,7 @@ export function ColorSwatch({
               {color}
             </div>
           )}
-        </div>
+        </button>
 
         {/* Bottom: hover actions */}
         <div className="flex flex-col gap-1">

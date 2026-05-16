@@ -22,6 +22,26 @@ const SHADOW_MAP_SIZE = 2048;
 // 0.5 reduction, then the remaining angle cut another 25% (0.5 * 0.75).
 const SHADOW_ANGLE_REDUCTION = 0.625;
 
+// Daylight comes from the right-wall window. The two shadow-casting
+// key lights sit on that (+X) side; pushing them much further back
+// (larger Z) makes the light hit the piece more head-on, so its
+// shadow is softer and no longer rakes hard in one direction.
+const WINDOW_KEY_X = 15; // window side (+X), unchanged direction
+const WINDOW_KEY_Y = 5; // top/bottom pair splits around center
+const WINDOW_KEY_Z = 13; // pulled back from 5 → 13 (softer, less raked)
+const WINDOW_KEY_INTENSITY = 0.5; // was 0.7 — less single-direction punch
+// Opposite (left) fill, lifted a touch so the key no longer dominates.
+const FILL_LIGHT_INTENSITY = 0.45; // was 0.3
+
+// The art's cast shadow is thrown by a SINGLE dedicated key fixed in
+// the window's direction — high on the right wall, angled down into the
+// room (+X right, +Y above, +Z toward the room front). It lives OUTSIDE
+// the time-of-day rotation so the shadow always reads as sun through
+// the window instead of swinging around (and looking floor-lit) as the
+// rig rotates. All the other lights are shadowless fill.
+const WINDOW_SHADOW_DIR: [number, number, number] = [16, 9, 8];
+const WINDOW_SHADOW_INTENSITY = 0.55;
+
 // Flatten a light position's lateral (x,y) offset while keeping its
 // distance from the piece (z) so shadows are less raked.
 function angled([x, y, z]: [number, number, number]): [number, number, number] {
@@ -75,7 +95,9 @@ function useUpdateShadowCameras(
   }, [groupRef, half]);
 }
 
-function useDisposeLightsOnUnmount(groupRef: React.RefObject<THREE.Group>) {
+function useDisposeLightsOnUnmount(
+  groupRef: React.RefObject<THREE.Group | null>
+) {
   useEffect(() => {
     return () => {
       if (groupRef.current) {
@@ -89,7 +111,14 @@ function useDisposeLightsOnUnmount(groupRef: React.RefObject<THREE.Group>) {
   }, [groupRef]);
 }
 
-export function GeometricLighting({
+/**
+ * The art's only shadow caster: one directional light fixed in the
+ * window's direction. Rendered OUTSIDE the time-of-day rotation so the
+ * cast shadow always reads as sunlight coming through the window rather
+ * than swinging around (and looking like it comes from the floor) as
+ * the fill rig rotates.
+ */
+export function WindowShadowKey({
   intensityScale = 1,
   lightColor = "#ffffff",
 }: {
@@ -103,22 +132,45 @@ export function GeometricLighting({
 
   return (
     <group ref={lightGroupRef}>
+      <directionalLight
+        position={WINDOW_SHADOW_DIR}
+        color={lightColor}
+        intensity={WINDOW_SHADOW_INTENSITY * intensityScale}
+        {...shadowProps(half)}
+      ></directionalLight>
+    </group>
+  );
+}
+
+export function GeometricLighting({
+  intensityScale = 1,
+  lightColor = "#ffffff",
+}: {
+  intensityScale?: number;
+  lightColor?: string;
+}) {
+  const lightGroupRef = useRef<THREE.Group>(null);
+  useDisposeLightsOnUnmount(lightGroupRef);
+
+  // All shadowless fill — the single window key (rendered separately,
+  // outside the rotation) owns the cast shadow. These just shape the
+  // brightness/colour and rotate for the time-of-day sweep.
+  return (
+    <group ref={lightGroupRef}>
       {/* Ambient light - softer for geometric patterns to enhance shadows */}
       <ambientLight intensity={1 * intensityScale} />
 
-      {/* Primary directional light - top right */}
+      {/* Window-side fill (+X), split above/below the centre line. */}
       <directionalLight
-        position={angled([15, 5, 5])}
+        position={angled([WINDOW_KEY_X, WINDOW_KEY_Y, WINDOW_KEY_Z])}
         color={lightColor}
-        intensity={0.7 * intensityScale}
-        {...shadowProps(half)}
+        intensity={WINDOW_KEY_INTENSITY * intensityScale}
       ></directionalLight>
 
       <directionalLight
-        position={angled([15, -5, 5])}
+        position={angled([WINDOW_KEY_X, -WINDOW_KEY_Y, WINDOW_KEY_Z])}
         color={lightColor}
-        intensity={0.7 * intensityScale}
-        {...shadowProps(half)}
+        intensity={WINDOW_KEY_INTENSITY * intensityScale}
       ></directionalLight>
 
       {/* Secondary light source (bottom-left-back) */}
@@ -126,21 +178,18 @@ export function GeometricLighting({
         position={angled([-5, -5, 10])}
         color={lightColor}
         intensity={0.5 * intensityScale}
-        {...shadowProps(half)}
       ></directionalLight>
 
       <directionalLight
         position={angled([-15, -2, 5])}
         color={lightColor}
-        intensity={0.3 * intensityScale}
-        {...shadowProps(half)}
+        intensity={FILL_LIGHT_INTENSITY * intensityScale}
       ></directionalLight>
 
       <directionalLight
         position={angled([0, 0, -5])}
         color={lightColor}
         intensity={0.5 * intensityScale}
-        {...shadowProps(half)}
       ></directionalLight>
     </group>
   );

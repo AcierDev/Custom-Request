@@ -1,23 +1,162 @@
-export function mixPaintColors(hexColors: string[]) {
+//╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
+//║ 🎨 PERCEPTUAL COLOR BLENDING (OKLab)                                  ║
+//╚═══╝ ════════════════════════════════════════════════════════════════ ╚═══╝
+//
+// Blending in raw 0–255 sRGB (a plain channel average) is gamma-incorrect:
+// the midpoint of two saturated colors collapses toward a muddy gray and
+// the lightness ramp is uneven. Instead we work in OKLab — a perceptually
+// uniform space (the one CSS `color-mix(in oklab)` uses). Pipeline:
+//
+//   hex → sRGB → linear-light RGB → OKLab → (interpolate) → linear → sRGB
+//
+// Endpoints that interpolate outside the sRGB gamut are pulled back by
+// reducing chroma while preserving OKLab lightness & hue, so blends stay
+// smooth and never clip to a flat primary.
+
+// sRGB electro-optical transfer (IEC 61966-2-1). Operates on 0–1 channels.
+const SRGB_LINEAR_THRESHOLD = 0.04045;
+const SRGB_GAMMA_THRESHOLD = 0.0031308;
+
+function srgbToLinear(c: number): number {
+  return c <= SRGB_LINEAR_THRESHOLD
+    ? c / 12.92
+    : Math.pow((c + 0.055) / 1.055, 2.4);
+}
+
+function linearToSrgb(c: number): number {
+  return c <= SRGB_GAMMA_THRESHOLD
+    ? c * 12.92
+    : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
+}
+
+interface Oklab {
+  L: number;
+  a: number;
+  b: number;
+}
+
+// Linear-light sRGB → OKLab (Björn Ottosson's published matrices).
+function linearRgbToOklab(r: number, g: number, b: number): Oklab {
+  const l = 0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b;
+  const m = 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b;
+  const s = 0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b;
+
+  const l_ = Math.cbrt(l);
+  const m_ = Math.cbrt(m);
+  const s_ = Math.cbrt(s);
+
+  return {
+    L: 0.2104542553 * l_ + 0.793617785 * m_ - 0.0040720468 * s_,
+    a: 1.9779984951 * l_ - 2.428592205 * m_ + 0.4505937099 * s_,
+    b: 0.0259040371 * l_ + 0.7827717662 * m_ - 0.808675766 * s_,
+  };
+}
+
+// OKLab → linear-light sRGB.
+function oklabToLinearRgb(c: Oklab): {
+  r: number;
+  g: number;
+  b: number;
+} {
+  const l_ = c.L + 0.3963377774 * c.a + 0.2158037573 * c.b;
+  const m_ = c.L - 0.1055613458 * c.a - 0.0638541728 * c.b;
+  const s_ = c.L - 0.0894841775 * c.a - 1.291485548 * c.b;
+
+  const l = l_ * l_ * l_;
+  const m = m_ * m_ * m_;
+  const s = s_ * s_ * s_;
+
+  return {
+    r: 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+    g: -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+    b: -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
+  };
+}
+
+function hexToOklab(hex: string): Oklab {
+  const { r, g, b } = hexToRgb(hex);
+  return linearRgbToOklab(
+    srgbToLinear(r / 255),
+    srgbToLinear(g / 255),
+    srgbToLinear(b / 255)
+  );
+}
+
+// True if a linear-light triplet sits inside the sRGB cube (tiny epsilon
+// absorbs floating-point overshoot at the exact gamut boundary).
+const GAMUT_EPSILON = 1e-4;
+function inGamut(c: { r: number; g: number; b: number }): boolean {
+  const lo = -GAMUT_EPSILON;
+  const hi = 1 + GAMUT_EPSILON;
+  return (
+    c.r >= lo && c.r <= hi && c.g >= lo && c.g <= hi && c.b >= lo && c.b <= hi
+  );
+}
+
+const GAMUT_BISECT_ITERS = 24;
+
+// Map an OKLab color into displayable sRGB. If it's already in gamut we
+// keep it exactly; otherwise we bisect on chroma (scaling a,b toward the
+// neutral axis) so lightness and hue are preserved while the color is
+// desaturated just enough to be representable.
+function oklabToHex(c: Oklab): string {
+  let lin = oklabToLinearRgb(c);
+
+  if (!inGamut(lin)) {
+    let lo = 0; // chroma scale known in-gamut (gray at this L)
+    let hi = 1; // chroma scale known out-of-gamut (requested color)
+    for (let i = 0; i < GAMUT_BISECT_ITERS; i++) {
+      const mid = (lo + hi) / 2;
+      const test = oklabToLinearRgb({ L: c.L, a: c.a * mid, b: c.b * mid });
+      if (inGamut(test)) lo = mid;
+      else hi = mid;
+    }
+    lin = oklabToLinearRgb({ L: c.L, a: c.a * lo, b: c.b * lo });
+  }
+
+  const to8 = (v: number) =>
+    Math.max(0, Math.min(255, Math.round(linearToSrgb(v) * 255)));
+
+  return rgbToHex(to8(lin.r), to8(lin.g), to8(lin.b));
+}
+
+/**
+ * Perceptual blend between two hex colors at position `t` (0 → colorA,
+ * 1 → colorB), interpolated linearly in OKLab.
+ */
+export function blendHexColors(
+  colorA: string,
+  colorB: string,
+  t: number
+): string {
+  const c = Math.max(0, Math.min(1, t));
+  const A = hexToOklab(colorA);
+  const B = hexToOklab(colorB);
+  return oklabToHex({
+    L: A.L + (B.L - A.L) * c,
+    a: A.a + (B.a - A.a) * c,
+    b: A.b + (B.b - A.b) * c,
+  });
+}
+
+/**
+ * Even-weight perceptual average of N hex colors (averaged in OKLab).
+ * Signature kept for backward compatibility with existing callers.
+ */
+export function mixPaintColors(hexColors: string[]): string {
   if (!hexColors.length) return "#000000"; // Default to black if empty
 
-  let total = hexColors.length;
-  let r = 0,
-    g = 0,
+  let L = 0,
+    a = 0,
     b = 0;
-
-  hexColors.forEach((hex: string) => {
-    let rgb = hexToRgb(hex);
-    r += rgb.r;
-    g += rgb.g;
-    b += rgb.b;
-  });
-
-  r = Math.round(r / total);
-  g = Math.round(g / total);
-  b = Math.round(b / total);
-
-  return rgbToHex(r, g, b);
+  for (const hex of hexColors) {
+    const c = hexToOklab(hex);
+    L += c.L;
+    a += c.a;
+    b += c.b;
+  }
+  const n = hexColors.length;
+  return oklabToHex({ L: L / n, a: a / n, b: b / n });
 }
 
 function hexToRgb(hex: string) {
@@ -43,10 +182,7 @@ function rgbToHex(r: number, g: number, b: number) {
   );
 }
 
-// Example usage:
-console.log(mixPaintColors(["#FF0000", "#0000FF"])); // Mixes red and blue to get purple
-
-// Add new color harmony functions:
+// Color harmony functions:
 
 // Convert hex to HSL
 export function hexToHSL(hex: string): { h: number; s: number; l: number } {

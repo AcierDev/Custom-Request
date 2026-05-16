@@ -86,9 +86,9 @@ export const WOOD_STYLES: WoodStyle[] = GRAIN_IMAGES.flatMap((grain) =>
   )
 );
 
-// Current shipped look: Douglas fir, satin, medium grain scale.
+// Current shipped look: Oak, satin finish, bold grain scale.
 // Change this once you've picked a favorite in the viewer.
-export const DEFAULT_WOOD_STYLE_ID = "dougfir-satin-medtight";
+export const DEFAULT_WOOD_STYLE_ID = "oak-satin-bold";
 
 export function getWoodStyle(id: string | undefined): WoodStyle {
   return (

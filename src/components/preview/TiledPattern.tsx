@@ -15,6 +15,7 @@ import {
   getColorEntries,
   generateColorMap,
   calculateSquareLayout,
+  isExactMiniSize,
   initializeTextureVariations,
   TextureVariation,
 } from "./patternUtils";
@@ -110,6 +111,8 @@ export function TiledPattern({
     ? drawnPatternGridSize!.height
     : originalModelHeight;
 
+  const exactMini = isExactMiniSize(modelWidth, modelHeight);
+
   // Calculate layout dimensions and spacing for the square grid
   const layoutDetails = useMemo(() => {
     // Calculate the square layout based on model dimensions and spacing
@@ -118,7 +121,8 @@ export function TiledPattern({
       modelHeight,
       squareSize,
       squareSpacing,
-      useMini
+      useMini,
+      exactMini
     );
 
     // Calculate one-third width for split animation effects
@@ -129,7 +133,14 @@ export function TiledPattern({
       oneThirdWidth,
       driftAmount: squareSize * 2, // Amount squares will move during split animations
     };
-  }, [modelWidth, modelHeight, squareSize, squareSpacing, useMini]);
+  }, [
+    modelWidth,
+    modelHeight,
+    squareSize,
+    squareSpacing,
+    useMini,
+    exactMini,
+  ]);
 
   const {
     adjustedModelWidth,

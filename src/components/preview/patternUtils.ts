@@ -1313,6 +1313,18 @@ export function generateColorMap(
   return colorMap;
 }
 
+// The 14x7 mini panel is defined as literally 14x7 mini squares (~36" x 18"),
+// so it skips the 1.1 mini upscale and uses an exact square count.
+export const EXACT_MINI_WIDTH = 14;
+export const EXACT_MINI_HEIGHT = 7;
+
+export function isExactMiniSize(
+  modelWidth: number,
+  modelHeight: number
+): boolean {
+  return modelWidth === EXACT_MINI_WIDTH && modelHeight === EXACT_MINI_HEIGHT;
+}
+
 /**
  * Calculate square positions and dimensions
  */
@@ -1321,13 +1333,14 @@ export function calculateSquareLayout(
   modelHeight: number,
   squareSize: number,
   squareSpacing: number,
-  useMini: boolean = false
+  useMini: boolean = false,
+  exactCount: boolean = false
 ) {
   // Calculate adjusted dimensions for mini mode
-  const adjustedModelWidth = useMini ? Math.ceil(modelWidth * 1.1) : modelWidth;
-  const adjustedModelHeight = useMini
-    ? Math.ceil(modelHeight * 1.1)
-    : modelHeight;
+  const adjustedModelWidth =
+    useMini && !exactCount ? Math.ceil(modelWidth * 1.1) : modelWidth;
+  const adjustedModelHeight =
+    useMini && !exactCount ? Math.ceil(modelHeight * 1.1) : modelHeight;
 
   // Calculate total dimensions based on actual square spacing
   const totalWidth = adjustedModelWidth * squareSize * squareSpacing;

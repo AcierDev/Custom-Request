@@ -1,10 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useSidebar } from "@/contexts/sidebar-context";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import {
-  ChevronLeft,
-  ChevronRight,
   Menu,
   Palette,
   LogOut,
@@ -17,6 +14,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -30,6 +28,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useCustomStore } from "@/store/customStore";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -72,6 +76,7 @@ interface NavLinkProps {
   label: string;
   isCollapsed: boolean;
   outlined?: boolean;
+  linkRef?: (el: HTMLAnchorElement | null) => void;
 }
 
 export function Navbar() {
@@ -82,17 +87,44 @@ export function Navbar() {
   const [navigationSequence, setNavigationSequence] = useState<string[]>([]);
   const saveToDatabase = useCustomStore((state) => state.saveToDatabase);
   const [isSaving, setIsSaving] = useState(false);
-  const sidebarContext = useSidebar();
-  const [localSidebarOpen, setLocalSidebarOpen] = useState(true);
-  const isSidebarOpen = sidebarContext?.isSidebarOpen ?? localSidebarOpen;
-  const setIsSidebarOpen =
-    sidebarContext?.setIsSidebarOpen ?? setLocalSidebarOpen;
+  // Sidebar is permanently collapsed — no toggle.
+  const isSidebarOpen = false;
 
   useEffect(() => {
     setActiveTab(pathname);
   }, [pathname]);
 
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+  // Sliding active-indicator for the main nav. Measured from the real
+  // item rects so it's exact regardless of padding/gap, and driven by
+  // state (not framer's shared-layout) so route-change remounts of the
+  // inner links don't make it jump.
+  const navListRef = useRef<HTMLDivElement | null>(null);
+  const navItemRefs = useRef<(HTMLAnchorElement | null)[]>([]);
+  const [indicator, setIndicator] = useState<{
+    top: number;
+    height: number;
+    visible: boolean;
+  }>({ top: 0, height: 0, visible: false });
+
+  const activeMainIndex = mainNavItems.findIndex(
+    (item) => "href" in item && item.href === activeTab
+  );
+
+  useLayoutEffect(() => {
+    const list = navListRef.current;
+    const el = navItemRefs.current[activeMainIndex];
+    if (!list || !el || activeMainIndex < 0) {
+      setIndicator((p) => ({ ...p, visible: false }));
+      return;
+    }
+    const listRect = list.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    setIndicator({
+      top: elRect.top - listRect.top,
+      height: elRect.height,
+      visible: true,
+    });
+  }, [activeMainIndex, activeTab, pathname]);
 
   const getUserInitials = () => {
     if (!user || !user.name) return "U";
@@ -128,6 +160,7 @@ export function Navbar() {
     label,
     isCollapsed,
     outlined,
+    linkRef,
   }: NavLinkProps) => {
     if (!href) return null;
 
@@ -140,73 +173,78 @@ export function Navbar() {
 
     const isActive = activeTab === href;
 
-    return (
+    const link = (
       <Link
         href={href}
+        ref={linkRef}
         onClick={handleClick}
         className={cn(
           "relative flex items-center w-full rounded-lg text-sm font-medium px-3 py-3 transition-colors duration-200 group",
-          outlined && "border border-white/10 bg-white/[0.03]",
+          outlined && "border border-white/10 bg-white/[0.03] [&>span]:opacity-80",
           isCollapsed ? "justify-center" : "",
           isActive
-            ? "bg-blue-900/30 text-blue-200"
+            ? "text-blue-200"
             : "text-muted-foreground hover:bg-gray-800/50 hover:text-primary"
         )}
       >
-        {isActive && (
-          <span className="absolute inset-y-0 left-0 w-1 bg-blue-500 rounded-r-full" />
-        )}
         <Icon
           className={cn(
-            "h-5 w-5 flex-shrink-0 transition-transform duration-200",
+            "relative z-10 h-5 w-5 flex-shrink-0 transition-transform duration-200",
             isActive ? "scale-110" : "group-hover:scale-105",
             isCollapsed ? "mr-0" : "mr-3"
           )}
         />
-        {!isCollapsed && <span>{label}</span>}
+        {!isCollapsed && <span className="relative z-10">{label}</span>}
       </Link>
+    );
+
+    // Collapsed rail hides labels — surface them on hover so the icons
+    // are identifiable.
+    if (!isCollapsed) return link;
+
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{link}</TooltipTrigger>
+        <TooltipContent side="right">{label}</TooltipContent>
+      </Tooltip>
     );
   };
 
   return (
-    <>
+    <TooltipProvider delayDuration={200}>
       {/* Desktop Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 h-screen transition-[width] duration-300 ease-in-out hidden lg:block z-30 overflow-hidden bg-[hsl(var(--sidebar)/0.55)] backdrop-blur-xl backdrop-saturate-150 border-r border-white/10 shadow-glass-dark",
-          isSidebarOpen ? "w-36" : "w-12"
+          "fixed inset-y-0 left-0 h-screen transition-[width] duration-300 ease-in-out hidden lg:block z-30 overflow-hidden bg-gray-900/30 backdrop-blur-xl backdrop-saturate-150 border-r border-white/10 shadow-glass-dark",
+          isSidebarOpen ? "w-36" : "w-[4.5rem]"
         )}
       >
-        <div className="h-16 flex items-center justify-between px-4 border-b border-white/5">
-          {isSidebarOpen && (
-            <span
-              className="text-lg font-bold cursor-pointer bg-clip-text text-transparent bg-gradient-to-br from-white to-blue-300 [-webkit-text-fill-color:transparent] hover:opacity-80 transition-opacity tracking-tight"
-              onClick={() => router.push("/welcome")}
-            >
-              Everwood
-            </span>
-          )}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleSidebar}
-            className={cn(
-              "hover:bg-gray-800/60 text-gray-300",
-              isSidebarOpen ? "" : "mx-auto"
-            )}
+        <div className="h-16 flex items-center justify-center px-4 border-b border-white/5">
+          <span
+            className="text-xl font-bold cursor-pointer bg-clip-text text-transparent bg-gradient-to-br from-white to-blue-300 [-webkit-text-fill-color:transparent] hover:opacity-80 transition-opacity tracking-tight"
+            onClick={() => router.push("/welcome")}
           >
-            {isSidebarOpen ? (
-              <ChevronLeft className="h-4 w-4" />
-            ) : (
-              <ChevronRight className="h-4 w-4" />
-            )}
-            <span className="sr-only">Toggle sidebar</span>
-          </Button>
+            E
+          </span>
         </div>
         <div className="mx-4 my-2 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
         <div className="h-[calc(100vh-4rem)] flex flex-col">
-          <div className="flex-1 overflow-hidden px-3 flex flex-col justify-center">
-            <div className="flex flex-col space-y-1 py-2">
+          <div className="flex-1 overflow-hidden px-1.5 flex flex-col justify-center">
+            <div
+              ref={navListRef}
+              className="relative flex flex-col space-y-1 py-2"
+            >
+              {indicator.visible && (
+                <motion.div
+                  aria-hidden
+                  className="absolute left-0 right-0 rounded-lg bg-blue-900/30 pointer-events-none"
+                  initial={false}
+                  animate={{ top: indicator.top, height: indicator.height }}
+                  transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                >
+                  <span className="absolute inset-y-0 left-0 w-1 bg-blue-500 rounded-r-full" />
+                </motion.div>
+              )}
               {mainNavItems.map((item, index) =>
                 item.type === "divider" ? (
                   <Separator
@@ -221,6 +259,9 @@ export function Navbar() {
                     icon={"icon" in item ? item.icon : Menu}
                     label={"label" in item ? item.label : ""}
                     isCollapsed={!isSidebarOpen}
+                    linkRef={(el) => {
+                      navItemRefs.current[index] = el;
+                    }}
                   />
                 )
               )}
@@ -366,7 +407,7 @@ export function Navbar() {
       </aside>
 
       {/* Mobile Navbar */}
-      <nav className="lg:hidden fixed top-0 left-0 right-0 z-40 border-b border-white/10 bg-[hsl(var(--sidebar)/0.55)] backdrop-blur-xl backdrop-saturate-150 shadow-glass-dark">
+      <nav className="lg:hidden fixed top-0 left-0 right-0 z-40 border-b border-white/10 bg-gray-900/30 backdrop-blur-xl backdrop-saturate-150 shadow-glass-dark">
         <div className="w-full flex h-14 items-center px-4">
           <Sheet>
             <SheetTrigger asChild>
@@ -495,7 +536,7 @@ export function Navbar() {
 
             <SheetContent
               side="left"
-              className="w-64 p-0 bg-[hsl(var(--sidebar)/0.7)] backdrop-blur-xl backdrop-saturate-150 border-r border-white/10 shadow-glass-dark"
+              className="w-64 p-0 bg-gray-900/40 backdrop-blur-xl backdrop-saturate-150 border-r border-white/10 shadow-glass-dark"
             >
               <div className="h-16 flex items-center px-4 border-b border-white/5">
                 <span className="text-lg font-bold cursor-pointer bg-clip-text text-transparent bg-gradient-to-br from-white to-blue-300 [-webkit-text-fill-color:transparent] tracking-tight">
@@ -548,6 +589,6 @@ export function Navbar() {
           </Sheet>
         </div>
       </nav>
-    </>
+    </TooltipProvider>
   );
 }

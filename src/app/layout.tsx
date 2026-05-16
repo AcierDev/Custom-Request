@@ -9,7 +9,6 @@ import { Toaster } from "sonner";
 import { AuthProvider } from "@/lib/auth-context";
 import { AuthContextProvider } from "@/components/AuthContextProvider";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { SidebarProvider, useSidebar } from "@/contexts/sidebar-context";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -23,27 +22,15 @@ const geistMono = localFont({
 });
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
-  return (
-    <SidebarProvider>
-      <LayoutContentInner>{children}</LayoutContentInner>
-    </SidebarProvider>
-  );
-}
-
-function LayoutContentInner({ children }: { children: React.ReactNode }) {
-  const sidebar = useSidebar();
-  const isSidebarOpen = sidebar?.isSidebarOpen ?? true;
+  // Sidebar is permanently collapsed, so content always clears the
+  // collapsed-width rail.
   return (
     <div className="flex h-screen overflow-hidden bg-gray-900 text-gray-100">
       <SpeedInsights />
       <MobileWarning />
       <Navbar />
       <div className="flex-1 overflow-auto no-scrollbar border-t border-sky-400/40">
-        <div
-          className={`mt-14 lg:mt-0 transition-[margin] duration-300 flex flex-col h-full ${
-            isSidebarOpen ? "lg:ml-36" : "lg:ml-12"
-          }`}
-        >
+        <div className="mt-14 lg:mt-0 flex flex-col h-full lg:ml-[4.5rem]">
           <main className="flex-1 w-full pb-16">{children}</main>
         </div>
       </div>

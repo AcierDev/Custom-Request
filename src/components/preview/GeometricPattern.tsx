@@ -20,8 +20,16 @@ import {
   initializeTextureVariations,
   generateColorMap,
   calculateSquareLayout,
+  isExactMiniSize,
 } from "./patternUtils";
 import { useSpring } from "@react-spring/three";
+
+// Shown when Custom is selected with no palette colors and no drawn
+// pattern: every square renders this single dark blue.
+const EMPTY_FALLBACK_BLUE = "#1e3a5f";
+const EMPTY_FALLBACK_PALETTE = [
+  { hex: EMPTY_FALLBACK_BLUE, name: "Dark Blue" },
+];
 
 export function GeometricPattern({
   showColorInfo = true,
@@ -49,25 +57,25 @@ export function GeometricPattern({
 
   // Use values from customDesign when provided, otherwise use store values
   const dimensions = customDesign?.dimensions || storeDimensions;
-  const rawSelectedDesign =
+  const selectedDesign =
     customDesign?.selectedDesign || storeSelectedDesign;
   // When Custom is selected but there's nothing to preview (no palette
-  // colors and no drawn pattern), fall back to Coastal Dream so the
-  // viewer never renders an empty / white screen.
+  // colors and no drawn pattern), render every square a single dark
+  // blue instead of an empty / white screen.
   const customPaletteSource =
     customDesign?.customPalette || storeCustomPalette;
-  const selectedDesign =
-    rawSelectedDesign === ItemDesigns.Custom &&
+  const nothingToPreview =
+    selectedDesign === ItemDesigns.Custom &&
     customPaletteSource.length === 0 &&
-    (!drawnPatternGrid || !drawnPatternGridSize)
-      ? ItemDesigns.Coastal
-      : rawSelectedDesign;
+    (!drawnPatternGrid || !drawnPatternGridSize);
   const colorPattern = customDesign?.colorPattern || storeColorPattern;
   const orientation = customDesign?.orientation || storeOrientation;
   const isReversed = customDesign?.isReversed || storeIsReversed;
   const isRotated = customDesign?.isRotated || storeIsRotated;
   const useMini = customDesign?.useMini || storeUseMini;
-  const customPalette = customPaletteSource;
+  const customPalette = nothingToPreview
+    ? EMPTY_FALLBACK_PALETTE
+    : customPaletteSource;
 
   const { showSplitPanel } = viewSettings;
 
@@ -81,6 +89,13 @@ export function GeometricPattern({
   const rotationSeedsRef = useRef<boolean[][]>();
   // Create refs for texture variations
   const textureVariationsRef = useRef<TextureVariation[][]>();
+
+  // While the squares are revealing (size-change bloom) the plywood
+  // backing + hanger stay hidden so they don't pop in behind the wave.
+  // Starts hidden so the first mount's reveal doesn't flash the backing.
+  const [bloomActive, setBloomActive] = useState(true);
+  const handleBloomStart = useCallback(() => setBloomActive(true), []);
+  const handleBloomComplete = useCallback(() => setBloomActive(false), []);
 
   // Create a pre-calculated color map for perfect distribution
   const colorMapRef = useRef<ColorMapRef>();
@@ -139,10 +154,11 @@ export function GeometricPattern({
         modelHeight,
         squareSize,
         squareSpacing,
-        useMini
+        useMini,
+        isExactMiniSize(modelWidth, modelHeight)
       ),
     };
-  }, [details.squares, useMini]);
+  }, [details.squares, useMini, modelWidth, modelHeight]);
 
   const {
     squareSize,
@@ -518,15 +534,19 @@ export function GeometricPattern({
         position={[0, 0, 0]}
         onClick={handleGroupClick}
       >
-        <PlywoodBase
-          width={totalWidth}
-          height={totalHeight}
-          showWoodGrain={showWoodGrain}
-          squareSize={squareSize}
-          adjustedModelWidth={adjustedModelWidth}
-          adjustedModelHeight={adjustedModelHeight}
-          useMini={useMini}
-        />
+        {/* Hidden until the size-change reveal lands so the backing and
+            hanger don't pop in behind the blooming squares. */}
+        {!bloomActive && (
+          <PlywoodBase
+            width={totalWidth}
+            height={totalHeight}
+            showWoodGrain={showWoodGrain}
+            squareSize={squareSize}
+            adjustedModelWidth={adjustedModelWidth}
+            adjustedModelHeight={adjustedModelHeight}
+            useMini={useMini}
+          />
+        )}
 
         {/* Single instanced draw call for the whole square grid */}
         <InstancedSquares
@@ -538,6 +558,9 @@ export function GeometricPattern({
           onHover={handleSquareHover}
           onUnhover={handleSquareUnhover}
           onClick={handleSquareClick}
+          onBloomStart={handleBloomStart}
+          onBloomComplete={handleBloomComplete}
+          revealStyle="rows"
         />
       </group>
 
