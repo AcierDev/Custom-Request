@@ -1,11 +1,12 @@
 "use client";
 
 import { useTexture } from "@react-three/drei";
-import { ThreeEvent, useFrame } from "@react-three/fiber";
+import { ThreeEvent, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
+import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { useDeferredValue, useEffect, useMemo, useRef } from "react";
 import { useCustomStore } from "@/store/customStore";
-import { getWoodStyle } from "./woodStyles";
+import { getWoodStyle, METALLIC_PAINT } from "./woodStyles";
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ 🧱 INSTANCED SQUARES                                                  ║
@@ -59,6 +60,10 @@ interface InstancedSquaresProps {
   revealStyle?: RevealStyle;
   /** Bump this to replay the reveal even when the grid size is unchanged. */
   revealNonce?: number;
+  /** Auto-play the per-square bloom when the grid is rebuilt at a new
+   *  size. Off when the parent runs its own size-change transition.
+   *  An explicit revealNonce bump still replays the reveal. */
+  bloomOnResize?: boolean;
 }
 
 // Wedge geometry — same shape as Square.tsx's geometric wedge, but built
@@ -246,6 +251,7 @@ export function InstancedSquares({
   onBloomComplete,
   revealStyle = "radial",
   revealNonce = 0,
+  bloomOnResize = true,
 }: InstancedSquaresProps) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const highlightRef = useRef<THREE.Mesh>(null);
@@ -279,6 +285,19 @@ export function InstancedSquares({
     useCustomStore((s) => s.viewSettings.woodStyle)
   );
   const woodStyle = useMemo(() => getWoodStyle(woodStyleId), [woodStyleId]);
+  const metallic = useCustomStore((s) => s.viewSettings.metallic);
+
+  // Metalness is pure black with nothing to reflect, so a metallic finish
+  // needs an environment map. Bake a neutral room into a PMREM cube once
+  // per renderer and reflect only that (it isn't shown as the background).
+  const gl = useThree((s) => s.gl);
+  const envMap = useMemo(() => {
+    const pmrem = new THREE.PMREMGenerator(gl);
+    const tex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    pmrem.dispose();
+    return tex;
+  }, [gl]);
+  useEffect(() => () => envMap.dispose(), [envMap]);
 
   const topTexture = useTexture(woodStyle.topTexture);
 
@@ -309,11 +328,15 @@ export function InstancedSquares({
       tex.anisotropy = 8;
     }
 
+    // "Metallic" is a paint finish layered over the wood grain — the grain
+    // map stays; only the PBR finish changes to a soft (low-gloss) sheen.
     const mat = new THREE.MeshStandardMaterial({
       map: showWoodGrain ? tex ?? null : null,
       color: 0xffffff,
-      roughness: woodStyle.roughness,
-      metalness: woodStyle.metalness,
+      roughness: metallic ? METALLIC_PAINT.roughness : woodStyle.roughness,
+      metalness: metallic ? METALLIC_PAINT.metalness : woodStyle.metalness,
+      envMap: metallic ? envMap : null,
+      envMapIntensity: metallic ? METALLIC_PAINT.envMapIntensity : 1,
     });
 
     // Only inject the per-instance UV transform when there's a grain map;
@@ -352,7 +375,7 @@ export function InstancedSquares({
 
     return mat;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [topTexture, showWoodGrain, woodStyle]);
+  }, [topTexture, showWoodGrain, woodStyle, metallic, envMap]);
 
   // Highlight material for the hovered / pinned square.
   const highlightMaterial = useMemo(
@@ -386,10 +409,11 @@ export function InstancedSquares({
     // the bloom so they recolour in place. First mount also blooms as a
     // reveal. Square coords are stable identity; their world positions
     // recenter, so we re-reveal the whole grid rather than just newcomers.
+    const sizeChanged = instances.length !== prevCountRef.current;
+    const nonceBumped = revealNonce !== prevNonceRef.current;
     const startBloom =
       instances.length > 0 &&
-      (instances.length !== prevCountRef.current ||
-        revealNonce !== prevNonceRef.current);
+      ((bloomOnResize && sizeChanged) || nonceBumped);
     prevCountRef.current = instances.length;
     prevNonceRef.current = revealNonce;
 
@@ -428,7 +452,7 @@ export function InstancedSquares({
     uvOffsetAttr.needsUpdate = true;
     uvRotAttr.needsUpdate = true;
     mesh.computeBoundingSphere();
-  }, [instances, geometry, revealNonce]);
+  }, [instances, geometry, revealNonce, bloomOnResize]);
 
   // One per-frame matrix writer for both the size-change bloom and the
   // split-panel drift. It stays idle (early return) unless the bloom is

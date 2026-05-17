@@ -25,6 +25,8 @@ import {
   Undo2,
   Redo2,
   Anchor,
+  GitBranch,
+  Printer,
 } from "lucide-react";
 import {
   Card,
@@ -47,6 +49,41 @@ import {
 import { toast } from "sonner";
 import { ImportCard } from "./components/PaletteList/ImportCard";
 import { useRouter, useSearchParams } from "next/navigation";
+import {
+  BRAND_OPTIONS,
+  type BrandOption,
+  VERIFIED_BRANDS,
+  purchaseLabel,
+} from "@/lib/paint";
+
+//╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
+//║ 🎨 BUTTON THEME                                                       ║
+//╚═══╝ ════════════════════════════════════════════════════════════════ ╚═══╝
+
+// One shared shape + polish so every action button reads as a single
+// family. Variants differ only by color, never by shape/shadow.
+const BTN_BASE =
+  "flex items-center gap-1.5 rounded-[10px] ring-1 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_1px_3px_rgba(0,0,0,0.25)] [text-shadow:_0_1px_2px_rgb(0_0_0_/_48%)] transition-all";
+
+const BTN_PRIMARY = `${BTN_BASE} bg-blue-600 hover:bg-blue-500 ring-blue-400/40`;
+const BTN_INSPIRE = `${BTN_BASE} bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 ring-indigo-400/40`;
+const BTN_IMPORT = `${BTN_BASE} bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 ring-emerald-400/40`;
+const BTN_SECONDARY =
+  "flex items-center gap-1.5 rounded-[10px] ring-1 ring-purple-400/40 bg-purple-600/20 hover:bg-purple-600/30 text-purple-200 transition-all";
+
+//╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
+//║ 🎯 PAINT MATCH                                                        ║
+//╚═══╝ ════════════════════════════════════════════════════════════════ ╚═══╝
+
+// ΔE2000 → human "% match". 1 unit of ΔE costs this many percentage
+// points, so a just-perceptible difference (ΔE ≈ 2.3) still reads as a
+// strong ~98% match. Clamped to 0–100.
+const PAINT_MATCH_DE_FALLOFF = 1;
+
+const paintMatchPercent = (deltaE: number) =>
+  Math.round(
+    Math.max(0, Math.min(100, 100 - deltaE * PAINT_MATCH_DE_FALLOFF))
+  );
 
 export default function PalettePage() {
   const {
@@ -55,7 +92,6 @@ export default function PalettePage() {
     activeTab,
     setActiveTab,
     editingPaletteId,
-    updatePalette,
     resetPaletteEditor,
     savedPalettes,
     undoPaletteAction,
@@ -63,11 +99,17 @@ export default function PalettePage() {
     paletteHistory,
     paletteHistoryIndex,
     setCustomPalette,
+    setHistoryPaletteId,
+    setEditingPaletteId,
   } = useCustomStore();
 
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   const [paletteName, setPaletteName] = useState("");
   const [saveSuccess, setSaveSuccess] = useState(false);
+  // "Save Palette" dialog: create a brand-new palette, or attach this
+  // in-progress palette to an existing one as its next version.
+  const [saveMode, setSaveMode] = useState<"new" | "existing">("new");
+  const [connectTargetId, setConnectTargetId] = useState("");
 
   // Default to the "official" tab only on a fresh start. If the user
   // already has work in progress, keep them where they left off so
@@ -81,6 +123,34 @@ export default function PalettePage() {
   // Paint color grounding
   const [allPaintColors, setAllPaintColors] = useState<any[]>([]);
   const [paintColorsLoaded, setPaintColorsLoaded] = useState(false);
+  // Which paint brand to ground to. Grounding only matches that brand
+  // (and skips discontinued colors) so suggestions are purchasable.
+  const [groundBrand, setGroundBrand] = useState<BrandOption>("Any");
+  // When on, ground only to brands with verified current color codes
+  // (skips Behr/PPG), so every match is genuinely orderable.
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
+
+  // 4×6 label print options — what to tell the paint counter. Printed in
+  // the header so every color on the sheet is ordered at one sheen/size.
+  const PAINT_SHEENS = [
+    "Flat",
+    "Matte",
+    "Eggshell",
+    "Satin",
+    "Semi-Gloss",
+    "High-Gloss",
+  ] as const;
+  const PAINT_SIZES = [
+    "Sample (8 oz)",
+    "Quart",
+    "Gallon",
+    "5 Gallon",
+  ] as const;
+  const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
+  const [printSheen, setPrintSheen] =
+    useState<(typeof PAINT_SHEENS)[number]>("Eggshell");
+  const [printSize, setPrintSize] =
+    useState<(typeof PAINT_SIZES)[number]>("Sample (8 oz)");
 
   useEffect(() => {
      const loadPaintColors = async () => {
@@ -176,15 +246,97 @@ export default function PalettePage() {
   };
 
   // Calculate color distance using Delta E
-  const calculateColorDistance = (hex1: string, hex2: string): number => {
-    const [L1, a1, b1] = hexToLab(hex1);
-    const [L2, a2, b2] = hexToLab(hex2);
+  //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
+  //║ 🎨 PERCEPTUAL COLOR DISTANCE (CIEDE2000)                             ║
+  //╚═══╝ ════════════════════════════════════════════════════════════════ ╚═══╝
 
-    const deltaL = L1 - L2;
-    const deltaA = a1 - a2;
-    const deltaB = b1 - b2;
+  // Tunable channel weights — the only knobs that aren't fixed by the
+  // CIEDE2000 standard. All 1 = reference conditions.
+  const DELTA_E_KL = 1; // lightness weighting
+  const DELTA_E_KC = 1; // chroma weighting
+  const DELTA_E_KH = 1; // hue weighting
 
-    return Math.sqrt(deltaL * deltaL + deltaA * deltaA + deltaB * deltaB);
+  // CIEDE2000 ΔE00 between two LAB triples. Far better perceptual
+  // ranking than plain LAB Euclidean (ΔE76): it corrects LAB's
+  // non-uniformity in hue/chroma so "nearest" matches what the eye
+  // picks. The bare numeric constants below are fixed by the CIEDE2000
+  // formula itself, not arbitrary tuning values.
+  const deltaE2000 = (
+    lab1: [number, number, number],
+    lab2: [number, number, number]
+  ): number => {
+    const [L1, a1, b1] = lab1;
+    const [L2, a2, b2] = lab2;
+    const d2r = Math.PI / 180;
+    const r2d = 180 / Math.PI;
+    const pow25_7 = Math.pow(25, 7);
+
+    const C1 = Math.hypot(a1, b1);
+    const C2 = Math.hypot(a2, b2);
+    const cBar7 = Math.pow((C1 + C2) / 2, 7);
+    const G = 0.5 * (1 - Math.sqrt(cBar7 / (cBar7 + pow25_7)));
+
+    const a1p = (1 + G) * a1;
+    const a2p = (1 + G) * a2;
+    const C1p = Math.hypot(a1p, b1);
+    const C2p = Math.hypot(a2p, b2);
+
+    const hp = (b: number, ap: number): number => {
+      if (ap === 0 && b === 0) return 0;
+      const h = Math.atan2(b, ap) * r2d;
+      return h >= 0 ? h : h + 360;
+    };
+    const h1p = hp(b1, a1p);
+    const h2p = hp(b2, a2p);
+
+    const dLp = L2 - L1;
+    const dCp = C2p - C1p;
+
+    let dhp = 0;
+    if (C1p * C2p !== 0) {
+      const diff = h2p - h1p;
+      if (Math.abs(diff) <= 180) dhp = diff;
+      else dhp = diff > 180 ? diff - 360 : diff + 360;
+    }
+    const dHp = 2 * Math.sqrt(C1p * C2p) * Math.sin((dhp * d2r) / 2);
+
+    const LBarp = (L1 + L2) / 2;
+    const CBarp = (C1p + C2p) / 2;
+
+    let hBarp = h1p + h2p;
+    if (C1p * C2p !== 0) {
+      if (Math.abs(h1p - h2p) <= 180) hBarp = (h1p + h2p) / 2;
+      else hBarp = (h1p + h2p + (h1p + h2p < 360 ? 360 : -360)) / 2;
+    }
+
+    const T =
+      1 -
+      0.17 * Math.cos((hBarp - 30) * d2r) +
+      0.24 * Math.cos(2 * hBarp * d2r) +
+      0.32 * Math.cos((3 * hBarp + 6) * d2r) -
+      0.2 * Math.cos((4 * hBarp - 63) * d2r);
+
+    const dTheta = 30 * Math.exp(-Math.pow((hBarp - 275) / 25, 2));
+    const CBarp7 = Math.pow(CBarp, 7);
+    const Rc = 2 * Math.sqrt(CBarp7 / (CBarp7 + pow25_7));
+    const Sl =
+      1 +
+      (0.015 * Math.pow(LBarp - 50, 2)) /
+        Math.sqrt(20 + Math.pow(LBarp - 50, 2));
+    const Sc = 1 + 0.045 * CBarp;
+    const Sh = 1 + 0.015 * CBarp * T;
+    const Rt = -Math.sin(2 * dTheta * d2r) * Rc;
+
+    const lTerm = dLp / (DELTA_E_KL * Sl);
+    const cTerm = dCp / (DELTA_E_KC * Sc);
+    const hTerm = dHp / (DELTA_E_KH * Sh);
+
+    return Math.sqrt(
+      lTerm * lTerm +
+        cTerm * cTerm +
+        hTerm * hTerm +
+        Rt * cTerm * hTerm
+    );
   };
 
   const groundPalette = () => {
@@ -198,42 +350,172 @@ export default function PalettePage() {
       return;
     }
 
+    // Only match colors the chosen store actually sells, and never
+    // ground onto a discontinued color (available === false). Records
+    // without an `available` flag (brands whose importer isn't built
+    // yet) are kept so those brands still work.
+    const pool = allPaintColors.filter((c) => {
+      if (c.available === false) return false;
+      if (verifiedOnly && !VERIFIED_BRANDS.has(c.brand)) return false;
+      if (groundBrand === "Any") return true;
+      return c.brand === groundBrand;
+    });
+
+    if (pool.length === 0) {
+      toast.error(
+        verifiedOnly
+          ? `No verified ${groundBrand === "Any" ? "" : groundBrand + " "}` +
+            `colors — uncheck "Verified only" or pick another brand.`
+          : `No purchasable ${groundBrand} colors yet. Try "Any".`
+      );
+      return;
+    }
+
+    // Convert every paint to LAB once up front instead of re-deriving
+    // it for every palette color (was O(palette × paints) conversions).
+    const paintLabs = pool.map((paintColor) => ({
+      paintColor,
+      lab: hexToLab(paintColor.hex),
+    }));
+
     const groundedColors = customPalette.map((customColor) => {
-      let closestColor = allPaintColors[0];
+      const customLab = hexToLab(customColor.hex);
+      let closestColor = pool[0];
       let minDistance = Infinity;
 
-      for (const paintColor of allPaintColors) {
-        const dist = calculateColorDistance(customColor.hex, paintColor.hex);
+      for (const { paintColor, lab } of paintLabs) {
+        const dist = deltaE2000(customLab, lab);
         if (dist < minDistance) {
           minDistance = dist;
           closestColor = paintColor;
         }
       }
 
-      let brandPrefix = "";
-      if (closestColor.brand === "Benjamin Moore") {
-        brandPrefix = "BM - ";
-      } else if (closestColor.brand === "Sherwin-Williams") {
-        brandPrefix = "SW - ";
-      } else if (closestColor.brand === "Behr") {
-        brandPrefix = "Behr - ";
-      } else if (closestColor.brand === "Valspar") {
-        brandPrefix = "Valspar - ";
-      } else if (closestColor.brand === "PPG") {
-        brandPrefix = "PPG - ";
-      }
-
+      // Name carries the real purchase identifier — the manufacturer
+      // code ("SW 6258 — Tricorn Black") when we have it, so it can be
+      // searched/ordered at the counter, not just an ambiguous name.
       return {
         ...customColor,
         hex: closestColor.hex,
-        name: `${brandPrefix}${closestColor.name}`,
+        name: purchaseLabel(closestColor),
+        paintMatch: paintMatchPercent(minDistance),
       };
     });
 
     setCustomPalette(groundedColors);
+    const where =
+      groundBrand === "Any" ? "" : ` (${groundBrand})`;
     toast.success(
-      `Grounded ${customPalette.length} colors to nearest paint matches`
+      `Grounded ${customPalette.length} colors to nearest paint matches${where}`
     );
+  };
+
+  //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
+  //║ 🖨️ 4×6 PAINT LABEL PRINTOUT                                          ║
+  //╚═══╝ ════════════════════════════════════════════════════════════════ ╚═══╝
+
+  // Standard 4"×6" label/photo stock — what you take to the paint counter.
+  const LABEL_W_IN = 4;
+  const LABEL_H_IN = 6;
+
+  // Opens a print-ready window sized to a single 4×6 label listing every
+  // palette color: swatch + purchase label (brand/code/name) + hex, so the
+  // counter can tint straight from the printout.
+  const printPaintLabels = () => {
+    if (customPalette.length === 0) {
+      toast.error("Palette is empty");
+      return;
+    }
+
+    const esc = (s: string) =>
+      s.replace(/[&<>"]/g, (c) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string)
+      );
+
+    const rows = customPalette
+      .map((c, i) => {
+        // After "Convert to paint" the name is "Brand — code — name".
+        // Show the paint name big, with brand/code as a sub-line so the
+        // counter has exactly what to tint.
+        const raw = c.name && c.name.trim() ? c.name.trim() : "";
+        const parts = raw.split(" — ").map((p) => p.trim()).filter(Boolean);
+        let name = raw || c.hex;
+        let sub = "";
+        if (parts.length >= 3) {
+          name = parts.slice(2).join(" — ");
+          sub = `${parts[0]} · ${parts[1]}`;
+        } else if (parts.length === 2) {
+          name = parts[1];
+          sub = parts[0];
+        }
+        const meta = [sub, (c.hex || "").toUpperCase()]
+          .filter(Boolean)
+          .join("  ·  ");
+        return `<li class="row">
+          <span class="num">${i + 1}.</span>
+          <span class="meta">
+            <span class="name">${esc(name)}</span>
+            <span class="hex">${esc(meta)}</span>
+          </span>
+        </li>`;
+      })
+      .join("");
+
+    const html = `<!doctype html><html><head><meta charset="utf-8">
+      <title>Paint shopping list</title>
+      <style>
+        @page { size: ${LABEL_W_IN}in ${LABEL_H_IN}in; margin: 0; }
+        * { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; }
+        body { width: ${LABEL_W_IN}in; height: ${LABEL_H_IN}in;
+          font-family: -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
+          color: #000; padding: 0.22in; }
+        h1 { font-size: 13pt; margin: 0 0 2pt; }
+        .sub { font-size: 8pt; color: #000; margin: 0 0 8pt; }
+        ul { list-style: none; margin: 0; padding: 0; }
+        .row { display: flex; align-items: baseline; gap: 6pt;
+          padding: 4pt 0; border-bottom: 0.75pt solid #000; }
+        .num { font-size: 9pt; font-weight: 700; flex: none;
+          min-width: 16pt; font-variant-numeric: tabular-nums; }
+        .meta { display: flex; flex-direction: column; min-width: 0; }
+        .name { font-size: 10pt; font-weight: 700; line-height: 1.25;
+          word-break: break-word; }
+        .hex { font-size: 8pt; color: #000; font-variant-numeric: tabular-nums; }
+        .order { font-size: 9.5pt; font-weight: 700; margin: 0 0 8pt;
+          padding: 4pt 6pt; border: 1pt solid #000; border-radius: 3pt; }
+      </style></head>
+      <body>
+        <h1>Paint shopping list</h1>
+        <p class="sub">${customPalette.length} colors &middot; ${esc(
+          new Date().toLocaleDateString()
+        )}</p>
+        <p class="order">Sheen: ${esc(printSheen)} &nbsp;|&nbsp; Size: ${esc(
+          printSize
+        )}</p>
+        <ul>${rows}</ul>
+      </body></html>`;
+
+    // Print from a hidden in-page iframe instead of opening a window —
+    // no pop-up/tab, the print dialog fires over the current page.
+    const frame = document.createElement("iframe");
+    frame.setAttribute("aria-hidden", "true");
+    frame.style.position = "fixed";
+    frame.style.right = "0";
+    frame.style.bottom = "0";
+    frame.style.width = "0";
+    frame.style.height = "0";
+    frame.style.border = "0";
+    frame.onload = () => {
+      const win = frame.contentWindow;
+      if (!win) return;
+      win.focus();
+      win.print();
+      // Leave the frame long enough for the print dialog to read it.
+      setTimeout(() => frame.remove(), 1000);
+    };
+    document.body.appendChild(frame);
+    frame.srcdoc = html;
+    setIsPrintDialogOpen(false);
   };
 
   // For import functionality
@@ -416,20 +698,32 @@ export default function PalettePage() {
 
   const handleSavePalette = () => {
     if (editingPaletteId) {
-      // If we're editing an existing palette, update it
-      updatePalette(editingPaletteId, {
-        colors: customPalette,
-      });
+      // A palette is already open: save it under its existing name as
+      // the next version. Stay in the editor so the user can keep
+      // iterating — saving again just stacks another version.
+      const existing = savedPalettes.find((p) => p.id === editingPaletteId);
+      savePalette(existing?.name ?? paletteName ?? "Untitled");
 
-      // Show success message briefly
+      const versionNum = (existing?.versions?.length ?? 1) + 1;
       setSaveSuccess(true);
-      setTimeout(() => {
-        setSaveSuccess(false);
-        // Reset the editing state and palette editor
-        resetPaletteEditor();
-        // Switch to the saved palettes tab
-        setActiveTab("saved");
-      }, 1500);
+      toast.success(`Saved "${existing?.name ?? "palette"}" as version ${versionNum}`);
+      setTimeout(() => setSaveSuccess(false), 1500);
+    } else if (saveMode === "existing" && connectTargetId) {
+      // Attach this in-progress palette to an existing one as its next
+      // version. savePalette() keys off editingPaletteId, so connecting
+      // first makes the save stack a version instead of forking a new
+      // palette. Stay in the editor like the normal edit flow.
+      const target = savedPalettes.find((p) => p.id === connectTargetId);
+      setEditingPaletteId(connectTargetId);
+      savePalette(target?.name ?? "Untitled");
+
+      const versionNum = (target?.versions?.length ?? 1) + 1;
+      setIsSaveDialogOpen(false);
+      setSaveSuccess(true);
+      toast.success(
+        `Connected to "${target?.name ?? "palette"}" — saved as version ${versionNum}`
+      );
+      setTimeout(() => setSaveSuccess(false), 1500);
     } else {
       // Otherwise create a new palette
       savePalette(paletteName);
@@ -893,7 +1187,7 @@ export default function PalettePage() {
                     ? !importIdValue.trim()
                     : !importText.trim() || isImportLoading
                 }
-                className="bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white sm:order-2"
+                className={`${BTN_PRIMARY} sm:order-2`}
               >
                 {isImportLoading ? "Importing..." : "Import Palette"}
               </Button>
@@ -904,7 +1198,7 @@ export default function PalettePage() {
 
       <div className="max-w-[1800px] mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between space-x-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between lg:space-x-4">
           <div className="space-y-2">
             <motion.h1
               className="heading-hero"
@@ -925,19 +1219,6 @@ export default function PalettePage() {
               projects with our intuitive tools.
             </motion.p>
           </div>
-          <div className="flex gap-2">
-             {activeTab === 'create' && customPalette.length > 0 && (
-                <Button
-                  variant="outline"
-                  onClick={groundPalette}
-                  className="flex items-center gap-2"
-                  disabled={!paintColorsLoaded}
-                >
-                  <Anchor className="w-4 h-4" />
-                  Ground
-                </Button>
-             )}
-          </div>
         </div>
 
         {/* Main Content */}
@@ -946,14 +1227,9 @@ export default function PalettePage() {
           className="w-full"
           value={activeTab}
           onValueChange={(value) => {
-            // If switching to create tab from saved tab, reset the editor
-            if (
-              value === "create" &&
-              (activeTab === "saved" || activeTab === "official") &&
-              !editingPaletteId
-            ) {
-              resetPaletteEditor();
-            }
+            // The Create tab is just where the in-progress palette lives.
+            // Navigating to it should always return the user to their work
+            // intact — never reset or prompt on tab navigation.
             setActiveTab(value as "create" | "saved" | "official" | "extract");
           }}
         >
@@ -964,7 +1240,7 @@ export default function PalettePage() {
                 className="data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-200"
               >
                 <div className="flex items-center gap-2">
-                  <span>{editingPaletteId ? "Edit" : "Custom"}</span>
+                  <span>Custom</span>
                 </div>
               </TabsTrigger>
 
@@ -1027,7 +1303,7 @@ export default function PalettePage() {
               <div className="hidden md:flex gap-2">
                 <Button
                   onClick={() => setActiveTab("official")}
-                  className="flex items-center gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-500 ring-1 ring-indigo-400/40 text-white"
+                  className={`${BTN_INSPIRE} text-xs`}
                   size="sm"
                 >
                   <Lightbulb className="h-3.5 w-3.5" />
@@ -1035,7 +1311,7 @@ export default function PalettePage() {
                 </Button>
                 <Button
                   onClick={handleImport}
-                  className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 ring-1 ring-emerald-400/40 text-white"
+                  className={`${BTN_IMPORT} text-xs`}
                   size="sm"
                 >
                   <Upload className="h-3.5 w-3.5" />
@@ -1046,7 +1322,7 @@ export default function PalettePage() {
               <div className="hidden md:flex gap-2">
                 <Button
                   onClick={() => setActiveTab("official")}
-                  className="flex items-center gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-500 ring-1 ring-indigo-400/40 text-white"
+                  className={`${BTN_INSPIRE} text-xs`}
                   size="sm"
                 >
                   <Lightbulb className="h-3.5 w-3.5" />
@@ -1054,7 +1330,7 @@ export default function PalettePage() {
                 </Button>
                 <Button
                   onClick={() => setActiveTab("create")}
-                  className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
+                  className={`${BTN_PRIMARY} text-xs`}
                   size="sm"
                 >
                   <Plus className="h-3.5 w-3.5" />
@@ -1062,7 +1338,7 @@ export default function PalettePage() {
                 </Button>
                 <Button
                   onClick={handleImport}
-                  className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 ring-1 ring-emerald-400/40 text-white"
+                  className={`${BTN_IMPORT} text-xs`}
                   size="sm"
                 >
                   <Upload className="h-3.5 w-3.5" />
@@ -1073,7 +1349,7 @@ export default function PalettePage() {
               <div className="hidden md:flex gap-2">
                 <Button
                   onClick={() => setActiveTab("create")}
-                  className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
+                  className={`${BTN_PRIMARY} text-xs`}
                   size="sm"
                 >
                   <Plus className="h-3.5 w-3.5" />
@@ -1081,7 +1357,7 @@ export default function PalettePage() {
                 </Button>
                 <Button
                   onClick={() => setActiveTab("official")}
-                  className="flex items-center gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-500 ring-1 ring-indigo-400/40 text-white"
+                  className={`${BTN_INSPIRE} text-xs`}
                   size="sm"
                 >
                   <Lightbulb className="h-3.5 w-3.5" />
@@ -1089,7 +1365,7 @@ export default function PalettePage() {
                 </Button>
                 <Button
                   onClick={handleImport}
-                  className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 ring-1 ring-emerald-400/40 text-white"
+                  className={`${BTN_IMPORT} text-xs`}
                   size="sm"
                 >
                   <Upload className="h-3.5 w-3.5" />
@@ -1100,7 +1376,7 @@ export default function PalettePage() {
               <div className="hidden md:flex gap-2">
                 <Button
                   onClick={() => setActiveTab("create")}
-                  className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
+                  className={`${BTN_PRIMARY} text-xs`}
                   size="sm"
                 >
                   <Plus className="h-3.5 w-3.5" />
@@ -1108,7 +1384,7 @@ export default function PalettePage() {
                 </Button>
                 <Button
                   onClick={handleImport}
-                  className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 ring-1 ring-emerald-400/40 text-white"
+                  className={`${BTN_IMPORT} text-xs`}
                   size="sm"
                 >
                   <Upload className="h-3.5 w-3.5" />
@@ -1123,7 +1399,7 @@ export default function PalettePage() {
             <div className="flex md:hidden justify-end mb-2 gap-2">
               <Button
                 onClick={() => setActiveTab("extract")}
-                className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
+                className={`${BTN_PRIMARY} text-xs`}
                 size="sm"
               >
                 <ImageIcon className="h-3.5 w-3.5" />
@@ -1131,7 +1407,7 @@ export default function PalettePage() {
               </Button>
               <Button
                 onClick={() => setActiveTab("official")}
-                className="flex items-center gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-500 ring-1 ring-indigo-400/40 text-white"
+                className={`${BTN_INSPIRE} text-xs`}
                 size="sm"
               >
                 <Lightbulb className="h-3.5 w-3.5" />
@@ -1139,13 +1415,165 @@ export default function PalettePage() {
               </Button>
               <Button
                 onClick={handleImport}
-                className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 ring-1 ring-emerald-400/40 text-white"
+                className={`${BTN_IMPORT} text-xs`}
                 size="sm"
               >
                 <Upload className="h-3.5 w-3.5" />
                 Import
               </Button>
             </div>
+
+            {customPalette.length > 0 && (
+              <motion.section
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className="mb-4 rounded-2xl border border-blue-400/20 bg-gradient-to-br from-blue-950/40 via-gray-900 to-gray-900 p-4 sm:p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_2px_8px_rgba(0,0,0,0.25)]"
+              >
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="flex items-start gap-3">
+                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-blue-600/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_1px_2px_rgba(0,0,0,0.10)]">
+                      <Anchor className="h-4 w-4 text-white" />
+                    </span>
+                    <div>
+                      <h3 className="text-sm font-semibold text-white">
+                        Match to real paint
+                      </h3>
+                      <p className="mt-0.5 max-w-md text-xs text-slate-400">
+                        Snap every color to the nearest purchasable paint so
+                        you can buy it at the store.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <select
+                      aria-label="Ground to which paint brand"
+                      value={groundBrand}
+                      onChange={(e) =>
+                        setGroundBrand(e.target.value as BrandOption)
+                      }
+                      className="h-9 rounded-[10px] border border-white/10 bg-gray-900/80 px-3 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      title="Only match colors from this brand. ✓ = verified current color codes"
+                      disabled={!paintColorsLoaded}
+                    >
+                      {BRAND_OPTIONS.map((b) => (
+                        <option key={b} value={b}>
+                          {b === "Any"
+                            ? "Any brand"
+                            : VERIFIED_BRANDS.has(b)
+                              ? `${b}  ✓ verified`
+                              : b}
+                        </option>
+                      ))}
+                    </select>
+                    <label
+                      className="flex h-9 cursor-pointer select-none items-center gap-1.5 rounded-[10px] border border-white/10 bg-gray-900/80 px-3 text-sm text-slate-300"
+                      title="Only ground to brands with verified current color codes (excludes Behr/PPG)"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={verifiedOnly}
+                        onChange={(e) => setVerifiedOnly(e.target.checked)}
+                        disabled={!paintColorsLoaded}
+                        className="accent-blue-500"
+                      />
+                      Verified only
+                    </label>
+                    <Button
+                      onClick={groundPalette}
+                      className={BTN_PRIMARY}
+                      disabled={!paintColorsLoaded}
+                    >
+                      <Anchor className="w-4 h-4" />
+                      Convert to paint
+                    </Button>
+                    <Dialog
+                      open={isPrintDialogOpen}
+                      onOpenChange={setIsPrintDialogOpen}
+                    >
+                      <DialogTrigger asChild>
+                        <Button
+                          className={BTN_SECONDARY}
+                          title="Print a 4×6 label of every color to take to the store"
+                        >
+                          <Printer className="w-4 h-4" />
+                          Print 4×6 label
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>Print paint label</DialogTitle>
+                          <DialogDescription>
+                            Pick the sheen and can size to print on the 4×6
+                            label for all {customPalette.length} colors.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-2">
+                          <div className="space-y-2">
+                            <Label htmlFor="print-sheen">Sheen</Label>
+                            <select
+                              id="print-sheen"
+                              value={printSheen}
+                              onChange={(e) =>
+                                setPrintSheen(
+                                  e.target
+                                    .value as (typeof PAINT_SHEENS)[number]
+                                )
+                              }
+                              className="h-9 w-full rounded-md border border-slate-700 bg-slate-900 px-2 text-sm text-slate-200"
+                            >
+                              {PAINT_SHEENS.map((s) => (
+                                <option key={s} value={s}>
+                                  {s}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="print-size">Can size</Label>
+                            <select
+                              id="print-size"
+                              value={printSize}
+                              onChange={(e) =>
+                                setPrintSize(
+                                  e.target
+                                    .value as (typeof PAINT_SIZES)[number]
+                                )
+                              }
+                              className="h-9 w-full rounded-md border border-slate-700 bg-slate-900 px-2 text-sm text-slate-200"
+                            >
+                              {PAINT_SIZES.map((s) => (
+                                <option key={s} value={s}>
+                                  {s}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setIsPrintDialogOpen(false)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            type="button"
+                            className={BTN_PRIMARY}
+                            onClick={printPaintLabels}
+                          >
+                            <Printer className="w-4 h-4" />
+                            Print
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </div>
+              </motion.section>
+            )}
 
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -1215,16 +1643,27 @@ export default function PalettePage() {
                           className="text-green-600 dark:text-green-400 flex items-center gap-1"
                         >
                           <Check className="h-4 w-4" />
-                          <span>Palette updated!</span>
+                          <span>New version saved!</span>
                         </motion.div>
                       )}
+                      {editingPaletteId && (
+                        <Button
+                          className={BTN_SECONDARY}
+                          onClick={() =>
+                            setHistoryPaletteId(editingPaletteId)
+                          }
+                        >
+                          <GitBranch className="mr-2 h-4 w-4" />
+                          Version History
+                        </Button>
+                      )}
                       <Button
-                        className="bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
+                        className={BTN_PRIMARY}
                         disabled={customPalette.length === 0 || saveSuccess}
                         onClick={handleSavePalette}
                       >
                         <Save className="mr-2 h-4 w-4" />
-                        Update Palette
+                        Save Version
                       </Button>
                     </div>
                   ) : (
@@ -1235,11 +1674,19 @@ export default function PalettePage() {
                       </span>
                       <Dialog
                         open={isSaveDialogOpen}
-                        onOpenChange={setIsSaveDialogOpen}
+                        onOpenChange={(open) => {
+                          setIsSaveDialogOpen(open);
+                          if (open) {
+                            // Always start on "new"; the user explicitly
+                            // opts in to connecting to an existing palette.
+                            setSaveMode("new");
+                            setConnectTargetId("");
+                          }
+                        }}
                       >
                         <DialogTrigger asChild>
                         <Button
-                          className="bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
+                          className={BTN_PRIMARY}
                           disabled={customPalette.length === 0}
                         >
                           <Save className="mr-2 h-4 w-4" />
@@ -1250,20 +1697,100 @@ export default function PalettePage() {
                         <DialogHeader>
                           <DialogTitle>Save Palette</DialogTitle>
                           <DialogDescription>
-                            Give your palette a name to save it to your
-                            collection
+                            Save as a new palette, or connect it to an
+                            existing one as its next version.
                           </DialogDescription>
                         </DialogHeader>
                         <div className="grid gap-4 py-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="palette-name">Palette Name</Label>
-                            <Input
-                              id="palette-name"
-                              placeholder="My Awesome Palette"
-                              value={paletteName}
-                              onChange={(e) => setPaletteName(e.target.value)}
-                            />
+                          {/* Mode toggle */}
+                          <div className="grid grid-cols-2 gap-1 rounded-lg bg-slate-800/60 p-1">
+                            <button
+                              type="button"
+                              onClick={() => setSaveMode("new")}
+                              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                                saveMode === "new"
+                                  ? "bg-blue-600 text-white"
+                                  : "text-slate-300 hover:text-white"
+                              }`}
+                            >
+                              New palette
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setSaveMode("existing")}
+                              disabled={savedPalettes.length === 0}
+                              title={
+                                savedPalettes.length === 0
+                                  ? "You have no saved palettes yet"
+                                  : undefined
+                              }
+                              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                                saveMode === "existing"
+                                  ? "bg-blue-600 text-white"
+                                  : "text-slate-300 hover:text-white"
+                              }`}
+                            >
+                              Add to existing
+                            </button>
                           </div>
+
+                          {saveMode === "new" ? (
+                            <div className="space-y-2">
+                              <Label htmlFor="palette-name">
+                                Palette Name
+                              </Label>
+                              <Input
+                                id="palette-name"
+                                placeholder="My Awesome Palette"
+                                value={paletteName}
+                                onChange={(e) =>
+                                  setPaletteName(e.target.value)
+                                }
+                                onKeyDown={(e) => {
+                                  if (
+                                    e.key === "Enter" &&
+                                    paletteName.trim()
+                                  ) {
+                                    e.preventDefault();
+                                    handleSavePalette();
+                                  }
+                                }}
+                              />
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              <Label htmlFor="connect-target">
+                                Connect to palette
+                              </Label>
+                              <select
+                                id="connect-target"
+                                value={connectTargetId}
+                                onChange={(e) =>
+                                  setConnectTargetId(e.target.value)
+                                }
+                                className="h-9 w-full rounded-md border border-slate-700 bg-slate-900 px-2 text-sm text-slate-200"
+                              >
+                                <option value="">
+                                  Select a saved palette…
+                                </option>
+                                {savedPalettes.map((p) => (
+                                  <option key={p.id} value={p.id}>
+                                    {p.name} (
+                                    {(p.versions?.length ?? 1)}{" "}
+                                    {(p.versions?.length ?? 1) === 1
+                                      ? "version"
+                                      : "versions"}
+                                    )
+                                  </option>
+                                ))}
+                              </select>
+                              <p className="text-xs text-slate-400">
+                                Saves these colors as the next version of
+                                the chosen palette.
+                              </p>
+                            </div>
+                          )}
+
                           <div className="flex h-8 w-full rounded-md overflow-hidden">
                             {customPalette.map((color, index) => (
                               <div
@@ -1285,11 +1812,17 @@ export default function PalettePage() {
                           </Button>
                           <Button
                             type="button"
-                            className="bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
+                            className={BTN_PRIMARY}
                             onClick={handleSavePalette}
-                            disabled={!paletteName.trim()}
+                            disabled={
+                              saveMode === "new"
+                                ? !paletteName.trim()
+                                : !connectTargetId
+                            }
                           >
-                            Save Palette
+                            {saveMode === "new"
+                              ? "Save Palette"
+                              : "Save as New Version"}
                           </Button>
                         </DialogFooter>
                       </DialogContent>
@@ -1305,7 +1838,7 @@ export default function PalettePage() {
             <div className="flex md:hidden justify-end mb-2">
               <Button
                 onClick={() => setActiveTab("create")}
-                className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white mr-2"
+                className={`${BTN_PRIMARY} text-xs mr-2`}
                 size="sm"
               >
                 <Plus className="h-3.5 w-3.5" />
@@ -1313,7 +1846,7 @@ export default function PalettePage() {
               </Button>
               <Button
                 onClick={() => setActiveTab("official")}
-                className="flex items-center gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-500 ring-1 ring-indigo-400/40 text-white"
+                className={`${BTN_INSPIRE} text-xs`}
                 size="sm"
               >
                 <Lightbulb className="h-3.5 w-3.5" />
@@ -1321,7 +1854,7 @@ export default function PalettePage() {
               </Button>
               <Button
                 onClick={handleImport}
-                className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 ring-1 ring-emerald-400/40 text-white ml-2"
+                className={`${BTN_IMPORT} text-xs ml-2`}
                 size="sm"
               >
                 <Upload className="h-3.5 w-3.5" />
@@ -1344,7 +1877,7 @@ export default function PalettePage() {
             <div className="flex md:hidden justify-end gap-2 mb-2">
               <Button
                 onClick={() => setActiveTab("create")}
-                className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
+                className={`${BTN_PRIMARY} text-xs`}
                 size="sm"
               >
                 <Plus className="h-3.5 w-3.5" />
@@ -1352,7 +1885,7 @@ export default function PalettePage() {
               </Button>
               <Button
                 onClick={() => setActiveTab("extract")}
-                className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
+                className={`${BTN_PRIMARY} text-xs`}
                 size="sm"
               >
                 <ImageIcon className="h-3.5 w-3.5" />
@@ -1360,7 +1893,7 @@ export default function PalettePage() {
               </Button>
               <Button
                 onClick={() => setActiveTab("official")}
-                className="flex items-center gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-500 ring-1 ring-indigo-400/40 text-white"
+                className={`${BTN_INSPIRE} text-xs`}
                 size="sm"
               >
                 <Lightbulb className="h-3.5 w-3.5" />
@@ -1368,7 +1901,7 @@ export default function PalettePage() {
               </Button>
               <Button
                 onClick={handleImport}
-                className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 ring-1 ring-emerald-400/40 text-white"
+                className={`${BTN_IMPORT} text-xs`}
                 size="sm"
               >
                 <Upload className="h-3.5 w-3.5" />
@@ -1452,7 +1985,7 @@ export default function PalettePage() {
             <div className="flex md:hidden justify-end gap-2 mb-2">
               <Button
                 onClick={() => setActiveTab("create")}
-                className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
+                className={`${BTN_PRIMARY} text-xs`}
                 size="sm"
               >
                 <Plus className="h-3.5 w-3.5" />
@@ -1460,7 +1993,7 @@ export default function PalettePage() {
               </Button>
               <Button
                 onClick={() => setActiveTab("extract")}
-                className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
+                className={`${BTN_PRIMARY} text-xs`}
                 size="sm"
               >
                 <ImageIcon className="h-3.5 w-3.5" />
@@ -1468,7 +2001,7 @@ export default function PalettePage() {
               </Button>
               <Button
                 onClick={handleImport}
-                className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 ring-1 ring-emerald-400/40 text-white"
+                className={`${BTN_IMPORT} text-xs`}
                 size="sm"
               >
                 <Upload className="h-3.5 w-3.5" />

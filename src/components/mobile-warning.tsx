@@ -1,14 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Laptop, X } from "lucide-react";
 import { Button } from "./ui/button";
 
 export function MobileWarning() {
+  const pathname = usePathname();
   const [isMobile, setIsMobile] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
+
+  // The viewer now has a working mobile layout, so don't block it
+  // behind the "best viewed on desktop" gate.
+  const suppressed = pathname?.startsWith("/viewer");
 
   useEffect(() => {
     const checkIfMobile = () => {
@@ -21,7 +27,7 @@ export function MobileWarning() {
     return () => window.removeEventListener("resize", checkIfMobile);
   }, []);
 
-  if (!isMobile || isDismissed) return null;
+  if (!isMobile || isDismissed || suppressed) return null;
 
   return (
     <AnimatePresence>

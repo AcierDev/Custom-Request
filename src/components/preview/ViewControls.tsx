@@ -14,6 +14,7 @@ import {
   Paperclip,
   SplitSquareVertical,
   TreePine,
+  Sparkles,
 } from "lucide-react";
 import { WOOD_STYLES } from "./woodStyles";
 
@@ -27,6 +28,7 @@ export function ViewControls({ className = "" }: ViewControlsProps) {
     setShowRuler,
     setShowWoodGrain,
     setWoodStyle,
+    setMetallic,
     setShowColorInfo,
     setShowHanger,
     setShowSplitPanel,
@@ -35,6 +37,7 @@ export function ViewControls({ className = "" }: ViewControlsProps) {
     showRuler,
     showWoodGrain,
     woodStyle,
+    metallic,
     showColorInfo,
     showHanger,
     showSplitPanel,
@@ -120,6 +123,18 @@ export function ViewControls({ className = "" }: ViewControlsProps) {
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-slate-400" />
+                <span className="text-sm text-slate-300">Metallic</span>
+              </div>
+              <Switch
+                checked={metallic}
+                onCheckedChange={setMetallic}
+                className="data-[state=checked]:bg-indigo-600"
+              />
             </div>
 
             <div className="flex items-center justify-between">

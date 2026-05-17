@@ -87,8 +87,6 @@ export function Navbar() {
   const [navigationSequence, setNavigationSequence] = useState<string[]>([]);
   const saveToDatabase = useCustomStore((state) => state.saveToDatabase);
   const [isSaving, setIsSaving] = useState(false);
-  // Sidebar is permanently collapsed — no toggle.
-  const isSidebarOpen = false;
 
   useEffect(() => {
     setActiveTab(pathname);
@@ -215,8 +213,7 @@ export function Navbar() {
       {/* Desktop Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 h-screen transition-[width] duration-300 ease-in-out hidden lg:block z-30 overflow-hidden bg-gray-900/30 backdrop-blur-xl backdrop-saturate-150 border-r border-white/10 shadow-glass-dark",
-          isSidebarOpen ? "w-36" : "w-[4.5rem]"
+          "fixed inset-y-0 left-0 h-screen hidden lg:block z-30 overflow-hidden bg-gray-900/80 backdrop-blur-xl backdrop-saturate-150 border-r border-white/15 shadow-glass-dark w-[4.5rem]"
         )}
       >
         <div className="h-16 flex items-center justify-center px-4 border-b border-white/5">
@@ -258,7 +255,7 @@ export function Navbar() {
                     href={"href" in item ? item.href : ""}
                     icon={"icon" in item ? item.icon : Menu}
                     label={"label" in item ? item.label : ""}
-                    isCollapsed={!isSidebarOpen}
+                    isCollapsed
                     linkRef={(el) => {
                       navItemRefs.current[index] = el;
                     }}
@@ -283,7 +280,7 @@ export function Navbar() {
                     href={"href" in item ? item.href : ""}
                     icon={"icon" in item ? item.icon : Menu}
                     label={"label" in item ? item.label : ""}
-                    isCollapsed={!isSidebarOpen}
+                    isCollapsed
                     outlined
                   />
                 )
@@ -292,9 +289,7 @@ export function Navbar() {
           </div>
           <div className="mx-4 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
           <div className="p-3">
-            <div
-              className={cn("flex gap-2", !isSidebarOpen && "flex-col")}
-            >
+            <div className="flex flex-col gap-2">
               {user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

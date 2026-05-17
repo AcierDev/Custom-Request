@@ -6,6 +6,7 @@ import { useFrame } from "@react-three/fiber";
 import { RoundedBox } from "@react-three/drei";
 import { useSpring, animated } from "@react-spring/three";
 import type { TimeOfDay } from "./RotatableLighting";
+import { frameAlpha } from "./animationUtils";
 
 // Per-frame easing for the time-of-day cross-fade (windows dimming, the
 // lamp coming on). Matches the lighting rig's feel so they move
@@ -18,7 +19,7 @@ const TOD_SETTLE = 0.0005;
 function useEasedValue(target: number) {
   const ref = useRef(target);
   const [value, setValue] = useState(target);
-  useFrame(() => {
+  useFrame((_, delta) => {
     const cur = ref.current;
     if (Math.abs(cur - target) < TOD_SETTLE) {
       if (cur !== target) {
@@ -27,7 +28,7 @@ function useEasedValue(target: number) {
       }
       return;
     }
-    const next = THREE.MathUtils.lerp(cur, target, TOD_EASE);
+    const next = THREE.MathUtils.lerp(cur, target, frameAlpha(TOD_EASE, delta));
     ref.current = next;
     setValue(next);
   });
@@ -126,6 +127,17 @@ const TRIM_COLOR = "#f4f1e8";
 // Pile shades: the height field blends dark valleys → light tufts.
 const CARPET_DARK = "#9a9c9f";
 const CARPET_LIGHT = "#d8dadd";
+// Medium-dark hardwood plank floor. Grain blends deep → mid → figure;
+// plank seams and end joints carve dark grooves the normal map catches.
+const WOOD_DEEP = "#4a2f1b"; // darkest grain / groove shadow
+const WOOD_BASE = "#6f4628"; // medium-dark plank field
+const WOOD_FIGURE = "#946338"; // lighter cathedral figure
+const WOOD_PLANKS = 5; // planks across one texture tile
+// Half-width of the smooth groove valley between planks/joints (px).
+// Wider = gentler side-wall slopes that don't catch a white Fresnel
+// rim at low viewing angles.
+const WOOD_GROOVE_RAMP = 7;
+const WOOD_NORMAL_STRENGTH = 1.6;
 const CEILING_COLOR = "#f1eee6";
 const WINDOW_GLOW_COLOR = "#eaf2ff"; // soft daylight through the glass
 const WINDOW_NIGHT_COLOR = "#1d2740"; // dim blue dusk outside at night
@@ -149,6 +161,9 @@ const CARPET_PILE_H = 0.3;
 const BASEBOARD_H = 0.46;
 const CROWN_H = 0.55;
 const TRIM_PROUD = 0.06; // how far moldings stand off the wall
+// Window casing border thickness. Verticals butt between the
+// horizontals so the corners meet cleanly (square picture frame).
+const WINDOW_CASING_T = 0.18;
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ 🎥 ORBIT LIMITS (shared with the viewer's OrbitControls)             ║
@@ -206,6 +221,23 @@ export function roomBounds(width: number, height: number) {
   const floorY = -(height / 2 + FLOOR_GAP);
   const ceilingY = floorY + CEILING_HEIGHT;
   return { wallHalfX: wallWidth / 2, floorY, ceilingY };
+}
+
+/**
+ * World-space centre of the right-hand daylight window. The art's cast
+ * shadow is driven from this exact point (toward the art) so it matches
+ * the visible window instead of a hand-tuned direction. Mirrors the
+ * window placement in <Room/> (winY/winZ), so the two can't drift apart.
+ */
+export function rightWindowWorldPos(
+  width: number,
+  height: number
+): [number, number, number] {
+  const wallWidth = roomWallWidth(width);
+  const floorY = -(height / 2 + FLOOR_GAP);
+  const backZ = -WALL_OFFSET;
+  const midZ = backZ + ROOM_DEPTH / 2;
+  return [wallWidth / 2, floorY + CEILING_HEIGHT * 0.52, midZ];
 }
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
@@ -354,6 +386,42 @@ function addOctave(
   }
 }
 
+// Like addOctave but with independent X/Y lattice resolution, so the
+// noise can be stretched into long fibres. A small periodX with a large
+// periodY gives streaks that run vertically — i.e. wood grain.
+function addOctaveAniso(
+  H: Float32Array,
+  size: number,
+  periodX: number,
+  periodY: number,
+  amp: number
+) {
+  const g = new Float32Array(periodX * periodY);
+  for (let i = 0; i < g.length; i++) g[i] = Math.random();
+  const s = (t: number) => t * t * (3 - 2 * t);
+  for (let y = 0; y < size; y++) {
+    const fy = (y / size) * periodY;
+    const yi = Math.floor(fy);
+    const ty = s(fy - yi);
+    const y0 = yi % periodY;
+    const y1 = (y0 + 1) % periodY;
+    for (let x = 0; x < size; x++) {
+      const fx = (x / size) * periodX;
+      const xi = Math.floor(fx);
+      const tx = s(fx - xi);
+      const x0 = xi % periodX;
+      const x1 = (x0 + 1) % periodX;
+      const a = g[y0 * periodX + x0];
+      const b = g[y0 * periodX + x1];
+      const c = g[y1 * periodX + x0];
+      const d = g[y1 * periodX + x1];
+      const top = a + (b - a) * tx;
+      const bot = c + (d - c) * tx;
+      H[y * size + x] += amp * (top + (bot - top) * ty);
+    }
+  }
+}
+
 // Plush cut-pile carpet built from a seamless multi-octave height
 // field — broad tonal clumps down to individual tuft grain. The same
 // field drives a normal map and a roughness map, so the pile actually
@@ -364,12 +432,16 @@ function carpetMaps() {
   const size = 512;
   const n = size * size;
 
-  // period (px) / amplitude: coarse shading → fine tufts.
+  // period (lattice cells) / amplitude. The tile is repeated many
+  // times across the rug, so any strong low-frequency content reads
+  // as an obvious repeating grid of blobs. We keep the broad clumps
+  // weak and push the energy into fine tuft grain, which tiles
+  // invisibly and still reads as a dense nap.
   const H = new Float32Array(n);
-  addOctave(H, size, 12, 0.4);
-  addOctave(H, size, 44, 0.3);
-  addOctave(H, size, 150, 0.55);
-  addOctave(H, size, 340, 0.75);
+  addOctave(H, size, 96, 0.22);
+  addOctave(H, size, 190, 0.5);
+  addOctave(H, size, 360, 0.78);
+  addOctave(H, size, 640, 0.42);
 
   let lo = Infinity;
   let hi = -Infinity;
@@ -380,6 +452,24 @@ function carpetMaps() {
   const inv = 1 / (hi - lo || 1);
   for (let i = 0; i < n; i++) H[i] = (H[i] - lo) * inv;
 
+  // Subtle wool-fleck tint field: fine per-tuft warm/cool variation so
+  // the rug looks dyed/lived-in instead of a flat grey lerp. Kept high
+  // frequency so the tiled repeat doesn't show as colour patches.
+  const T = new Float32Array(n);
+  addOctave(T, size, 150, 0.55);
+  addOctave(T, size, 330, 0.45);
+  let tlo = Infinity;
+  let thi = -Infinity;
+  for (let i = 0; i < n; i++) {
+    if (T[i] < tlo) tlo = T[i];
+    if (T[i] > thi) thi = T[i];
+  }
+  const tinv = 1 / (thi - tlo || 1);
+  for (let i = 0; i < n; i++) T[i] = (T[i] - tlo) * tinv;
+  // warm (beige) ←→ cool (slate) fleck endpoints
+  const warm = [201, 188, 168];
+  const cool = [150, 158, 170];
+
   const mk = () => {
     const c = document.createElement("canvas");
     c.width = c.height = size;
@@ -388,17 +478,21 @@ function carpetMaps() {
   const cCanvas = mk();
   const nCanvas = mk();
   const rCanvas = mk();
+  const dCanvas = mk();
   const cCtx = cCanvas.getContext("2d");
   const nCtx = nCanvas.getContext("2d");
   const rCtx = rCanvas.getContext("2d");
-  if (!cCtx || !nCtx || !rCtx) return null;
+  const dCtx = dCanvas.getContext("2d");
+  if (!cCtx || !nCtx || !rCtx || !dCtx) return null;
 
   const cImg = cCtx.createImageData(size, size);
   const nImg = nCtx.createImageData(size, size);
   const rImg = rCtx.createImageData(size, size);
+  const dImg = dCtx.createImageData(size, size);
   const cd = cImg.data;
   const nd = nImg.data;
   const rd = rImg.data;
+  const dd = dImg.data;
 
   const dark = hexToRgb(CARPET_DARK);
   const light = hexToRgb(CARPET_LIGHT);
@@ -410,10 +504,21 @@ function carpetMaps() {
       const o = i * 4;
       const h = H[i];
 
-      // Colour: blend the dark/light pile shades by height.
-      cd[o] = dark[0] + (light[0] - dark[0]) * h;
-      cd[o + 1] = dark[1] + (light[1] - dark[1]) * h;
-      cd[o + 2] = dark[2] + (light[2] - dark[2]) * h;
+      // Colour: blend the dark/light pile shades by height, mix in a
+      // faint warm/cool wool fleck, then darken the deep valleys with a
+      // soft baked ambient occlusion so the nap reads thick, not flat.
+      const t = T[i];
+      const fleck = 0.12; // fleck blend weight
+      const ao = 0.78 + 0.22 * h; // valleys ~22% darker than tufts
+      const cr = (dark[0] + (light[0] - dark[0]) * h) * (1 - fleck) +
+        (warm[0] + (cool[0] - warm[0]) * t) * fleck;
+      const cg = (dark[1] + (light[1] - dark[1]) * h) * (1 - fleck) +
+        (warm[1] + (cool[1] - warm[1]) * t) * fleck;
+      const cb = (dark[2] + (light[2] - dark[2]) * h) * (1 - fleck) +
+        (warm[2] + (cool[2] - warm[2]) * t) * fleck;
+      cd[o] = cr * ao;
+      cd[o + 1] = cg * ao;
+      cd[o + 2] = cb * ao;
       cd[o + 3] = 255;
 
       // Normal from wrapped central differences (seamless).
@@ -436,17 +541,181 @@ function carpetMaps() {
       const rv = 235 - h * 28;
       rd[o] = rd[o + 1] = rd[o + 2] = rv;
       rd[o + 3] = 255;
+
+      // Displacement: raw height drives real vertex pile depth so the
+      // surface physically lifts/crushes instead of reading flat.
+      const dv = h * 255;
+      dd[o] = dd[o + 1] = dd[o + 2] = dv;
+      dd[o + 3] = 255;
     }
   }
   cCtx.putImageData(cImg, 0, 0);
   nCtx.putImageData(nImg, 0, 0);
   rCtx.putImageData(rImg, 0, 0);
+  dCtx.putImageData(dImg, 0, 0);
 
   return {
     map: texFromCanvas(cCanvas),
     normalMap: texFromCanvas(nCanvas),
     roughnessMap: texFromCanvas(rCanvas),
+    displacementMap: texFromCanvas(dCanvas),
   };
+}
+
+// Medium-dark hardwood: vertical planks with long stretched grain,
+// per-plank stain variation, fine pore streaks, and dark seams / end
+// joints. The grain field also drives a normal + roughness map so the
+// boards catch room light with real relief instead of reading flat.
+function woodFloorMaps() {
+  if (typeof document === "undefined") return null;
+  const size = 512;
+  const n = size * size;
+  const plankW = size / WOOD_PLANKS;
+
+  // Long stretched fibres (narrow X, tall Y) + finer pore streaks +
+  // broad cathedral figure. All octaves wrap, so the tile is seamless.
+  const grain = new Float32Array(n);
+  addOctaveAniso(grain, size, 90, 5, 0.55);
+  addOctaveAniso(grain, size, 240, 9, 0.22);
+  addOctaveAniso(grain, size, 7, 3, 0.5);
+  let glo = Infinity;
+  let ghi = -Infinity;
+  for (let i = 0; i < n; i++) {
+    if (grain[i] < glo) glo = grain[i];
+    if (grain[i] > ghi) ghi = grain[i];
+  }
+  const ginv = 1 / (ghi - glo || 1);
+  for (let i = 0; i < n; i++) grain[i] = (grain[i] - glo) * ginv;
+
+  // Per-plank stain tint + a staggered end-joint offset per board.
+  const plankTint: number[] = [];
+  const plankJoint: number[] = [];
+  for (let p = 0; p < WOOD_PLANKS; p++) {
+    plankTint.push((Math.random() - 0.5) * 0.28);
+    plankJoint.push(Math.random());
+  }
+  // End joints every ~1.4 tiles of board length, staggered per plank.
+  const jointEvery = size * 1.4;
+
+  // Height field: plank field high, seams + joints carved down.
+  const H = new Float32Array(n);
+  const cd = new Uint8ClampedArray(n * 4);
+  const rd = new Uint8ClampedArray(n * 4);
+  const deep = hexToRgb(WOOD_DEEP);
+  const base = hexToRgb(WOOD_BASE);
+  const fig = hexToRgb(WOOD_FIGURE);
+
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const i = y * size + x;
+      const o = i * 4;
+      const g = grain[i];
+
+      const p = Math.floor(x / plankW) % WOOD_PLANKS;
+      const inPlank = x - p * plankW;
+      // Staggered end joint offset per plank.
+      const jy = (y + plankJoint[p] * jointEvery) % jointEvery;
+
+      // Smooth groove profile: instead of a vertical cliff at the seam
+      // (steep normals that catch a white Fresnel rim at low viewing
+      // angles), ramp the depth over WOOD_GROOVE_RAMP px so the
+      // side-walls are gentle slopes.
+      const edgeX = Math.min(inPlank, plankW - inPlank);
+      const edgeY = Math.min(jy, jointEvery - jy);
+      const edgeDist = Math.min(edgeX, edgeY);
+      const grooveT =
+        edgeDist >= WOOD_GROOVE_RAMP
+          ? 0
+          : 1 - edgeDist / WOOD_GROOVE_RAMP;
+      // Smoothstep for a soft valley floor and lip.
+      const grooveDepth = grooveT * grooveT * (3 - 2 * grooveT);
+
+      // Two-stop grain ramp: deep → base → figure.
+      let r: number;
+      let gg: number;
+      let b: number;
+      if (g < 0.55) {
+        const t = g / 0.55;
+        r = deep[0] + (base[0] - deep[0]) * t;
+        gg = deep[1] + (base[1] - deep[1]) * t;
+        b = deep[2] + (base[2] - deep[2]) * t;
+      } else {
+        const t = (g - 0.55) / 0.45;
+        r = base[0] + (fig[0] - base[0]) * t;
+        gg = base[1] + (fig[1] - base[1]) * t;
+        b = base[2] + (fig[2] - base[2]) * t;
+      }
+      // Per-plank stain shift (warmer/cooler, lighter/darker board).
+      const tint = 1 + plankTint[p];
+      r *= tint;
+      gg *= tint;
+      b *= tint;
+
+      let h = 0.55 + (g - 0.5) * 0.18;
+      if (grooveDepth > 0) {
+        // Near-black groove that fades in over the ramp: the carved
+        // side-walls still catch some diffuse light, so darken the
+        // albedo toward the valley so a lit groove never reads bright
+        // between the boards.
+        const k = 1 - grooveDepth * 0.82;
+        r *= k;
+        gg *= k;
+        b *= k;
+        h = h + (0.04 - h) * grooveDepth;
+      }
+      H[i] = h;
+
+      cd[o] = r;
+      cd[o + 1] = gg;
+      cd[o + 2] = b;
+      cd[o + 3] = 255;
+
+      // Open-grain pores read a touch more matte than the finish.
+      // Seams/joints are forced fully matte: a glossier groove caught
+      // a sharp white specular streak between boards at grazing angles.
+      const rv = 150 + g * 70 + grooveDepth * (255 - (150 + g * 70));
+      rd[o] = rd[o + 1] = rd[o + 2] = rv;
+      rd[o + 3] = 255;
+    }
+  }
+
+  // Normal map from wrapped central differences of the height field.
+  const nd = new Uint8ClampedArray(n * 4);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const o = (y * size + x) * 4;
+      const xl = H[y * size + ((x - 1 + size) % size)];
+      const xr = H[y * size + ((x + 1) % size)];
+      const yt = H[((y - 1 + size) % size) * size + x];
+      const yb = H[((y + 1) % size) * size + x];
+      let nx = (xl - xr) * WOOD_NORMAL_STRENGTH;
+      let ny = (yt - yb) * WOOD_NORMAL_STRENGTH;
+      const nz = 1;
+      const len = Math.hypot(nx, ny, nz) || 1;
+      nx /= len;
+      ny /= len;
+      nd[o] = (nx * 0.5 + 0.5) * 255;
+      nd[o + 1] = (ny * 0.5 + 0.5) * 255;
+      nd[o + 2] = (nz / len) * 0.5 * 255 + 127.5;
+      nd[o + 3] = 255;
+    }
+  }
+
+  const mk = (data: Uint8ClampedArray) => {
+    const c = document.createElement("canvas");
+    c.width = c.height = size;
+    const ctx = c.getContext("2d");
+    if (!ctx) return null;
+    const img = ctx.createImageData(size, size);
+    img.data.set(data);
+    ctx.putImageData(img, 0, 0);
+    return texFromCanvas(c);
+  };
+  const map = mk(cd);
+  const normalMap = mk(nd);
+  const roughnessMap = mk(rd);
+  if (!map || !normalMap || !roughnessMap) return null;
+  return { map, normalMap, roughnessMap };
 }
 
 // Soft-white ceiling with a faint orange-peel stipple.
@@ -632,8 +901,19 @@ const RIGHT_WALL_ART = [
 // Soft neutral area rug so the colourful art stays the focal point.
 const RUG_COLOR = "#6c7682";
 const RUG_BORDER_COLOR = "#515a64";
-const RUG_THICKNESS = 0.06;
-const RUG_BORDER_W = 1.1;
+// Low-profile woven backing — a real area rug lies nearly flat; the
+// pile on top is what reads as carpet, not a thick foam slab.
+const RUG_THICKNESS = 0.07;
+// Thin serged binding tape showing around the perimeter.
+const RUG_BORDER_W = 0.45;
+// A woven border band just inside the serge tape — slightly darker
+// than the field so the rug reads as a framed, designed piece.
+const RUG_ACCENT_COLOR = "#5b6470";
+const RUG_ACCENT_W = 1.1;
+// Real vertex-displaced pile so the surface physically lifts and
+// crushes like a dense cut-pile nap instead of a flat painted plane.
+const RUG_PILE_DEPTH = 0.09;
+const RUG_PILE_SEGMENTS = 260;
 // Distance of the rug's center from the back wall. Pulled ~2 ft further
 // out than before (was 14; +4 units @ 6 in/unit ≈ 2 ft).
 const RUG_FROM_WALL = 18;
@@ -811,11 +1091,17 @@ const DOWNLIGHT_RECESS = 0.05; // how far the lens sits up into the ceiling
 const DOWNLIGHT_LENS_COLOR = "#fff3df"; // warm bulb white
 const DOWNLIGHT_TRIM_COLOR = "#eceae3";
 const DOWNLIGHT_LENS_EMISSIVE = 1.7;
-// Row pitch front-to-back. Wide so the few fixtures read as spaced-out
-// home recessed cans rather than a tight cluster over the art.
-const DOWNLIGHT_SPACING = 34;
+// Row pitch front-to-back. Sized to the furnished depth (back wall to
+// the front of the rug at ~backZ+31) so the 3 rows sit over the room
+// instead of sprawling far past it toward the camera.
+const DOWNLIGHT_SPACING = 18;
+// Grid centre distance forward from the back/art wall — over the
+// seating area (couch/loveseat centre ~backZ+18..24), not on the wall.
+const DOWNLIGHT_Z_FROM_WALL = 12;
 // Grid extent: how many fixtures across (X) and front-to-back (Z).
 // Kept sparse on purpose — a real room has a handful, not a dense grid.
+// Keep the outermost cans this far in from each side wall.
+const DOWNLIGHT_EDGE_MARGIN = 5;
 const DOWNLIGHT_COLS = 2;
 const DOWNLIGHT_ROWS = 3;
 // Each can is a real aimed downlight: a spot cone pointed straight at
@@ -895,15 +1181,16 @@ function RecessedLights({
   zCenter: number;
   spanX: number;
 }) {
-  // Spread the columns evenly across the full usable ceiling width
-  // (equal edge margins via the (i+1)/(cols+1) split) instead of
+  // Spread the columns evenly across the full usable ceiling width,
+  // with the outermost cans pushed out to ±halfX, instead of
   // bunching them near the center, so the grid reads as evenly
   // distributed overhead rather than clustered.
   const cols = Math.max(1, Math.min(DOWNLIGHT_COLS, Math.floor(spanX) || 1));
   const halfX = Math.max(spanX, 4);
-  const xs = Array.from(
-    { length: cols },
-    (_, i) => -halfX + (2 * halfX * (i + 1)) / (cols + 1)
+  // Spread the outer columns all the way to ±halfX so the cans reach
+  // toward the side walls instead of bunching in the central third.
+  const xs = Array.from({ length: cols }, (_, i) =>
+    cols === 1 ? 0 : -halfX + (2 * halfX * i) / (cols - 1)
   );
   const zs = Array.from(
     { length: DOWNLIGHT_ROWS },
@@ -1002,7 +1289,6 @@ function Sofa({
         radius={COUCH_EDGE_R}
         smoothness={4}
         position={[0, legY + COUCH_BASE_H / 2, 0]}
-        castShadow
       >
         {fabric}
       </RoundedBox>
@@ -1022,7 +1308,6 @@ function Sofa({
           radius={COUCH_EDGE_R}
           smoothness={4}
           position={[0, COUCH_BACK_H / 2, 0]}
-          castShadow
         >
           {fabric}
         </RoundedBox>
@@ -1037,7 +1322,6 @@ function Sofa({
               COUCH_SEAT_H + COUCH_BACK_H * 0.34,
               COUCH_BACK_T / 2 + 0.45,
             ]}
-            castShadow
           >
             <meshStandardMaterial
               color={COUCH_CUSHION_COLOR}
@@ -1060,7 +1344,6 @@ function Sofa({
             radius={COUCH_EDGE_R}
             smoothness={4}
             position={[0, COUCH_ARM_H / 2, 0]}
-            castShadow
           >
             {fabric}
           </RoundedBox>
@@ -1075,7 +1358,6 @@ function Sofa({
           radius={COUCH_EDGE_R}
           smoothness={4}
           position={[sx, seatTopY, seatZ]}
-          castShadow
         >
           <meshStandardMaterial
             color={COUCH_CUSHION_COLOR}
@@ -1139,6 +1421,10 @@ const FRAME_MAT = "#efe9df"; // off-white mat board
 const FRAME_W = 1.05;
 const FRAME_H = 1.35;
 const FRAME_T = 0.12; // frame profile thickness
+// Hair of clearance under a frame so its slight forward tilt can't dip a
+// corner through the case top. Sized just past the actual tilt dip
+// (~0.007) — the old 0.04 read as the frame floating.
+const FRAME_REST_LIFT = 0.01;
 
 // Slight per-book HSL jitter so no two spines read identically even
 // when they share a base colour — looks hand-shelved, not tiled.
@@ -1155,7 +1441,8 @@ function jitterColor(hex: string, rnd: () => number) {
 }
 
 /** A small framed family photo with a sepia "snapshot" of two figures.
- *  Origin = bottom-centre so it can rest on a surface; faces +Z. */
+ *  Origin = centre (rails span ±FRAME_H/2), faces +Z. Callers rest it on
+ *  a surface by lifting it FRAME_H/2 (+ FRAME_REST_LIFT). */
 function PhotoFrame({ tone = "#caa074" }: { tone?: string }) {
   const tex = useMemo(() => {
     const cv = document.createElement("canvas");
@@ -1183,6 +1470,8 @@ function PhotoFrame({ tone = "#caa074" }: { tone?: string }) {
     return t;
   }, [tone]);
 
+  useEffect(() => () => tex.dispose(), [tex]);
+
   return (
     <group>
       {/* Frame rails. */}
@@ -1197,9 +1486,12 @@ function PhotoFrame({ tone = "#caa074" }: { tone?: string }) {
           <meshStandardMaterial color={FRAME_WOOD} roughness={0.5} />
         </mesh>
       ))}
-      {/* Mat backing. */}
-      <mesh position={[0, 0, -0.02]}>
-        <boxGeometry args={[FRAME_W, FRAME_H, 0.08]} />
+      {/* Mat backing. Sized inside the outer frame and shallow enough
+          that its back face is flush with the wood rails' back (z =
+          -0.01) — otherwise the off-white slab pokes out behind the
+          frame. Edges sit under the rails so no white shows from behind. */}
+      <mesh position={[0, 0, 0.005]}>
+        <boxGeometry args={[FRAME_W - FRAME_T, FRAME_H - FRAME_T, 0.03]} />
         <meshStandardMaterial color={FRAME_MAT} roughness={0.9} />
       </mesh>
       {/* Photo, set well clear of the mat face to avoid z-fighting. */}
@@ -1358,7 +1650,7 @@ function Bookshelf() {
             on its origin, so rest it at half-height + a hair of clearance
             so the slight tilt can't dip a corner into the case top. */}
         <group
-          position={[-1.9, FRAME_H / 2 + 0.04, 0.35]}
+          position={[-1.9, FRAME_H / 2 + FRAME_REST_LIFT, 0.35]}
           rotation={[-0.05, 0.32, 0]}
         >
           <PhotoFrame tone="#c89a6a" />
@@ -1366,7 +1658,7 @@ function Bookshelf() {
         {/* Smaller frame, turned the other way. Scaled 0.78, so its
             half-height is 0.39·FRAME_H. */}
         <group
-          position={[0.7, FRAME_H * 0.39 + 0.04, 0.25]}
+          position={[0.7, FRAME_H * 0.39 + FRAME_REST_LIFT, 0.25]}
           rotation={[-0.05, -0.28, 0]}
           scale={0.78}
         >
@@ -1506,7 +1798,7 @@ function LightSwitch() {
 // HVAC return-air grille: angled louver slats over a dark recessed
 // cavity, in a painted metal frame. Faces +Z.
 const VENT_W = 20 * SCENE_UNITS_PER_INCH;
-const VENT_H = 12 * SCENE_UNITS_PER_INCH;
+const VENT_H = 9 * SCENE_UNITS_PER_INCH;
 const VENT_FRAME_COLOR = "#d8d6cc";
 const VENT_SLAT_COLOR = "#b4b1a6";
 const VENT_CAVITY_COLOR = "#1c1c1c";
@@ -1515,27 +1807,59 @@ const VENT_SLATS = 9;
 const VENT_SHELF_GAP = 3 * SCENE_UNITS_PER_INCH;
 // Extra lift above its baseboard rest height.
 const VENT_RAISE = 2 * SCENE_UNITS_PER_INCH;
+// Uniform frame border thickness so corners stay square.
+const VENT_FRAME_T = 0.75 * SCENE_UNITS_PER_INCH;
+const VENT_FRAME_D = 0.06;
 function Vent() {
   const slatGap = VENT_H / (VENT_SLATS + 1);
+  const innerW = VENT_W - 2 * VENT_FRAME_T;
+  const innerH = VENT_H - 2 * VENT_FRAME_T;
+  // One-piece bezel: a solid rectangle with a rectangular window cut
+  // out, extruded flat. Square corners, no overlapping bars.
+  const frameGeo = useMemo(() => {
+    const ow = VENT_W / 2;
+    const oh = VENT_H / 2;
+    const iw = innerW / 2;
+    const ih = innerH / 2;
+    const shape = new THREE.Shape();
+    shape.moveTo(-ow, -oh);
+    shape.lineTo(ow, -oh);
+    shape.lineTo(ow, oh);
+    shape.lineTo(-ow, oh);
+    shape.closePath();
+    const hole = new THREE.Path();
+    hole.moveTo(-iw, -ih);
+    hole.lineTo(iw, -ih);
+    hole.lineTo(iw, ih);
+    hole.lineTo(-iw, ih);
+    hole.closePath();
+    shape.holes.push(hole);
+    const geo = new THREE.ExtrudeGeometry(shape, {
+      depth: VENT_FRAME_D,
+      bevelEnabled: false,
+    });
+    geo.center();
+    return geo;
+  }, [innerW, innerH]);
   return (
     <group>
-      {/* Dark recessed cavity behind the slats. */}
-      <mesh position={[0, 0, -0.02]}>
-        <boxGeometry args={[VENT_W * 0.92, VENT_H * 0.92, 0.04]} />
+      {/* Dark recessed cavity behind the window. */}
+      <mesh position={[0, 0, -VENT_FRAME_D / 2 - 0.01]}>
+        <boxGeometry args={[innerW, innerH, 0.04]} />
         <meshStandardMaterial
           color={VENT_CAVITY_COLOR}
           roughness={1}
           metalness={0}
         />
       </mesh>
-      {/* Angled louver slats. */}
+      {/* Angled louver slats, recessed behind the bezel face. */}
       {Array.from({ length: VENT_SLATS }, (_, i) => (
         <mesh
           key={i}
-          position={[0, VENT_H / 2 - (i + 1) * slatGap, 0.015]}
+          position={[0, VENT_H / 2 - (i + 1) * slatGap, 0]}
           rotation={[-0.5, 0, 0]}
         >
-          <boxGeometry args={[VENT_W * 0.9, slatGap * 0.9, 0.02]} />
+          <boxGeometry args={[innerW, slatGap, 0.02]} />
           <meshStandardMaterial
             color={VENT_SLAT_COLOR}
             roughness={0.6}
@@ -1543,22 +1867,14 @@ function Vent() {
           />
         </mesh>
       ))}
-      {/* Painted metal frame. */}
-      {[
-        [0, VENT_H / 2, VENT_W, VENT_H * 0.08] as const,
-        [0, -VENT_H / 2, VENT_W, VENT_H * 0.08] as const,
-        [-VENT_W / 2, 0, VENT_W * 0.06, VENT_H] as const,
-        [VENT_W / 2, 0, VENT_W * 0.06, VENT_H] as const,
-      ].map(([x, y, w, h], i) => (
-        <mesh key={`f-${i}`} position={[x, y, 0.02]}>
-          <boxGeometry args={[w, h, 0.05]} />
-          <meshStandardMaterial
-            color={VENT_FRAME_COLOR}
-            roughness={0.5}
-            metalness={0.3}
-          />
-        </mesh>
-      ))}
+      {/* One-piece painted metal bezel. */}
+      <mesh geometry={frameGeo}>
+        <meshStandardMaterial
+          color={VENT_FRAME_COLOR}
+          roughness={0.5}
+          metalness={0.3}
+        />
+      </mesh>
     </group>
   );
 }
@@ -1750,12 +2066,13 @@ export function Room({
 
   //╔═══╗ Textures (built once; tiled to real-world scale) ╚═══╝
   const carpet = useMemo(() => carpetMaps(), []);
+  const wood = useMemo(() => woodFloorMaps(), []);
   const ceilTex = useMemo(() => ceilingTexture(), []);
 
-  // ~3 ft of carpet per texture tile; colour/normal/roughness share the
-  // same repeat so the pile relief lines up with its shading.
-  const carpetMapsTiled = useMemo(() => {
-    if (!carpet) return null;
+  // Hardwood: one tile spans ~3 ft so plank width / grain read at real
+  // scale; colour/normal/roughness share the repeat so relief lines up.
+  const woodMapsTiled = useMemo(() => {
+    if (!wood) return null;
     const rx = wallWidth / 6;
     const ry = ROOM_DEPTH / 6;
     const tile = (src: THREE.Texture) => {
@@ -1765,11 +2082,30 @@ export function Room({
       return t;
     };
     return {
+      map: tile(wood.map),
+      normalMap: tile(wood.normalMap),
+      roughnessMap: tile(wood.roughnessMap),
+    };
+  }, [wood, wallWidth]);
+
+  // Plush pile for the area rug: tighter repeat than the old floor so
+  // the tufts read dense and deep, giving it a thick fluffy nap.
+  const rugPileTiled = useMemo(() => {
+    if (!carpet) return null;
+    const tile = (src: THREE.Texture) => {
+      const t = src.clone();
+      t.repeat.set(16, 20);
+      t.needsUpdate = true;
+      return t;
+    };
+    return {
       map: tile(carpet.map),
       normalMap: tile(carpet.normalMap),
       roughnessMap: tile(carpet.roughnessMap),
+      displacementMap: tile(carpet.displacementMap),
     };
-  }, [carpet, wallWidth]);
+  }, [carpet]);
+
 
   const ceilTexTiled = useMemo(() => {
     if (!ceilTex) return null;
@@ -2011,10 +2347,30 @@ export function Room({
         rotation={[0, -Math.PI / 2, 0]}
       >
         {[
-          [0, winH / 2, winW + 0.3, 0.18] as const,
-          [0, -winH / 2, winW + 0.3, 0.18] as const,
-          [-winW / 2, 0, 0.18, winH + 0.3] as const,
-          [winW / 2, 0, 0.18, winH + 0.3] as const,
+          [
+            0,
+            winH / 2 + WINDOW_CASING_T / 2,
+            winW + 2 * WINDOW_CASING_T,
+            WINDOW_CASING_T,
+          ] as const,
+          [
+            0,
+            -(winH / 2 + WINDOW_CASING_T / 2),
+            winW + 2 * WINDOW_CASING_T,
+            WINDOW_CASING_T,
+          ] as const,
+          [
+            -(winW / 2 + WINDOW_CASING_T / 2),
+            0,
+            WINDOW_CASING_T,
+            winH,
+          ] as const,
+          [
+            winW / 2 + WINDOW_CASING_T / 2,
+            0,
+            WINDOW_CASING_T,
+            winH,
+          ] as const,
           [0, 0, 0.1, winH] as const,
           [0, 0, winW, 0.1] as const,
         ].map(([x, y, w, h], i) => (
@@ -2052,10 +2408,30 @@ export function Room({
         rotation={[0, Math.PI / 2, 0]}
       >
         {[
-          [0, leftWinH / 2, leftWinW + 0.3, 0.18] as const,
-          [0, -leftWinH / 2, leftWinW + 0.3, 0.18] as const,
-          [-leftWinW / 2, 0, 0.18, leftWinH + 0.3] as const,
-          [leftWinW / 2, 0, 0.18, leftWinH + 0.3] as const,
+          [
+            0,
+            leftWinH / 2 + WINDOW_CASING_T / 2,
+            leftWinW + 2 * WINDOW_CASING_T,
+            WINDOW_CASING_T,
+          ] as const,
+          [
+            0,
+            -(leftWinH / 2 + WINDOW_CASING_T / 2),
+            leftWinW + 2 * WINDOW_CASING_T,
+            WINDOW_CASING_T,
+          ] as const,
+          [
+            -(leftWinW / 2 + WINDOW_CASING_T / 2),
+            0,
+            WINDOW_CASING_T,
+            leftWinH,
+          ] as const,
+          [
+            leftWinW / 2 + WINDOW_CASING_T / 2,
+            0,
+            WINDOW_CASING_T,
+            leftWinH,
+          ] as const,
           [0, 0, 0.1, leftWinH] as const,
           [0, 0, leftWinW, 0.1] as const,
         ].map(([x, y, w, h], i) => (
@@ -2070,7 +2446,7 @@ export function Room({
         ))}
       </group>
 
-      {/*╔═══╗ FLOOR — thick gray carpet ╚═══╝*/}
+      {/*╔═══╗ FLOOR — medium-dark hardwood planks ╚═══╝*/}
 
       <mesh
         position={[0, floorY - CARPET_PILE_H / 2, midZ]}
@@ -2079,10 +2455,10 @@ export function Room({
         <boxGeometry args={[wallWidth, CARPET_PILE_H, ROOM_DEPTH]} />
         <meshStandardMaterial
           color="#ffffff"
-          map={carpetMapsTiled?.map}
-          normalMap={carpetMapsTiled?.normalMap}
-          normalScale={[1.4, 1.4]}
-          roughnessMap={carpetMapsTiled?.roughnessMap}
+          map={woodMapsTiled?.map}
+          normalMap={woodMapsTiled?.normalMap}
+          normalScale={[0.8, 0.8]}
+          roughnessMap={woodMapsTiled?.roughnessMap}
           roughness={1}
           metalness={0}
         />
@@ -2105,8 +2481,8 @@ export function Room({
       {/* Recessed downlights over the art zone. */}
       <RecessedLights
         ceilingY={ceilingY - 0.01}
-        zCenter={backZ + DOWNLIGHT_SPACING}
-        spanX={Math.min(halfW - 4, Math.max(width, 12))}
+        zCenter={backZ + DOWNLIGHT_Z_FROM_WALL}
+        spanX={halfW - DOWNLIGHT_EDGE_MARGIN}
       />
 
       {/*╔═══╗ CROWN MOLDING + BASEBOARDS ╚═══╝*/}
@@ -2197,14 +2573,15 @@ export function Room({
         <Vent />
       </group>
 
-      {/*╔═══╗ THERMOSTAT (back wall, ~60 in up) ╚═══╝*/}
+      {/*╔═══╗ THERMOSTAT (left wall, 6 in from the back corner) ╚═══╝*/}
 
       <group
         position={[
-          0.3 * wallWidth,
+          -halfW + 0.07,
           floorY + THERM_FROM_FLOOR,
-          backZ + 0.07,
+          backZ + THERM_FROM_BACK,
         ]}
+        rotation={[0, Math.PI / 2, 0]}
       >
         <Thermostat />
       </group>
@@ -2227,11 +2604,13 @@ export function Room({
 
       {/*╔═══╗ AREA RUG ╚═══╝*/}
 
-      {/* Border slab, then a slightly raised field — keeps the colourful
-          art the focal point with a calm neutral underfoot. */}
+      {/* Thin woven backing with a serged binding edge; the cut-pile
+          nap covers the whole footprint so it reads as real carpet. */}
       <group
         position={[rugCenterX, floorY + 0.001, backZ + RUG_FROM_WALL]}
       >
+        {/* Low backing — only its thin side edge shows, as the
+            slightly darker bound serge tape around the rug. */}
         <mesh receiveShadow position={[0, RUG_THICKNESS / 2, 0]}>
           <boxGeometry args={[rugW, RUG_THICKNESS, RUG_DEPTH]} />
           <meshStandardMaterial
@@ -2240,19 +2619,59 @@ export function Room({
             metalness={0}
           />
         </mesh>
+        {/* Woven border band: same cut-pile nap a shade darker than
+            the field, framing it just inside the serged edge. */}
         <mesh
           receiveShadow
-          position={[0, RUG_THICKNESS + 0.002, 0]}
+          position={[0, RUG_THICKNESS, 0]}
           rotation={[-Math.PI / 2, 0, 0]}
         >
           <planeGeometry
             args={[
               rugW - RUG_BORDER_W * 2,
               RUG_DEPTH - RUG_BORDER_W * 2,
+              RUG_PILE_SEGMENTS,
+              RUG_PILE_SEGMENTS,
+            ]}
+          />
+          <meshStandardMaterial
+            color={RUG_ACCENT_COLOR}
+            map={rugPileTiled?.map}
+            normalMap={rugPileTiled?.normalMap}
+            normalScale={[1.6, 1.6]}
+            roughnessMap={rugPileTiled?.roughnessMap}
+            displacementMap={rugPileTiled?.displacementMap}
+            displacementScale={RUG_PILE_DEPTH}
+            displacementBias={0}
+            roughness={1}
+            metalness={0}
+          />
+        </mesh>
+        {/* Continuous cut-pile nap across the rug field, inset past
+            the serge edge and the woven border band. */}
+        <mesh
+          receiveShadow
+          castShadow
+          position={[0, RUG_THICKNESS + 0.001, 0]}
+          rotation={[-Math.PI / 2, 0, 0]}
+        >
+          <planeGeometry
+            args={[
+              rugW - (RUG_BORDER_W + RUG_ACCENT_W) * 2,
+              RUG_DEPTH - (RUG_BORDER_W + RUG_ACCENT_W) * 2,
+              RUG_PILE_SEGMENTS,
+              RUG_PILE_SEGMENTS,
             ]}
           />
           <meshStandardMaterial
             color={RUG_COLOR}
+            map={rugPileTiled?.map}
+            normalMap={rugPileTiled?.normalMap}
+            normalScale={[1.6, 1.6]}
+            roughnessMap={rugPileTiled?.roughnessMap}
+            displacementMap={rugPileTiled?.displacementMap}
+            displacementScale={RUG_PILE_DEPTH}
+            displacementBias={0}
             roughness={1}
             metalness={0}
           />

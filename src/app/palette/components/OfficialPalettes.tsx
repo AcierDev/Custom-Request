@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input";
 import {
   Search,
   Palette,
-  Edit,
   Copy,
   Eye,
   Download,
@@ -172,7 +171,10 @@ const OfficialPaletteCard = ({
       whileHover={{ y: -5 }}
       className="h-full"
     >
-      <Card className="group overflow-hidden border border-gray-200 dark:border-gray-800 bg-gray-900 hover:shadow-lg transition-all h-full flex flex-col">
+      <Card
+        onClick={() => onCustomize(design)}
+        className="group cursor-pointer overflow-hidden border border-gray-200 dark:border-gray-800 bg-gray-900 hover:shadow-lg transition-all h-full flex flex-col"
+      >
         <div className="h-28 w-full overflow-hidden bg-gray-800/60 relative">
           <div
             className="absolute inset-0 bg-cover bg-center"
@@ -204,26 +206,11 @@ const OfficialPaletteCard = ({
           </CardDescription>
         </CardHeader>
 
-        <CardFooter className="p-3 flex justify-between border-t border-gray-100 dark:border-gray-800 mt-auto">
+        <CardFooter
+          onClick={(e) => e.stopPropagation()}
+          className="p-3 flex justify-between border-t border-gray-100 dark:border-gray-800 mt-auto"
+        >
           <div className="flex gap-1">
-            <TooltipProvider delayDuration={300}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-slate-300 hover:text-blue-400 dark:hover:text-blue-300"
-                    onClick={() => onCustomize(design)}
-                  >
-                    <Edit className="h-3.5 w-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p>Customize</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-
             <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
               <TooltipProvider delayDuration={300}>
                 <Tooltip>

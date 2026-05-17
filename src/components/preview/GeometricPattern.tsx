@@ -561,6 +561,7 @@ export function GeometricPattern({
           onBloomStart={handleBloomStart}
           onBloomComplete={handleBloomComplete}
           revealStyle="rows"
+          bloomOnResize={false}
         />
       </group>
 

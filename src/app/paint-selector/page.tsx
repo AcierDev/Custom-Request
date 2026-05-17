@@ -768,7 +768,7 @@ export default function PaintSelectorPage() {
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950 p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col gap-4 mb-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-4">
             <Button
               variant="outline"
@@ -786,7 +786,7 @@ export default function PaintSelectorPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {selectedColors.size > 0 && (
               <Button
                 onClick={addSelectedToPalette}

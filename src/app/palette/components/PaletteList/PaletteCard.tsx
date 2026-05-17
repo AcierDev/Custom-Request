@@ -6,9 +6,8 @@ import html2canvas from "html2canvas";
 import {
   Edit,
   Trash2,
-  Download,
+  Share,
   Eye,
-  ShoppingCart,
   FolderIcon,
   Share2,
   Lock,
@@ -17,9 +16,9 @@ import {
   MessageSquare,
   Twitter,
   Facebook,
-  Copy,
   CheckSquare,
   Square,
+  GitBranch,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,7 +45,6 @@ export const PaletteCard = ({
   onEdit,
   onDelete,
   onVisualize,
-  onOrder,
   isEditing,
   onMove,
   inFolder = false,
@@ -59,11 +57,12 @@ export const PaletteCard = ({
   const [copyTrycolors, setCopyTrycolors] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
-  const [copiedColorIndex, setCopiedColorIndex] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<"export" | "share">("export");
   const [isEditingName, setIsEditingName] = useState(false);
   const [editingName, setEditingName] = useState(palette.name);
-  const { togglePalettePublic, updatePalette } = useCustomStore();
+  const { togglePalettePublic, updatePalette, setHistoryPaletteId } =
+    useCustomStore();
+  const versionCount = palette.versions?.length ?? 1;
 
   // Reset editing state when palette changes
   useEffect(() => {
@@ -171,18 +170,6 @@ export const PaletteCard = ({
     toast.success(`Palette is now ${palette.isPublic ? "private" : "public"}`);
   };
 
-  const handleCopyColor = (
-    hex: string,
-    index: number,
-    event: React.MouseEvent
-  ) => {
-    event.stopPropagation();
-    event.preventDefault();
-    navigator.clipboard.writeText(hex);
-    setCopiedColorIndex(index);
-    toast.success(`Copied ${hex} to clipboard`);
-    setTimeout(() => setCopiedColorIndex(null), 1500);
-  };
 
   const handleNameEdit = () => {
     setIsEditingName(true);
@@ -275,10 +262,13 @@ export const PaletteCard = ({
     >
       <Card
         onClick={() => {
-          if (!selectionMode) return;
-          onToggleSelected?.(palette.id);
+          if (selectionMode) {
+            onToggleSelected?.(palette.id);
+            return;
+          }
+          onEdit(palette.id);
         }}
-        className={`overflow-hidden border h-full flex flex-col ${
+        className={`overflow-hidden border h-full flex flex-col cursor-pointer ${
           selectionMode
             ? isSelected
               ? "border-blue-500 dark:border-blue-400 border-2 shadow-md"
@@ -286,13 +276,11 @@ export const PaletteCard = ({
             : isEditing
             ? "border-blue-400 dark:border-blue-500 border-2"
             : "border-gray-200 dark:border-gray-800"
-        } bg-gray-900 hover:shadow-md transition-shadow ${
-          selectionMode ? "cursor-pointer" : ""
-        }`}
+        } bg-gray-900 hover:shadow-md transition-shadow`}
       >
-        <CardHeader className="p-4 pb-2">
+        <CardHeader className="p-3 pb-1.5">
           <div className="flex justify-between items-start">
-            <CardTitle className="text-lg font-semibold text-white flex items-center">
+            <CardTitle className="text-base font-semibold text-white flex items-center">
               {selectionMode && (
                 <button
                   type="button"
@@ -353,78 +341,19 @@ export const PaletteCard = ({
           </div>
           <CardDescription className="text-xs text-slate-400">
             {new Date(palette.createdAt).toLocaleDateString()} •{" "}
-            {palette.colors.length} colors
+            {palette.colors.length} colors • {versionCount}{" "}
+            {versionCount === 1 ? "version" : "versions"}
           </CardDescription>
         </CardHeader>
-        <CardContent className="p-4 pt-2 flex-1 flex flex-col">
+        <CardContent className="p-3 pt-1.5">
           <PalettePreview colors={palette.colors} />
-
-          <div className="mt-3 grid grid-cols-5 gap-1 min-h-[104px] flex-1 relative">
-            {/* Show only the first 10 colors (2 rows) */}
-            {palette.colors.slice(0, 10).map((color, index) => (
-              <TooltipProvider
-                key={`${color.hex}-${index}`}
-                delayDuration={300}
-              >
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <motion.div
-                      className="w-full aspect-square rounded-md cursor-pointer border border-gray-200 dark:border-gray-800 relative group"
-                      style={{ backgroundColor: color.hex }}
-                      whileHover={{ scale: 0.9 }}
-                      transition={{ duration: 0.15 }}
-                      onClick={(e) => handleCopyColor(color.hex, index, e)}
-                    >
-                      {/* Copy icon overlay */}
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-black/20 rounded-md">
-                        <Copy className="h-3 w-3 text-white drop-shadow-sm" />
-                      </div>
-
-                      {/* Copied feedback */}
-                      {copiedColorIndex === index && (
-                        <motion.div
-                          initial={{ opacity: 0, scale: 0.8 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.8 }}
-                          className="absolute inset-0 flex items-center justify-center bg-green-500/80 text-white text-xs font-medium rounded-md"
-                        >
-                          ✓
-                        </motion.div>
-                      )}
-                    </motion.div>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="text-xs">
-                    <p>{color.name || color.hex}</p>
-                    <p className="text-slate-400">
-                      {color.hex}
-                    </p>
-                    <p className="text-xs text-blue-500 dark:text-blue-400 mt-1">
-                      Click to copy
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            ))}
-
-            {/* Add placeholder color squares to fill up to two rows if needed */}
-            {Array.from({
-              length: Math.max(0, 10 - Math.min(palette.colors.length, 10)),
-            }).map((_, index) => (
-              <div
-                key={`placeholder-${index}`}
-                className="w-full aspect-square rounded-md  bg-gray-800/40/20"
-              />
-            ))}
-
-            {/* Show indicator if there are more colors */}
-            {palette.colors.length > 10 && (
-              <div className="absolute -bottom-1 right-4 bg-blue-500/10 dark:bg-blue-900/30 text-blue-300 text-xs px-2 py-0.5 rounded-full">
-                +{palette.colors.length - 10} more
-              </div>
-            )}
-          </div>
         </CardContent>
-        <CardFooter className="p-3 pt-0 flex justify-between">
+        <CardFooter
+          onClick={(e) => {
+            if (!selectionMode) e.stopPropagation();
+          }}
+          className="p-3 pt-0 flex justify-between"
+        >
           {selectionMode ? (
             <div className="w-full text-xs text-slate-400">
               {isSelected ? "Selected" : "Click to select"}
@@ -456,10 +385,37 @@ export const PaletteCard = ({
                       <Button
                         variant="ghost"
                         size="icon"
+                        className="relative h-8 w-8 text-gray-500 hover:text-purple-400 dark:text-gray-400 dark:hover:text-purple-300"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          setHistoryPaletteId(palette.id);
+                        }}
+                      >
+                        <GitBranch className="h-4 w-4" />
+                        {versionCount > 1 && (
+                          <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-[0.875rem] items-center justify-center rounded-full bg-purple-600 px-0.5 text-[9px] font-semibold text-white">
+                            {versionCount}
+                          </span>
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Version history</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
+                <TooltipProvider delayDuration={300}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         className="h-8 w-8 text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400"
                         onClick={handleExportPalette}
                       >
-                        <Download className="h-4 w-4" />
+                        <Share className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom">
@@ -557,24 +513,6 @@ export const PaletteCard = ({
                   </Tooltip>
                 </TooltipProvider>
 
-                <TooltipProvider delayDuration={300}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 text-xs font-medium text-blue-300 border-blue-500/30 hover:bg-blue-500/10"
-                        onClick={() => onOrder(palette)}
-                      >
-                        <ShoppingCart className="h-3 w-3 mr-1" />
-                        Order
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom">
-                      <p>Apply palette and go to order</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
               </div>
             </>
           )}

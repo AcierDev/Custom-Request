@@ -23,6 +23,29 @@ export interface WoodStyle {
 }
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
+//║ ✨ METALLIC PAINT                                                     ║
+//╚═══╝ ════════════════════════════════════════════════════════════════ ╚═══╝
+//
+// A subtle metallic-paint finish layered over whatever wood grain is
+// selected — a soft sheen, NOT a mirror. Toggled on/off in the viewer
+// (see the "Metallic" switch); it isn't a wood-style entry.
+export const METALLIC_PAINT = {
+  /**
+   * Partial metalness: keeps ~40% diffuse so the wood grain still reads,
+   * while the metallic share picks up the room reflection below.
+   */
+  metalness: 0.6,
+  /** Satin, not mirror — a soft brushed sheen rather than chrome. */
+  roughness: 0.5,
+  /**
+   * MeshStandardMaterial metalness is BLACK without something to reflect.
+   * This env-map intensity is what actually makes it read as metal (vs.
+   * just darker); tuned for a subtle, paint-like sheen.
+   */
+  envMapIntensity: 0.85,
+} as const;
+
+//╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ ⚙️ GENERATION CONFIG                                                  ║
 //╚═══╝ ════════════════════════════════════════════════════════════════ ╚═══╝
 

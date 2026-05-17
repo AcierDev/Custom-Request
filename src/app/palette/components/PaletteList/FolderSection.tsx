@@ -42,7 +42,6 @@ interface FolderItemProps {
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onVisualize: (palette: SavedPalette) => void;
-  onOrder: (palette: SavedPalette) => void;
   editingPaletteId: string | null;
   onMovePalette: (
     paletteId: string,
@@ -59,7 +58,6 @@ const FolderItem = ({
   onEdit,
   onDelete,
   onVisualize,
-  onOrder,
   editingPaletteId,
   onMovePalette,
   selectionMode = false,
@@ -156,7 +154,7 @@ const FolderItem = ({
             transition={{ duration: 0.3 }}
             className="pl-4 pr-4"
           >
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {palettes.map((palette) => (
                 <div key={palette.id} className="h-full">
                   <PaletteCard
@@ -164,7 +162,6 @@ const FolderItem = ({
                     onEdit={onEdit}
                     onDelete={onDelete}
                     onVisualize={onVisualize}
-                    onOrder={onOrder}
                     isEditing={palette.id === editingPaletteId}
                     onMove={() => onMovePalette(palette.id, palette.folderId)}
                     inFolder={true}
@@ -250,7 +247,6 @@ interface UnorganizedPalettesProps {
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onVisualize: (palette: SavedPalette) => void;
-  onOrder: (palette: SavedPalette) => void;
   editingPaletteId: string | null;
   onMovePalette: (
     paletteId: string,
@@ -268,7 +264,6 @@ const UnorganizedPalettes = ({
   onEdit,
   onDelete,
   onVisualize,
-  onOrder,
   editingPaletteId,
   onMovePalette,
   onImport,
@@ -313,7 +308,7 @@ const UnorganizedPalettes = ({
             transition={{ duration: 0.3 }}
             className="pl-4 pr-4"
           >
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {palettes.map((palette) => (
                 <div key={palette.id} className="h-full">
                   <PaletteCard
@@ -321,7 +316,6 @@ const UnorganizedPalettes = ({
                     onEdit={onEdit}
                     onDelete={onDelete}
                     onVisualize={onVisualize}
-                    onOrder={onOrder}
                     isEditing={palette.id === editingPaletteId}
                     onMove={() => onMovePalette(palette.id, undefined)}
                     inFolder={false}
@@ -429,7 +423,6 @@ export interface FolderSectionProps {
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onVisualize: (palette: SavedPalette) => void;
-  onOrder: (palette: SavedPalette) => void;
   onImport: () => void;
   onIdImport?: (id: string) => void;
   selectionMode?: boolean;
@@ -441,7 +434,6 @@ export const FolderSection = ({
   onEdit,
   onDelete,
   onVisualize,
-  onOrder,
   onImport,
   onIdImport,
   selectionMode = false,
@@ -514,7 +506,6 @@ export const FolderSection = ({
           onEdit={onEdit}
           onDelete={onDelete}
           onVisualize={onVisualize}
-          onOrder={onOrder}
           editingPaletteId={editingPaletteId}
           onMovePalette={handleMovePalette}
           selectionMode={selectionMode}
@@ -529,7 +520,6 @@ export const FolderSection = ({
         onEdit={onEdit}
         onDelete={onDelete}
         onVisualize={onVisualize}
-        onOrder={onOrder}
         editingPaletteId={editingPaletteId}
         onMovePalette={handleMovePalette}
         onImport={onImport}

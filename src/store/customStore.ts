@@ -50,10 +50,40 @@ export type CustomColor = {
   name?: string;
   /** Extra proportion of squares for this color (e.g. 50 = +50%). Default 0. */
   extraPercent?: number;
+  /**
+   * Set by "Convert to paint": how close (0–100%) this swatch is to the
+   * real paint color it was grounded onto, derived from the ΔE2000
+   * distance. Cleared when the color is edited directly.
+   */
+  paintMatch?: number;
+  /**
+   * If present, this is a *mixed* color: a blend sitting `t` of the way
+   * between two other ("primary") colors in the palette, referenced by
+   * id. When a primary's hex changes, mixed colors re-derive from it.
+   * Absent → the color is primary (entered/picked directly).
+   */
+  mix?: { fromId: string; toId: string; t: number };
 };
 
 // Add a new type for custom modes
 export type CustomMode = "palette" | "pattern";
+
+// A single point-in-time snapshot of a design's colors. Versions are
+// append-only: editing/saving or restoring a design adds a new version
+// rather than mutating or removing existing ones, so design history is
+// never lost.
+export interface PaletteVersion {
+  id: string;
+  colors: CustomColor[];
+  createdAt: string;
+  label?: string;
+  // The version this one descends from. Lets history form a tree:
+  // restoring an older version branches off it instead of overwriting.
+  parentId?: string;
+  // Set only on a branch root (a version created by restoring an older
+  // one). Holds the label of the version it branched from, for display.
+  branchedFrom?: string;
+}
 
 export interface SavedPalette {
   id: string;
@@ -63,6 +93,12 @@ export interface SavedPalette {
   updatedAt?: string;
   folderId?: string;
   isPublic?: boolean;
+  // Full version history. Optional for backward-compat with palettes
+  // saved before versioning existed; backfilled on load.
+  versions?: PaletteVersion[];
+  // The version the palette's current colors reflect — i.e. the tip of
+  // the active branch. The next save descends from this version.
+  currentVersionId?: string;
 }
 
 export type Folder = {
@@ -109,6 +145,9 @@ interface CustomState {
   folders: Folder[];
   activeTab: "create" | "saved" | "official" | "extract";
   editingPaletteId: string | null;
+  // Transient UI: which saved palette's version history is open (in a
+  // dialog). Not persisted — purely view state.
+  historyPaletteId: string | null;
   viewSettings: {
     showRuler: boolean;
     showWoodGrain: boolean;
@@ -118,6 +157,7 @@ interface CustomState {
     showFPS: boolean;
     showUIControls: boolean;
     woodStyle: string;
+    metallic: boolean;
   };
   lastSaved: number;
   autoSaveEnabled: boolean;
@@ -173,6 +213,7 @@ interface CustomStore extends CustomState {
   setShowRuler: (value: boolean) => void;
   setShowWoodGrain: (value: boolean) => void;
   setWoodStyle: (value: string) => void;
+  setMetallic: (value: boolean) => void;
   setShowColorInfo: (value: boolean) => void;
   setShowHanger: (value: boolean) => void;
   setShowSplitPanel: (value: boolean) => void;
@@ -182,10 +223,25 @@ interface CustomStore extends CustomState {
   updatePalette: (id: string, updates: Partial<SavedPalette>) => void;
   deletePalette: (id: string) => void;
   applyPalette: (paletteId: string) => void;
+  applyPaletteVersion: (paletteId: string, versionId: string) => void;
+  restorePaletteVersion: (paletteId: string, versionId: string) => void;
+  renamePaletteVersion: (
+    paletteId: string,
+    versionId: string,
+    label: string
+  ) => void;
+  deletePaletteVersion: (paletteId: string, versionId: string) => void;
+  setHistoryPaletteId: (id: string | null) => void;
   loadPaletteForEditing: (paletteId: string) => void;
+  setEditingPaletteId: (id: string | null) => void;
   setActiveTab: (tab: "create" | "saved" | "official" | "extract") => void;
   updateColorName: (index: number, name: string) => void;
   updateColorHex: (index: number, hex: string) => void;
+  /** Apply hex and/or name in one shot — a single undo step. */
+  updateColor: (
+    index: number,
+    changes: { hex?: string; name?: string }
+  ) => void;
   updateColorExtraPercent: (index: number, extraPercent: number) => void;
   resetPaletteEditor: () => void;
   loadOfficialPalette: (design: ItemDesigns) => void;
@@ -298,6 +354,33 @@ export const hoverStore = createStore<HoverState>((set) => ({
 }));
 
 // Helper function to create a ColorMap from CustomColor array
+// Recompute every mixed color from its two primary parents' *current*
+// hexes. Run after any edit that can change a parent so blends stay in
+// sync. Repeated passes resolve chains (a mix whose parent is itself a
+// mix); it always terminates since each pass can only fix-point. If a
+// parent was deleted, that mix is left untouched (nothing to blend from).
+const reblendMixedColors = (colors: CustomColor[]): CustomColor[] => {
+  const byId = new Map(colors.map((c) => [c.id, c]));
+  let next = colors;
+  for (let pass = 0; pass < colors.length; pass++) {
+    let changed = false;
+    next = next.map((c) => {
+      if (!c.mix) return c;
+      const from = byId.get(c.mix.fromId);
+      const to = byId.get(c.mix.toId);
+      if (!from || !to) return c;
+      const hex = blendHexColors(from.hex, to.hex, c.mix.t);
+      if (hex === c.hex) return c;
+      changed = true;
+      const updated = { ...c, hex };
+      byId.set(c.id, updated);
+      return updated;
+    });
+    if (!changed) break;
+  }
+  return next;
+};
+
 const createColorMap = (colors: CustomColor[]): ColorMap => {
   return Object.fromEntries(
     colors.map((color, i) => [
@@ -309,17 +392,40 @@ const createColorMap = (colors: CustomColor[]): ColorMap => {
 
 const normalizeSavedPaletteToCustomColors = (
   palette: SavedPalette
-): CustomColor[] =>
-  palette.colors.map((c) => ({
-    id: nanoid(),
-    hex: c.hex,
-    name: c.name ?? "",
-    extraPercent:
-      typeof (c as CustomColor).extraPercent === "number" &&
-      !Number.isNaN((c as CustomColor).extraPercent)
-        ? (c as CustomColor).extraPercent
-        : 0,
-  }));
+): CustomColor[] => {
+  // Fresh ids so a loaded palette can't collide with one already in the
+  // editor — but remap mix parent references through the same map so
+  // mixed colors stay linked to their (renamed) primaries.
+  const idMap = new Map<string, string>();
+  for (const c of palette.colors) {
+    const old = (c as CustomColor).id;
+    if (old) idMap.set(old, nanoid());
+  }
+  return palette.colors.map((c) => {
+    const src = c as CustomColor;
+    const mix =
+      src.mix &&
+      idMap.has(src.mix.fromId) &&
+      idMap.has(src.mix.toId)
+        ? {
+            fromId: idMap.get(src.mix.fromId)!,
+            toId: idMap.get(src.mix.toId)!,
+            t: src.mix.t,
+          }
+        : undefined;
+    return {
+      id: (src.id && idMap.get(src.id)) || nanoid(),
+      hex: c.hex,
+      name: c.name ?? "",
+      extraPercent:
+        typeof src.extraPercent === "number" &&
+        !Number.isNaN(src.extraPercent)
+          ? src.extraPercent
+          : 0,
+      ...(mix ? { mix } : {}),
+    };
+  });
+};
 
 const buildShareableStateForPalette = (
   base: ShareableState,
@@ -372,10 +478,85 @@ interface PersistentState extends ShareableState {
     showFPS: boolean;
     showUIControls: boolean;
     woodStyle: string;
+    metallic: boolean;
   };
   dataSyncVersion?: number;
   draftSet?: DraftSetItem[];
+  // Persisted so a refresh keeps an in-progress palette connected to
+  // the saved palette it was opened from (Save Version, not Save New).
+  editingPaletteId?: string | null;
 }
+
+//╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
+//║ 🌿 VERSION LABEL / BRANCH HELPERS                                     ║
+//╚═══╝ ════════════════════════════════════════════════════════════════ ╚═══╝
+
+// Increment the trailing number of a version label, preserving its
+// branch prefix: "v3" → "v4", "v2.1" → "v2.2". Custom-renamed labels
+// with no trailing number fall back to a ".1" suffix.
+const bumpVersionLabel = (label: string): string => {
+  const m = label.match(/^(.*?)(\d+)$/);
+  return m ? `${m[1]}${Number(m[2]) + 1}` : `${label}.1`;
+};
+
+// Make a label unique within a design by bumping it until it's free.
+const freeVersionLabel = (base: string, taken: Set<string>): string => {
+  let candidate = base;
+  while (taken.has(candidate)) candidate = bumpVersionLabel(candidate);
+  return candidate;
+};
+
+// The version a palette's current colors reflect (the active branch
+// tip). Falls back to the last version for pre-branching saved data.
+const resolveCurrentVersion = (
+  p: SavedPalette
+): PaletteVersion | undefined => {
+  const versions = p.versions ?? [];
+  if (versions.length === 0) return undefined;
+  return (
+    versions.find((v) => v.id === p.currentVersionId) ??
+    versions[versions.length - 1]
+  );
+};
+
+// Backfill version history for palettes saved before versioning existed.
+// Purely additive: an existing palette's current colors become its
+// "v1". Never mutates or drops a palette that already has history,
+// so old saved designs always remain accessible.
+const ensurePaletteVersions = (
+  palettes: SavedPalette[] = []
+): SavedPalette[] =>
+  palettes.map((p) => {
+    if (p.versions && p.versions.length > 0) {
+      // Existing history but no recorded tip (pre-branching data):
+      // point the current version at the newest entry.
+      if (!p.currentVersionId) {
+        return {
+          ...p,
+          currentVersionId: p.versions[p.versions.length - 1].id,
+        };
+      }
+      return p;
+    }
+    const colors = (p.colors || []).map((c) => ({
+      ...c,
+      id: c.id || nanoid(),
+    }));
+    const versionId = nanoid();
+    return {
+      ...p,
+      colors,
+      currentVersionId: versionId,
+      versions: [
+        {
+          id: versionId,
+          colors,
+          createdAt: p.createdAt || new Date().toISOString(),
+          label: "v1",
+        },
+      ],
+    };
+  });
 
 // List of state properties that should trigger an auto-save when changed
 const AUTO_SAVE_TRACKED_PROPERTIES: (keyof CustomState)[] = [
@@ -431,6 +612,7 @@ export const useCustomStore = create<CustomStore>()(
     paletteFolders: [],
     activeTab: "create",
     editingPaletteId: null,
+    historyPaletteId: null,
     viewSettings: {
       showRuler: true,
       showWoodGrain: true,
@@ -440,6 +622,7 @@ export const useCustomStore = create<CustomStore>()(
       showFPS: false,
       showUIControls: true,
       woodStyle: DEFAULT_WOOD_STYLE_ID,
+      metallic: false,
     },
     lastSaved: 0,
     autoSaveEnabled: true,
@@ -477,14 +660,14 @@ export const useCustomStore = create<CustomStore>()(
             }
 
             if (parsedState.savedPalettes) {
-              parsedState.savedPalettes = parsedState.savedPalettes.map(
-                (p: any) => ({
+              parsedState.savedPalettes = ensurePaletteVersions(
+                parsedState.savedPalettes.map((p: any) => ({
                   ...p,
-                  colors: p.colors.map((c: any) => ({
+                  colors: (p.colors || []).map((c: any) => ({
                     ...c,
                     id: c.id || nanoid(),
                   })),
-                })
+                }))
               );
             }
 
@@ -704,19 +887,24 @@ export const useCustomStore = create<CustomStore>()(
 
         const [startIndex, endIndex] = indices.sort((a, b) => a - b);
 
-        const color1 = state.customPalette[startIndex].hex;
-        const color2 = state.customPalette[endIndex].hex;
+        const fromColor = state.customPalette[startIndex];
+        const toColor = state.customPalette[endIndex];
+        const color1 = fromColor.hex;
+        const color2 = toColor.hex;
 
         const blendedColors: CustomColor[] = [];
 
         // Evenly spaced, symmetric steps between the two endpoints,
         // interpolated perceptually in OKLab. t = i/(count+1) keeps the
         // new colors strictly between color1 and color2 with equal gaps.
+        // Each blend remembers its two parents + t so it stays in sync
+        // when a parent's hex is later edited.
         for (let i = 1; i <= count; i++) {
           const t = i / (count + 1);
           blendedColors.push({
             id: nanoid(),
             hex: blendHexColors(color1, color2, t),
+            mix: { fromId: fromColor.id, toId: toColor.id, t },
           });
         }
 
@@ -814,6 +1002,10 @@ export const useCustomStore = create<CustomStore>()(
       set((state) => ({
         viewSettings: { ...state.viewSettings, showWoodGrain: value },
       })),
+    setMetallic: (value) =>
+      set((state) => ({
+        viewSettings: { ...state.viewSettings, metallic: value },
+      })),
     setWoodStyle: (value) =>
       set((state) => ({
         viewSettings: { ...state.viewSettings, woodStyle: value },
@@ -844,33 +1036,82 @@ export const useCustomStore = create<CustomStore>()(
         return;
       }
 
-      const paletteId = Date.now().toString();
-      const newPalette: SavedPalette = {
-        id: paletteId,
-        name,
-        colors: [...customPalette],
-        createdAt: new Date().toISOString(),
-        folderId,
-      };
-
+      const now = new Date().toISOString();
+      const colorsSnapshot = customPalette.map((c) => ({ ...c }));
       const editingId = get().editingPaletteId;
+
       if (editingId) {
+        // Saving an edited design appends a new version; the previous
+        // versions are preserved so the full history is retained.
         set((state) => ({
-          savedPalettes: state.savedPalettes.map((palette) =>
-            palette.id === editingId
-              ? {
-                  ...palette,
-                  name,
-                  colors: [...customPalette],
-                  updatedAt: new Date().toISOString(),
-                  folderId,
-                }
-              : palette
-          ),
-          editingPaletteId: null,
+          savedPalettes: state.savedPalettes.map((palette) => {
+            if (palette.id !== editingId) return palette;
+            const seededId = nanoid();
+            const existingVersions =
+              palette.versions && palette.versions.length > 0
+                ? palette.versions
+                : [
+                    {
+                      id: seededId,
+                      colors: palette.colors,
+                      createdAt: palette.createdAt,
+                      label: "v1",
+                    },
+                  ];
+            // The new version continues whatever branch is currently
+            // active (the tip), incrementing its label: v3 → v4, or
+            // v2.1 → v2.2 if the user is working on a restored branch.
+            const tip =
+              existingVersions.find(
+                (v) => v.id === palette.currentVersionId
+              ) ?? existingVersions[existingVersions.length - 1];
+            const takenLabels = new Set(
+              existingVersions.map((v) => v.label ?? "")
+            );
+            const newVersion: PaletteVersion = {
+              id: nanoid(),
+              colors: colorsSnapshot,
+              createdAt: now,
+              parentId: tip.id,
+              label: freeVersionLabel(
+                bumpVersionLabel(tip.label ?? "v1"),
+                takenLabels
+              ),
+            };
+            return {
+              ...palette,
+              name,
+              colors: colorsSnapshot,
+              updatedAt: now,
+              // Don't wipe an existing folder when saving without one.
+              folderId: folderId ?? palette.folderId,
+              versions: [...existingVersions, newVersion],
+              currentVersionId: newVersion.id,
+            };
+          }),
+          // Keep the palette "open" so further edits keep stacking
+          // versions onto the same design instead of forking a new one.
+          editingPaletteId: editingId,
           lastSaved: Date.now(),
         }));
       } else {
+        const firstVersionId = nanoid();
+        const newPalette: SavedPalette = {
+          id: Date.now().toString(),
+          name,
+          colors: colorsSnapshot,
+          createdAt: now,
+          folderId,
+          currentVersionId: firstVersionId,
+          versions: [
+            {
+              id: firstVersionId,
+              colors: colorsSnapshot,
+              createdAt: now,
+              label: "v1",
+            },
+          ],
+        };
         set((state) => ({
           savedPalettes: [...state.savedPalettes, newPalette],
           editingPaletteId: null,
@@ -907,6 +1148,91 @@ export const useCustomStore = create<CustomStore>()(
           currentColors: createColorMap(palette.colors),
         };
       }),
+    // Preview a specific version in the viewer without changing history.
+    applyPaletteVersion: (paletteId, versionId) =>
+      set((state) => {
+        const palette = state.savedPalettes.find((p) => p.id === paletteId);
+        const version = palette?.versions?.find((v) => v.id === versionId);
+        if (!palette || !version) return state;
+
+        return {
+          customPalette: [...version.colors],
+          selectedDesign: ItemDesigns.Custom,
+          currentColors: createColorMap(version.colors),
+        };
+      }),
+    // Restore an older version by branching off it. Append-only and
+    // non-destructive: this creates a new version whose parent is the
+    // restored one, starting a fresh branch (e.g. v2 → v2.1). The
+    // original linear history is left untouched; further edits continue
+    // the new branch (v2.1 → v2.2 …).
+    restorePaletteVersion: (paletteId, versionId) =>
+      set((state) => {
+        const palette = state.savedPalettes.find((p) => p.id === paletteId);
+        const source = palette?.versions?.find((v) => v.id === versionId);
+        if (!palette || !source) return state;
+
+        const colors = source.colors.map((c) => ({ ...c }));
+        const versions = palette.versions ?? [];
+        const sourceLabel = source.label || "v1";
+        const takenLabels = new Set(versions.map((v) => v.label ?? ""));
+        // First version of a new branch off the source: v2 → v2.1. If
+        // that branch root already exists (restored more than once),
+        // freeVersionLabel bumps it to the next free slot (v2.2, …).
+        const branchLabel = freeVersionLabel(`${sourceLabel}.1`, takenLabels);
+        const restored: PaletteVersion = {
+          id: nanoid(),
+          colors,
+          createdAt: new Date().toISOString(),
+          parentId: source.id,
+          branchedFrom: sourceLabel,
+          label: branchLabel,
+        };
+
+        return {
+          savedPalettes: state.savedPalettes.map((p) =>
+            p.id === paletteId
+              ? {
+                  ...p,
+                  colors,
+                  updatedAt: new Date().toISOString(),
+                  versions: [...versions, restored],
+                  currentVersionId: restored.id,
+                }
+              : p
+          ),
+          lastSaved: Date.now(),
+        };
+      }),
+    renamePaletteVersion: (paletteId, versionId, label) =>
+      set((state) => ({
+        savedPalettes: state.savedPalettes.map((p) =>
+          p.id === paletteId
+            ? {
+                ...p,
+                versions: (p.versions ?? []).map((v) =>
+                  v.id === versionId ? { ...v, label } : v
+                ),
+              }
+            : p
+        ),
+        lastSaved: Date.now(),
+      })),
+    // Explicit, user-initiated removal of a single version. Guarded so a
+    // design can never be left with zero versions.
+    deletePaletteVersion: (paletteId, versionId) =>
+      set((state) => ({
+        savedPalettes: state.savedPalettes.map((p) => {
+          if (p.id !== paletteId) return p;
+          const versions = p.versions ?? [];
+          if (versions.length <= 1) return p;
+          return {
+            ...p,
+            versions: versions.filter((v) => v.id !== versionId),
+          };
+        }),
+        lastSaved: Date.now(),
+      })),
     loadPaletteForEditing: (paletteId) =>
       set((state) => {
         const palette = state.savedPalettes.find((p) => p.id === paletteId);
@@ -931,6 +1257,7 @@ export const useCustomStore = create<CustomStore>()(
           paletteHistoryIndex: 0,
         };
       }),
+    setEditingPaletteId: (id) => set({ editingPaletteId: id }),
     updateColorName: (index, name) =>
       set((state) => {
         if (index < 0 || index >= state.customPalette.length) return state;
@@ -961,18 +1288,72 @@ export const useCustomStore = create<CustomStore>()(
           return state;
 
         const newPalette = [...state.customPalette];
-        newPalette[index] = { ...newPalette[index], hex };
+        // Manually setting a hex makes the color primary: if it was a
+        // mixed color the user has taken it over, so drop the mix link
+        // (otherwise the reblend below would immediately overwrite it).
+        const { mix: _droppedMix, ...rest } = newPalette[index];
+        void _droppedMix;
+        newPalette[index] = { ...rest, hex };
+
+        // Re-derive every mixed color that descends from the changed
+        // primary so the whole palette stays consistent in one edit.
+        const reblended = reblendMixedColors(newPalette);
 
         const newHistory = state.paletteHistory.slice(
           0,
           state.paletteHistoryIndex + 1
         );
-        newHistory.push(newPalette);
+        newHistory.push(reblended);
 
         return {
-          customPalette: newPalette,
-          currentColors: createColorMap(newPalette),
+          customPalette: reblended,
+          currentColors: createColorMap(reblended),
           // selectedColors stores IDs, so no need to update it when hex changes
+          paletteHistory: newHistory,
+          paletteHistoryIndex: newHistory.length - 1,
+        };
+      }),
+    updateColor: (index, changes) =>
+      set((state) => {
+        if (index < 0 || index >= state.customPalette.length) return state;
+        const { hex, name } = changes;
+        if (hex !== undefined && !/^#[0-9A-Fa-f]{6}$/.test(hex)) {
+          return state;
+        }
+
+        const newPalette = [...state.customPalette];
+        if (hex !== undefined) {
+          // Manual hex makes the color primary — drop its mix link so
+          // the reblend below can't immediately overwrite it. The old
+          // paint-match % no longer describes this new color, so drop it.
+          const {
+            mix: _droppedMix,
+            paintMatch: _droppedMatch,
+            ...rest
+          } = newPalette[index];
+          void _droppedMix;
+          void _droppedMatch;
+          newPalette[index] = { ...rest, hex };
+        }
+        if (name !== undefined) {
+          newPalette[index] = { ...newPalette[index], name };
+        }
+
+        // Both edits land in a single history entry → one undo step.
+        const reblended = reblendMixedColors(newPalette);
+        const newHistory = state.paletteHistory.slice(
+          0,
+          state.paletteHistoryIndex + 1
+        );
+        // If history was never seeded, record the pre-edit palette as
+        // the undo target — otherwise this single push lands at index 0
+        // and undo (which needs index > 0) can't go back at all.
+        if (newHistory.length === 0) newHistory.push(state.customPalette);
+        newHistory.push(reblended);
+
+        return {
+          customPalette: reblended,
+          currentColors: createColorMap(reblended),
           paletteHistory: newHistory,
           paletteHistoryIndex: newHistory.length - 1,
         };
@@ -1007,6 +1388,8 @@ export const useCustomStore = create<CustomStore>()(
       }),
     setActiveTab: (tab: "create" | "saved" | "official" | "extract") =>
       set({ activeTab: tab }),
+    setHistoryPaletteId: (id: string | null) =>
+      set({ historyPaletteId: id }),
     resetPaletteEditor: () =>
       set({
         customPalette: [],
@@ -1323,14 +1706,24 @@ export const useCustomStore = create<CustomStore>()(
               showFPS: data.viewSettings?.showFPS ?? false,
               showUIControls: data.viewSettings?.showUIControls ?? true,
               woodStyle: data.viewSettings?.woodStyle ?? DEFAULT_WOOD_STYLE_ID,
+              metallic: data.viewSettings?.metallic ?? false,
             };
 
             const localVersion = get().dataSyncVersion;
             const storedVersion = data.dataSyncVersion || 0;
 
             if (storedVersion >= localVersion || get().lastSaved === 0) {
+              // Drop the editing link if its saved palette is gone, so
+              // a refresh never leaves "Save Version" pointing nowhere.
+              const guestSavedPalettes = data.savedPalettes || [];
+              const guestEditingId = data.editingPaletteId ?? null;
+              const guestEditingExists =
+                guestEditingId != null &&
+                guestSavedPalettes.some((p) => p.id === guestEditingId);
+
               set({
                 ...data,
+                editingPaletteId: guestEditingExists ? guestEditingId : null,
                 viewSettings,
                 paletteFolders: data.paletteFolders || [],
                 currentColors:
@@ -1399,6 +1792,7 @@ export const useCustomStore = create<CustomStore>()(
           viewSettings: get().viewSettings,
           activeCustomMode: get().activeCustomMode,
           draftSet: get().draftSet,
+          editingPaletteId: get().editingPaletteId,
           dataSyncVersion: newVersion,
         };
 
@@ -1451,6 +1845,7 @@ export const useCustomStore = create<CustomStore>()(
               useMini: get().useMini,
               viewSettings: get().viewSettings,
               activeCustomMode: get().activeCustomMode,
+              editingPaletteId: get().editingPaletteId,
               dataSyncVersion: newVersion,
             };
 
@@ -1604,7 +1999,7 @@ export const useCustomStore = create<CustomStore>()(
           style: mergedState.style || get().style,
           activeCustomMode:
             mergedState.activeCustomMode || get().activeCustomMode,
-          savedPalettes: mergedState.savedPalettes || [],
+          savedPalettes: ensurePaletteVersions(mergedState.savedPalettes || []),
           paletteFolders: mergedState.paletteFolders || [],
           useMini: mergedState.useMini ?? get().useMini,
           viewSettings: {
@@ -1631,6 +2026,9 @@ export const useCustomStore = create<CustomStore>()(
             woodStyle:
               mergedState.viewSettings?.woodStyle ??
               get().viewSettings.woodStyle,
+            metallic:
+              mergedState.viewSettings?.metallic ??
+              get().viewSettings.metallic,
           },
           currentColors:
             mergedState.selectedDesign === ItemDesigns.Custom &&
@@ -1645,8 +2043,17 @@ export const useCustomStore = create<CustomStore>()(
           dataSyncVersion: Math.max(serverVersion, localVersion),
         };
 
+        // Keep an in-progress palette connected to the saved palette it
+        // was opened from, but only if that palette still exists — a
+        // dangling id would make "Save Version" target nothing.
+        const restoredEditingId = mergedState.editingPaletteId ?? null;
+        const editingStillExists =
+          restoredEditingId != null &&
+          finalState.savedPalettes.some((p) => p.id === restoredEditingId);
+
         set({
           ...finalState,
+          editingPaletteId: editingStillExists ? restoredEditingId : null,
           lastSaved: Date.now(),
         });
 

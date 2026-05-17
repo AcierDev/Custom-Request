@@ -20,6 +20,7 @@ import { useRouter } from "next/navigation";
 import { usePaletteLoadConfirm } from "@/hooks/usePaletteLoadConfirm";
 import { PaletteLoadConfirmDialog } from "@/components/PaletteLoadConfirmDialog";
 import { ShareSetDialog } from "@/components/ShareSetDialog";
+import { VersionHistoryDialog } from "./VersionHistoryDialog";
 
 interface PaletteListProps {
   onOpenImport: () => void;
@@ -94,14 +95,6 @@ export function PaletteList({ onOpenImport, onImportById }: PaletteListProps) {
     router.push("/viewer");
     toast.success(
       `Applied "${palette.name}" palette and navigating to preview`
-    );
-  };
-
-  const handleOrder = (palette: SavedPalette) => {
-    applyPalette(palette.id);
-    router.push("/viewer");
-    toast.success(
-      `Applied "${palette.name}" palette and navigating to order page`
     );
   };
 
@@ -186,7 +179,7 @@ export function PaletteList({ onOpenImport, onImportById }: PaletteListProps) {
       {searchQuery ? (
         // When searching, show flat list of palettes
         filteredPalettes.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             <AnimatePresence>
               {filteredPalettes.map((palette) => (
                 <div key={palette.id} className="h-full">
@@ -195,7 +188,6 @@ export function PaletteList({ onOpenImport, onImportById }: PaletteListProps) {
                     onEdit={handleEdit}
                     onDelete={handleDelete}
                     onVisualize={handleVisualize}
-                    onOrder={handleOrder}
                     isEditing={palette.id === editingPaletteId}
                     selectionMode={selectionMode}
                     isSelected={isSelected(palette.id)}
@@ -225,7 +217,6 @@ export function PaletteList({ onOpenImport, onImportById }: PaletteListProps) {
             onEdit={handleEdit}
             onDelete={handleDelete}
             onVisualize={handleVisualize}
-            onOrder={handleOrder}
             onImport={onOpenImport}
             onIdImport={onImportById}
             selectionMode={selectionMode}
@@ -286,6 +277,8 @@ export function PaletteList({ onOpenImport, onImportById }: PaletteListProps) {
         }}
         palettes={selectedPalettes}
       />
+
+      <VersionHistoryDialog />
     </div>
   );
 }

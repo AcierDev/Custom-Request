@@ -10,12 +10,17 @@ import {
   StripedLighting,
 } from "./LightingSetups";
 import { blendHexColors } from "@/lib/colorUtils";
+import { frameAlpha } from "./animationUtils";
 
 export type TimeOfDay = "morning" | "afternoon" | "night";
 
 interface RotatableLightingProps {
   timeOfDay: TimeOfDay;
   style: "geometric" | "tiled" | "striped";
+  // Real right-window world position and the art's centre, used to aim
+  // the cast-shadow key so the shadow matches the visible daylight.
+  windowPos: [number, number, number];
+  artCenter: [number, number, number];
 }
 
 // Morning → afternoon → night live on a single linear axis (the
@@ -53,10 +58,18 @@ const TIME_COLOR: Record<TimeOfDay, string> = {
   night: "#e2e7f5", // subtly cool moonlight
 };
 
-// Per-frame easing toward the target phase, and the threshold below
-// which the transition is considered done (stops the re-render loop).
+// Easing factor toward the target phase (calibrated at 60fps, then
+// rescaled by frame time via frameAlpha so the sweep takes the same
+// wall-clock time at any refresh rate), and the threshold below which
+// the transition is considered done (stops the re-render loop).
 const PHASE_EASE = 0.06;
 const PHASE_SETTLE = 0.0005;
+
+// Rotation eases on the ref every frame (smooth, no re-render). The
+// brightness/colour re-render only needs to keep up with what the eye
+// can see, so the phase pushed to state is quantised to this step —
+// finer than perceptible, but ~10x fewer re-renders per transition.
+const PHASE_RENDER_STEP = 0.04;
 
 const ORDER: TimeOfDay[] = ["morning", "afternoon", "night"];
 
@@ -75,6 +88,8 @@ function sampleAtPhase<T>(
 export function RotatableLighting({
   timeOfDay,
   style,
+  windowPos,
+  artCenter,
 }: RotatableLightingProps) {
   const groupRef = useRef<THREE.Group>(null);
   const phaseRef = useRef(TIME_PHASE[timeOfDay]);
@@ -86,7 +101,7 @@ export function RotatableLighting({
   // straight to the group (cheap, no re-render); brightness/colour need
   // a re-render so they're pushed to state only while still moving and
   // left alone once settled.
-  useFrame(() => {
+  useFrame((_, delta) => {
     const cur = phaseRef.current;
     if (Math.abs(cur - target) < PHASE_SETTLE) {
       if (cur !== target) {
@@ -98,12 +113,20 @@ export function RotatableLighting({
       }
       return;
     }
-    const next = THREE.MathUtils.lerp(cur, target, PHASE_EASE);
+    const next = THREE.MathUtils.lerp(
+      cur,
+      target,
+      frameAlpha(PHASE_EASE, delta)
+    );
     phaseRef.current = next;
     if (groupRef.current) {
       groupRef.current.rotation.z = next * PHASE_ROTATION_STEP;
     }
-    setPhase(next);
+    const quantized =
+      Math.round(next / PHASE_RENDER_STEP) * PHASE_RENDER_STEP;
+    if (quantized !== phase) {
+      setPhase(quantized);
+    }
   });
 
   const intensityScale = sampleAtPhase(
@@ -122,6 +145,8 @@ export function RotatableLighting({
         <WindowShadowKey
           intensityScale={intensityScale}
           lightColor={lightColor}
+          windowPos={windowPos}
+          artCenter={artCenter}
         />
       )}
 

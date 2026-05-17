@@ -58,6 +58,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { Input } from "@/components/ui/input";
 import {
   Tooltip,
@@ -85,6 +86,7 @@ type SelectorTab = "official" | "saved" | "custom";
 
 export default function DrawPatternPage() {
   const router = useRouter();
+  const isMobile = useIsMobile();
   const [mounted, setMounted] = useState(false);
   const {
     selectedDesign,
@@ -640,13 +642,13 @@ export default function DrawPatternPage() {
       </Dialog>
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold text-white">
             Draw Pattern
           </h1>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button onClick={handlePreview}>
             <Eye className="w-4 h-4 mr-2" />
             Preview Design
@@ -957,7 +959,7 @@ export default function DrawPatternPage() {
                     </div>
                   </div>
                 </div>
-                <CardDescription className="flex justify-between items-center">
+                <CardDescription className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
                   <span>
                     Click and drag to draw. Grid: {gridSize.width}x
                     {gridSize.height}
@@ -1022,11 +1024,18 @@ export default function DrawPatternPage() {
                   <div
                     className="mx-auto bg-gray-900/50 rounded-md p-2 relative"
                     style={{
-                      minWidth: gridSize.width > 20 ? "800px" : "auto",
+                      // On mobile the desktop fixed subtractions
+                      // (450/100px) and the 800px floor make the grid
+                      // negative-width or force horizontal scroll; let
+                      // it fill the available width instead.
+                      minWidth:
+                        !isMobile && gridSize.width > 20 ? "800px" : "auto",
                       width: "100%",
-                      maxWidth: isPaletteVisible
-                        ? "calc(100vw - 450px)"
-                        : "calc(100vw - 100px)",
+                      maxWidth: isMobile
+                        ? "100%"
+                        : isPaletteVisible
+                          ? "calc(100vw - 450px)"
+                          : "calc(100vw - 100px)",
                       height: "auto",
                       aspectRatio: `${gridSize.width}/${gridSize.height}`,
                     }}

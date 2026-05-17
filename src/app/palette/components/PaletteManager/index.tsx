@@ -47,6 +47,9 @@ import {
   Palette,
   Blend,
   MousePointerClick,
+  RotateCcw,
+  Trash2,
+  ListChecks,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -56,6 +59,7 @@ import { SortableColorSwatch } from "./SortableColorSwatch";
 import { AddColorButton } from "./AddColorButton";
 import { BlendingGuide } from "./BlendingGuide";
 import { ColorHarmonyGenerator } from "./ColorHarmonyGenerator";
+import { VersionHistoryDialog } from "../PaletteList/VersionHistoryDialog";
 
 // Hex -> readable RGB / HSL strings for the color info readout.
 function describeColor(hex: string): { rgb: string; hsl: string } | null {
@@ -88,6 +92,19 @@ function describeColor(hex: string): { rgb: string; hsl: string } | null {
   };
 }
 
+//╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
+//║ 🎨 ACTION BUTTON THEME                                                ║
+//╚═══╝ ════════════════════════════════════════════════════════════════ ╚═══╝
+
+// One shared pill so every Custom-tab action button matches the rest of
+// the app (same shape/height/shadow as the page's BTN_* family). Hue is
+// the only thing that differs between them.
+const ACTION_BTN =
+  "h-8 px-3 rounded-[10px] ring-1 text-white text-xs font-medium shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_1px_3px_rgba(0,0,0,0.25)] [text-shadow:_0_1px_2px_rgb(0_0_0_/_48%)] transition-all disabled:opacity-50";
+const ACTION_BLUE = `${ACTION_BTN} bg-blue-600 hover:bg-blue-500 ring-blue-400/40`;
+const ACTION_SLATE = `${ACTION_BTN} bg-slate-700 hover:bg-slate-600 ring-slate-400/30`;
+const ACTION_RED = `${ACTION_BTN} bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 ring-red-400/40`;
+
 export function PaletteManager() {
   const {
     customPalette,
@@ -98,15 +115,20 @@ export function PaletteManager() {
     toggleColorSelection,
     clearSelectedColors,
     addBlendedColors,
-    updateColorName,
-    updateColorHex,
+    updateColor,
     reorderPalette,
     commitPaletteToHistory,
     editingPaletteId,
     resetPaletteEditor,
+    setCustomPalette,
   } = useCustomStore();
 
   const [mixMode, setMixMode] = useState(false);
+  const [deleteMode, setDeleteMode] = useState(false);
+  const [deleteSelected, setDeleteSelected] = useState<string[]>([]);
+  // Index of the last swatch toggled in delete mode — anchor for
+  // shift-click range selection.
+  const [deleteAnchor, setDeleteAnchor] = useState<number | null>(null);
   const [blendCount, setBlendCount] = useState(3);
   const [editingColor, setEditingColor] = useState<number | null>(null);
   const [editColorHex, setEditColorHex] = useState("#000000");
@@ -242,9 +264,8 @@ export function PaletteManager() {
       return;
     }
 
-    // Update color hex and name
-    updateColorHex(editingColor, editColorHex);
-    updateColorName(editingColor, editColorName);
+    // Apply hex + name as one history entry so a single undo reverts it.
+    updateColor(editingColor, { hex: editColorHex, name: editColorName });
 
     // Close the edit modal
     setEditingColor(null);
@@ -286,7 +307,67 @@ export function PaletteManager() {
 
   const toggleMixMode = () => {
     if (mixMode) clearSelectedColors();
+    if (deleteMode) {
+      setDeleteMode(false);
+      setDeleteSelected([]);
+    }
     setMixMode((prev) => !prev);
+  };
+
+  const toggleDeleteMode = () => {
+    setDeleteMode((prev) => {
+      const next = !prev;
+      if (next && mixMode) {
+        clearSelectedColors();
+        setMixMode(false);
+      }
+      if (!next) {
+        setDeleteSelected([]);
+        setDeleteAnchor(null);
+      }
+      return next;
+    });
+  };
+
+  const toggleDeleteSelection = (index: number, shiftKey: boolean) => {
+    const id = customPalette[index]?.id;
+    if (!id) return;
+
+    // Shift-click extends a range from the last toggled swatch to this
+    // one, selecting everything in between.
+    if (shiftKey && deleteAnchor !== null) {
+      const start = Math.min(deleteAnchor, index);
+      const end = Math.max(deleteAnchor, index);
+      const rangeIds = customPalette
+        .slice(start, end + 1)
+        .map((c) => c.id);
+      setDeleteSelected((prev) =>
+        Array.from(new Set([...prev, ...rangeIds]))
+      );
+      return;
+    }
+
+    setDeleteSelected((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+    setDeleteAnchor(index);
+  };
+
+  const handleDeleteSelected = () => {
+    if (deleteSelected.length === 0) return;
+    const count = deleteSelected.length;
+    const newPalette = customPalette.filter(
+      (c) => !deleteSelected.includes(c.id)
+    );
+    if (newPalette.length === 0) {
+      resetPaletteEditor();
+    } else {
+      setCustomPalette(newPalette);
+    }
+    setDeleteSelected([]);
+    setDeleteAnchor(null);
+    setDeleteMode(false);
+    toast.success(`Deleted ${count} ${count === 1 ? "color" : "colors"}`);
   };
 
   const handleClearPalette = () => {
@@ -338,100 +419,145 @@ export function PaletteManager() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {/* Main Actions Group */}
-            <div className="flex items-center gap-2">
-              <TooltipProvider delayDuration={300}>
+            <TooltipProvider delayDuration={300}>
+              {/* Harmony */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="sm"
+                    onClick={() =>
+                      setShowHarmonyGenerator(!showHarmonyGenerator)
+                    }
+                    className={ACTION_BLUE}
+                  >
+                    <Palette className="h-3.5 w-3.5 mr-1.5" />
+                    Harmony
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Generate color harmonies</p>
+                </TooltipContent>
+              </Tooltip>
+
+              {/* Select & delete colors */}
+              {deleteMode ? (
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    onClick={handleDeleteSelected}
+                    disabled={deleteSelected.length === 0}
+                    className={ACTION_RED}
+                  >
+                    <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                    Delete
+                    {deleteSelected.length > 0
+                      ? ` (${deleteSelected.length})`
+                      : ""}
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={toggleDeleteMode}
+                    className={ACTION_SLATE}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              ) : (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
-                      variant="outline"
                       size="sm"
-                      onClick={() =>
-                        setShowHarmonyGenerator(!showHarmonyGenerator)
-                      }
-                      className="h-8 px-3 dark:bg-blue-900/20 border-blue-500/30/50"
+                      onClick={toggleDeleteMode}
+                      disabled={customPalette.length === 0}
+                      className={ACTION_SLATE}
                     >
-                      <Palette className="h-4 w-4 mr-1 text-blue-300" />
-                      <span className="text-xs font-medium text-blue-300">
-                        Harmony
-                      </span>
+                      <ListChecks className="h-3.5 w-3.5 mr-1.5" />
+                      Select &amp; Delete
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="bottom">
-                    <p>Generate color harmonies</p>
+                    <p>Select multiple colors, then delete them</p>
                   </TooltipContent>
                 </Tooltip>
-              </TooltipProvider>
-              <TooltipProvider delayDuration={300}>
-                <Tooltip>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        className="h-8 px-3 ml-2"
-                      >
-                        Reset Palette
-                      </Button>
-                    </AlertDialogTrigger>
-                    <TooltipContent side="bottom">
-                      <p>Reset your entire palette</p>
-                    </TooltipContent>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Reset Palette?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This will remove all colors from your palette. This
-                          action cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => {
-                            handleResetEditor();
-                            toast.success("Palette reset!");
-                          }}
-                        >
-                          Yes, Reset
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </Tooltip>
-              </TooltipProvider>
+              )}
 
-              {/* Utility Actions */}
-              <div className="flex items-center gap-1 ml-1">
-                <TooltipProvider delayDuration={300}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      {(customPalette.length >= 2 || showBlendingGuide) && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={resetAllTips}
-                          className={`h-7 w-7 rounded-full ${
-                            showBlendingGuide
-                              ? "bg-blue-500/10 dark:bg-blue-900/30"
-                              : "bg-gray-800/60"
-                          }`}
-                        >
-                          {showBlendingGuide ? (
-                            <X className="h-3.5 w-3.5 text-blue-300" />
-                          ) : (
-                            <Info className="h-3.5 w-3.5 text-blue-300" />
-                          )}
-                        </Button>
+              {/* Divider before the destructive action */}
+              <div className="h-6 w-px bg-white/10" />
+
+              {/* Reset entire palette */}
+              <Tooltip>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      size="sm"
+                      disabled={customPalette.length === 0}
+                      className={ACTION_RED}
+                    >
+                      <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+                      Reset Palette
+                    </Button>
+                  </AlertDialogTrigger>
+                  <TooltipContent side="bottom">
+                    <p>Reset your entire palette</p>
+                  </TooltipContent>
+                  <AlertDialogContent className="border border-red-400/30 bg-gradient-to-br from-gray-900 via-gray-900 to-rose-950/40 backdrop-blur-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_8px_30px_rgba(0,0,0,0.5)]">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="flex items-center gap-2 text-white">
+                        <span className="inline-flex items-center justify-center h-7 w-7 rounded-[10px] bg-red-600/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_1px_2px_rgba(0,0,0,0.10)]">
+                          <RotateCcw className="h-4 w-4 text-white" />
+                        </span>
+                        Reset Palette?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription className="text-slate-400">
+                        This will remove all colors from your palette. This
+                        action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel className="rounded-[10px] border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 hover:text-white">
+                        Cancel
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        className="rounded-[10px] bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 ring-1 ring-red-400/40 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_1px_3px_rgba(0,0,0,0.25)] [text-shadow:_0_1px_2px_rgb(0_0_0_/_48%)]"
+                        onClick={() => {
+                          handleResetEditor();
+                          toast.success("Palette reset!");
+                        }}
+                      >
+                        Yes, Reset
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </Tooltip>
+
+              {/* Tips toggle */}
+              {(customPalette.length >= 2 || showBlendingGuide) && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={resetAllTips}
+                      className={`h-7 w-7 rounded-full ${
+                        showBlendingGuide
+                          ? "bg-blue-500/10 dark:bg-blue-900/30"
+                          : "bg-gray-800/60"
+                      }`}
+                    >
+                      {showBlendingGuide ? (
+                        <X className="h-3.5 w-3.5 text-blue-300" />
+                      ) : (
+                        <Info className="h-3.5 w-3.5 text-blue-300" />
                       )}
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom">
-                      <p>{showBlendingGuide ? "Hide tips" : "Show tips"}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-            </div>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p>{showBlendingGuide ? "Hide tips" : "Show tips"}</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </TooltipProvider>
           </div>
         </div>
 
@@ -495,17 +621,25 @@ export function PaletteManager() {
                         id={color.id}
                         color={color.hex}
                         name={color.name}
+                        mixed={!!color.mix}
+                        paintMatch={color.paintMatch}
                         index={index}
                         isSelected={
-                          mixMode && selectedColors.includes(color.id)
+                          (mixMode && selectedColors.includes(color.id)) ||
+                          (deleteMode && deleteSelected.includes(color.id))
                         }
                         selectionOrder={
                           mixMode && selectedColors.indexOf(color.id) >= 0
                             ? selectedColors.indexOf(color.id) + 1
                             : undefined
                         }
-                        onSelect={() =>
-                          mixMode
+                        onSelect={(e) =>
+                          deleteMode
+                            ? toggleDeleteSelection(
+                                index,
+                                !!e?.shiftKey
+                              )
+                            : mixMode
                             ? toggleColorSelection(color.id)
                             : handleEditColor(index)
                         }
@@ -564,28 +698,20 @@ export function PaletteManager() {
       {/* Blend Controls - Only show when 2 colors are selected */}
       {mixMode && selectedColors.length === 2 && (
         <motion.div
-          initial={{ opacity: 0, height: 0, y: -10 }}
-          animate={{ opacity: 1, height: "auto", y: 0 }}
-          exit={{ opacity: 0, height: 0, y: -10 }}
-          transition={{
-            duration: 0.4,
-            type: "spring",
-            stiffness: 300,
-            damping: 25,
-          }}
-          className="p-4 border border-blue-500/30 dark:border-blue-900/50 rounded-lg bg-blue-500/5 dark:bg-blue-900/20 backdrop-blur-sm shadow-md"
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+          className="p-4 border border-blue-400/30 rounded-xl bg-gradient-to-br from-blue-600/15 to-indigo-600/10 backdrop-blur-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.10),0_2px_8px_rgba(0,0,0,0.25)]"
         >
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <motion.div
-              className="flex items-center gap-2"
+              className="inline-flex items-center justify-center gap-1.5 px-[0.675rem] h-6 text-xs font-medium text-white rounded-[10px] bg-blue-600/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_1px_2px_rgba(0,0,0,0.10)] [text-shadow:_0_1px_2px_rgb(0_0_0_/_48%)]"
               initial={{ scale: 1 }}
               animate={{ scale: [1, 1.05, 1] }}
               transition={{ duration: 0.5, delay: 0.3 }}
             >
-              <Blend className="h-5 w-5 text-blue-300" />
-              <span className="font-medium text-blue-300">
-                Blend Colors
-              </span>
+              <Blend className="h-3.5 w-3.5" />
+              <span>Blend Colors</span>
             </motion.div>
 
             <div className="flex-1 flex items-center gap-4">
@@ -600,8 +726,11 @@ export function PaletteManager() {
                   step={1}
                   onValueChange={(value) => setBlendCount(value[0])}
                   className="flex-1"
+                  trackClassName="h-2 bg-blue-400/20"
+                  rangeClassName="bg-gradient-to-r from-blue-500 to-indigo-500"
+                  thumbClassName="h-5 w-9 rounded-[10px] border-transparent bg-blue-600/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_1px_3px_rgba(0,0,0,0.35)] focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
                 />
-                <span className="text-sm font-medium text-white w-6 text-center">
+                <span className="inline-flex items-center justify-center h-6 min-w-[1.75rem] px-2 text-xs font-medium text-white rounded-[10px] bg-blue-600/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_1px_2px_rgba(0,0,0,0.10)] [text-shadow:_0_1px_2px_rgb(0_0_0_/_48%)]">
                   {blendCount}
                 </span>
               </div>
@@ -616,7 +745,7 @@ export function PaletteManager() {
                     addBlendedColors(blendCount);
                     setMixMode(false);
                   }}
-                  className="bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white whitespace-nowrap shadow-md hover:shadow-lg transition-all"
+                  className="rounded-[10px] bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 ring-1 ring-blue-400/40 text-white whitespace-nowrap shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_1px_3px_rgba(0,0,0,0.25)] [text-shadow:_0_1px_2px_rgb(0_0_0_/_48%)] transition-all"
                 >
                   <Blend className="mr-2 h-4 w-4" />
                   Create Blend
@@ -728,6 +857,8 @@ export function PaletteManager() {
           <ColorHarmonyGenerator onAddColors={handleAddHarmonyColors} />
         )}
       </AnimatePresence>
+
+      <VersionHistoryDialog />
     </div>
   );
 }

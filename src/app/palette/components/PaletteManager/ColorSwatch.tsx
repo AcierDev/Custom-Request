@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Edit, Trash2, Sparkles, Copy } from "lucide-react";
+import { Edit, Trash2, Sparkles, Copy, Blend } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -15,10 +15,33 @@ import { ColorSwatchProps } from "./types";
 
 const BAR_HEIGHT_CLASS = "h-64 sm:h-80";
 
+// Grounded paint labels look like "Sherwin-Williams — SW 6258 — Tricorn
+// Black" (brand — code — name) or "Behr — Cloud White" (no code). Split
+// into stacked lines. The separator is a space-padded dash so a
+// hyphenated brand ("Sherwin-Williams") is never split mid-name.
+function splitPaintLabel(label: string): {
+  brand: string | null;
+  code: string | null;
+  name: string;
+} {
+  const parts = label.split(/\s+[—–-]\s+/);
+  if (parts.length >= 3)
+    return {
+      brand: parts[0].trim(),
+      code: parts[1].trim(),
+      name: parts.slice(2).join(" — ").trim(),
+    };
+  if (parts.length === 2)
+    return { brand: parts[0].trim(), code: null, name: parts[1].trim() };
+  return { brand: null, code: null, name: label };
+}
+
 export function ColorSwatch({
   id,
   color,
   name,
+  mixed,
+  paintMatch,
   isSelected,
   onSelect,
   onRemove,
@@ -102,6 +125,26 @@ export function ColorSwatch({
         transition={{ duration: 0.5, ease: "easeOut" }}
       />
 
+      {/* Mixed-color marker: primary colors have none, so absence tells
+          them apart at a glance. */}
+      {mixed && (
+        <TooltipProvider delayDuration={225}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                className="absolute right-1.5 top-1.5 z-40 flex h-5 w-5 items-center justify-center rounded-full bg-black/30 backdrop-blur-sm ring-1 ring-white/25"
+                style={textColorStyle}
+              >
+                <Blend className="h-3 w-3" />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="left">
+              <p>Mixed color — blended from two primary colors</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
+
       <div className="h-full p-2 flex flex-col justify-between overflow-hidden">
         {/* Top: name + hex — click to copy the hex */}
         <button
@@ -110,18 +153,56 @@ export function ColorSwatch({
           title="Click to copy hex"
           className="min-w-0 text-left cursor-pointer rounded-sm hover:opacity-80 transition-opacity"
         >
-          <div
-            className="font-semibold text-xs sm:text-sm truncate"
-            style={textColorStyle}
-          >
-            {name || color}
-          </div>
+          {(() => {
+            const { brand, code, name: readable } = splitPaintLabel(
+              name || color
+            );
+            return (
+              <>
+                {brand && (
+                  <div
+                    className="font-semibold text-xs sm:text-sm truncate"
+                    style={textColorStyle}
+                  >
+                    {brand}
+                  </div>
+                )}
+                {code && (
+                  <div
+                    className="text-[11px] opacity-90 truncate"
+                    style={textColorStyle}
+                  >
+                    {code}
+                  </div>
+                )}
+                <div
+                  className={cn(
+                    "truncate",
+                    brand
+                      ? "text-[11px] opacity-90"
+                      : "font-semibold text-xs sm:text-sm"
+                  )}
+                  style={textColorStyle}
+                >
+                  {readable}
+                </div>
+              </>
+            );
+          })()}
           {name && (
             <div
               className="font-mono text-[10px] opacity-80 truncate"
               style={textColorStyle}
             >
               {color}
+            </div>
+          )}
+          {typeof paintMatch === "number" && (
+            <div
+              className="text-[10px] font-medium opacity-90 truncate"
+              style={textColorStyle}
+            >
+              {paintMatch}% match
             </div>
           )}
         </button>

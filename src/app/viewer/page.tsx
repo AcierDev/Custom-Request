@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { ColorPattern, useCustomStore } from "@/store/customStore";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,7 @@ import {
   evenBackWallLayout,
   roomCameraMaxDistance,
   roomBounds,
+  rightWindowWorldPos,
   ORBIT_MIN_POLAR,
   ORBIT_MAX_POLAR,
   ORBIT_MAX_AZIMUTH,
@@ -58,6 +59,7 @@ import { DesignTutorial } from "@/components/DesignTutorial";
 import { EmptyPaletteWarning } from "@/components/EmptyPaletteWarning";
 import { CustomChoiceDialog } from "@/components/CustomChoiceDialog";
 import { useCustomChoiceDialog } from "@/hooks/useCustomChoiceDialog";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import {
   Tooltip,
   TooltipContent,
@@ -100,6 +102,12 @@ const BOOKCASE_MIN_REF_W = 16; // floor the bookshelf at this width's size
 // room. Scene units are dimensions * 0.5 (see GeometricPattern).
 const ROOM_REF_WIDTH = 40 * 0.5;
 const ROOM_REF_HEIGHT = 16 * 0.5;
+
+// On a size change the art shrinks away over this long. Only once it's
+// fully shrunk does the room (bookshelf, plant, lamp) slide to its new
+// layout; the art then grows back in once everything has settled.
+const ART_SHRINK_MS = 170;
+const ART_ENTER_DELAY_MS = 650;
 
 // Keep the camera this far inside every surface it could intersect.
 // A fixed buffer (not a percentage of distance), so the reachable zoom
@@ -181,6 +189,7 @@ function RoomCollision({
 
 export default function DesignPage() {
   const [mounted, setMounted] = useState(false);
+  const isMobile = useIsMobile();
   const {
     viewSettings,
     dimensions,
@@ -247,6 +256,15 @@ export default function DesignPage() {
   const sceneH = ROOM_REF_HEIGHT;
   // Orbit pivot is a fixed constant — the camera never pans with size.
   const rotationCenterX = ORBIT_TARGET_X;
+  // Sequenced size change. The room/furniture layout reads `roomDims`,
+  // not the live store dimensions, so nothing moves until the art is
+  // fully shrunk — at which point roomDims catches up and the furniture
+  // slides, then the art scales back in.
+  const [artIn, setArtIn] = useState(true);
+  const [artVisible, setArtVisible] = useState(true);
+  const [roomDims, setRoomDims] = useState(dimensions);
+  const firstSize = useRef(true);
+
   // How "small" the piece is: 0 at/above 20 wide, ramping to 1 at the
   // narrowest size (14 wide). Drives the rightward art slide and the
   // bookshelf fade-in that fills the freed left of the back wall.
@@ -254,7 +272,7 @@ export default function DesignPage() {
     1,
     Math.max(
       0,
-      (ART_RIGHT_SHIFT_W_HI - dimensions.width) /
+      (ART_RIGHT_SHIFT_W_HI - roomDims.width) /
         (ART_RIGHT_SHIFT_W_HI - ART_RIGHT_SHIFT_W_LO)
     )
   );
@@ -263,7 +281,7 @@ export default function DesignPage() {
   // evenly spaced between the bookshelf and the right wall; full-size
   // pieces stay centred.
   const artCenterX =
-    dimensions.width <= ART_RIGHT_SHIFT_W_HI
+    roomDims.width <= ART_RIGHT_SHIFT_W_HI
       ? evenBackWallLayout(ROOM_REF_WIDTH).artX
       : 0;
   // Bookshelf fill: visible for every piece ≤ 24 wide (so 24 gets it
@@ -273,14 +291,37 @@ export default function DesignPage() {
     (ART_RIGHT_SHIFT_W_HI - BOOKCASE_MIN_REF_W) /
     (ART_RIGHT_SHIFT_W_HI - ART_RIGHT_SHIFT_W_LO);
   const bookcaseFill =
-    dimensions.width <= ART_RIGHT_SHIFT_W_HI
+    roomDims.width <= ART_RIGHT_SHIFT_W_HI
       ? Math.max(smallFill, bookcaseMinFill)
       : 0;
-  // Spring so the art glides over when the size changes (matches the
-  // plant/lamp slide spring in Room).
-  const { artX } = useSpring({
-    artX: artCenterX,
-    config: { tension: 120, friction: 26 },
+  // The art shrinks to nothing, is then fully hidden (so no tiny
+  // remnant shows while the room rearranges), and finally scales back
+  // in once the furniture has settled. The first render is skipped so
+  // the art doesn't pop in on load.
+  useEffect(() => {
+    if (firstSize.current) {
+      firstSize.current = false;
+      return;
+    }
+    setArtIn(false); // spring scale 1 → 0 (visible shrink-away)
+    const hide = setTimeout(() => {
+      setArtVisible(false);
+      setRoomDims(dimensions); // fully shrunk → room now starts moving
+    }, ART_SHRINK_MS);
+    const show = setTimeout(() => {
+      setArtVisible(true);
+      setArtIn(true); // spring scale 0 → 1 (animate back in)
+    }, ART_ENTER_DELAY_MS);
+    return () => {
+      clearTimeout(hide);
+      clearTimeout(show);
+    };
+  }, [dimensions.width, dimensions.height]);
+  // Plain symmetric scale (no spring bounce): shrink out, then simply
+  // grow back to full size in place once the room has moved.
+  const { artScale } = useSpring({
+    artScale: artIn ? 1 : 0.001,
+    config: { duration: ART_SHRINK_MS },
   });
   // Generous straight-back cap; the real per-angle ceiling/side-wall
   // limit is enforced live by <RoomCollision /> below.
@@ -299,21 +340,49 @@ export default function DesignPage() {
         className="absolute inset-0 -z-10 pointer-events-none bg-[radial-gradient(circle_at_15%_15%,rgba(56,189,248,0.12),transparent_55%),radial-gradient(circle_at_85%_80%,rgba(99,102,241,0.16),transparent_55%),linear-gradient(to_bottom,rgb(2_6_23),rgb(15_23_42))]"
       />
 
-      {/* Header controls */}
+      {/* Header controls. On mobile it's fixed just below the mobile
+          navbar (the page sits in an `mt-14` offset wrapper, so absolute
+          positioning would clip); the desktop left-margin that clears
+          the PatternEditor is dropped since that editor is hidden on
+          mobile. */}
       <div
-        className="absolute top-4 left-4 z-50 flex items-center gap-4"
-        style={{ marginLeft: showUIControls ? "336px" : "0px" }}
+        className={cn(
+          "z-50 flex items-center gap-4",
+          isMobile
+            ? "fixed top-[3.75rem] left-3"
+            : "absolute top-4 left-4"
+        )}
+        style={{
+          marginLeft: !isMobile && showUIControls ? "336px" : "0px",
+        }}
       >
         <h1 className="heading-section select-none">3D Preview</h1>
         <div className="flex items-center gap-2">
-          {showUIControls && <DraftSetControls compact={false} />}
+          {showUIControls && !isMobile && (
+            <DraftSetControls compact={false} />
+          )}
         </div>
       </div>
 
-      {/* Enhanced view controls with pattern options */}
-      <div className="absolute top-4 right-4 z-50 flex items-start gap-3">
+      {/* Enhanced view controls with pattern options. On mobile the
+          tall desktop column doesn't fit, so it becomes a fixed,
+          full-width, scrollable bottom sheet. */}
+      <div
+        className={cn(
+          "z-50 flex gap-3",
+          isMobile
+            ? "fixed inset-x-2 bottom-2 items-end"
+            : "absolute top-4 right-4 items-start"
+        )}
+      >
         {showUIControls && (
-          <div className="flex flex-col gap-3 select-none">
+          <div
+            className={cn(
+              "flex flex-col gap-3 select-none",
+              isMobile &&
+                "w-full max-h-[58dvh] overflow-y-auto no-scrollbar rounded-2xl"
+            )}
+          >
             <ViewControls />
             <motion.div
               initial={{ opacity: 0, x: 20 }}
@@ -346,8 +415,10 @@ export default function DesignPage() {
       {/* Color info hint */}
       {showColorInfo && showUIControls && <ColorInfoHint />}
 
-      {/* Pattern Editor on the left */}
-      {showUIControls && (
+      {/* Pattern Editor on the left — a 320px desktop authoring
+          overlay; hidden on mobile where it can't fit alongside the
+          bottom-sheet controls. */}
+      {showUIControls && !isMobile && (
         <div className="absolute top-4 left-4 z-40 w-80">
           <PatternEditor />
         </div>
@@ -362,6 +433,7 @@ export default function DesignPage() {
       <div className="fixed inset-0 z-0 canvas-container">
         <Canvas
           shadows
+          dpr={isMobile ? [1, 1.5] : [1, 2]}
           className={cn("w-full h-full", showEmptyCustomInfo && "opacity-25")}
           camera={{
             // Load fully zoomed out and dead-centre on the art: in
@@ -400,7 +472,12 @@ export default function DesignPage() {
           <color attach="background" args={[WALL_COLOR]} />
           <Suspense fallback={null}>
           {/* Rotatable lighting driven by time-of-day */}
-          <RotatableLighting timeOfDay={timeOfDay} style={style} />
+          <RotatableLighting
+            timeOfDay={timeOfDay}
+            style={style}
+            windowPos={rightWindowWorldPos(ROOM_REF_WIDTH, ROOM_REF_HEIGHT)}
+            artCenter={[artCenterX, 0, 0]}
+          />
 
           {/* Gallery room behind the art — fixed size, independent of
               the art dimensions so resizing the art never moves the
@@ -409,17 +486,21 @@ export default function DesignPage() {
           <Room
             width={ROOM_REF_WIDTH}
             height={ROOM_REF_HEIGHT}
-            artWidth={dimensions.width * 0.5}
+            artWidth={roomDims.width * 0.5}
             artCenterX={artCenterX}
             fillFactor={bookcaseFill}
             timeOfDay={timeOfDay}
           />
 
-          {/* The art (and its ruler) slide toward the right wall for
-              small pieces so they don't leave the back wall bare —
-              freeing the left of the wall for the bookshelf. The
-              camera itself never moves. */}
-          <animated.group position-x={artX}>
+          {/* The art sits at its final spot for the size (no slide);
+              after the room rearranges it scales back in. Small pieces
+              sit right of centre so the bookshelf can fill the freed
+              left of the back wall. The camera never moves. */}
+          <animated.group
+            position-x={artCenterX}
+            scale={artScale}
+            visible={artVisible}
+          >
           {/* Pattern based on style */}
           {style === "geometric" && (
             <GeometricPattern
@@ -473,8 +554,18 @@ export default function DesignPage() {
         </Canvas>
       </div>
 
-      {/* Action buttons */}
-      <div className="absolute bottom-6 right-6 flex items-center gap-3 select-none">
+      {/* Action buttons. Bottom-anchored on desktop; on mobile the
+          page's `mt-14` offset would push `bottom-*` off-screen and it
+          would collide with the bottom-sheet controls, so it's fixed
+          top-right under the navbar instead. */}
+      <div
+        className={cn(
+          "flex items-center gap-3 select-none",
+          isMobile
+            ? "fixed top-[3.75rem] right-3 z-50 flex-wrap justify-end max-w-[62vw]"
+            : "absolute bottom-6 right-6"
+        )}
+      >
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>

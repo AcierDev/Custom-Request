@@ -35,6 +35,14 @@ export interface TextureVariation {
 }
 
 /**
+ * Fraction of squares swapped between two adjacent solid lines (columns/rows)
+ * in the fade pattern. The fade fill already builds solid lines for any color
+ * with enough squares; this only softens the seam between them, so a small
+ * value keeps lines mostly solid while still avoiding a hard edge.
+ */
+const SOLID_LINE_BLEND_FRACTION = 0.08;
+
+/**
  * Get color entries from selected design or custom palette
  */
 export function getColorEntries(selectedDesign: string, customPalette: any[]) {
@@ -354,7 +362,9 @@ export function generateColorMap(
           nextRowSingleColor &&
           currentColor !== nextColor
         ) {
-          const squaresToSwap = Math.floor(adjustedModelWidth * 0.25); // 25% of squares
+          const squaresToSwap = Math.floor(
+            adjustedModelWidth * SOLID_LINE_BLEND_FRACTION
+          );
 
           // Choose random positions from the first row
           const allPositions = Array.from(
@@ -531,7 +541,9 @@ export function generateColorMap(
           nextColumnSingleColor &&
           currentColor !== nextColor
         ) {
-          const squaresToSwap = Math.floor(adjustedModelHeight * 0.25); // 25% of squares
+          const squaresToSwap = Math.floor(
+            adjustedModelHeight * SOLID_LINE_BLEND_FRACTION
+          );
 
           // Choose random positions from the first column
           const allPositions = Array.from(
@@ -608,7 +620,9 @@ export function generateColorMap(
           nextRowSingleColor &&
           currentColor !== nextColor
         ) {
-          const squaresToSwap = Math.floor(adjustedModelWidth * 0.25); // 25% of squares
+          const squaresToSwap = Math.floor(
+            adjustedModelWidth * SOLID_LINE_BLEND_FRACTION
+          );
 
           // Choose random positions from the first row
           const allPositions = Array.from(
@@ -806,7 +820,9 @@ export function generateColorMap(
           nextRowSingleColor &&
           currentColor !== nextColor
         ) {
-          const squaresToSwap = Math.floor(adjustedModelWidth * 0.25); // 25% of squares
+          const squaresToSwap = Math.floor(
+            adjustedModelWidth * SOLID_LINE_BLEND_FRACTION
+          );
 
           // Choose random positions from the first row
           const allPositions = Array.from(
@@ -983,7 +999,9 @@ export function generateColorMap(
           nextColumnSingleColor &&
           currentColor !== nextColor
         ) {
-          const squaresToSwap = Math.floor(adjustedModelHeight * 0.25); // 25% of squares
+          const squaresToSwap = Math.floor(
+            adjustedModelHeight * SOLID_LINE_BLEND_FRACTION
+          );
 
           // Choose random positions from the first column
           const allPositions = Array.from(
@@ -1060,7 +1078,9 @@ export function generateColorMap(
           nextRowSingleColor &&
           currentColor !== nextColor
         ) {
-          const squaresToSwap = Math.floor(adjustedModelWidth * 0.25); // 25% of squares
+          const squaresToSwap = Math.floor(
+            adjustedModelWidth * SOLID_LINE_BLEND_FRACTION
+          );
 
           // Choose random positions from the first row
           const allPositions = Array.from(
