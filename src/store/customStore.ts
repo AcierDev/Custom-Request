@@ -2,6 +2,10 @@ import { create } from "zustand";
 import { ItemDesigns, Dimensions } from "@/typings/types";
 import { calculatePrice, PriceBreakdown } from "@/lib/pricing";
 import { blendHexColors } from "@/lib/colorUtils";
+import {
+  simulatePaintLikeMix,
+  type HandMixSimulation,
+} from "@/lib/paintMixSimulator";
 import { DESIGN_COLORS } from "@/typings/color-maps";
 import { createStore } from "zustand/vanilla";
 import { createWithEqualityFn } from "zustand/traditional";
@@ -63,6 +67,11 @@ export type CustomColor = {
    * Absent → the color is primary (entered/picked directly).
    */
   mix?: { fromId: string; toId: string; t: number };
+  /**
+   * Paint-like hand-mix prediction for mixed colors. Compares the intended
+   * swatch with a Kubelka-Munk-style pigment mix of the two parent colors.
+   */
+  handMix?: HandMixSimulation;
 };
 
 // Add a new type for custom modes
@@ -370,15 +379,39 @@ const reblendMixedColors = (colors: CustomColor[]): CustomColor[] => {
       const to = byId.get(c.mix.toId);
       if (!from || !to) return c;
       const hex = blendHexColors(from.hex, to.hex, c.mix.t);
-      if (hex === c.hex) return c;
+      const handMix = simulatePaintLikeMix(from.hex, to.hex, c.mix.t, hex);
+      const handMixChanged =
+        !c.handMix ||
+        c.handMix.targetHex !== handMix.targetHex ||
+        c.handMix.predictedHex !== handMix.predictedHex ||
+        c.handMix.deltaE !== handMix.deltaE ||
+        c.handMix.decision !== handMix.decision ||
+        c.handMix.confidence !== handMix.confidence ||
+        c.handMix.label !== handMix.label ||
+        c.handMix.recipe !== handMix.recipe;
+      if (hex === c.hex && !handMixChanged) return c;
       changed = true;
-      const updated = { ...c, hex };
+      const updated = { ...c, hex, handMix };
       byId.set(c.id, updated);
       return updated;
     });
     if (!changed) break;
   }
   return next;
+};
+
+const refreshHandMixMetadata = (colors: CustomColor[]): CustomColor[] => {
+  const byId = new Map(colors.map((c) => [c.id, c]));
+  return colors.map((c) => {
+    if (!c.mix) return c;
+    const from = byId.get(c.mix.fromId);
+    const to = byId.get(c.mix.toId);
+    if (!from || !to) return c;
+    return {
+      ...c,
+      handMix: simulatePaintLikeMix(from.hex, to.hex, c.mix.t, c.hex),
+    };
+  });
 };
 
 const createColorMap = (colors: CustomColor[]): ColorMap => {
@@ -401,7 +434,7 @@ const normalizeSavedPaletteToCustomColors = (
     const old = (c as CustomColor).id;
     if (old) idMap.set(old, nanoid());
   }
-  return palette.colors.map((c) => {
+  const normalized = palette.colors.map((c) => {
     const src = c as CustomColor;
     const mix =
       src.mix &&
@@ -425,6 +458,7 @@ const normalizeSavedPaletteToCustomColors = (
       ...(mix ? { mix } : {}),
     };
   });
+  return refreshHandMixMetadata(normalized);
 };
 
 const buildShareableStateForPalette = (
@@ -901,10 +935,12 @@ export const useCustomStore = create<CustomStore>()(
         // when a parent's hex is later edited.
         for (let i = 1; i <= count; i++) {
           const t = i / (count + 1);
+          const hex = blendHexColors(color1, color2, t);
           blendedColors.push({
             id: nanoid(),
-            hex: blendHexColors(color1, color2, t),
+            hex,
             mix: { fromId: fromColor.id, toId: toColor.id, t },
+            handMix: simulatePaintLikeMix(color1, color2, t, hex),
           });
         }
 
@@ -1291,8 +1327,10 @@ export const useCustomStore = create<CustomStore>()(
         // Manually setting a hex makes the color primary: if it was a
         // mixed color the user has taken it over, so drop the mix link
         // (otherwise the reblend below would immediately overwrite it).
-        const { mix: _droppedMix, ...rest } = newPalette[index];
+        const { mix: _droppedMix, handMix: _droppedHandMix, ...rest } =
+          newPalette[index];
         void _droppedMix;
+        void _droppedHandMix;
         newPalette[index] = { ...rest, hex };
 
         // Re-derive every mixed color that descends from the changed
@@ -1328,10 +1366,12 @@ export const useCustomStore = create<CustomStore>()(
           // paint-match % no longer describes this new color, so drop it.
           const {
             mix: _droppedMix,
+            handMix: _droppedHandMix,
             paintMatch: _droppedMatch,
             ...rest
           } = newPalette[index];
           void _droppedMix;
+          void _droppedHandMix;
           void _droppedMatch;
           newPalette[index] = { ...rest, hex };
         }
@@ -1424,10 +1464,12 @@ export const useCustomStore = create<CustomStore>()(
       }),
     setCustomPalette: (palette: CustomColor[]) =>
       set((state) => {
-        const paletteWithIds = palette.map((c) => ({
-          ...c,
-          id: c.id || nanoid(),
-        }));
+        const paletteWithIds = refreshHandMixMetadata(
+          palette.map((c) => ({
+            ...c,
+            id: c.id || nanoid(),
+          }))
+        );
 
         const newHistory = state.paletteHistory.slice(
           0,

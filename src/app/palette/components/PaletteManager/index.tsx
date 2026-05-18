@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { nanoid } from "nanoid";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -19,6 +19,8 @@ import {
 } from "@dnd-kit/sortable";
 import { HexColorPicker } from "react-colorful";
 import { useCustomStore } from "@/store/customStore";
+import { blendHexColors } from "@/lib/colorUtils";
+import { simulatePaintLikeMix } from "@/lib/paintMixSimulator";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -104,6 +106,16 @@ const ACTION_BTN =
 const ACTION_BLUE = `${ACTION_BTN} bg-blue-600 hover:bg-blue-500 ring-blue-400/40`;
 const ACTION_SLATE = `${ACTION_BTN} bg-slate-700 hover:bg-slate-600 ring-slate-400/30`;
 const ACTION_RED = `${ACTION_BTN} bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 ring-red-400/40`;
+const SELECTED_BLEND_COLOR_COUNT = 2;
+const FIRST_SELECTED_INDEX = 0;
+const SECOND_SELECTED_INDEX = 1;
+const FIRST_BLEND_STEP = 1;
+const MISSING_COLOR_INDEX = -1;
+const HAND_MIX_PREVIEW_THEME = {
+  mix: "border-emerald-400/35 bg-emerald-500/15 text-emerald-100",
+  test: "border-amber-400/40 bg-amber-500/15 text-amber-100",
+  buy: "border-rose-400/40 bg-rose-500/15 text-rose-100",
+} as const;
 
 export function PaletteManager() {
   const {
@@ -142,6 +154,27 @@ export function PaletteManager() {
     harmony: true,
     selection: true,
   });
+
+  const handMixPreview = useMemo(() => {
+    if (selectedColors.length !== SELECTED_BLEND_COLOR_COUNT) return [];
+
+    const indices = selectedColors
+      .map((id) => customPalette.findIndex((color) => color.id === id))
+      .filter((index) => index !== MISSING_COLOR_INDEX)
+      .sort((a, b) => a - b);
+
+    if (indices.length !== SELECTED_BLEND_COLOR_COUNT) return [];
+
+    const fromColor = customPalette[indices[FIRST_SELECTED_INDEX]];
+    const toColor = customPalette[indices[SECOND_SELECTED_INDEX]];
+    if (!fromColor || !toColor) return [];
+
+    return Array.from({ length: blendCount }, (_, index) => {
+      const t = (index + FIRST_BLEND_STEP) / (blendCount + FIRST_BLEND_STEP);
+      const targetHex = blendHexColors(fromColor.hex, toColor.hex, t);
+      return simulatePaintLikeMix(fromColor.hex, toColor.hex, t, targetHex);
+    });
+  }, [blendCount, customPalette, selectedColors]);
 
   // Initialize hasSeenBlendingGuide from localStorage
   useEffect(() => {
@@ -623,6 +656,7 @@ export function PaletteManager() {
                         name={color.name}
                         mixed={!!color.mix}
                         paintMatch={color.paintMatch}
+                        handMix={color.handMix}
                         index={index}
                         isSelected={
                           (mixMode && selectedColors.includes(color.id)) ||
@@ -753,6 +787,46 @@ export function PaletteManager() {
               </motion.div>
             </div>
           </div>
+
+          {handMixPreview.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {handMixPreview.map((mix) => (
+                <TooltipProvider
+                  key={`${mix.recipe}-${mix.targetHex}-${mix.predictedHex}`}
+                  delayDuration={225}
+                >
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div
+                        className={cn(
+                          "flex min-w-0 items-center gap-1.5 rounded-[10px] border px-2 py-1 text-xs font-medium",
+                          HAND_MIX_PREVIEW_THEME[mix.decision]
+                        )}
+                      >
+                        <span
+                          className="h-4 w-5 rounded-sm ring-1 ring-white/25"
+                          style={{ backgroundColor: mix.targetHex }}
+                        />
+                        <span
+                          className="h-4 w-5 rounded-sm ring-1 ring-white/25"
+                          style={{ backgroundColor: mix.predictedHex }}
+                        />
+                        <span className="truncate">{mix.label}</span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="max-w-64">
+                      <div className="space-y-1 text-xs">
+                        <div className="font-medium">{mix.recipe}</div>
+                        <div>Target {mix.targetHex}</div>
+                        <div>Hand mix {mix.predictedHex}</div>
+                        <div>ΔE {mix.deltaE}</div>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ))}
+            </div>
+          )}
         </motion.div>
       )}
 
