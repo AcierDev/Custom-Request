@@ -1,5 +1,6 @@
 import type { MouseEvent } from "react";
 import { CustomColor } from "@/store/customStore";
+import type { HandMixSimulation } from "@/lib/paintMixSimulator";
 
 // Types for PaletteManager components
 
@@ -22,6 +23,8 @@ export interface ColorSwatchProps {
   mixed?: boolean;
   /** "Convert to paint" closeness (0–100%). Shown under the name. */
   paintMatch?: number;
+  /** Paint-like prediction for whether this generated blend is hand-mixable. */
+  handMix?: HandMixSimulation;
   /** Extra proportion of squares for this color (e.g. 50 = +50%). 0–500. */
   extraPercent?: number;
   onExtraPercentChange?: (value: number) => void;

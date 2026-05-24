@@ -25,13 +25,15 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   // Sidebar is permanently collapsed, so content always clears the
   // collapsed-width rail.
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-900 text-gray-100">
+    <div className="flex h-dvh overflow-hidden bg-gray-900 text-gray-100">
       <SpeedInsights />
       <MobileWarning />
       <Navbar />
       <div className="flex-1 overflow-auto no-scrollbar border-t border-sky-400/40">
-        <div className="mt-14 lg:mt-0 flex flex-col h-full lg:ml-[4.5rem]">
-          <main className="flex-1 w-full pb-16">{children}</main>
+        <div className="mt-14 lg:mt-0 flex h-full min-h-0 flex-col lg:ml-[4.5rem]">
+          <main className="min-h-0 flex-1 w-full pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-16">
+            {children}
+          </main>
         </div>
       </div>
     </div>
@@ -50,13 +52,7 @@ export default function RootLayout({
       style={{ colorScheme: "dark" }}
       suppressHydrationWarning
     >
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{document.documentElement.classList.add('dark');document.documentElement.style.colorScheme='dark';}catch(e){}})();`,
-          }}
-        />
-      </head>
+      <head />
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-900 text-gray-100`}
       >

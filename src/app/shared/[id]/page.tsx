@@ -17,6 +17,7 @@ import {
   Eye,
   Copy,
   Check,
+  Info,
 } from "lucide-react";
 import { GeometricPattern } from "@/components/preview/GeometricPattern";
 // Tiled option hidden from UI — preserved for potential re-enable.
@@ -32,6 +33,7 @@ import { Ruler3D } from "@/components/preview/Ruler3D";
 import { ItemDesigns } from "@/typings/types";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 interface SharedDesignData {
   shareId: string;
@@ -50,6 +52,8 @@ export default function SharedDesignPage() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [showUIControls, setShowUIControls] = useState(true);
+  const [showMobileDetails, setShowMobileDetails] = useState(false);
+  const isMobile = useIsMobile();
 
   const {
     dimensions,
@@ -173,39 +177,58 @@ export default function SharedDesignPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+    <div className="relative min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
-      <div className="absolute top-0 left-0 right-0 z-40 p-6">
-        <div className="flex items-center justify-between">
+      <div className="absolute left-0 right-0 top-0 z-40 p-3 sm:p-6">
+        <div className="flex items-center justify-between gap-2">
           <Link href="/">
             <Button
               variant="outline"
+              size={isMobile ? "icon" : "default"}
               className="glass-surface"
             >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Home
+              <ArrowLeft className={cn("w-4 h-4", !isMobile && "mr-2")} />
+              {!isMobile && "Back to Home"}
             </Button>
           </Link>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <Button
               variant="outline"
+              size={isMobile ? "icon" : "default"}
+              onClick={() => setShowMobileDetails((value) => !value)}
+              className="glass-surface sm:hidden"
+            >
+              <Info className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size={isMobile ? "icon" : "default"}
               onClick={handleCopyLink}
               className="glass-surface"
             >
               {copied ? (
-                <Check className="w-4 h-4 mr-2" />
+                <Check className={cn("w-4 h-4", !isMobile && "mr-2")} />
               ) : (
-                <Copy className="w-4 h-4 mr-2" />
+                <Copy className={cn("w-4 h-4", !isMobile && "mr-2")} />
               )}
-              {copied ? "Copied!" : "Copy Link"}
+              {!isMobile && (copied ? "Copied!" : "Copy Link")}
             </Button>
           </div>
         </div>
       </div>
 
       {/* Design Info Card */}
-      <div className="absolute top-20 left-6 z-40 max-w-sm">
+      <div
+        className={cn(
+          "absolute z-40 max-w-sm",
+          isMobile
+            ? showMobileDetails
+              ? "left-3 right-3 top-16 max-w-none"
+              : "hidden"
+            : "left-6 top-20"
+        )}
+      >
         <Card className="glass-surface shadow-lg p-4">
           <div className="space-y-3">
             <div className="flex items-center gap-2">
@@ -256,7 +279,7 @@ export default function SharedDesignPage() {
       </div>
 
       {/* 3D Canvas */}
-      <div className="w-full h-screen">
+      <div className="h-dvh w-full">
         <Canvas
           camera={{ position: [0, 0, 5], fov: 50 }}
           className="bg-transparent"
@@ -281,7 +304,12 @@ export default function SharedDesignPage() {
 
       {/* View controls overlay (outside Canvas) */}
       {showUIControls && (
-        <div className="absolute top-20 right-6 z-40">
+        <div
+          className={cn(
+            "absolute z-40",
+            isMobile ? "bottom-4 right-3" : "right-6 top-20"
+          )}
+        >
           <ViewControls />
         </div>
       )}
@@ -290,7 +318,7 @@ export default function SharedDesignPage() {
       <ColorInfoHint />
 
       {/* UI Controls Toggle */}
-      <div className="absolute top-6 right-6 z-40">
+      <div className="absolute bottom-4 left-3 z-40 sm:left-auto sm:right-6 sm:top-6 sm:bottom-auto">
         <Button
           variant="outline"
           size="sm"

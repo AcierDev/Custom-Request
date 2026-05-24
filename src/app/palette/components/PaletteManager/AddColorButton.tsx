@@ -139,7 +139,7 @@ export function AddColorButton({
           <span className="text-sm font-medium">Add your first color</span>
         )}
         {!isEmpty && (
-          <span className="text-[10px] sm:text-xs font-medium tracking-wide opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <span className="text-[10px] sm:text-xs font-medium tracking-wide opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300">
             Add color
           </span>
         )}
@@ -149,7 +149,7 @@ export function AddColorButton({
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -162,7 +162,7 @@ export function AddColorButton({
               exit={{ opacity: 0, scale: 0.92, y: 16 }}
               transition={{ type: "spring", stiffness: 380, damping: 30 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-gray-900 rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl border border-white/10"
+              className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-2xl border border-white/10 bg-gray-900 p-4 shadow-2xl sm:p-6"
             >
               <h3 className="text-xl font-bold text-white mb-4">
                 Add New Color
@@ -191,7 +191,7 @@ export function AddColorButton({
                     >
                       <div
                         className={cn(
-                          "absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity",
+                          "absolute inset-0 flex items-center justify-center opacity-100 sm:opacity-0 sm:hover:opacity-100 transition-opacity",
                           "bg-black/20 backdrop-blur-sm"
                         )}
                       >
@@ -279,7 +279,7 @@ export function AddColorButton({
                     <h4 className="text-sm font-medium text-slate-300 capitalize">
                       {category}
                     </h4>
-                    <div className="grid grid-cols-6 gap-2">
+                    <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
                       {colors.map((colorOption, i) => (
                         <TooltipProvider
                           key={colorOption.hex}
@@ -324,7 +324,7 @@ export function AddColorButton({
               </TabsContent>
             </Tabs>
 
-            <div className="flex justify-end gap-2 mt-6">
+            <div className="mt-6 grid grid-cols-2 gap-2 sm:flex sm:justify-end">
               <Button variant="outline" onClick={() => setIsOpen(false)}>
                 Cancel
               </Button>

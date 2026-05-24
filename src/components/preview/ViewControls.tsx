@@ -13,35 +13,29 @@ import {
   Info,
   Paperclip,
   SplitSquareVertical,
-  TreePine,
   Sparkles,
+  Image,
 } from "lucide-react";
-import { WOOD_STYLES } from "./woodStyles";
 
 interface ViewControlsProps {
   className?: string;
 }
 
 export function ViewControls({ className = "" }: ViewControlsProps) {
-  const {
-    viewSettings,
-    setShowRuler,
-    setShowWoodGrain,
-    setWoodStyle,
-    setMetallic,
-    setShowColorInfo,
-    setShowHanger,
-    setShowSplitPanel,
-  } = useCustomStore();
-  const {
-    showRuler,
-    showWoodGrain,
-    woodStyle,
-    metallic,
-    showColorInfo,
-    showHanger,
-    showSplitPanel,
-  } = viewSettings;
+  const showRuler = useCustomStore((s) => s.viewSettings.showRuler);
+  const showWoodGrain = useCustomStore((s) => s.viewSettings.showWoodGrain);
+  const metallic = useCustomStore((s) => s.viewSettings.metallic);
+  const showColorInfo = useCustomStore((s) => s.viewSettings.showColorInfo);
+  const showHanger = useCustomStore((s) => s.viewSettings.showHanger);
+  const showSplitPanel = useCustomStore((s) => s.viewSettings.showSplitPanel);
+  const showRoom = useCustomStore((s) => s.viewSettings.showRoom);
+  const setShowRuler = useCustomStore((s) => s.setShowRuler);
+  const setShowWoodGrain = useCustomStore((s) => s.setShowWoodGrain);
+  const setMetallic = useCustomStore((s) => s.setMetallic);
+  const setShowColorInfo = useCustomStore((s) => s.setShowColorInfo);
+  const setShowHanger = useCustomStore((s) => s.setShowHanger);
+  const setShowSplitPanel = useCustomStore((s) => s.setShowSplitPanel);
+  const setShowRoom = useCustomStore((s) => s.setShowRoom);
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
@@ -106,25 +100,6 @@ export function ViewControls({ className = "" }: ViewControlsProps) {
               />
             </div>
 
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <TreePine className="w-4 h-4 text-slate-400" />
-                <span className="text-sm text-slate-300">Wood Style</span>
-              </div>
-              <select
-                value={woodStyle}
-                onChange={(e) => setWoodStyle(e.target.value)}
-                disabled={!showWoodGrain}
-                className="max-w-[10rem] truncate rounded-md bg-slate-800 px-2 py-1 text-xs text-slate-200 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-40"
-              >
-                {WOOD_STYLES.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-slate-400" />
@@ -175,6 +150,20 @@ export function ViewControls({ className = "" }: ViewControlsProps) {
               <Switch
                 checked={showSplitPanel}
                 onCheckedChange={setShowSplitPanel}
+                className="data-[state=checked]:bg-indigo-600"
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Image className="w-4 h-4 text-slate-400" />
+                <span className="text-sm text-slate-300">
+                  Show Room
+                </span>
+              </div>
+              <Switch
+                checked={showRoom}
+                onCheckedChange={setShowRoom}
                 className="data-[state=checked]:bg-indigo-600"
               />
             </div>

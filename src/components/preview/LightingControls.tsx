@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { Sun, Sunset, Moon } from "lucide-react";
+import { Sunset, Moon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type TimeOfDay = "morning" | "afternoon" | "night";
@@ -16,12 +16,6 @@ interface LightingControlsProps {
 
 export function LightingControls({ value, onChange }: LightingControlsProps) {
   const options = [
-    {
-      value: "morning" as TimeOfDay,
-      label: "Morning",
-      icon: Sun,
-      description: "Bright, clear light from the east",
-    },
     {
       value: "afternoon" as TimeOfDay,
       label: "Afternoon",

@@ -150,6 +150,12 @@ export default function DrawPatternPage() {
     }
   }, [gridSize.width, gridSize.height, mounted]);
 
+  useEffect(() => {
+    if (isMobile) {
+      setIsPaletteVisible(false);
+    }
+  }, [isMobile]);
+
   // Initialize a new pattern grid with the current dimensions
   const initializeGrid = () => {
     const newGrid: PatternCell[][] = [];
@@ -575,9 +581,11 @@ export default function DrawPatternPage() {
 
   return (
     <div
-      className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950 p-4 md:p-6"
+      className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950 p-3 sm:p-4 md:p-6"
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
+      onPointerUp={handleMouseUp}
+      onPointerCancel={handleMouseUp}
     >
       {/* Hidden file input for pattern import */}
       <input
@@ -642,16 +650,17 @@ export default function DrawPatternPage() {
       </Dialog>
 
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+      <div className="mb-5 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold text-white">
             Draw Pattern
           </h1>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap">
           <Button onClick={handlePreview}>
             <Eye className="w-4 h-4 mr-2" />
-            Preview Design
+            <span className="hidden sm:inline">Preview Design</span>
+            <span className="sm:hidden">Preview</span>
           </Button>
           <Button variant="outline" onClick={handleImport}>
             <Upload className="w-4 h-4 mr-2" />
@@ -667,14 +676,25 @@ export default function DrawPatternPage() {
       <div className="grid grid-cols-1 lg:grid-cols-7 gap-6">
         {/* Show Palette Button (when hidden) */}
         {!isPaletteVisible && (
-          <div className="fixed left-4 lg:left-72 top-1/2 transform -translate-y-1/2 z-40 transition-all duration-300">
+          <div
+            className={cn(
+              "fixed z-40 transition-all duration-300",
+              isMobile
+                ? "bottom-[calc(1rem+env(safe-area-inset-bottom))] right-3"
+                : "left-4 top-1/2 -translate-y-1/2 lg:left-72"
+            )}
+          >
             <Button
               variant="outline"
-              size="icon"
+              size={isMobile ? "default" : "icon"}
               onClick={() => setIsPaletteVisible(true)}
-              className="h-12 w-12 bg-gray-900 shadow-lg border-2 hover:shadow-xl transition-all"
+              className={cn(
+                "bg-gray-900 shadow-lg border-2 hover:shadow-xl transition-all",
+                isMobile ? "rounded-full px-4" : "h-12 w-12"
+              )}
             >
               <ChevronRight className="w-5 h-5" />
+              {isMobile ? <span className="ml-2">Palette</span> : null}
             </Button>
           </div>
         )}
@@ -684,7 +704,7 @@ export default function DrawPatternPage() {
           <div className="lg:col-span-2">
             <Card className="bg-gray-900 shadow-sm">
               <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
+                <div className="flex items-start justify-between gap-3">
                   <div>
                     <CardTitle className="text-xl">Color Palette</CardTitle>
                     <CardDescription>
@@ -924,9 +944,9 @@ export default function DrawPatternPage() {
             {/* Drawing Grid */}
             <Card className="bg-gray-900 shadow-sm">
               <CardHeader className="pb-3">
-                <div className="flex justify-between items-start mb-1">
+                <div className="mb-1 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <CardTitle className="text-xl">Pattern Editor</CardTitle>
-                  <div className="flex gap-3 items-center">
+                  <div className="grid grid-cols-2 gap-3 sm:flex sm:items-center">
                     <div className="flex items-center gap-1.5">
                       <Label htmlFor="gridWidth" className="text-xs">
                         Width:
@@ -964,7 +984,7 @@ export default function DrawPatternPage() {
                     Click and drag to draw. Grid: {gridSize.width}x
                     {gridSize.height}
                   </span>
-                  <div className="flex items-center gap-2 mt-2">
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
                     <span className="text-xs text-slate-400 mr-1">
                       Mirror:
                     </span>
@@ -1018,8 +1038,10 @@ export default function DrawPatternPage() {
               </CardHeader>
               <CardContent className="relative">
                 <div
-                  className="w-full overflow-auto p-1"
-                  style={{ maxHeight: "calc(100vh - 300px)" }}
+                  className="w-full overflow-auto p-1 overscroll-contain"
+                  style={{
+                    maxHeight: isMobile ? "70dvh" : "calc(100dvh - 300px)",
+                  }}
                 >
                   <div
                     className="mx-auto bg-gray-900/50 rounded-md p-2 relative"
@@ -1055,18 +1077,26 @@ export default function DrawPatternPage() {
                           row.map((cell, x) => (
                             <div
                               key={`${x}-${y}`}
-                              className={cn(
-                                "border border-white/10 rounded-sm cursor-pointer transition-all hover:opacity-90",
-                                activeTool === "paint"
-                                  ? "hover:border-blue-500 dark:hover:border-blue-400"
-                                  : "hover:border-red-500 dark:hover:border-red-400"
-                              )}
                               style={{
                                 backgroundColor: cell.color || "transparent",
                                 aspectRatio: "1/1",
                               }}
-                              onMouseDown={() => handleMouseDown(x, y)}
-                              onMouseEnter={() => handleMouseEnter(x, y)}
+                              onPointerDown={(event) => {
+                                event.preventDefault();
+                                handleMouseDown(x, y);
+                              }}
+                              onPointerEnter={(event) => {
+                                if (event.buttons > 0) {
+                                  event.preventDefault();
+                                  handleMouseEnter(x, y);
+                                }
+                              }}
+                              className={cn(
+                                "border border-white/10 rounded-sm cursor-pointer touch-none transition-all hover:opacity-90",
+                                activeTool === "paint"
+                                  ? "hover:border-blue-500 dark:hover:border-blue-400"
+                                  : "hover:border-red-500 dark:hover:border-red-400"
+                              )}
                               title={cell.colorName || ""}
                             />
                           ))

@@ -279,8 +279,8 @@ export const PaletteCard = ({
         } bg-gray-900 hover:shadow-md transition-shadow`}
       >
         <CardHeader className="p-3 pb-1.5">
-          <div className="flex justify-between items-start">
-            <CardTitle className="text-base font-semibold text-white flex items-center">
+          <div className="flex min-w-0 justify-between items-start">
+            <CardTitle className="flex min-w-0 items-center text-base font-semibold text-white">
               {selectionMode && (
                 <button
                   type="button"
@@ -328,8 +328,8 @@ export const PaletteCard = ({
                   }}
                   title="Click to edit name"
                 >
-                  {palette.name}
-                  <Edit className="h-3 w-3 ml-1 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <span className="truncate">{palette.name}</span>
+                  <Edit className="ml-1 h-3 w-3 shrink-0 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100" />
                 </div>
               )}
               {isEditing && (
@@ -352,7 +352,7 @@ export const PaletteCard = ({
           onClick={(e) => {
             if (!selectionMode) e.stopPropagation();
           }}
-          className="p-3 pt-0 flex justify-between"
+          className="flex flex-col gap-2 p-3 pt-0 sm:flex-row sm:justify-between"
         >
           {selectionMode ? (
             <div className="w-full text-xs text-slate-400">
@@ -360,7 +360,7 @@ export const PaletteCard = ({
             </div>
           ) : (
             <>
-              <div className="flex gap-1">
+              <div className="flex flex-wrap gap-1">
                 <TooltipProvider delayDuration={300}>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -521,15 +521,15 @@ export const PaletteCard = ({
 
       {/* Export Dialog */}
       {!selectionMode && showExportDialog && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 backdrop-blur-sm sm:p-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="bg-gray-900 rounded-lg max-w-md w-full mx-4 shadow-2xl border border-white/10 overflow-hidden"
+            className="flex max-h-[90dvh] w-full max-w-md flex-col overflow-hidden rounded-lg border border-white/10 bg-gray-900 shadow-2xl"
           >
-            <div className="p-5 border-b border-white/10">
-              <h3 className="text-lg font-semibold text-white">
+            <div className="border-b border-white/10 p-4 sm:p-5">
+              <h3 className="truncate pr-8 text-lg font-semibold text-white">
                 {activeTab === "export" ? "Export" : "Share"} "{palette.name}"
               </h3>
               <p className="text-sm text-slate-400 mt-1">
@@ -537,7 +537,7 @@ export const PaletteCard = ({
               </p>
             </div>
 
-            <div className="p-5 space-y-5">
+            <div className="flex-1 space-y-5 overflow-y-auto p-4 sm:p-5">
               {/* Format tabs */}
               <div className="flex space-x-2 border-b border-white/10">
                 <button

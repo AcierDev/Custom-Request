@@ -4,7 +4,7 @@ import { useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import { useEffect, useMemo, useRef } from "react";
 import { useCustomStore } from "@/store/customStore";
-import { getWoodStyle } from "./woodStyles";
+import { WOOD_STYLE } from "./woodStyles";
 
 interface SquareProps {
   position: [number, number, number];
@@ -170,8 +170,7 @@ export function Square({
   const adjustedPosition: [number, number, number] = [x, y, z + height / 2];
   const meshRef = useRef<THREE.Mesh>(null);
 
-  const woodStyleId = useCustomStore((s) => s.viewSettings.woodStyle);
-  const woodStyle = useMemo(() => getWoodStyle(woodStyleId), [woodStyleId]);
+  const woodStyle = WOOD_STYLE;
 
   // Load textures with caching - load only if wood grain is shown
   const texturePaths = showWoodGrain

@@ -1,7 +1,7 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { ColorPattern, useCustomStore } from "@/store/customStore";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +20,8 @@ import {
   Maximize2,
   Eye,
   EyeOff,
+  SlidersHorizontal,
+  X,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
@@ -47,6 +49,7 @@ import { LightingControls } from "@/components/preview/LightingControls";
 import { ViewControls } from "@/components/preview/ViewControls";
 import { ColorInfoHint } from "@/components/preview/ColorInfoHint";
 import { Ruler3D } from "@/components/preview/Ruler3D";
+import { frameAlpha } from "@/components/preview/animationUtils";
 import { ItemDesigns } from "@/typings/types";
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
@@ -68,18 +71,19 @@ import {
 } from "@/components/ui/tooltip";
 import { PatternEditor } from "./components/PatternEditor";
 import { Slider } from "@/components/ui/slider";
+import { WALL_COLOR_OPTIONS } from "@/components/preview/wallColors";
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ 🎥 ROOM COLLISION                                                     ║
 //╚═══╝ ════════════════════════════════════════════════════════════════ ╚═══╝
 
-// Fixed orbit pivot X. The camera NEVER pans with size — a size-derived
-// pivot pushed the orbit target near a wall, which made RoomCollision
-// fight it every frame ("can't look around"). Instead, small art is
-// physically slid toward the right wall (art + plant + lamp move; see
-// ART_RIGHT_SHIFT_* and Room's artCenterX). Small constant keeps the
-// long-standing "reads slightly left of centre" framing.
-const ORBIT_TARGET_X = 0.4;
+const ART_CENTER_DEFAULT_X = 0;
+const ART_CENTER_Y = 0;
+const ART_CENTER_Z = 0;
+const CAMERA_FOLLOW_EASE = 0.08;
+const CAMERA_FOLLOW_SETTLE = 0.001;
+const CAMERA_FOV = 40;
+const CAMERA_ZOOM = 1;
 
 // Pieces 24 squares WIDE or smaller don't fill the back wall, so the
 // art (with its flanking plant & lamp) spreads evenly between the
@@ -120,6 +124,66 @@ const ROOM_COLLISION_INSET = 0.7;
 // resting at the limit isn't yanked every frame (which pulses the
 // distance and feels laggy) — only a genuine fast overshoot is caught.
 const ROOM_COLLISION_HARD_CLAMP_SLACK = 0.6;
+const ROOM_COLLISION_MIN_OFFSET = 1e-4;
+const ROOM_COLLISION_MIN_DISTANCE = 1.2;
+
+//╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
+//║ 🎯 ART CAMERA FOLLOW                                                  ║
+//╚═══╝ ════════════════════════════════════════════════════════════════ ╚═══╝
+
+function ArtCameraFollow({ target }: { target: [number, number, number] }) {
+  const camera = useThree((s) => s.camera);
+  const invalidate = useThree((s) => s.invalidate);
+  const controls = useThree((s) => s.controls) as
+    | {
+        target: { x: number; y: number; z: number };
+        update?: () => void;
+      }
+    | null;
+
+  useEffect(() => {
+    invalidate();
+  }, [invalidate, target]);
+
+  useFrame((_, delta) => {
+    if (!controls) return;
+
+    const [targetX, targetY, targetZ] = target;
+    const diffX = targetX - controls.target.x;
+    const diffY = targetY - controls.target.y;
+    const diffZ = targetZ - controls.target.z;
+    const distance = Math.hypot(diffX, diffY, diffZ);
+
+    if (distance < CAMERA_FOLLOW_SETTLE) {
+      if (distance === 0) return;
+      controls.target.x = targetX;
+      controls.target.y = targetY;
+      controls.target.z = targetZ;
+      camera.position.x += diffX;
+      camera.position.y += diffY;
+      camera.position.z += diffZ;
+      controls.update?.();
+      invalidate();
+      return;
+    }
+
+    const alpha = frameAlpha(CAMERA_FOLLOW_EASE, delta);
+    const moveX = diffX * alpha;
+    const moveY = diffY * alpha;
+    const moveZ = diffZ * alpha;
+
+    controls.target.x += moveX;
+    controls.target.y += moveY;
+    controls.target.z += moveZ;
+    camera.position.x += moveX;
+    camera.position.y += moveY;
+    camera.position.z += moveZ;
+    controls.update?.();
+    invalidate();
+  });
+
+  return null;
+}
 
 /**
  * Per-frame dolly limiter. Instead of letting OrbitControls pull past a
@@ -142,15 +206,53 @@ function RoomCollision({
         maxDistance: number;
       }
     | null;
+  const lastSample = useRef({
+    camX: NaN,
+    camY: NaN,
+    camZ: NaN,
+    targetX: NaN,
+    targetY: NaN,
+    targetZ: NaN,
+    fallbackMax: NaN,
+    wallHalfX: NaN,
+    floorY: NaN,
+    ceilingY: NaN,
+  });
 
   useFrame(() => {
     if (!controls) return;
     const t = controls.target;
+    const sample = lastSample.current;
+    if (
+      sample.camX === camera.position.x &&
+      sample.camY === camera.position.y &&
+      sample.camZ === camera.position.z &&
+      sample.targetX === t.x &&
+      sample.targetY === t.y &&
+      sample.targetZ === t.z &&
+      sample.fallbackMax === fallbackMax &&
+      sample.wallHalfX === bounds.wallHalfX &&
+      sample.floorY === bounds.floorY &&
+      sample.ceilingY === bounds.ceilingY
+    ) {
+      return;
+    }
+    sample.camX = camera.position.x;
+    sample.camY = camera.position.y;
+    sample.camZ = camera.position.z;
+    sample.targetX = t.x;
+    sample.targetY = t.y;
+    sample.targetZ = t.z;
+    sample.fallbackMax = fallbackMax;
+    sample.wallHalfX = bounds.wallHalfX;
+    sample.floorY = bounds.floorY;
+    sample.ceilingY = bounds.ceilingY;
+
     const ox = camera.position.x - t.x;
     const oy = camera.position.y - t.y;
     const oz = camera.position.z - t.z;
     const offsetLen = Math.hypot(ox, oy, oz);
-    if (offsetLen < 1e-4) return;
+    if (offsetLen < ROOM_COLLISION_MIN_OFFSET) return;
 
     const maxX = bounds.wallHalfX - ROOM_COLLISION_INSET;
     const ceil = bounds.ceilingY - ROOM_COLLISION_INSET;
@@ -165,7 +267,10 @@ function RoomCollision({
     if (oy < 0) f = Math.min(f, (floor - t.y) / oy);
 
     const boundaryDist = Number.isFinite(f) ? offsetLen * f : fallbackMax;
-    const allowed = Math.max(1.2, Math.min(fallbackMax, boundaryDist));
+    const allowed = Math.max(
+      ROOM_COLLISION_MIN_DISTANCE,
+      Math.min(fallbackMax, boundaryDist)
+    );
 
     // Feed OrbitControls the limit for next update (prevents the dolly
     // from creeping out and avoids the forward snap on slow moves)...
@@ -190,27 +295,24 @@ function RoomCollision({
 export default function DesignPage() {
   const [mounted, setMounted] = useState(false);
   const isMobile = useIsMobile();
-  const {
-    viewSettings,
-    dimensions,
-    style,
-    setShowUIControls,
-  } = useCustomStore();
+  const dimensions = useCustomStore((s) => s.dimensions);
+  const style = useCustomStore((s) => s.style);
+  const showRuler = useCustomStore((s) => s.viewSettings.showRuler);
+  const showWoodGrain = useCustomStore((s) => s.viewSettings.showWoodGrain);
+  const showColorInfo = useCustomStore((s) => s.viewSettings.showColorInfo);
+  const showRoom = useCustomStore((s) => s.viewSettings.showRoom);
+  const showUIControls = useCustomStore((s) => s.viewSettings.showUIControls);
+  const wallColor = useCustomStore((s) => s.viewSettings.wallColor);
+  const setShowUIControls = useCustomStore((s) => s.setShowUIControls);
+  const setWallColor = useCustomStore((s) => s.setWallColor);
 
   // Custom with no palette colors and no drawn pattern no longer
   // redirects away — GeometricPattern renders every square a single
   // dark blue so the viewer is never empty.
-  const {
-    showRuler,
-    showWoodGrain,
-    showColorInfo,
-    showHanger,
-    showSplitPanel,
-    showFPS,
-    showUIControls,
-  } = viewSettings;
+  const currentWallColor = wallColor || WALL_COLOR;
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
-  const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>("morning");
+  const [mobileOptionsOpen, setMobileOptionsOpen] = useState(false);
+  const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>("afternoon");
 
   // Custom choice dialog hook
   const {
@@ -239,6 +341,12 @@ export default function DesignPage() {
     };
   }, [showUIControls, setShowUIControls]);
 
+  useEffect(() => {
+    if (!isMobile || !showUIControls) {
+      setMobileOptionsOpen(false);
+    }
+  }, [isMobile, showUIControls]);
+
   // Only dim / show the "empty" hint when there is genuinely nothing to
   // preview. If a custom palette has colors (or a pattern grid exists),
   // render it at full brightness just like an official design.
@@ -254,8 +362,6 @@ export default function DesignPage() {
   // the reachable zoom / framing never shifts when the size changes.
   const sceneW = ROOM_REF_WIDTH;
   const sceneH = ROOM_REF_HEIGHT;
-  // Orbit pivot is a fixed constant — the camera never pans with size.
-  const rotationCenterX = ORBIT_TARGET_X;
   // Sequenced size change. The room/furniture layout reads `roomDims`,
   // not the live store dimensions, so nothing moves until the art is
   // fully shrunk — at which point roomDims catches up and the furniture
@@ -283,7 +389,8 @@ export default function DesignPage() {
   const artCenterX =
     roomDims.width <= ART_RIGHT_SHIFT_W_HI
       ? evenBackWallLayout(ROOM_REF_WIDTH).artX
-      : 0;
+      : ART_CENTER_DEFAULT_X;
+  const displayArtCenterX = showRoom ? artCenterX : ART_CENTER_DEFAULT_X;
   // Bookshelf fill: visible for every piece ≤ 24 wide (so 24 gets it
   // too, even though it doesn't slide the art), but never smaller than
   // its 16-wide size.
@@ -325,8 +432,20 @@ export default function DesignPage() {
   });
   // Generous straight-back cap; the real per-angle ceiling/side-wall
   // limit is enforced live by <RoomCollision /> below.
-  const maxCamDistance = roomCameraMaxDistance(sceneW, sceneH);
-  const camBounds = roomBounds(sceneW, sceneH);
+  const maxCamDistance = useMemo(
+    () => roomCameraMaxDistance(sceneW, sceneH),
+    [sceneW, sceneH]
+  );
+  const camBounds = useMemo(() => roomBounds(sceneW, sceneH), [sceneW, sceneH]);
+  const windowPos = useMemo(
+    () => rightWindowWorldPos(ROOM_REF_WIDTH, ROOM_REF_HEIGHT),
+    []
+  );
+  const artCenter = useMemo<[number, number, number]>(
+    () => [displayArtCenterX, ART_CENTER_Y, ART_CENTER_Z],
+    [displayArtCenterX]
+  );
+  const initialCameraTarget = useRef<[number, number, number]>(artCenter);
 
   if (!mounted) return null;
 
@@ -364,53 +483,78 @@ export default function DesignPage() {
         </div>
       </div>
 
-      {/* Enhanced view controls with pattern options. On mobile the
-          tall desktop column doesn't fit, so it becomes a fixed,
-          full-width, scrollable bottom sheet. */}
-      <div
-        className={cn(
-          "z-50 flex gap-3",
-          isMobile
-            ? "fixed inset-x-2 bottom-2 items-end"
-            : "absolute top-4 right-4 items-start"
-        )}
-      >
-        {showUIControls && (
-          <div
-            className={cn(
-              "flex flex-col gap-3 select-none",
-              isMobile &&
-                "w-full max-h-[58dvh] overflow-y-auto no-scrollbar rounded-2xl"
-            )}
+      {/* Enhanced view controls with pattern options. Desktop keeps the
+          right-side stack; mobile tucks the stack behind a small button
+          so the room stays visible until the user asks for controls. */}
+      {showUIControls && !isMobile && (
+        <div className="absolute top-4 right-4 z-50 flex items-start gap-3">
+          <ViewerOptionsStack
+            timeOfDay={timeOfDay}
+            onTimeOfDayChange={setTimeOfDay}
+            wallColor={currentWallColor}
+            onWallColorChange={setWallColor}
+          />
+        </div>
+      )}
+
+      {showUIControls && isMobile && (
+        <>
+          <Button
+            type="button"
+            className="fixed right-3 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-50 rounded-full bg-indigo-600 px-4 shadow-2xl ring-1 ring-indigo-300/40 hover:bg-indigo-500"
+            onClick={() => setMobileOptionsOpen(true)}
           >
-            <ViewControls />
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <LightingControls value={timeOfDay} onChange={setTimeOfDay} />
-            </motion.div>
-            <Card className="glass-surface rounded-[0.7rem] shadow-lg">
-              <div className="flex flex-row items-center gap-3 py-3 px-4">
-                <div className="design-card flex items-center">
-                  <DesignCard compact bare />
-                </div>
-                <div className="size-card flex items-center">
-                  <SizeCard compact bare />
-                </div>
-              </div>
-            </Card>
-            <div className="style-card">
-              <StyleCard compact />
-            </div>
-            <MiniCard compact />
-            <div className="pattern-controls">
-              <PatternControls />
-            </div>
-          </div>
-        )}
-      </div>
+            <SlidersHorizontal className="mr-2 h-4 w-4" />
+            Options
+          </Button>
+
+          <AnimatePresence>
+            {mobileOptionsOpen && (
+              <>
+                <motion.button
+                  aria-label="Close options"
+                  className="fixed inset-0 z-40 bg-slate-950/30 backdrop-blur-[1px]"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setMobileOptionsOpen(false)}
+                />
+                <motion.div
+                  className="fixed inset-x-2 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-50 max-h-[72dvh] overflow-hidden rounded-2xl border border-white/15 bg-slate-950/70 shadow-2xl backdrop-blur-xl"
+                  initial={{ y: "105%", opacity: 0.8 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: "105%", opacity: 0.8 }}
+                  transition={{ type: "spring", stiffness: 420, damping: 36 }}
+                >
+                  <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-slate-950/80 px-4 py-3 backdrop-blur-xl">
+                    <div className="flex items-center gap-2 text-sm font-medium text-slate-100">
+                      <SlidersHorizontal className="h-4 w-4 text-indigo-300" />
+                      Options
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 rounded-full text-slate-300 hover:bg-white/10 hover:text-white"
+                      onClick={() => setMobileOptionsOpen(false)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="max-h-[calc(72dvh-3.5rem)] overflow-y-auto p-3 no-scrollbar">
+                    <ViewerOptionsStack
+                      timeOfDay={timeOfDay}
+                      onTimeOfDayChange={setTimeOfDay}
+                      wallColor={currentWallColor}
+                      onWallColorChange={setWallColor}
+                    />
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+        </>
+      )}
 
       {/* Color info hint */}
       {showColorInfo && showUIControls && <ColorInfoHint />}
@@ -433,15 +577,19 @@ export default function DesignPage() {
       <div className="fixed inset-0 z-0 canvas-container">
         <Canvas
           shadows
+          frameloop="demand"
           dpr={isMobile ? [1, 1.5] : [1, 2]}
           className={cn("w-full h-full", showEmptyCustomInfo && "opacity-25")}
           camera={{
-            // Load fully zoomed out and dead-centre on the art: in
-            // front (+Z), level with the art centre, at the max safe
-            // orbit distance.
-            position: [rotationCenterX, 0, maxCamDistance],
-            fov: 40,
-            zoom: 1,
+            // Load fully zoomed out and centered on the art. Later size
+            // changes are eased by <ArtCameraFollow />.
+            position: [
+              initialCameraTarget.current[0],
+              initialCameraTarget.current[1],
+              maxCamDistance,
+            ],
+            fov: CAMERA_FOV,
+            zoom: CAMERA_ZOOM,
           }}
           onCreated={({ gl, invalidate }) => {
             const canvas = gl.domElement;
@@ -469,35 +617,37 @@ export default function DesignPage() {
               past the side wall); without this that sliver showed the
               page's dark indigo backdrop. Matching the wall tone makes
               any uncovered edge read as "more wall" instead of a void. */}
-          <color attach="background" args={[WALL_COLOR]} />
+          {showRoom && <color attach="background" args={[currentWallColor]} />}
           <Suspense fallback={null}>
           {/* Rotatable lighting driven by time-of-day */}
           <RotatableLighting
             timeOfDay={timeOfDay}
             style={style}
-            windowPos={rightWindowWorldPos(ROOM_REF_WIDTH, ROOM_REF_HEIGHT)}
-            artCenter={[artCenterX, 0, 0]}
+            windowPos={windowPos}
+            artCenter={artCenter}
           />
 
           {/* Gallery room behind the art — fixed size, independent of
-              the art dimensions so resizing the art never moves the
-              room or camera. Only the flanking plant & lamp track the
-              live art width (they slide to stay 1 ft off its edge). */}
-          <Room
-            width={ROOM_REF_WIDTH}
-            height={ROOM_REF_HEIGHT}
-            artWidth={roomDims.width * 0.5}
-            artCenterX={artCenterX}
-            fillFactor={bookcaseFill}
-            timeOfDay={timeOfDay}
-          />
+              the art dimensions. The art, flanking plant, lamp and
+              camera focus track the live art center. */}
+          {showRoom && (
+            <Room
+              width={ROOM_REF_WIDTH}
+              height={ROOM_REF_HEIGHT}
+              artWidth={roomDims.width * 0.5}
+              artCenterX={artCenterX}
+              fillFactor={bookcaseFill}
+              timeOfDay={timeOfDay}
+              wallColor={currentWallColor}
+            />
+          )}
 
-          {/* The art sits at its final spot for the size (no slide);
-              after the room rearranges it scales back in. Small pieces
-              sit right of centre so the bookshelf can fill the freed
-              left of the back wall. The camera never moves. */}
+          {/* The art sits at its final spot for the size; after the room
+              rearranges it scales back in. Small pieces sit right of
+              centre so the bookshelf can fill the freed left of the
+              back wall. */}
           <animated.group
-            position-x={artCenterX}
+            position-x={displayArtCenterX}
             scale={artScale}
             visible={artVisible}
           >
@@ -541,15 +691,16 @@ export default function DesignPage() {
               regardless is safe. */}
           <OrbitControls
             enablePan={false}
-            minDistance={1.2}
+            minDistance={ROOM_COLLISION_MIN_DISTANCE}
             maxDistance={maxCamDistance}
             minAzimuthAngle={-ORBIT_MAX_AZIMUTH}
             maxAzimuthAngle={ORBIT_MAX_AZIMUTH}
             minPolarAngle={ORBIT_MIN_POLAR}
             maxPolarAngle={ORBIT_MAX_POLAR}
-            target={[rotationCenterX, 0, 0]}
+            target={initialCameraTarget.current}
             makeDefault
           />
+          <ArtCameraFollow target={artCenter} />
           <RoomCollision bounds={camBounds} fallbackMax={maxCamDistance} />
         </Canvas>
       </div>
@@ -562,7 +713,7 @@ export default function DesignPage() {
         className={cn(
           "flex items-center gap-3 select-none",
           isMobile
-            ? "fixed top-[3.75rem] right-3 z-50 flex-wrap justify-end max-w-[62vw]"
+            ? "fixed top-[3.75rem] right-3 z-50 justify-end gap-2"
             : "absolute bottom-6 right-6"
         )}
       >
@@ -590,19 +741,27 @@ export default function DesignPage() {
         {showUIControls && (
           <Button
             variant="outline"
-            className="glass-surface text-gray-200 hover:bg-gray-900/50 hover:border-white/30 hover:text-white"
+            size={isMobile ? "icon" : "default"}
+            className={cn(
+              "glass-surface text-gray-200 hover:bg-gray-900/50 hover:border-white/30 hover:text-white",
+              isMobile && "h-9 w-9 rounded-full"
+            )}
           >
-            <Download className="w-4 h-4 mr-2" />
-            Save Image
+            <Download className={cn("w-4 h-4", !isMobile && "mr-2")} />
+            {!isMobile && "Save Image"}
           </Button>
         )}
         {showUIControls && (
           <Button
-            className="bg-indigo-600 hover:bg-indigo-500 ring-1 ring-indigo-400/40 text-white"
+            size={isMobile ? "icon" : "default"}
+            className={cn(
+              "bg-indigo-600 hover:bg-indigo-500 ring-1 ring-indigo-400/40 text-white",
+              isMobile && "h-9 w-9 rounded-full"
+            )}
             onClick={() => setIsShareDialogOpen(true)}
           >
-            <Share className="w-4 h-4 mr-2" />
-            Share Design
+            <Share className={cn("w-4 h-4", !isMobile && "mr-2")} />
+            {!isMobile && "Share Design"}
           </Button>
         )}
       </div>
@@ -614,7 +773,7 @@ export default function DesignPage() {
       />
 
       {/* Design tutorial */}
-      {showUIControls && <DesignTutorial />}
+      {showUIControls && !isMobile && <DesignTutorial />}
 
       {/* Empty palette warning */}
       <EmptyPaletteWarning />
@@ -629,9 +788,91 @@ export default function DesignPage() {
   );
 }
 
+function ViewerOptionsStack({
+  timeOfDay,
+  onTimeOfDayChange,
+  wallColor,
+  onWallColorChange,
+}: {
+  timeOfDay: TimeOfDay;
+  onTimeOfDayChange: (value: TimeOfDay) => void;
+  wallColor: string;
+  onWallColorChange: (value: string) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-3 select-none">
+      <ViewControls />
+      <motion.div
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.3 }}
+      >
+        <LightingControls value={timeOfDay} onChange={onTimeOfDayChange} />
+      </motion.div>
+      <WallColorControls value={wallColor} onChange={onWallColorChange} />
+      <Card className="glass-surface rounded-[0.7rem] shadow-lg">
+        <div className="flex flex-row items-center gap-3 px-4 py-3">
+          <div className="design-card flex items-center">
+            <DesignCard compact bare />
+          </div>
+          <div className="size-card flex items-center">
+            <SizeCard compact bare />
+          </div>
+        </div>
+      </Card>
+      <div className="style-card">
+        <StyleCard compact />
+      </div>
+      <MiniCard compact />
+      <div className="pattern-controls">
+        <PatternControls />
+      </div>
+    </div>
+  );
+}
+
+function WallColorControls({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <Card className="glass-surface rounded-[0.7rem] shadow-lg">
+      <div className="p-3 space-y-2">
+        <Label className="text-sm text-gray-300">Wall Color</Label>
+        <div className="grid grid-cols-4 gap-2">
+          {WALL_COLOR_OPTIONS.map((option) => {
+            const selected = value.toLowerCase() === option.hex.toLowerCase();
+
+            return (
+              <button
+                key={option.name}
+                type="button"
+                aria-label={option.name}
+                title={option.name}
+                onClick={() => onChange(option.hex)}
+                className={cn(
+                  "h-7 rounded-md border transition-all",
+                  selected
+                    ? "border-indigo-300 ring-2 ring-indigo-400/60"
+                    : "border-white/15 hover:border-white/40"
+                )}
+                style={{ backgroundColor: option.hex }}
+              />
+            );
+          })}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 // Add the MiniCard component
 function MiniCard({ compact = false }: { compact?: boolean }) {
-  const { useMini, setUseMini } = useCustomStore();
+  const useMini = useCustomStore((s) => s.useMini);
+  const setUseMini = useCustomStore((s) => s.setUseMini);
 
   return (
     <Card className="glass-surface rounded-[0.7rem] shadow-lg">
@@ -676,25 +917,22 @@ function MiniCard({ compact = false }: { compact?: boolean }) {
 
 // Add the PatternControls component
 function PatternControls() {
-  const {
-    colorPattern,
-    setColorPattern,
-    orientation,
-    setOrientation,
-    isReversed,
-    setIsReversed,
-    isRotated,
-    setIsRotated,
-    selectedDesign,
-    customPalette,
-    drawnPatternGrid,
-    drawnPatternGridSize,
-    activeCustomMode,
-    scatterWidth,
-    setScatterWidth,
-    scatterAmount,
-    setScatterAmount,
-  } = useCustomStore();
+  const colorPattern = useCustomStore((s) => s.colorPattern);
+  const setColorPattern = useCustomStore((s) => s.setColorPattern);
+  const orientation = useCustomStore((s) => s.orientation);
+  const setOrientation = useCustomStore((s) => s.setOrientation);
+  const isReversed = useCustomStore((s) => s.isReversed);
+  const setIsReversed = useCustomStore((s) => s.setIsReversed);
+  const isRotated = useCustomStore((s) => s.isRotated);
+  const setIsRotated = useCustomStore((s) => s.setIsRotated);
+  const selectedDesign = useCustomStore((s) => s.selectedDesign);
+  const customPalette = useCustomStore((s) => s.customPalette);
+  const drawnPatternGrid = useCustomStore((s) => s.drawnPatternGrid);
+  const drawnPatternGridSize = useCustomStore((s) => s.drawnPatternGridSize);
+  const scatterWidth = useCustomStore((s) => s.scatterWidth);
+  const setScatterWidth = useCustomStore((s) => s.setScatterWidth);
+  const scatterAmount = useCustomStore((s) => s.scatterAmount);
+  const setScatterAmount = useCustomStore((s) => s.setScatterAmount);
 
   // Only hide controls when a custom design has genuinely nothing to
   // preview (no palette colors and no drawn pattern). If a palette has

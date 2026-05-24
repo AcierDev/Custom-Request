@@ -1,7 +1,16 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Edit, Trash2, Sparkles, Copy, Blend } from "lucide-react";
+import {
+  Edit,
+  Trash2,
+  Sparkles,
+  Copy,
+  Blend,
+  CheckCircle2,
+  FlaskConical,
+  ShoppingCart,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -14,6 +23,20 @@ import { toast } from "sonner";
 import { ColorSwatchProps } from "./types";
 
 const BAR_HEIGHT_CLASS = "h-64 sm:h-80";
+const HAND_MIX_DECISION_THEME = {
+  mix: {
+    className: "bg-emerald-600/85 ring-emerald-300/45",
+    Icon: CheckCircle2,
+  },
+  test: {
+    className: "bg-amber-600/90 ring-amber-300/50",
+    Icon: FlaskConical,
+  },
+  buy: {
+    className: "bg-rose-600/90 ring-rose-300/50",
+    Icon: ShoppingCart,
+  },
+} as const;
 
 // Grounded paint labels look like "Sherwin-Williams — SW 6258 — Tricorn
 // Black" (brand — code — name) or "Behr — Cloud White" (no code). Split
@@ -42,6 +65,7 @@ export function ColorSwatch({
   name,
   mixed,
   paintMatch,
+  handMix,
   isSelected,
   onSelect,
   onRemove,
@@ -205,11 +229,55 @@ export function ColorSwatch({
               {paintMatch}% match
             </div>
           )}
+          {handMix && (
+            <TooltipProvider delayDuration={225}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div
+                    className={cn(
+                      "mt-1 inline-flex max-w-full items-center gap-1.5 rounded-[10px] px-1.5 py-1 text-[10px] font-semibold text-white ring-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_1px_2px_rgba(0,0,0,0.20)]",
+                      HAND_MIX_DECISION_THEME[handMix.decision].className
+                    )}
+                  >
+                    {(() => {
+                      const Icon =
+                        HAND_MIX_DECISION_THEME[handMix.decision].Icon;
+                      return <Icon className="h-3 w-3 shrink-0" />;
+                    })()}
+                    <span className="truncate">{handMix.label}</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-64">
+                  <div className="space-y-2 text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">Target</span>
+                      <span
+                        className="h-3 w-8 rounded-sm ring-1 ring-white/30"
+                        style={{ backgroundColor: handMix.targetHex }}
+                      />
+                      <span className="font-mono">{handMix.targetHex}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">Hand mix</span>
+                      <span
+                        className="h-3 w-8 rounded-sm ring-1 ring-white/30"
+                        style={{ backgroundColor: handMix.predictedHex }}
+                      />
+                      <span className="font-mono">{handMix.predictedHex}</span>
+                    </div>
+                    <div>
+                      ΔE {handMix.deltaE} · {handMix.recipe}
+                    </div>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
         </button>
 
         {/* Bottom: hover actions */}
         <div className="flex flex-col gap-1">
-          <div className="flex flex-wrap items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex flex-wrap items-center gap-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
             <TooltipProvider delayDuration={225}>
               <Tooltip>
                 <TooltipTrigger asChild>

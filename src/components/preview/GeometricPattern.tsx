@@ -1,8 +1,8 @@
 "use client";
 
-import { ColorPattern, useCustomStore, PatternCell } from "@/store/customStore";
+import { useCustomStore } from "@/store/customStore";
 import { getDimensionsDetails } from "@/lib/utils";
-import { useRef, useEffect, useState, useMemo, useCallback } from "react";
+import { memo, useRef, useEffect, useState, useMemo, useCallback } from "react";
 import { Html } from "@react-three/drei";
 import { hoverStore } from "@/store/customStore";
 import { useStore } from "zustand";
@@ -31,29 +31,84 @@ const EMPTY_FALLBACK_PALETTE = [
   { hex: EMPTY_FALLBACK_BLUE, name: "Dark Blue" },
 ];
 
-export function GeometricPattern({
+function ColorInfoOverlays() {
+  const hoverInfo = useStore(hoverStore, (s) => s.hoverInfo);
+  const pinnedInfo = useStore(hoverStore, (s) => s.pinnedInfo);
+  const setPinnedInfo = useStore(hoverStore, (s) => s.setPinnedInfo);
+
+  return (
+    <>
+      {hoverInfo && (
+        <Html position={[hoverInfo.position[0], hoverInfo.position[1], 0.5]}>
+          <div className="bg-gray-900 p-2 rounded shadow-md text-xs whitespace-nowrap">
+            <div className="flex items-center gap-2">
+              <div
+                className="w-3 h-3 rounded-full"
+                style={{ backgroundColor: hoverInfo.color }}
+              ></div>
+              <span className="font-medium text-slate-200">
+                {hoverInfo.colorName || "Custom Color"}
+              </span>
+            </div>
+            <div className="text-slate-400 mt-1">
+              {hoverInfo.color.toUpperCase()}
+            </div>
+          </div>
+        </Html>
+      )}
+
+      {pinnedInfo && (
+        <Html position={[pinnedInfo.position[0], pinnedInfo.position[1], 0.5]}>
+          <div className="bg-gray-900 border-2 border-blue-500 p-2 rounded shadow-md text-xs whitespace-nowrap">
+            <div className="flex items-center gap-2">
+              <div
+                className="w-3 h-3 rounded-full"
+                style={{ backgroundColor: pinnedInfo.color }}
+              ></div>
+              <span className="font-medium text-slate-200">
+                {pinnedInfo.colorName || "Custom Color"}
+              </span>
+              <button
+                className="ml-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                onClick={() => setPinnedInfo(null)}
+              >
+                ✕
+              </button>
+            </div>
+            <div className="text-slate-400 mt-1">
+              {pinnedInfo.color.toUpperCase()}
+            </div>
+          </div>
+        </Html>
+      )}
+    </>
+  );
+}
+
+function GeometricPatternComponent({
   showColorInfo = true,
   showWoodGrain = true,
   customDesign = null,
 }: PatternProps & { customDesign?: any }) {
-  const customStore = useCustomStore();
-  const {
-    dimensions: storeDimensions,
-    selectedDesign: storeSelectedDesign,
-    colorPattern: storeColorPattern,
-    orientation: storeOrientation,
-    isReversed: storeIsReversed,
-    isRotated: storeIsRotated,
-    useMini: storeUseMini,
-    customPalette: storeCustomPalette,
-    viewSettings,
-    drawnPatternGrid,
-    drawnPatternGridSize,
-    activeCustomMode,
-    patternOverride,
-    setPatternOverride,
-    isPatternEditorActive,
-  } = customStore;
+  const storeDimensions = useCustomStore((s) => s.dimensions);
+  const storeSelectedDesign = useCustomStore((s) => s.selectedDesign);
+  const storeColorPattern = useCustomStore((s) => s.colorPattern);
+  const storeOrientation = useCustomStore((s) => s.orientation);
+  const storeIsReversed = useCustomStore((s) => s.isReversed);
+  const storeIsRotated = useCustomStore((s) => s.isRotated);
+  const storeUseMini = useCustomStore((s) => s.useMini);
+  const storeCustomPalette = useCustomStore((s) => s.customPalette);
+  const showSplitPanel = useCustomStore((s) => s.viewSettings.showSplitPanel);
+  const drawnPatternGrid = useCustomStore((s) => s.drawnPatternGrid);
+  const drawnPatternGridSize = useCustomStore((s) => s.drawnPatternGridSize);
+  const activeCustomMode = useCustomStore((s) => s.activeCustomMode);
+  const patternOverride = useCustomStore((s) => s.patternOverride);
+  const setPatternOverride = useCustomStore((s) => s.setPatternOverride);
+  const isPatternEditorActive = useCustomStore((s) => s.isPatternEditorActive);
+  const patternEditingMode = useCustomStore((s) => s.patternEditingMode);
+  const scatterEase = useCustomStore((s) => s.scatterEase);
+  const scatterWidth = useCustomStore((s) => s.scatterWidth);
+  const scatterAmount = useCustomStore((s) => s.scatterAmount);
 
   // Use values from customDesign when provided, otherwise use store values
   const dimensions = customDesign?.dimensions || storeDimensions;
@@ -77,18 +132,21 @@ export function GeometricPattern({
     ? EMPTY_FALLBACK_PALETTE
     : customPaletteSource;
 
-  const { showSplitPanel } = viewSettings;
+  const details = useMemo(() => getDimensionsDetails(dimensions), [dimensions]);
+  const colorEntries = useMemo(
+    () => getColorEntries(selectedDesign, customPalette),
+    [selectedDesign, customPalette]
+  );
 
-  const details = getDimensionsDetails(dimensions);
-
-  // Use the hover store
-  const { hoverInfo, setHoverInfo, pinnedInfo, setPinnedInfo } =
-    useStore(hoverStore);
+  const setHoverInfo = useStore(hoverStore, (s) => s.setHoverInfo);
+  const setPinnedInfo = useStore(hoverStore, (s) => s.setPinnedInfo);
 
   // Create refs for rotation seeds
-  const rotationSeedsRef = useRef<boolean[][]>();
+  const rotationSeedsRef = useRef<boolean[][] | undefined>(undefined);
   // Create refs for texture variations
-  const textureVariationsRef = useRef<TextureVariation[][]>();
+  const textureVariationsRef = useRef<TextureVariation[][] | undefined>(
+    undefined
+  );
 
   // While the squares are revealing (size-change bloom) the plywood
   // backing + hanger stay hidden so they don't pop in behind the wave.
@@ -98,7 +156,7 @@ export function GeometricPattern({
   const handleBloomComplete = useCallback(() => setBloomActive(false), []);
 
   // Create a pre-calculated color map for perfect distribution
-  const colorMapRef = useRef<ColorMapRef>();
+  const colorMapRef = useRef<ColorMapRef | undefined>(undefined);
 
   // Force colorMapRef to reset when design or custom palette changes
   useEffect(() => {
@@ -122,9 +180,6 @@ export function GeometricPattern({
     activeCustomMode === "pattern";
 
   if (!details) return null;
-
-  // Get the appropriate color map
-  const colorEntries = getColorEntries(selectedDesign, customPalette);
 
   // Determine the dimensions based on whether a drawn pattern is available
   const { width: originalModelWidth, height: originalModelHeight } =
@@ -158,7 +213,7 @@ export function GeometricPattern({
         isExactMiniSize(modelWidth, modelHeight)
       ),
     };
-  }, [details.squares, useMini, modelWidth, modelHeight]);
+  }, [useMini, modelWidth, modelHeight]);
 
   const {
     squareSize,
@@ -210,14 +265,18 @@ export function GeometricPattern({
         colorMapRef.current.customPaletteLength !== customPalette.length) ||
       (selectedDesign === ItemDesigns.Custom &&
         colorMapRef.current.extraPercentKey !==
-          customPalette.map((c) => c.extraPercent ?? 0).join(",")) ||
-      colorMapRef.current.scatterEase !== (customStore.scatterEase ?? 50) ||
-      colorMapRef.current.scatterWidth !== (customStore.scatterWidth ?? 10) ||
-      colorMapRef.current.scatterAmount !== (customStore.scatterAmount ?? 50)
+          customPalette
+            .map((c: { extraPercent?: number }) => c.extraPercent ?? 0)
+            .join(",")) ||
+      colorMapRef.current.scatterEase !== (scatterEase ?? 50) ||
+      colorMapRef.current.scatterWidth !== (scatterWidth ?? 10) ||
+      colorMapRef.current.scatterAmount !== (scatterAmount ?? 50)
     ) {
       const extraPercentByIndex =
         selectedDesign === ItemDesigns.Custom && customPalette?.length
-          ? customPalette.map((c) => c.extraPercent ?? 0)
+          ? customPalette.map(
+              (c: { extraPercent?: number }) => c.extraPercent ?? 0
+            )
           : undefined;
       colorMapRef.current = generateColorMap(
         adjustedModelWidth,
@@ -229,9 +288,9 @@ export function GeometricPattern({
         isRotated,
         selectedDesign,
         customPalette.length,
-        customStore.scatterEase ?? 50,
-        customStore.scatterWidth ?? 10,
-        customStore.scatterAmount ?? 50,
+        scatterEase ?? 50,
+        scatterWidth ?? 10,
+        scatterAmount ?? 50,
         extraPercentByIndex
       );
       // Store the parameters used to generate this color map
@@ -241,9 +300,9 @@ export function GeometricPattern({
       colorMapRef.current.isRotated = isRotated;
       colorMapRef.current.selectedDesign = selectedDesign;
       colorMapRef.current.customPaletteLength = customPalette.length;
-      colorMapRef.current.scatterEase = customStore.scatterEase ?? 50;
-      colorMapRef.current.scatterWidth = customStore.scatterWidth ?? 10;
-      colorMapRef.current.scatterAmount = customStore.scatterAmount ?? 50;
+      colorMapRef.current.scatterEase = scatterEase ?? 50;
+      colorMapRef.current.scatterWidth = scatterWidth ?? 10;
+      colorMapRef.current.scatterAmount = scatterAmount ?? 50;
       colorMapRef.current.extraPercentKey =
         extraPercentByIndex?.join(",") ?? "";
     }
@@ -265,9 +324,9 @@ export function GeometricPattern({
     customPalette.length,
     colorEntries,
     squareSize,
-    customStore.scatterEase,
-    customStore.scatterWidth,
-    customStore.scatterAmount,
+    scatterEase,
+    scatterWidth,
+    scatterAmount,
   ]);
 
   const { oneThirdWidth, twoThirdsWidth, driftAmount } = colorMapDetails;
@@ -327,8 +386,6 @@ export function GeometricPattern({
   const handleSquareClick = useCallback(
     (x: number, y: number, color: string, name?: string) => {
       // Check if we're in pattern editing mode
-      const { patternEditingMode } = customStore;
-
       if (
         isPatternEditorActive &&
         patternEditingMode &&
@@ -359,7 +416,13 @@ export function GeometricPattern({
         });
       }
     },
-    [customStore, patternOverride, setPatternOverride, setPinnedInfo]
+    [
+      isPatternEditorActive,
+      patternEditingMode,
+      patternOverride,
+      setPatternOverride,
+      setPinnedInfo,
+    ]
   );
 
   // Build a flat list of per-square instance descriptors. One pass; the
@@ -494,17 +557,14 @@ export function GeometricPattern({
     useMini,
     rotationSeedsRef,
     textureVariationsRef,
-    showWoodGrain,
-    showColorInfo,
     getColorIndexDebug,
     driftDirForColumn,
     hasDrawnPattern,
     drawnPatternGrid,
     drawnPatternGridSize,
-    customStore.scatterEase,
-    customStore.scatterWidth,
-    customStore.scatterAmount,
-    isPatternEditorActive,
+    scatterEase,
+    scatterWidth,
+    scatterAmount,
     patternOverride,
   ]);
 
@@ -525,14 +585,14 @@ export function GeometricPattern({
           customPalette.length
         }-${colorPattern}-${orientation}-${isReversed ? 1 : 0}-${
           isRotated ? 1 : 0
-        }-${useMini ? 1 : 0}-${customStore.scatterEase ?? 50}-${
-          customStore.scatterWidth ?? 10
-        }-${customStore.scatterAmount ?? 50}`}
+        }-${useMini ? 1 : 0}-${scatterEase ?? 50}-${scatterWidth ?? 10}-${
+          scatterAmount ?? 50
+        }`}
         rotation={
           orientation === "vertical" ? [0, 0, Math.PI / 2] : [0, 0, 0]
         }
         position={[0, 0, 0]}
-        onClick={handleGroupClick}
+        onClick={showColorInfo ? handleGroupClick : undefined}
       >
         {/* Hidden until the size-change reveal lands so the backing and
             hanger don't pop in behind the blooming squares. */}
@@ -562,54 +622,13 @@ export function GeometricPattern({
           onBloomComplete={handleBloomComplete}
           revealStyle="rows"
           bloomOnResize={false}
+          enablePatternEditing={isPatternEditorActive}
         />
       </group>
 
-      {/* Only render info panels when needed */}
-      {hoverInfo && showColorInfo && (
-        <Html position={[hoverInfo.position[0], hoverInfo.position[1], 0.5]}>
-          <div className="bg-gray-900 p-2 rounded shadow-md text-xs whitespace-nowrap">
-            <div className="flex items-center gap-2">
-              <div
-                className="w-3 h-3 rounded-full"
-                style={{ backgroundColor: hoverInfo.color }}
-              ></div>
-              <span className="font-medium text-slate-200">
-                {hoverInfo.colorName || "Custom Color"}
-              </span>
-            </div>
-            <div className="text-slate-400 mt-1">
-              {hoverInfo.color.toUpperCase()}
-            </div>
-          </div>
-        </Html>
-      )}
-
-      {/* Render pinned info */}
-      {pinnedInfo && showColorInfo && (
-        <Html position={[pinnedInfo.position[0], pinnedInfo.position[1], 0.5]}>
-          <div className="bg-gray-900 border-2 border-blue-500 p-2 rounded shadow-md text-xs whitespace-nowrap">
-            <div className="flex items-center gap-2">
-              <div
-                className="w-3 h-3 rounded-full"
-                style={{ backgroundColor: pinnedInfo.color }}
-              ></div>
-              <span className="font-medium text-slate-200">
-                {pinnedInfo.colorName || "Custom Color"}
-              </span>
-              <button
-                className="ml-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                onClick={() => setPinnedInfo(null)}
-              >
-                ✕
-              </button>
-            </div>
-            <div className="text-slate-400 mt-1">
-              {pinnedInfo.color.toUpperCase()}
-            </div>
-          </div>
-        </Html>
-      )}
+      {showColorInfo && <ColorInfoOverlays />}
     </>
   );
 }
+
+export const GeometricPattern = memo(GeometricPatternComponent);

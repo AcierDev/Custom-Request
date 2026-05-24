@@ -3839,6 +3839,11 @@ sparse-bitfield@^3.0.3:
   dependencies:
     memory-pager "^1.0.2"
 
+spectral.js@^3.0.0:
+  version "3.0.0"
+  resolved "https://registry.npmjs.org/spectral.js/-/spectral.js-3.0.0.tgz"
+  integrity sha512-vIvoUfuB0jrj8bdCXvKks5nmp4Zx1DeKhSojJxN8Pk7jIpH2KMwF8cAhDPto0dEwk0/0qa06eL0owRZ2tAJB5w==
+
 stable-hash@^0.0.5:
   version "0.0.5"
   resolved "https://registry.npmjs.org/stable-hash/-/stable-hash-0.0.5.tgz"

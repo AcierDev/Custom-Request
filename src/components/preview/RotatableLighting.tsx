@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { useFrame } from "@react-three/fiber";
+import { memo, useEffect, useRef, useState } from "react";
+import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import {
   GeometricLighting,
@@ -85,7 +85,7 @@ function sampleAtPhase<T>(
   return lerp(table[ORDER[lo]], table[ORDER[hi]], clamped - lo);
 }
 
-export function RotatableLighting({
+function RotatableLightingComponent({
   timeOfDay,
   style,
   windowPos,
@@ -94,8 +94,13 @@ export function RotatableLighting({
   const groupRef = useRef<THREE.Group>(null);
   const phaseRef = useRef(TIME_PHASE[timeOfDay]);
   const [phase, setPhase] = useState(TIME_PHASE[timeOfDay]);
+  const invalidate = useThree((s) => s.invalidate);
 
   const target = TIME_PHASE[timeOfDay];
+
+  useEffect(() => {
+    invalidate();
+  }, [invalidate, target]);
 
   // Ease the phase toward the target every frame. Rotation is written
   // straight to the group (cheap, no re-render); brightness/colour need
@@ -110,6 +115,7 @@ export function RotatableLighting({
         if (groupRef.current) {
           groupRef.current.rotation.z = target * PHASE_ROTATION_STEP;
         }
+        invalidate();
       }
       return;
     }
@@ -127,6 +133,7 @@ export function RotatableLighting({
     if (quantized !== phase) {
       setPhase(quantized);
     }
+    invalidate();
   });
 
   const intensityScale = sampleAtPhase(
@@ -163,3 +170,5 @@ export function RotatableLighting({
     </>
   );
 }
+
+export const RotatableLighting = memo(RotatableLightingComponent);

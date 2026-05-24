@@ -2,6 +2,10 @@ import { create } from "zustand";
 import { ItemDesigns, Dimensions } from "@/typings/types";
 import { calculatePrice, PriceBreakdown } from "@/lib/pricing";
 import { blendHexColors } from "@/lib/colorUtils";
+import {
+  simulatePaintLikeMix,
+  type HandMixSimulation,
+} from "@/lib/paintMixSimulator";
 import { DESIGN_COLORS } from "@/typings/color-maps";
 import { createStore } from "zustand/vanilla";
 import { createWithEqualityFn } from "zustand/traditional";
@@ -13,7 +17,7 @@ import {
 } from "@/lib/urlUtils";
 import { subscribeWithSelector } from "zustand/middleware";
 import { shallow } from "zustand/shallow";
-import { DEFAULT_WOOD_STYLE_ID } from "@/components/preview/woodStyles";
+import { DEFAULT_WALL_COLOR } from "@/components/preview/wallColors";
 import { nanoid } from "nanoid";
 
 // Add debounce utility function
@@ -56,6 +60,14 @@ export type CustomColor = {
    * distance. Cleared when the color is edited directly.
    */
   paintMatch?: number;
+  /** Second-closest purchasable paint match, for print-label backup ordering. */
+  paintBackup?: string;
+  /** Closeness (0–100%) for the backup paint match. */
+  paintBackupMatch?: number;
+  /** Original hex before "Convert to paint", so the palette can be restored. */
+  paintSourceHex?: string;
+  /** Original name before "Convert to paint", if the user had one. */
+  paintSourceName?: string;
   /**
    * If present, this is a *mixed* color: a blend sitting `t` of the way
    * between two other ("primary") colors in the palette, referenced by
@@ -63,6 +75,11 @@ export type CustomColor = {
    * Absent → the color is primary (entered/picked directly).
    */
   mix?: { fromId: string; toId: string; t: number };
+  /**
+   * Paint-like hand-mix prediction for mixed colors. Compares the intended
+   * swatch with a Kubelka-Munk-style pigment mix of the two parent colors.
+   */
+  handMix?: HandMixSimulation;
 };
 
 // Add a new type for custom modes
@@ -154,10 +171,11 @@ interface CustomState {
     showColorInfo: boolean;
     showHanger: boolean;
     showSplitPanel: boolean;
+    showRoom: boolean;
     showFPS: boolean;
     showUIControls: boolean;
-    woodStyle: string;
     metallic: boolean;
+    wallColor: string;
   };
   lastSaved: number;
   autoSaveEnabled: boolean;
@@ -197,7 +215,7 @@ interface CustomStore extends CustomState {
   isReversed: boolean;
   setIsReversed: (value: boolean) => void;
   updateCurrentColors: (design: ItemDesigns) => void;
-  addCustomColor: (hex: string) => void;
+  addCustomColor: (hex: string, name?: string) => void;
   removeCustomColor: (index: number) => void;
   duplicateCustomColor: (index: number) => void;
   toggleColorSelection: (hex: string) => void;
@@ -212,13 +230,14 @@ interface CustomStore extends CustomState {
   setUseMini: (value: boolean) => void;
   setShowRuler: (value: boolean) => void;
   setShowWoodGrain: (value: boolean) => void;
-  setWoodStyle: (value: string) => void;
   setMetallic: (value: boolean) => void;
   setShowColorInfo: (value: boolean) => void;
   setShowHanger: (value: boolean) => void;
   setShowSplitPanel: (value: boolean) => void;
+  setShowRoom: (value: boolean) => void;
   setShowFPS: (value: boolean) => void;
   setShowUIControls: (value: boolean) => void;
+  setWallColor: (value: string) => void;
   savePalette: (name: string, folderId?: string) => void;
   updatePalette: (id: string, updates: Partial<SavedPalette>) => void;
   deletePalette: (id: string) => void;
@@ -370,15 +389,39 @@ const reblendMixedColors = (colors: CustomColor[]): CustomColor[] => {
       const to = byId.get(c.mix.toId);
       if (!from || !to) return c;
       const hex = blendHexColors(from.hex, to.hex, c.mix.t);
-      if (hex === c.hex) return c;
+      const handMix = simulatePaintLikeMix(from.hex, to.hex, c.mix.t, hex);
+      const handMixChanged =
+        !c.handMix ||
+        c.handMix.targetHex !== handMix.targetHex ||
+        c.handMix.predictedHex !== handMix.predictedHex ||
+        c.handMix.deltaE !== handMix.deltaE ||
+        c.handMix.decision !== handMix.decision ||
+        c.handMix.confidence !== handMix.confidence ||
+        c.handMix.label !== handMix.label ||
+        c.handMix.recipe !== handMix.recipe;
+      if (hex === c.hex && !handMixChanged) return c;
       changed = true;
-      const updated = { ...c, hex };
+      const updated = { ...c, hex, handMix };
       byId.set(c.id, updated);
       return updated;
     });
     if (!changed) break;
   }
   return next;
+};
+
+const refreshHandMixMetadata = (colors: CustomColor[]): CustomColor[] => {
+  const byId = new Map(colors.map((c) => [c.id, c]));
+  return colors.map((c) => {
+    if (!c.mix) return c;
+    const from = byId.get(c.mix.fromId);
+    const to = byId.get(c.mix.toId);
+    if (!from || !to) return c;
+    return {
+      ...c,
+      handMix: simulatePaintLikeMix(from.hex, to.hex, c.mix.t, c.hex),
+    };
+  });
 };
 
 const createColorMap = (colors: CustomColor[]): ColorMap => {
@@ -401,7 +444,7 @@ const normalizeSavedPaletteToCustomColors = (
     const old = (c as CustomColor).id;
     if (old) idMap.set(old, nanoid());
   }
-  return palette.colors.map((c) => {
+  const normalized = palette.colors.map((c) => {
     const src = c as CustomColor;
     const mix =
       src.mix &&
@@ -425,6 +468,7 @@ const normalizeSavedPaletteToCustomColors = (
       ...(mix ? { mix } : {}),
     };
   });
+  return refreshHandMixMetadata(normalized);
 };
 
 const buildShareableStateForPalette = (
@@ -475,10 +519,11 @@ interface PersistentState extends ShareableState {
     showColorInfo: boolean;
     showHanger: boolean;
     showSplitPanel: boolean;
+    showRoom: boolean;
     showFPS: boolean;
     showUIControls: boolean;
-    woodStyle: string;
     metallic: boolean;
+    wallColor: string;
   };
   dataSyncVersion?: number;
   draftSet?: DraftSetItem[];
@@ -619,10 +664,11 @@ export const useCustomStore = create<CustomStore>()(
       showColorInfo: false,
       showHanger: true,
       showSplitPanel: false,
+      showRoom: true,
       showFPS: false,
       showUIControls: true,
-      woodStyle: DEFAULT_WOOD_STYLE_ID,
       metallic: false,
+      wallColor: DEFAULT_WALL_COLOR,
     },
     lastSaved: 0,
     autoSaveEnabled: true,
@@ -685,6 +731,13 @@ export const useCustomStore = create<CustomStore>()(
                 },
               }));
             }
+
+            parsedState.viewSettings = {
+              ...parsedState.viewSettings,
+              showRoom: parsedState.viewSettings?.showRoom ?? true,
+              wallColor: parsedState.viewSettings?.wallColor ?? DEFAULT_WALL_COLOR,
+            };
+            delete parsedState.viewSettings.woodStyle;
 
             set(parsedState);
 
@@ -785,11 +838,11 @@ export const useCustomStore = create<CustomStore>()(
     updateCurrentColors: (design: ItemDesigns) => {
       set({ currentColors: DESIGN_COLORS[design] });
     },
-    addCustomColor: (hex) =>
+    addCustomColor: (hex, name = "") =>
       set((state) => {
         const newPalette = [
           ...state.customPalette,
-          { id: nanoid(), hex, name: "" },
+          { id: nanoid(), hex, name },
         ];
 
         const newHistory = state.paletteHistory.slice(
@@ -901,10 +954,12 @@ export const useCustomStore = create<CustomStore>()(
         // when a parent's hex is later edited.
         for (let i = 1; i <= count; i++) {
           const t = i / (count + 1);
+          const hex = blendHexColors(color1, color2, t);
           blendedColors.push({
             id: nanoid(),
-            hex: blendHexColors(color1, color2, t),
+            hex,
             mix: { fromId: fromColor.id, toId: toColor.id, t },
+            handMix: simulatePaintLikeMix(color1, color2, t, hex),
           });
         }
 
@@ -1006,10 +1061,6 @@ export const useCustomStore = create<CustomStore>()(
       set((state) => ({
         viewSettings: { ...state.viewSettings, metallic: value },
       })),
-    setWoodStyle: (value) =>
-      set((state) => ({
-        viewSettings: { ...state.viewSettings, woodStyle: value },
-      })),
     setShowColorInfo: (value) =>
       set((state) => ({
         viewSettings: { ...state.viewSettings, showColorInfo: value },
@@ -1022,6 +1073,10 @@ export const useCustomStore = create<CustomStore>()(
       set((state) => ({
         viewSettings: { ...state.viewSettings, showSplitPanel: value },
       })),
+    setShowRoom: (value) =>
+      set((state) => ({
+        viewSettings: { ...state.viewSettings, showRoom: value },
+      })),
     setShowFPS: (value) =>
       set((state) => ({
         viewSettings: { ...state.viewSettings, showFPS: value },
@@ -1029,6 +1084,10 @@ export const useCustomStore = create<CustomStore>()(
     setShowUIControls: (value) =>
       set((state) => ({
         viewSettings: { ...state.viewSettings, showUIControls: value },
+      })),
+    setWallColor: (value) =>
+      set((state) => ({
+        viewSettings: { ...state.viewSettings, wallColor: value },
       })),
     savePalette: (name: string, folderId?: string) => {
       const { customPalette } = get();
@@ -1291,8 +1350,9 @@ export const useCustomStore = create<CustomStore>()(
         // Manually setting a hex makes the color primary: if it was a
         // mixed color the user has taken it over, so drop the mix link
         // (otherwise the reblend below would immediately overwrite it).
-        const { mix: _droppedMix, ...rest } = newPalette[index];
+        const { mix: _droppedMix, handMix: _droppedHandMix, ...rest } = newPalette[index];
         void _droppedMix;
+        void _droppedHandMix;
         newPalette[index] = { ...rest, hex };
 
         // Re-derive every mixed color that descends from the changed
@@ -1328,11 +1388,21 @@ export const useCustomStore = create<CustomStore>()(
           // paint-match % no longer describes this new color, so drop it.
           const {
             mix: _droppedMix,
+            handMix: _droppedHandMix,
             paintMatch: _droppedMatch,
+            paintBackup: _droppedBackup,
+            paintBackupMatch: _droppedBackupMatch,
+            paintSourceHex: _droppedPaintSourceHex,
+            paintSourceName: _droppedPaintSourceName,
             ...rest
           } = newPalette[index];
           void _droppedMix;
+          void _droppedHandMix;
           void _droppedMatch;
+          void _droppedBackup;
+          void _droppedBackupMatch;
+          void _droppedPaintSourceHex;
+          void _droppedPaintSourceName;
           newPalette[index] = { ...rest, hex };
         }
         if (name !== undefined) {
@@ -1424,10 +1494,12 @@ export const useCustomStore = create<CustomStore>()(
       }),
     setCustomPalette: (palette: CustomColor[]) =>
       set((state) => {
-        const paletteWithIds = palette.map((c) => ({
-          ...c,
-          id: c.id || nanoid(),
-        }));
+        const paletteWithIds = refreshHandMixMetadata(
+          palette.map((c) => ({
+            ...c,
+            id: c.id || nanoid(),
+          }))
+        );
 
         const newHistory = state.paletteHistory.slice(
           0,
@@ -1703,10 +1775,11 @@ export const useCustomStore = create<CustomStore>()(
               showColorInfo: data.viewSettings?.showColorInfo ?? false,
               showHanger: data.viewSettings?.showHanger ?? true,
               showSplitPanel: data.viewSettings?.showSplitPanel ?? false,
+              showRoom: data.viewSettings?.showRoom ?? true,
               showFPS: data.viewSettings?.showFPS ?? false,
               showUIControls: data.viewSettings?.showUIControls ?? true,
-              woodStyle: data.viewSettings?.woodStyle ?? DEFAULT_WOOD_STYLE_ID,
               metallic: data.viewSettings?.metallic ?? false,
+              wallColor: data.viewSettings?.wallColor ?? DEFAULT_WALL_COLOR,
             };
 
             const localVersion = get().dataSyncVersion;
@@ -2018,17 +2091,20 @@ export const useCustomStore = create<CustomStore>()(
             showSplitPanel:
               mergedState.viewSettings?.showSplitPanel ??
               get().viewSettings.showSplitPanel,
+            showRoom:
+              mergedState.viewSettings?.showRoom ??
+              get().viewSettings.showRoom,
             showFPS:
               mergedState.viewSettings?.showFPS ?? get().viewSettings.showFPS,
             showUIControls:
               mergedState.viewSettings?.showUIControls ??
               get().viewSettings.showUIControls,
-            woodStyle:
-              mergedState.viewSettings?.woodStyle ??
-              get().viewSettings.woodStyle,
             metallic:
               mergedState.viewSettings?.metallic ??
               get().viewSettings.metallic,
+            wallColor:
+              mergedState.viewSettings?.wallColor ??
+              get().viewSettings.wallColor,
           },
           currentColors:
             mergedState.selectedDesign === ItemDesigns.Custom &&

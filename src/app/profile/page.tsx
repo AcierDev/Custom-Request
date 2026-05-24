@@ -134,14 +134,14 @@ export default function ProfilePage() {
           <Card className="shadow-lg border-2 border-primary/10 dark:border-primary/5">
             <CardHeader className="pb-2 border-b dark:border-border/50">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div className="flex items-center gap-6">
-                  <Avatar className="h-20 w-20 ring-2 ring-primary/20 ring-offset-2 ring-offset-background transition-shadow duration-300 hover:ring-primary/30">
+                <div className="flex min-w-0 items-center gap-4 sm:gap-6">
+                  <Avatar className="h-16 w-16 ring-2 ring-primary/20 ring-offset-2 ring-offset-background transition-shadow duration-300 hover:ring-primary/30 sm:h-20 sm:w-20">
                     <AvatarFallback className="text-2xl bg-primary/10 text-primary font-semibold">
                       G
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <h1 className="heading-page tracking-tight">
+                    <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
                       Guest User
                     </h1>
                     <p className="text-muted-foreground mt-1">
@@ -303,15 +303,15 @@ export default function ProfilePage() {
         transition={{ duration: 0.4, ease: "easeOut" }}
       >
         <Card className="shadow-lg border-2 border-primary/10 dark:border-primary/5 overflow-hidden">
-          <CardHeader className="bg-muted/30 dark:bg-muted/10 p-6 border-b dark:border-border/50">
+          <CardHeader className="bg-muted/30 dark:bg-muted/10 p-4 border-b dark:border-border/50 sm:p-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
               <motion.div
-                className="flex items-center space-x-4"
+                className="flex min-w-0 items-center gap-4"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.1 }}
               >
-                <Avatar className="h-20 w-20 ring-2 ring-primary/20 ring-offset-2 ring-offset-background transition-shadow duration-300 hover:ring-primary/30">
+                <Avatar className="h-16 w-16 shrink-0 ring-2 ring-primary/20 ring-offset-2 ring-offset-background transition-shadow duration-300 hover:ring-primary/30 sm:h-20 sm:w-20">
                   <AvatarImage
                     src={user.image || ""}
                     alt={user.name || user.email}
@@ -320,11 +320,11 @@ export default function ProfilePage() {
                     {getUserInitials()}
                   </AvatarFallback>
                 </Avatar>
-                <div>
-                  <h1 className="text-2xl font-bold tracking-tight">
+                <div className="min-w-0">
+                  <h1 className="truncate text-2xl font-bold tracking-tight">
                     {user.name || "User"}
                   </h1>
-                  <p className="text-muted-foreground text-sm mt-0.5">
+                  <p className="mt-0.5 truncate text-sm text-muted-foreground">
                     {user.email}
                   </p>
                   <div className="flex items-center mt-2 gap-2">
@@ -345,7 +345,7 @@ export default function ProfilePage() {
               </motion.div>
 
               <motion.div
-                className="flex gap-2 flex-shrink-0 md:self-start"
+                className="grid grid-cols-2 gap-2 sm:flex sm:flex-shrink-0 md:self-start"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.1 }}
@@ -378,8 +378,8 @@ export default function ProfilePage() {
             onValueChange={setActiveTab}
             className="w-full"
           >
-            <div className="px-6 py-3 border-b dark:border-border/50">
-              <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground">
+            <div className="overflow-x-auto border-b px-4 py-3 dark:border-border/50 sm:px-6">
+              <TabsList className="grid h-10 min-w-max grid-cols-3 rounded-md bg-muted p-1 text-muted-foreground sm:inline-flex">
                 <TabsTrigger
                   value="overview"
                   className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-4 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
@@ -401,7 +401,7 @@ export default function ProfilePage() {
               </TabsList>
             </div>
 
-            <CardContent className="p-6 space-y-8">
+            <CardContent className="space-y-8 p-4 sm:p-6">
               <TabsContent value="overview" className="mt-0">
                 <motion.div
                   key="overview"
@@ -557,14 +557,14 @@ export default function ProfilePage() {
                     </h3>
                     <Separator className="mb-4" />
                     <Card className="bg-muted/50 dark:bg-muted/20">
-                      <CardContent className="p-4 flex items-center justify-between gap-4">
-                        <div>
+                      <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="min-w-0">
                           <h4 className="font-medium">Active Design</h4>
                           <p className="text-sm text-muted-foreground mt-0.5">
                             Last modified: {formatLastSaved()}
                           </p>
                         </div>
-                        <div className="flex space-x-2 flex-shrink-0">
+                        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-shrink-0">
                           <Button
                             variant="outline"
                             size="sm"
@@ -586,7 +586,7 @@ export default function ProfilePage() {
                   </div>
 
                   <div>
-                    <div className="flex items-center justify-between mb-3">
+                    <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <h3 className="text-lg font-semibold">
                         Saved Palettes ({savedPalettes.length})
                       </h3>
@@ -635,7 +635,7 @@ export default function ProfilePage() {
                             </div>
                             <CardContent className="p-4">
                               <div className="flex items-center justify-between">
-                                <div>
+                                <div className="min-w-0">
                                   <h4 className="font-medium truncate pr-2">
                                     {palette.name}
                                   </h4>
@@ -726,26 +726,26 @@ export default function ProfilePage() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-6 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right font-medium">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-4 sm:items-center sm:gap-4">
+              <Label htmlFor="name" className="font-medium sm:text-right">
                 Name
               </Label>
               <Input
                 id="name"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                className="col-span-3"
+                className="sm:col-span-3"
               />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="email" className="text-right font-medium">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-4 sm:items-center sm:gap-4">
+              <Label htmlFor="email" className="font-medium sm:text-right">
                 Email
               </Label>
               <Input
                 id="email"
                 value={user.email}
                 disabled
-                className="col-span-3 bg-muted"
+                className="bg-muted sm:col-span-3"
               />
             </div>
           </div>

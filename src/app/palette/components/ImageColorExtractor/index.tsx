@@ -173,7 +173,7 @@ export function ImageColorExtractor() {
   return (
     <Card className="glass-surface rounded-2xl shadow-lg">
       <CardHeader className="pb-3">
-        <CardTitle className="text-xl font-bold text-white">
+        <CardTitle className="text-lg font-bold text-white sm:text-xl">
           Extract Colors from Image
         </CardTitle>
         <CardDescription>
@@ -192,14 +192,14 @@ export function ImageColorExtractor() {
                 setExtractionMethod(value as "manual" | "auto")
               }
             >
-              <TabsList className="grid w-full max-w-md grid-cols-2 mb-4">
-                <TabsTrigger value="manual" className="flex items-center gap-2">
+              <TabsList className="mb-4 grid w-full grid-cols-2 sm:max-w-md">
+                <TabsTrigger value="manual" className="flex items-center gap-2 px-2 text-xs sm:text-sm">
                   <Pipette className="h-4 w-4" />
-                  <span>Manual Selection</span>
+                  <span>Manual</span>
                 </TabsTrigger>
-                <TabsTrigger value="auto" className="flex items-center gap-2">
+                <TabsTrigger value="auto" className="flex items-center gap-2 px-2 text-xs sm:text-sm">
                   <Wand2 className="h-4 w-4" />
-                  <span>Auto Extract</span>
+                  <span>Auto</span>
                 </TabsTrigger>
               </TabsList>
 
@@ -339,7 +339,7 @@ export function ImageColorExtractor() {
               </TabsContent>
             </Tabs>
 
-            <div className="flex flex-wrap gap-2 justify-end">
+            <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:justify-end">
               <Button
                 variant="outline"
                 onClick={() => setImage(null)}
@@ -375,7 +375,7 @@ export function ImageColorExtractor() {
       </CardContent>
 
       {image && (
-        <CardFooter className="border-t border-white/10 pt-4 flex justify-between">
+        <CardFooter className="flex flex-col gap-2 border-t border-white/10 pt-4 text-sm sm:flex-row sm:justify-between">
           <div className="text-sm text-slate-400">
             {extractionMethod === "manual"
               ? "Click on the image to extract colors"
