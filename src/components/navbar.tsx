@@ -85,6 +85,7 @@ export function Navbar() {
   const { user, signOut, isGuest } = useAuth();
   const [activeTab, setActiveTab] = useState(pathname);
   const [navigationSequence, setNavigationSequence] = useState<string[]>([]);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const saveToDatabase = useCustomStore((state) => state.saveToDatabase);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -166,6 +167,7 @@ export function Navbar() {
       e.preventDefault();
       const newSequence = [...navigationSequence.slice(-3), href];
       setNavigationSequence(newSequence);
+      setMobileMenuOpen(false);
       router.push(href);
     };
 
@@ -404,7 +406,7 @@ export function Navbar() {
       {/* Mobile Navbar */}
       <nav className="lg:hidden fixed top-0 left-0 right-0 z-40 border-b border-white/10 bg-gray-900/30 backdrop-blur-xl backdrop-saturate-150 shadow-glass-dark">
         <div className="w-full flex h-14 items-center px-4">
-          <Sheet>
+          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild>
               <Button
                 size="icon"

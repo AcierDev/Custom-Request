@@ -4,9 +4,9 @@ import { useTexture } from "@react-three/drei";
 import { ThreeEvent, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
-import { useDeferredValue, useEffect, useMemo, useRef } from "react";
+import { memo, useEffect, useMemo, useRef } from "react";
 import { useCustomStore } from "@/store/customStore";
-import { getWoodStyle, METALLIC_PAINT } from "./woodStyles";
+import { METALLIC_PAINT, WOOD_STYLE } from "./woodStyles";
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ 🧱 INSTANCED SQUARES                                                  ║
@@ -64,6 +64,8 @@ interface InstancedSquaresProps {
    *  size. Off when the parent runs its own size-change transition.
    *  An explicit revealNonce bump still replays the reveal. */
   bloomOnResize?: boolean;
+  /** Keep square picking enabled while editing even if color hints are hidden. */
+  enablePatternEditing?: boolean;
 }
 
 // Wedge geometry — same shape as Square.tsx's geometric wedge, but built
@@ -101,6 +103,9 @@ const tmpPos = new THREE.Vector3();
 const tmpScale = new THREE.Vector3();
 const tmpEuler = new THREE.Euler();
 const tmpColor = new THREE.Color();
+const METALLIC_ENV_BLUR = 0.04;
+const WOOD_TEXTURE_ANISOTROPY = 8;
+const HIGHLIGHT_SCALE = 1.04;
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ ✨ SIZE-CHANGE BLOOM                                                   ║
@@ -238,7 +243,7 @@ function computeBloomDelays(
   return delays;
 }
 
-export function InstancedSquares({
+function InstancedSquaresComponent({
   instances,
   showWoodGrain,
   showColorInfo,
@@ -252,9 +257,11 @@ export function InstancedSquares({
   revealStyle = "radial",
   revealNonce = 0,
   bloomOnResize = true,
+  enablePatternEditing = false,
 }: InstancedSquaresProps) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const highlightRef = useRef<THREE.Mesh>(null);
+  const hoveredInstanceRef = useRef<number | undefined>(undefined);
 
   // Read the live style without re-running the matrix-fill effect just
   // because the style prop changed (the replay nonce drives re-blooms).
@@ -277,27 +284,25 @@ export function InstancedSquares({
   onBloomStartRef.current = onBloomStart;
   onBloomCompleteRef.current = onBloomComplete;
 
-  // Defer the style id so a wood-style switch doesn't hard-suspend the
-  // mounted mesh: React keeps rendering the current (cached) texture
-  // while the newly requested one loads in the background, instead of
-  // dropping to the Suspense fallback (blank scene / white flash).
-  const woodStyleId = useDeferredValue(
-    useCustomStore((s) => s.viewSettings.woodStyle)
-  );
-  const woodStyle = useMemo(() => getWoodStyle(woodStyleId), [woodStyleId]);
+  const woodStyle = WOOD_STYLE;
   const metallic = useCustomStore((s) => s.viewSettings.metallic);
 
   // Metalness is pure black with nothing to reflect, so a metallic finish
   // needs an environment map. Bake a neutral room into a PMREM cube once
   // per renderer and reflect only that (it isn't shown as the background).
   const gl = useThree((s) => s.gl);
+  const invalidate = useThree((s) => s.invalidate);
   const envMap = useMemo(() => {
+    if (!metallic) return null;
     const pmrem = new THREE.PMREMGenerator(gl);
-    const tex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    const tex = pmrem.fromScene(
+      new RoomEnvironment(),
+      METALLIC_ENV_BLUR
+    ).texture;
     pmrem.dispose();
     return tex;
-  }, [gl]);
-  useEffect(() => () => envMap.dispose(), [envMap]);
+  }, [gl, metallic]);
+  useEffect(() => () => envMap?.dispose(), [envMap]);
 
   const topTexture = useTexture(woodStyle.topTexture);
 
@@ -325,7 +330,7 @@ export function InstancedSquares({
     if (tex) {
       tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
       tex.colorSpace = THREE.SRGBColorSpace;
-      tex.anisotropy = 8;
+      tex.anisotropy = WOOD_TEXTURE_ANISOTROPY;
     }
 
     // "Metallic" is a paint finish layered over the wood grain — the grain
@@ -416,6 +421,7 @@ export function InstancedSquares({
       ((bloomOnResize && sizeChanged) || nonceBumped);
     prevCountRef.current = instances.length;
     prevNonceRef.current = revealNonce;
+    hoveredInstanceRef.current = undefined;
 
     if (startBloom) {
       bloomDelaysRef.current = computeBloomDelays(
@@ -425,6 +431,7 @@ export function InstancedSquares({
       bloomActiveRef.current = true;
       bloomStartRef.current = -1; // resolved on first animated frame
       onBloomStartRef.current?.();
+      invalidate();
     }
 
     for (let i = 0; i < instances.length; i++) {
@@ -505,6 +512,10 @@ export function InstancedSquares({
       mesh.computeBoundingSphere();
       onBloomCompleteRef.current?.();
     }
+
+    if (bloomActiveRef.current || driftMoving) {
+      invalidate();
+    }
   });
 
   const moveHighlight = (instanceId: number | undefined) => {
@@ -512,25 +523,35 @@ export function InstancedSquares({
     if (!hl) return;
     if (instanceId === undefined || !instances[instanceId]) {
       hl.visible = false;
+      invalidate();
       return;
     }
     const s = instances[instanceId];
     hl.visible = true;
     hl.position.set(s.baseX, s.py, s.pz);
     hl.rotation.set(0, 0, s.rotationZ);
-    hl.scale.set(s.scaleXY * 1.04, s.scaleXY * 1.04, s.scaleZ * 1.04);
+    hl.scale.set(
+      s.scaleXY * HIGHLIGHT_SCALE,
+      s.scaleXY * HIGHLIGHT_SCALE,
+      s.scaleZ * HIGHLIGHT_SCALE
+    );
+    invalidate();
   };
 
   const handleMove = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
+    if (!showColorInfo) return;
     const id = e.instanceId;
     if (id === undefined || !instances[id]) return;
+    if (hoveredInstanceRef.current === id) return;
+    hoveredInstanceRef.current = id;
     const s = instances[id];
-    if (showColorInfo) moveHighlight(id);
+    moveHighlight(id);
     onHover(s.x, s.y, s.color, s.colorName);
   };
 
   const handleOut = () => {
+    hoveredInstanceRef.current = undefined;
     moveHighlight(undefined);
     onUnhover();
   };
@@ -551,9 +572,11 @@ export function InstancedSquares({
         castShadow
         receiveShadow
         frustumCulled={false}
-        onPointerMove={handleMove}
-        onPointerOut={handleOut}
-        onClick={handleClick}
+        onPointerMove={showColorInfo ? handleMove : undefined}
+        onPointerOut={showColorInfo ? handleOut : undefined}
+        onClick={
+          showColorInfo || enablePatternEditing ? handleClick : undefined
+        }
       />
       <mesh
         ref={highlightRef}
@@ -565,3 +588,5 @@ export function InstancedSquares({
     </>
   );
 }
+
+export const InstancedSquares = memo(InstancedSquaresComponent);

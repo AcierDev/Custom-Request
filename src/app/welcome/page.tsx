@@ -179,22 +179,24 @@ export default function WelcomePage() {
 
       {/* Content with backdrop blur for better readability */}
       <div className="relative min-h-screen z-10 backdrop-blur-[2px]">
-        <div className="container max-w-6xl mx-auto px-4 py-16">
-          <header className="mb-16 text-center">
+        <div className="container mx-auto max-w-6xl px-4 py-8 sm:py-12 lg:py-16">
+          <header className="mb-8 text-center sm:mb-12 lg:mb-16">
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, ease: "easeOut" }}
             >
-              <h1 className="heading-hero mb-6">Welcome to Everwood</h1>
-              <p className="text-xl text-slate-400 max-w-2xl mx-auto leading-relaxed">
+              <h1 className="mb-4 text-3xl font-bold tracking-tight text-white sm:mb-6 sm:text-5xl">
+                Welcome to Everwood
+              </h1>
+              <p className="mx-auto max-w-2xl text-base leading-relaxed text-slate-400 sm:text-xl">
                 Get started creating beautiful wooden art pieces customized to
                 your style and space.
               </p>
             </motion.div>
           </header>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3 lg:gap-8">
             {features.map((feature, index) => (
               <motion.div
                 key={feature.title}
@@ -238,7 +240,7 @@ export default function WelcomePage() {
             ))}
           </div>
 
-          <div className="mt-16 text-center">
+          <div className="mt-10 text-center sm:mt-16">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
@@ -247,7 +249,7 @@ export default function WelcomePage() {
               <Button
                 onClick={() => router.push("/viewer")}
                 size="lg"
-                className="bg-blue-600 hover:bg-blue-500 text-white px-10 py-6 text-lg shadow-xl shadow-blue-600/30 hover:shadow-blue-500/40 ring-1 ring-blue-400/40 transition-all duration-300 relative overflow-hidden group"
+                className="relative overflow-hidden bg-blue-600 px-6 py-5 text-base text-white shadow-xl shadow-blue-600/30 ring-1 ring-blue-400/40 transition-all duration-300 hover:bg-blue-500 hover:shadow-blue-500/40 sm:px-10 sm:py-6 sm:text-lg"
               >
                 <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-blue-400/10 to-sky-400/10 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-500"></span>
                 <span className="relative z-10 flex items-center">

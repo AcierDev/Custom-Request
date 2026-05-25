@@ -1,36 +1,54 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { RoundedBox } from "@react-three/drei";
 import { useSpring, animated } from "@react-spring/three";
 import type { TimeOfDay } from "./RotatableLighting";
 import { frameAlpha } from "./animationUtils";
+import { DEFAULT_WALL_COLOR } from "./wallColors";
 
 // Per-frame easing for the time-of-day cross-fade (windows dimming, the
 // lamp coming on). Matches the lighting rig's feel so they move
 // together. SETTLE stops the re-render loop once it's effectively done.
 const TOD_EASE = 0.06;
 const TOD_SETTLE = 0.0005;
+const TOD_RENDER_STEP = 0.025;
 
 /** Smoothly eases a scalar toward `target`, re-rendering only while it
  *  is still moving. Used to cross-fade time-of-day driven values. */
 function useEasedValue(target: number) {
+  const invalidate = useThree((s) => s.invalidate);
   const ref = useRef(target);
+  const renderedRef = useRef(target);
   const [value, setValue] = useState(target);
+
+  useEffect(() => {
+    invalidate();
+  }, [invalidate, target]);
+
   useFrame((_, delta) => {
     const cur = ref.current;
     if (Math.abs(cur - target) < TOD_SETTLE) {
       if (cur !== target) {
         ref.current = target;
-        setValue(target);
+        if (renderedRef.current !== target) {
+          renderedRef.current = target;
+          setValue(target);
+        }
+        invalidate();
       }
       return;
     }
     const next = THREE.MathUtils.lerp(cur, target, frameAlpha(TOD_EASE, delta));
     ref.current = next;
-    setValue(next);
+    const rendered = Math.round(next / TOD_RENDER_STEP) * TOD_RENDER_STEP;
+    if (rendered !== renderedRef.current) {
+      renderedRef.current = rendered;
+      setValue(rendered);
+    }
+    invalidate();
   });
   return value;
 }
@@ -122,7 +140,7 @@ const DOOR_EXTRA_LEFT = DOOR_EXTRA_LEFT_IN * SCENE_UNITS_PER_INCH;
 // A standard lived-in home: warm greige walls, soft-white ceiling and
 // trim, thick gray carpet. Neutral enough that the colorful wood still
 // reads as the focal point, the way real homes hang feature art.
-export const WALL_COLOR = "#b8b2a4"; // greige, 10% darker
+export const WALL_COLOR = DEFAULT_WALL_COLOR; // greige, 10% darker
 const TRIM_COLOR = "#f4f1e8";
 // Pile shades: the height field blends dark valleys → light tufts.
 const CARPET_DARK = "#9a9c9f";
@@ -136,7 +154,9 @@ const WOOD_PLANKS = 5; // planks across one texture tile
 // Half-width of the smooth groove valley between planks/joints (px).
 // Wider = gentler side-wall slopes that don't catch a white Fresnel
 // rim at low viewing angles.
-const WOOD_GROOVE_RAMP = 7;
+const WOOD_BASE_GROOVE_RAMP = 7;
+const WOOD_PANEL_GAP_SCALE = 0.5; // 50% tighter floor-panel gaps
+const WOOD_GROOVE_RAMP = WOOD_BASE_GROOVE_RAMP * WOOD_PANEL_GAP_SCALE;
 const WOOD_NORMAL_STRENGTH = 1.6;
 const CEILING_COLOR = "#f1eee6";
 const WINDOW_GLOW_COLOR = "#eaf2ff"; // soft daylight through the glass
@@ -150,7 +170,6 @@ const WINDOW_EMISSIVE_NIGHT = 0.12;
 // with a deadbolt above the lever.
 const DOOR_COLOR = "#27496d"; // deep navy entry-door paint
 const DOOR_PANEL_COLOR = "#1f3c59"; // recessed panels read slightly darker
-const DOOR_GLASS_COLOR = "#dfeaf2"; // frosted top lites
 const DOOR_HARDWARE_COLOR = "#caa64a"; // satin brass
 const DOOR_KICK_COLOR = "#b9bcbf"; // brushed-metal kick plate
 
@@ -159,8 +178,10 @@ const CARPET_PILE_H = 0.3;
 
 // Trim thicknesses.
 const BASEBOARD_H = 0.46;
-const CROWN_H = 0.55;
 const TRIM_PROUD = 0.06; // how far moldings stand off the wall
+const DOOR_WALL_PROUD = 0;
+const DOOR_CASING_DEPTH = 0.16;
+const DOOR_CASING_Z = DOOR_CASING_DEPTH / 2;
 // Window casing border thickness. Verticals butt between the
 // horizontals so the corners meet cleanly (square picture frame).
 const WINDOW_CASING_T = 0.18;
@@ -174,6 +195,12 @@ const WINDOW_CASING_T = 0.18;
 export const ORBIT_MIN_POLAR = Math.PI / 3; // ~60° — top-down cap
 export const ORBIT_MAX_POLAR = Math.PI / 1.7; // ~105.9° — look-up cap
 export const ORBIT_MAX_AZIMUTH = Math.PI / 3; // ±60° — side-to-side
+const CAMERA_REACH_FACTOR_EPSILON = 1e-3;
+const CAMERA_ZOOM_OUT_BASE_MULTIPLIER = 2.25;
+const CAMERA_ZOOM_OUT_EXTRA_MULTIPLIER = 1.05;
+const CAMERA_ZOOM_OUT_MULTIPLIER =
+  CAMERA_ZOOM_OUT_BASE_MULTIPLIER * CAMERA_ZOOM_OUT_EXTRA_MULTIPLIER;
+const CAMERA_MIN_MAX_DISTANCE = 6;
 
 /**
  * The largest orbit distance that keeps the camera safely inside the
@@ -198,16 +225,19 @@ export function roomCameraMaxDistance(width: number, height: number) {
   const toCeiling = Math.abs(ceilingY);
 
   const upFactor = Math.cos(ORBIT_MIN_POLAR);
-  const downFactor = Math.max(Math.abs(Math.cos(ORBIT_MAX_POLAR)), 1e-3);
+  const downFactor = Math.max(
+    Math.abs(Math.cos(ORBIT_MAX_POLAR)),
+    CAMERA_REACH_FACTOR_EPSILON
+  );
 
   const dCeiling = toCeiling / upFactor;
   const dFloor = toFloor / downFactor;
 
   // Side walls are intentionally ignored — only the floor and ceiling
-  // bound zoom-out. The extra 2.25 lets the camera pull back 125% farther
-  // than the bare floor/ceiling clearance allows.
-  const safe = Math.min(dCeiling, dFloor) * 2.25;
-  return Math.max(6, safe);
+  // bound zoom-out. The multiplier gives the camera its roomy pullback,
+  // with the current limit extended by 5%.
+  const safe = Math.min(dCeiling, dFloor) * CAMERA_ZOOM_OUT_MULTIPLIER;
+  return Math.max(CAMERA_MIN_MAX_DISTANCE, safe);
 }
 
 /**
@@ -964,6 +994,7 @@ const LAMP_SHADE_COLOR = "#f3ead4";
 const LAMP_H = 11;
 const LAMP_SHADE_H = 2.4;
 const LAMP_SHADE_R = 1.5;
+const LAMP_FLOOR_SETTLE = 0.08;
 // The lamp is off during the day and switched on at night: the shade
 // glows and a warm point light spills into the room.
 const LAMP_SHADE_EMISSIVE_OFF = 0;
@@ -1087,10 +1118,13 @@ function FloorLamp({ glow = 0 }: { glow?: number }) {
 // per unit) — a real 6 in recessed light is ~1.0 unit across.
 const DOWNLIGHT_LENS_R = 0.5; // glowing lens (~3 in radius)
 const DOWNLIGHT_TRIM_R = 0.62; // outer chrome/white trim ring
-const DOWNLIGHT_RECESS = 0.05; // how far the lens sits up into the ceiling
-const DOWNLIGHT_LENS_COLOR = "#fff3df"; // warm bulb white
+const DOWNLIGHT_FACE_DROP = 0.003;
+const DOWNLIGHT_FACE_OFFSET = 0.0015;
+const DOWNLIGHT_SOURCE_DROP = 0.04;
+const DOWNLIGHT_LENS_COLOR = "#ffffff"; // visibly powered bulb face
 const DOWNLIGHT_TRIM_COLOR = "#eceae3";
-const DOWNLIGHT_LENS_EMISSIVE = 1.7;
+const DOWNLIGHT_LENS_POINT_INTENSITY = 0.7;
+const DOWNLIGHT_LENS_POINT_DISTANCE = 3;
 // Row pitch front-to-back. Sized to the furnished depth (back wall to
 // the front of the rug at ~backZ+31) so the 3 rows sit over the room
 // instead of sprawling far past it toward the camera.
@@ -1101,14 +1135,19 @@ const DOWNLIGHT_Z_FROM_WALL = 12;
 // Grid extent: how many fixtures across (X) and front-to-back (Z).
 // Kept sparse on purpose — a real room has a handful, not a dense grid.
 // Keep the outermost cans this far in from each side wall.
-const DOWNLIGHT_EDGE_MARGIN = 5;
+const DOWNLIGHT_BASE_EDGE_MARGIN = 5;
+const DOWNLIGHT_EXTRA_WALL_INSET_IN = 6;
+const DOWNLIGHT_EXTRA_WALL_INSET =
+  DOWNLIGHT_EXTRA_WALL_INSET_IN * SCENE_UNITS_PER_INCH;
+const DOWNLIGHT_EDGE_MARGIN =
+  DOWNLIGHT_BASE_EDGE_MARGIN + DOWNLIGHT_EXTRA_WALL_INSET;
 const DOWNLIGHT_COLS = 2;
 const DOWNLIGHT_ROWS = 3;
 // Each can is a real aimed downlight: a spot cone pointed straight at
 // the floor so it actually pools light into the room (decay softened
 // and intensity raised so it survives the ~22-unit drop to the floor
 // without being swallowed by the existing key/fill rig).
-const DOWNLIGHT_INTENSITY = 45;
+const DOWNLIGHT_INTENSITY = 70;
 const DOWNLIGHT_DECAY = 1.4;
 const DOWNLIGHT_ANGLE = Math.PI / 5; // ~36° cone, like a real can light
 const DOWNLIGHT_PENUMBRA = 0.7; // soft-edged pool
@@ -1126,34 +1165,40 @@ function Downlight({ pos }: { pos: [number, number, number] }) {
   }, []);
   return (
     <group position={pos}>
-      {/* Trim ring flush with the ceiling. */}
-      <mesh rotation={[Math.PI / 2, 0, 0]}>
+      {/* Flush ceiling face. Kept flat so it reads mounted instead of
+          suspended, with the light source tucked just below it. */}
+      <mesh
+        position={[0, -DOWNLIGHT_FACE_OFFSET, 0]}
+        rotation={[Math.PI / 2, 0, 0]}
+      >
         <ringGeometry args={[DOWNLIGHT_LENS_R, DOWNLIGHT_TRIM_R, 40]} />
-        <meshStandardMaterial
+        <meshBasicMaterial
           color={DOWNLIGHT_TRIM_COLOR}
-          roughness={0.4}
-          metalness={0.3}
           side={THREE.DoubleSide}
         />
       </mesh>
-      {/* Glowing lens, recessed slightly up into the drywall. */}
+      {/* Glowing lens. */}
       <mesh
-        position={[0, -DOWNLIGHT_RECESS, 0]}
+        position={[0, -DOWNLIGHT_FACE_OFFSET * 1.2, 0]}
         rotation={[Math.PI / 2, 0, 0]}
       >
         <circleGeometry args={[DOWNLIGHT_LENS_R, 40]} />
-        <meshStandardMaterial
+        <meshBasicMaterial
           color={DOWNLIGHT_LENS_COLOR}
-          emissive={DOWNLIGHT_LENS_COLOR}
-          emissiveIntensity={DOWNLIGHT_LENS_EMISSIVE}
-          roughness={0.6}
+          toneMapped={false}
           side={THREE.DoubleSide}
         />
       </mesh>
+      <pointLight
+        position={[0, -DOWNLIGHT_SOURCE_DROP, 0]}
+        color={DOWNLIGHT_LENS_COLOR}
+        intensity={DOWNLIGHT_LENS_POINT_INTENSITY}
+        distance={DOWNLIGHT_LENS_POINT_DISTANCE}
+      />
       {/* Real aimed cone of light cast down into the room. */}
       <spotLight
         ref={light}
-        position={[0, -0.2, 0]}
+        position={[0, -DOWNLIGHT_SOURCE_DROP, 0]}
         color={DOWNLIGHT_LENS_COLOR}
         intensity={DOWNLIGHT_INTENSITY}
         decay={DOWNLIGHT_DECAY}
@@ -1969,22 +2014,24 @@ interface RoomProps {
    * floor lamp switches on. Defaults to "morning".
    */
   timeOfDay?: TimeOfDay;
+  /** Paint color used for the back and side walls. */
+  wallColor?: string;
 }
 
 /**
- * A furnished interior: textured drywall walls, crown molding and
- * baseboards, thick gray carpet, a panelled door and a daylight
- * window.
+ * A furnished interior: textured drywall walls, baseboards, thick gray
+ * carpet, a panelled door and a daylight window.
  * Surfaces are oversized so the room's far edges stay out of the
  * constrained orbit. The art faces +Z.
  */
-export function Room({
+function RoomComponent({
   width,
   height,
   artWidth = width,
   artCenterX = 0,
   fillFactor = 0,
   timeOfDay = "morning",
+  wallColor = WALL_COLOR,
 }: RoomProps) {
   // 0 by day → 1 at night, eased so the windows dim gradually instead
   // of snapping when the time of day changes.
@@ -2006,6 +2053,16 @@ export function Room({
   const windowEmissive =
     WINDOW_EMISSIVE_DAY +
     (WINDOW_EMISSIVE_NIGHT - WINDOW_EMISSIVE_DAY) * nightAmount;
+  const daylightGlassMaterial = useMemo(
+    () => ({
+      color: windowColor,
+      emissive: windowColor,
+      emissiveIntensity: windowEmissive,
+      roughness: 1,
+      metalness: 0,
+    }),
+    [windowColor, windowEmissive]
+  );
   const wallWidth = roomWallWidth(width);
   const wallHeight = Math.max(height * WALL_HEIGHT_FACTOR, MIN_WALL_HEIGHT);
 
@@ -2153,7 +2210,7 @@ export function Room({
       <mesh position={[0, wallHeight / 2 + floorY, backZ]} receiveShadow>
         <planeGeometry args={[wallWidth, wallHeight]} />
         <meshStandardMaterial
-          color={WALL_COLOR}
+          color={wallColor}
           roughness={0.95}
           metalness={0}
           side={THREE.DoubleSide}
@@ -2171,7 +2228,7 @@ export function Room({
         >
           <planeGeometry args={[ROOM_DEPTH, wallHeight]} />
           <meshStandardMaterial
-            color={WALL_COLOR}
+            color={wallColor}
             roughness={0.95}
             metalness={0}
             side={THREE.DoubleSide}
@@ -2182,7 +2239,7 @@ export function Room({
       {/*╔═══╗ DOOR (left wall) ╚═══╝*/}
 
       <group
-        position={[-halfW + TRIM_PROUD, floorY + doorH / 2, doorZ]}
+        position={[-halfW + DOOR_WALL_PROUD, floorY + doorH / 2, doorZ]}
         rotation={[0, Math.PI / 2, 0]}
       >
         {/* Solid painted slab. */}
@@ -2201,13 +2258,7 @@ export function Room({
             position={[c * doorW * 0.26, doorH * 0.34, 0.105]}
           >
             <boxGeometry args={[doorW * 0.2, doorH * 0.16, 0.04]} />
-            <meshStandardMaterial
-              color={DOOR_GLASS_COLOR}
-              emissive={DOOR_GLASS_COLOR}
-              emissiveIntensity={0.35}
-              roughness={0.9}
-              metalness={0}
-            />
+            <meshStandardMaterial {...daylightGlassMaterial} />
           </mesh>
         ))}
         {/* Two raised rectangular panels below the lites — a slightly
@@ -2292,8 +2343,8 @@ export function Room({
           [-(doorW / 2 + 0.17), 0, 0.34, doorH + 0.36] as const,
           [doorW / 2 + 0.17, 0, 0.34, doorH + 0.36] as const,
         ].map(([x, y, cw, ch], i) => (
-          <mesh key={i} position={[x, y, 0.12]}>
-            <boxGeometry args={[cw, ch, 0.16]} />
+          <mesh key={i} position={[x, y, DOOR_CASING_Z]}>
+            <boxGeometry args={[cw, ch, DOOR_CASING_DEPTH]} />
             <meshStandardMaterial
               color={TRIM_COLOR}
               roughness={0.6}
@@ -2333,11 +2384,7 @@ export function Room({
       >
         <planeGeometry args={[winW, winH]} />
         <meshStandardMaterial
-          color={windowColor}
-          emissive={windowColor}
-          emissiveIntensity={windowEmissive}
-          roughness={1}
-          metalness={0}
+          {...daylightGlassMaterial}
           side={THREE.DoubleSide}
         />
       </mesh>
@@ -2394,11 +2441,7 @@ export function Room({
       >
         <planeGeometry args={[leftWinW, leftWinH]} />
         <meshStandardMaterial
-          color={windowColor}
-          emissive={windowColor}
-          emissiveIntensity={windowEmissive}
-          roughness={1}
-          metalness={0}
+          {...daylightGlassMaterial}
           side={THREE.DoubleSide}
         />
       </mesh>
@@ -2480,22 +2523,14 @@ export function Room({
 
       {/* Recessed downlights over the art zone. */}
       <RecessedLights
-        ceilingY={ceilingY - 0.01}
+        ceilingY={ceilingY - DOWNLIGHT_FACE_DROP}
         zCenter={backZ + DOWNLIGHT_Z_FROM_WALL}
         spanX={halfW - DOWNLIGHT_EDGE_MARGIN}
       />
 
-      {/*╔═══╗ CROWN MOLDING + BASEBOARDS ╚═══╝*/}
+      {/*╔═══╗ BASEBOARDS ╚═══╝*/}
 
-      {/* Back wall crown + baseboard. */}
-      <mesh position={[0, ceilingY - CROWN_H / 2, backZ + TRIM_PROUD]}>
-        <boxGeometry args={[wallWidth, CROWN_H, TRIM_PROUD * 2.5]} />
-        <meshStandardMaterial
-          color={TRIM_COLOR}
-          roughness={0.6}
-          metalness={0.05}
-        />
-      </mesh>
+      {/* Back wall baseboard. */}
       <mesh position={[0, floorY + BASEBOARD_H / 2, backZ + TRIM_PROUD]}>
         <boxGeometry args={[wallWidth, BASEBOARD_H, TRIM_PROUD * 2]} />
         <meshStandardMaterial
@@ -2505,19 +2540,9 @@ export function Room({
         />
       </mesh>
 
-      {/* Side wall crowns + baseboards. */}
+      {/* Side wall baseboards. */}
       {[-1, 1].map((s) => (
         <group key={s}>
-          <mesh
-            position={[s * (halfW - TRIM_PROUD), ceilingY - CROWN_H / 2, midZ]}
-          >
-            <boxGeometry args={[TRIM_PROUD * 2.5, CROWN_H, ROOM_DEPTH]} />
-            <meshStandardMaterial
-              color={TRIM_COLOR}
-              roughness={0.6}
-              metalness={0.05}
-            />
-          </mesh>
           <mesh
             position={[s * (halfW - TRIM_PROUD), floorY + BASEBOARD_H / 2, midZ]}
           >
@@ -2719,7 +2744,7 @@ export function Room({
 
       <animated.group
         position-x={lampX}
-        position-y={floorY}
+        position-y={floorY - LAMP_FLOOR_SETTLE}
         position-z={backZ + PLANT_BACK_INSET}
       >
         <FloorLamp glow={lampGlow} />
@@ -2743,3 +2768,5 @@ export function Room({
     </group>
   );
 }
+
+export const Room = memo(RoomComponent);

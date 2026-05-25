@@ -357,26 +357,26 @@ export function ColorHarmonyGenerator({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 backdrop-blur-sm sm:p-4"
       onClick={handleClose}
     >
       <motion.div
         initial={{ scale: 0.9 }}
         animate={{ scale: 1 }}
-        className="bg-gray-900 rounded-xl shadow-2xl border border-white/10 w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
+        className="flex max-h-[90dvh] w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-white/10 bg-gray-900 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-5 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between gap-3 border-b border-gray-200 p-4 dark:border-gray-800 sm:p-5">
+          <div className="flex min-w-0 items-center gap-3">
             <div className="bg-gradient-to-r from-blue-500 to-sky-500 p-2 rounded-lg shadow-md">
               <Palette className="h-5 w-5 text-white" />
             </div>
-            <div>
-              <h2 className="text-xl font-bold text-white">
+            <div className="min-w-0">
+              <h2 className="truncate text-lg font-bold text-white sm:text-xl">
                 Color Harmony Generator
               </h2>
-              <p className="text-sm text-slate-400">
+              <p className="hidden text-sm text-slate-400 sm:block">
                 Create beautiful color combinations based on color theory
               </p>
             </div>
@@ -394,7 +394,7 @@ export function ColorHarmonyGenerator({
 
         {/* Content */}
         <div className="flex-1 overflow-auto">
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Left Column - Color Picker */}
               <div className="space-y-5 md:border-r md:pr-6 md:border-gray-200 md:dark:border-gray-800">
@@ -461,7 +461,7 @@ export function ColorHarmonyGenerator({
                   />
                   <div
                     className={cn(
-                      "absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity",
+                      "absolute inset-0 flex items-center justify-center opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100",
                       "rounded-lg bg-black/20 backdrop-blur-sm"
                     )}
                   >
@@ -519,7 +519,7 @@ export function ColorHarmonyGenerator({
               {/* Right Column - Harmony Options */}
               <div className="md:col-span-2 space-y-5">
                 {/* Harmony Type Selection */}
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-2">
                     <Label className="text-sm font-medium">Harmony Type</Label>
                     <TooltipProvider delayDuration={300}>
@@ -545,7 +545,7 @@ export function ColorHarmonyGenerator({
                     </TooltipProvider>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -693,11 +693,11 @@ export function ColorHarmonyGenerator({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-gray-900/50 flex justify-between items-center">
+        <div className="flex flex-col gap-3 border-t border-gray-200 bg-gray-900/50 p-3 dark:border-gray-800 sm:flex-row sm:items-center sm:justify-between sm:p-4">
           <div className="text-sm text-slate-400">
             {selectedColors.length} of {generatedColors.length} colors selected
           </div>
-          <div className="flex gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:flex">
             <Button variant="outline" onClick={handleClose}>
               Cancel
             </Button>

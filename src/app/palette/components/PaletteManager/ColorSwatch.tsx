@@ -277,7 +277,7 @@ export function ColorSwatch({
 
         {/* Bottom: hover actions */}
         <div className="flex flex-col gap-1">
-          <div className="flex flex-wrap items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex flex-wrap items-center gap-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
             <TooltipProvider delayDuration={225}>
               <Tooltip>
                 <TooltipTrigger asChild>

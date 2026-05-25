@@ -123,12 +123,6 @@ export default function PaintSelectorPage() {
           ...benjaminMooreColors,
         ] as PaintColor[];
 
-        // #region agent log
-        const duplicateHexes = combinedColors.map(c=>c.hex).filter((h,i,a)=>a.indexOf(h)!==i);
-        const duplicateColors = combinedColors.filter(c=>duplicateHexes.includes(c.hex));
-        fetch('http://127.0.0.1:7242/ingest/36fc63a3-0387-437e-a3a4-a17c9228bfcd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'paint-selector/page.tsx:130',message:'colors loaded',data:{totalCount:combinedColors.length,duplicateHexCount:duplicateHexes.length,duplicateHexes:Array.from(new Set(duplicateHexes)),duplicateColors:duplicateColors.map(c=>({name:c.name,hex:c.hex,brand:c.brand}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
-
         setAllColors(combinedColors);
         setLoading(false);
       } catch (error) {
@@ -260,45 +254,25 @@ export default function PaintSelectorPage() {
 
   // Simple search function - searches by color name only
   const searchColors = (colors: PaintColor[], term: string): PaintColor[] => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/36fc63a3-0387-437e-a3a4-a17c9228bfcd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'paint-selector/page.tsx:256',message:'searchColors called',data:{term,colorsCount:colors.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     if (!term.trim()) return colors;
 
     const searchTerm = term.toLowerCase().trim();
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/36fc63a3-0387-437e-a3a4-a17c9228bfcd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'paint-selector/page.tsx:260',message:'searchTerm normalized',data:{searchTerm,originalTerm:term},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
 
     const results = colors.filter((color) => {
       const colorNameLower = color.name.toLowerCase();
       const matches = colorNameLower.includes(searchTerm);
-      // #region agent log
-      if (matches || colorNameLower.includes('bare') || colorNameLower.includes('minimum')) {
-        fetch('http://127.0.0.1:7242/ingest/36fc63a3-0387-437e-a3a4-a17c9228bfcd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'paint-selector/page.tsx:265',message:'color match check',data:{colorName:color.name,colorNameLower,searchTerm,matches,hex:color.hex},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      }
-      // #endregion
       return matches;
     });
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/36fc63a3-0387-437e-a3a4-a17c9228bfcd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'paint-selector/page.tsx:273',message:'searchColors results',data:{term,resultsCount:results.length,resultNames:results.map(c=>c.name)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     return results;
   };
 
   // Filter and sort colors
   const filteredAndSortedColors = useMemo(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/36fc63a3-0387-437e-a3a4-a17c9228bfcd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'paint-selector/page.tsx:267',message:'filteredAndSortedColors useMemo start',data:{allColorsCount:allColors.length,searchTerm,selectedBrand,sortBy},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-    // #endregion
     let filtered = allColors;
 
     // Filter by search term using enhanced search
     if (searchTerm) {
       filtered = searchColors(filtered, searchTerm);
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/36fc63a3-0387-437e-a3a4-a17c9228bfcd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'paint-selector/page.tsx:275',message:'after search filter',data:{filteredCount:filtered.length,filteredNames:filtered.map(c=>c.name),filteredHexes:filtered.map(c=>c.hex)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
     }
 
     // Filter by brand
@@ -321,10 +295,6 @@ export default function PaintSelectorPage() {
           return 0;
       }
     });
-
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/36fc63a3-0387-437e-a3a4-a17c9228bfcd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'paint-selector/page.tsx:300',message:'filteredAndSortedColors final result',data:{finalCount:filtered.length,finalNames:filtered.map(c=>c.name),finalHexes:filtered.map(c=>c.hex),duplicateHexes:filtered.map(c=>c.hex).filter((h,i,a)=>a.indexOf(h)!==i)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-    // #endregion
     return filtered;
   }, [allColors, searchTerm, selectedBrand, sortBy]);
 
@@ -334,11 +304,6 @@ export default function PaintSelectorPage() {
       (currentPage - 1) * colorsPerPage,
       currentPage * colorsPerPage
     );
-    // #region agent log
-    if (searchTerm) {
-      fetch('http://127.0.0.1:7242/ingest/36fc63a3-0387-437e-a3a4-a17c9228bfcd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'paint-selector/page.tsx:303',message:'currentColors slice result',data:{currentPage,colorsPerPage,filteredCount:filteredAndSortedColors.length,currentCount:sliced.length,currentNames:sliced.map(c=>c.name),currentHexes:sliced.map(c=>c.hex),sliceStart:(currentPage-1)*colorsPerPage,sliceEnd:currentPage*colorsPerPage},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-    }
-    // #endregion
     return sliced;
   })();
 
@@ -425,7 +390,6 @@ export default function PaintSelectorPage() {
     isSelected: boolean;
     isFavorite: boolean;
   }) => {
-    const isLight = getLuminance(color.hex) > 0.5;
     const isInPalette = customPalette.some((c) => c.hex === color.hex);
 
     return (
@@ -484,7 +448,7 @@ export default function PaintSelectorPage() {
           {/* Favorite button */}
           <button
             className={cn(
-              "absolute top-2 right-8 w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity",
+              "absolute top-2 right-8 w-6 h-6 rounded-full flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity",
               isFavorite ? "bg-red-500 text-white" : "bg-white/80 text-gray-700"
             )}
             onClick={(e) => {
@@ -500,12 +464,12 @@ export default function PaintSelectorPage() {
           </button>
 
           {/* Expand icon */}
-          <div className="absolute bottom-2 right-2 w-6 h-6 bg-gray-900/70 backdrop-blur-md rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="absolute bottom-2 right-2 w-6 h-6 bg-gray-900/70 backdrop-blur-md rounded flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
             <Maximize2 className="w-3 h-3 text-slate-300" />
           </div>
 
           {/* Action buttons */}
-          <div className="absolute bottom-2 left-2 right-8 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="absolute bottom-2 left-2 right-8 flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -618,7 +582,6 @@ export default function PaintSelectorPage() {
     isSelected: boolean;
     isFavorite: boolean;
   }) => {
-    const isLight = getLuminance(color.hex) > 0.5;
     const isInPalette = customPalette.some((c) => c.hex === color.hex);
 
     return (
@@ -651,7 +614,7 @@ export default function PaintSelectorPage() {
           {/* Favorite button */}
           <button
             className={cn(
-              "absolute top-2 left-2 w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity",
+              "absolute top-2 left-2 w-6 h-6 rounded-full flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity",
               isFavorite ? "bg-red-500 text-white" : "bg-white/80 text-gray-700"
             )}
             onClick={(e) => {
@@ -667,7 +630,7 @@ export default function PaintSelectorPage() {
           </button>
 
           {/* Action buttons */}
-          <div className="absolute bottom-2 left-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="absolute bottom-2 left-2 right-2 flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -765,11 +728,11 @@ export default function PaintSelectorPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950 p-4 md:p-6">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950 p-3 sm:p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-col gap-4 mb-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
             <Button
               variant="outline"
               onClick={() => router.back()}
@@ -779,14 +742,16 @@ export default function PaintSelectorPage() {
               Back
             </Button>
             <div>
-              <h1 className="heading-hero">Paint Color Selector</h1>
-              <p className="text-slate-400 mt-1">
+              <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl">
+                Paint Color Selector
+              </h1>
+              <p className="mt-1 text-sm text-slate-400 sm:text-base">
                 Browse and select from thousands of paint colors
               </p>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
             {selectedColors.size > 0 && (
               <Button
                 onClick={addSelectedToPalette}
@@ -809,10 +774,14 @@ export default function PaintSelectorPage() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-3 mb-6">
-            <TabsTrigger value="similar">Similar Colors</TabsTrigger>
-            <TabsTrigger value="browse">Browse Colors</TabsTrigger>
-            <TabsTrigger value="favorites">
+          <TabsList className="mb-6 grid w-full grid-cols-3 sm:max-w-md">
+            <TabsTrigger value="similar" className="px-2 text-xs sm:text-sm">
+              Similar
+            </TabsTrigger>
+            <TabsTrigger value="browse" className="px-2 text-xs sm:text-sm">
+              Browse
+            </TabsTrigger>
+            <TabsTrigger value="favorites" className="px-2 text-xs sm:text-sm">
               Favorites ({favorites.size})
             </TabsTrigger>
           </TabsList>
@@ -898,7 +867,7 @@ export default function PaintSelectorPage() {
                   </Button>
                 </div>
 
-                <div className="flex items-center justify-between mt-4">
+                <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-sm text-slate-400">
                     Showing {currentColors.length} of{" "}
                     {filteredAndSortedColors.length} colors
@@ -923,17 +892,8 @@ export default function PaintSelectorPage() {
 
             {/* Color Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-              {/* #region agent log */}
-              {(() => {
-                fetch('http://127.0.0.1:7242/ingest/36fc63a3-0387-437e-a3a4-a17c9228bfcd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'paint-selector/page.tsx:905',message:'rendering color grid',data:{currentColorsCount:currentColors.length,currentColors:currentColors.map(c=>({name:c.name,hex:c.hex,brand:c.brand})),activeTab,searchTerm},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'F'})}).catch(()=>{});
-                return null;
-              })()}
-              {/* #endregion */}
               <AnimatePresence initial={false}>
                 {currentColors.map((color, index) => {
-                  // #region agent log
-                  fetch('http://127.0.0.1:7242/ingest/36fc63a3-0387-437e-a3a4-a17c9228bfcd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'paint-selector/page.tsx:912',message:'mapping color to render',data:{index,colorName:color.name,colorHex:color.hex,colorBrand:color.brand,searchTerm,totalColors:currentColors.length,key:`browse-${color.hex}-${color.name}-${color.brand}`},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'F'})}).catch(()=>{});
-                  // #endregion
                   return (
                     <ColorCard
                       key={`browse-${color.hex}-${color.name}-${color.brand}`}
@@ -1013,7 +973,7 @@ export default function PaintSelectorPage() {
                 </p>
               </CardHeader>
               <CardContent>
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row">
                   <div className="flex-1 relative">
                     <Input
                       placeholder="#3B82F6 or 3B82F6"
@@ -1059,7 +1019,7 @@ export default function PaintSelectorPage() {
                       }
                     }}
                     disabled={!isValidHex(similarToHex)}
-                    className="bg-gradient-to-r bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
+                    className="bg-gradient-to-r bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white sm:w-auto"
                   >
                     <Search className="w-4 h-4 mr-2" />
                     Find Similar
@@ -1166,7 +1126,7 @@ export default function PaintSelectorPage() {
                     </div>
                   ) : (
                     <div>
-                      <div className="flex items-center justify-between mb-4">
+                      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex items-center gap-3">
                           <div
                             className="w-8 h-8 rounded border border-white/10"
@@ -1223,7 +1183,7 @@ export default function PaintSelectorPage() {
         open={comparisonDialogOpen}
         onOpenChange={setComparisonDialogOpen}
       >
-        <DialogContent className="max-w-2xl w-full p-0 overflow-hidden">
+        <DialogContent className="max-h-[88dvh] w-[calc(100vw-1rem)] max-w-2xl overflow-y-auto p-0 sm:w-full">
           {comparisonData && (
             <>
               <DialogHeader className="p-6 pb-0">
@@ -1237,7 +1197,7 @@ export default function PaintSelectorPage() {
 
               <div className="p-6 pt-4">
                 {/* Large Color Comparison */}
-                <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
                   {/* Original Color */}
                   <div className="space-y-3">
                     <div className="text-sm font-medium text-white">
@@ -1307,7 +1267,7 @@ export default function PaintSelectorPage() {
                         }}
                       />
                     </div>
-                    <div className="p-3 bg-gray-900 flex justify-between text-xs">
+                    <div className="flex flex-col gap-1 bg-gray-900 p-3 text-xs sm:flex-row sm:justify-between">
                       <span className="text-slate-400">
                         Searched: {comparisonData.originalColor.toUpperCase()}
                       </span>
@@ -1356,7 +1316,7 @@ export default function PaintSelectorPage() {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex gap-3 mt-6 pt-4 border-t border-white/10">
+                <div className="mt-6 flex flex-col gap-3 border-t border-white/10 pt-4 sm:flex-row">
                   <Button
                     onClick={() => {
                       copyColorToClipboard(comparisonData.similarColor.hex);

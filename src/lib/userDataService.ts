@@ -9,6 +9,14 @@ export interface UserData {
   lastUpdated: Date;
 }
 
+export interface UserPaletteArchive {
+  userId: string;
+  email?: string;
+  lastUpdated?: Date;
+  savedPalettes: any[];
+  paletteFolders: any[];
+}
+
 // Collection name
 const COLLECTION_NAME = "userData";
 
@@ -72,6 +80,46 @@ export async function getUserData(userId: string): Promise<UserData | null> {
   } catch (error) {
     console.error("Error getting user data:", error);
     throw new Error("Failed to get user data");
+  }
+}
+
+/**
+ * Get every user's saved palettes for authorized admin views.
+ */
+export async function getAllUserPaletteArchives(): Promise<UserPaletteArchive[]> {
+  try {
+    const collection = await getCollection(COLLECTION_NAME);
+    const users = await collection
+      .find(
+        {},
+        {
+          projection: {
+            _id: 0,
+            userId: 1,
+            email: 1,
+            lastUpdated: 1,
+            "storeData.savedPalettes": 1,
+            "storeData.paletteFolders": 1,
+          },
+        }
+      )
+      .sort({ lastUpdated: -1 })
+      .toArray();
+
+    return users.map((user) => ({
+      userId: user.userId,
+      email: user.email,
+      lastUpdated: user.lastUpdated,
+      savedPalettes: Array.isArray(user.storeData?.savedPalettes)
+        ? user.storeData.savedPalettes
+        : [],
+      paletteFolders: Array.isArray(user.storeData?.paletteFolders)
+        ? user.storeData.paletteFolders
+        : [],
+    }));
+  } catch (error) {
+    console.error("Error getting all user palette archives:", error);
+    throw new Error("Failed to get all user palette archives");
   }
 }
 

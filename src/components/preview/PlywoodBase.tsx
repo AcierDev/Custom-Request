@@ -173,15 +173,12 @@ export function PlywoodBase({
     ? useLoader(TextureLoader, "/textures/plywood.jpg")
     : null;
 
-  const {
-    selectedDesign,
-    customPalette,
-    isReversed,
-    colorPattern,
-    viewSettings,
-  } = useCustomStore();
-
-  const { showHanger, showSplitPanel } = viewSettings;
+  const selectedDesign = useCustomStore((s) => s.selectedDesign);
+  const customPalette = useCustomStore((s) => s.customPalette);
+  const isReversed = useCustomStore((s) => s.isReversed);
+  const colorPattern = useCustomStore((s) => s.colorPattern);
+  const showHanger = useCustomStore((s) => s.viewSettings.showHanger);
+  const showSplitPanel = useCustomStore((s) => s.viewSettings.showSplitPanel);
 
   // Memoize all calculations to prevent recalculation on every render
   const dimensions = useMemo(() => {

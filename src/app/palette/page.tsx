@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, type ChangeEvent } from "react";
+import { useState, useEffect, useRef, type ChangeEvent } from "react";
 import { motion } from "framer-motion";
 import { nanoid } from "nanoid";
 import { useCustomStore } from "@/store/customStore";
@@ -22,9 +22,11 @@ import {
   Lightbulb,
   Loader2,
   Image as ImageIcon,
+  BadgeCheck,
   Undo2,
   Redo2,
   Anchor,
+  Hash,
   GitBranch,
   Printer,
 } from "lucide-react";
@@ -46,12 +48,20 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { ImportCard } from "./components/PaletteList/ImportCard";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   BRAND_OPTIONS,
   type BrandOption,
+  type PaintColor,
   VERIFIED_BRANDS,
   purchaseLabel,
 } from "@/lib/paint";
@@ -70,6 +80,8 @@ const BTN_INSPIRE = `${BTN_BASE} bg-gradient-to-r from-indigo-600 to-violet-600 
 const BTN_IMPORT = `${BTN_BASE} bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 ring-emerald-400/40`;
 const BTN_SECONDARY =
   "flex items-center gap-1.5 rounded-[10px] ring-1 ring-purple-400/40 bg-purple-600/20 hover:bg-purple-600/30 text-purple-200 transition-all";
+const PALETTE_PAGE_BACKGROUND =
+  "min-h-[calc(100%+4rem)] -mb-16 w-full bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950 p-3 sm:p-4 md:p-8";
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ 🎯 PAINT MATCH                                                        ║
@@ -79,11 +91,45 @@ const BTN_SECONDARY =
 // points, so a just-perceptible difference (ΔE ≈ 2.3) still reads as a
 // strong ~98% match. Clamped to 0–100.
 const PAINT_MATCH_DE_FALLOFF = 1;
+const MATCH_LIST_START_INDEX = 0;
+const PRIMARY_PAINT_MATCH_INDEX = 0;
+const BACKUP_PAINT_MATCH_INDEX = 1;
+const PAINT_MATCH_COUNT_WITH_BACKUP = 2;
+const PAINT_MATCH_CANDIDATE_COUNT = 12;
+const VERIFIED_BRAND_BADGE_LABEL = "Verified";
+const ANY_BRAND_LABEL = "Any brand";
 
 const paintMatchPercent = (deltaE: number) =>
   Math.round(
     Math.max(0, Math.min(100, 100 - deltaE * PAINT_MATCH_DE_FALLOFF))
   );
+
+type PaintMatch = {
+  paintColor: PaintColor;
+  distance: number;
+};
+
+const paintMatchKey = (match: PaintMatch) => purchaseLabel(match.paintColor);
+const paintBrandPickerLabel = (brand: BrandOption) =>
+  brand === "Any" ? ANY_BRAND_LABEL : brand;
+
+function VerifiedBrandBadge() {
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-300/30 bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
+      <BadgeCheck className="h-3 w-3 text-emerald-300" />
+      {VERIFIED_BRAND_BADGE_LABEL}
+    </span>
+  );
+}
+
+function PaintBrandOptionLabel({ brand }: { brand: BrandOption }) {
+  return (
+    <span className="inline-flex items-center gap-2">
+      <span>{paintBrandPickerLabel(brand)}</span>
+      {VERIFIED_BRANDS.has(brand) && <VerifiedBrandBadge />}
+    </span>
+  );
+}
 
 export default function PalettePage() {
   const {
@@ -121,7 +167,7 @@ export default function PalettePage() {
   }, []);
   
   // Paint color grounding
-  const [allPaintColors, setAllPaintColors] = useState<any[]>([]);
+  const [allPaintColors, setAllPaintColors] = useState<PaintColor[]>([]);
   const [paintColorsLoaded, setPaintColorsLoaded] = useState(false);
   // Which paint brand to ground to. Grounding only matches that brand
   // (and skips discontinued colors) so suggestions are purchasable.
@@ -146,11 +192,17 @@ export default function PalettePage() {
     "Gallon",
     "5 Gallon",
   ] as const;
+  const DEFAULT_PRINT_SHEEN: (typeof PAINT_SHEENS)[number] = "Semi-Gloss";
+  const PROGRAMMATIC_FOCUS_TAB_INDEX = -1;
   const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
   const [printSheen, setPrintSheen] =
-    useState<(typeof PAINT_SHEENS)[number]>("Eggshell");
+    useState<(typeof PAINT_SHEENS)[number]>(DEFAULT_PRINT_SHEEN);
   const [printSize, setPrintSize] =
     useState<(typeof PAINT_SIZES)[number]>("Sample (8 oz)");
+  const printDialogTitleRef = useRef<HTMLHeadingElement>(null);
+  const isPalettePaintConverted =
+    customPalette.length > 0 &&
+    customPalette.every((color) => typeof color.paintMatch === "number");
 
   useEffect(() => {
      const loadPaintColors = async () => {
@@ -207,6 +259,36 @@ export default function PalettePage() {
     const g = parseInt(hex.slice(3, 5), 16);
     const b = parseInt(hex.slice(5, 7), 16);
     return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  };
+
+  const chooseDirectionalPaintMatch = (
+    matches: PaintMatch[],
+    previousMatch: PaintMatch | null,
+    previousSourceHex: string,
+    currentSourceHex: string
+  ) => {
+    if (!previousMatch) return matches[PRIMARY_PAINT_MATCH_INDEX];
+
+    const previousKey = paintMatchKey(previousMatch);
+    const nonDuplicateMatches = matches.filter(
+      (match) => paintMatchKey(match) !== previousKey
+    );
+    const previousSourceLuminance = getLuminance(previousSourceHex);
+    const currentSourceLuminance = getLuminance(currentSourceHex);
+    const previousPaintLuminance = getLuminance(previousMatch.paintColor.hex);
+    const isGettingLighter = currentSourceLuminance > previousSourceLuminance;
+    const isGettingDarker = currentSourceLuminance < previousSourceLuminance;
+
+    return (
+      nonDuplicateMatches.find((match) => {
+        const paintLuminance = getLuminance(match.paintColor.hex);
+        if (isGettingLighter) return paintLuminance > previousPaintLuminance;
+        if (isGettingDarker) return paintLuminance < previousPaintLuminance;
+        return true;
+      }) ??
+      nonDuplicateMatches[PRIMARY_PAINT_MATCH_INDEX] ??
+      matches[PRIMARY_PAINT_MATCH_INDEX]
+    );
   };
 
   // Color distance calculation using Delta E (CIE76)
@@ -339,9 +421,37 @@ export default function PalettePage() {
     );
   };
 
+  const findClosestPaintMatches = (
+    hex: string,
+    paintLabs: Array<{ paintColor: PaintColor; lab: [number, number, number] }>,
+    matchCount = PAINT_MATCH_COUNT_WITH_BACKUP
+  ): PaintMatch[] => {
+    const targetLab = hexToLab(hex);
+    return paintLabs
+      .map(({ paintColor, lab }) => ({
+        paintColor,
+        distance: deltaE2000(targetLab, lab),
+      }))
+      .sort((a, b) => a.distance - b.distance)
+      .slice(MATCH_LIST_START_INDEX, matchCount);
+  };
+
+  const getGroundablePaintColors = () =>
+    allPaintColors.filter((c) => {
+      if (c.available === false) return false;
+      if (verifiedOnly && !VERIFIED_BRANDS.has(c.brand)) return false;
+      if (groundBrand === "Any") return true;
+      return c.brand === groundBrand;
+    });
+
   const groundPalette = () => {
     if (customPalette.length === 0) {
       toast.error("Palette is empty");
+      return;
+    }
+
+    if (isPalettePaintConverted) {
+      toast.error("Palette is already converted to paint");
       return;
     }
     
@@ -354,12 +464,7 @@ export default function PalettePage() {
     // ground onto a discontinued color (available === false). Records
     // without an `available` flag (brands whose importer isn't built
     // yet) are kept so those brands still work.
-    const pool = allPaintColors.filter((c) => {
-      if (c.available === false) return false;
-      if (verifiedOnly && !VERIFIED_BRANDS.has(c.brand)) return false;
-      if (groundBrand === "Any") return true;
-      return c.brand === groundBrand;
-    });
+    const pool = getGroundablePaintColors();
 
     if (pool.length === 0) {
       toast.error(
@@ -378,27 +483,46 @@ export default function PalettePage() {
       lab: hexToLab(paintColor.hex),
     }));
 
+    let previousMatch: PaintMatch | null = null;
+    let previousSourceHex = "";
     const groundedColors = customPalette.map((customColor) => {
-      const customLab = hexToLab(customColor.hex);
-      let closestColor = pool[0];
-      let minDistance = Infinity;
+      const matches = findClosestPaintMatches(
+        customColor.hex,
+        paintLabs,
+        PAINT_MATCH_CANDIDATE_COUNT
+      );
+      const primaryMatch = chooseDirectionalPaintMatch(
+        matches,
+        previousMatch,
+        previousSourceHex,
+        customColor.hex
+      );
 
-      for (const { paintColor, lab } of paintLabs) {
-        const dist = deltaE2000(customLab, lab);
-        if (dist < minDistance) {
-          minDistance = dist;
-          closestColor = paintColor;
-        }
-      }
+      if (!primaryMatch) return customColor;
+
+      const primaryKey = paintMatchKey(primaryMatch);
+      const backupMatch = matches.find(
+        (match) => paintMatchKey(match) !== primaryKey
+      );
+      previousMatch = primaryMatch;
+      previousSourceHex = customColor.hex;
 
       // Name carries the real purchase identifier — the manufacturer
       // code ("SW 6258 — Tricorn Black") when we have it, so it can be
       // searched/ordered at the counter, not just an ambiguous name.
       return {
         ...customColor,
-        hex: closestColor.hex,
-        name: purchaseLabel(closestColor),
-        paintMatch: paintMatchPercent(minDistance),
+        hex: primaryMatch.paintColor.hex,
+        name: purchaseLabel(primaryMatch.paintColor),
+        paintMatch: paintMatchPercent(primaryMatch.distance),
+        paintSourceHex: customColor.hex,
+        paintSourceName: customColor.name,
+        paintBackup: backupMatch
+          ? purchaseLabel(backupMatch.paintColor)
+          : undefined,
+        paintBackupMatch: backupMatch
+          ? paintMatchPercent(backupMatch.distance)
+          : undefined,
       };
     });
 
@@ -410,6 +534,33 @@ export default function PalettePage() {
     );
   };
 
+  const convertPaintPaletteToHex = () => {
+    const restoredColors = customPalette.map((color) => {
+      const {
+        name: _paintName,
+        paintMatch: _paintMatch,
+        paintBackup: _paintBackup,
+        paintBackupMatch: _paintBackupMatch,
+        paintSourceHex,
+        paintSourceName,
+        ...rest
+      } = color;
+      void _paintName;
+      void _paintMatch;
+      void _paintBackup;
+      void _paintBackupMatch;
+
+      return {
+        ...rest,
+        hex: paintSourceHex ?? color.hex,
+        ...(paintSourceName !== undefined ? { name: paintSourceName } : {}),
+      };
+    });
+
+    setCustomPalette(restoredColors);
+    toast.success("Converted palette back to hex");
+  };
+
   //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
   //║ 🖨️ 4×6 PAINT LABEL PRINTOUT                                          ║
   //╚═══╝ ════════════════════════════════════════════════════════════════ ╚═══╝
@@ -419,7 +570,7 @@ export default function PalettePage() {
   const LABEL_H_IN = 6;
 
   // Opens a print-ready window sized to a single 4×6 label listing every
-  // palette color: swatch + purchase label (brand/code/name) + hex, so the
+  // palette color: swatch + purchase label (brand/code/name), so the
   // counter can tint straight from the printout.
   const printPaintLabels = () => {
     if (customPalette.length === 0) {
@@ -432,30 +583,48 @@ export default function PalettePage() {
         ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string)
       );
 
+    const compactPaintLabel = (label: string) =>
+      label
+        .split(" — ")
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .join(" · ");
+    const printPaintLabs = getGroundablePaintColors().map((paintColor) => ({
+      paintColor,
+      lab: hexToLab(paintColor.hex),
+    }));
+
     const rows = customPalette
       .map((c, i) => {
         // After "Convert to paint" the name is "Brand — code — name".
-        // Show the paint name big, with brand/code as a sub-line so the
-        // counter has exactly what to tint.
+        // Keep the full purchase details on one bold line for the counter.
         const raw = c.name && c.name.trim() ? c.name.trim() : "";
-        const parts = raw.split(" — ").map((p) => p.trim()).filter(Boolean);
-        let name = raw || c.hex;
-        let sub = "";
-        if (parts.length >= 3) {
-          name = parts.slice(2).join(" — ");
-          sub = `${parts[0]} · ${parts[1]}`;
-        } else if (parts.length === 2) {
-          name = parts[1];
-          sub = parts[0];
-        }
-        const meta = [sub, (c.hex || "").toUpperCase()]
-          .filter(Boolean)
-          .join("  ·  ");
+        const primaryLabel = compactPaintLabel(raw || `Color ${i + 1}`);
+        const printBackupMatch = c.paintBackup
+          ? { label: c.paintBackup, match: c.paintBackupMatch }
+          : (() => {
+              const backupMatch = findClosestPaintMatches(c.hex, printPaintLabs)[
+                BACKUP_PAINT_MATCH_INDEX
+              ];
+              return backupMatch
+                ? {
+                    label: purchaseLabel(backupMatch.paintColor),
+                    match: paintMatchPercent(backupMatch.distance),
+                  }
+                : null;
+            })();
+        const backup = printBackupMatch
+          ? `Backup: ${compactPaintLabel(printBackupMatch.label)}${
+              typeof printBackupMatch.match === "number"
+                ? ` (${printBackupMatch.match}% match)`
+                : ""
+            }`
+          : "";
         return `<li class="row">
           <span class="num">${i + 1}.</span>
           <span class="meta">
-            <span class="name">${esc(name)}</span>
-            <span class="hex">${esc(meta)}</span>
+            <span class="name">${esc(primaryLabel)}</span>
+            ${backup ? `<span class="backup">${esc(backup)}</span>` : ""}
           </span>
         </li>`;
       })
@@ -480,7 +649,7 @@ export default function PalettePage() {
         .meta { display: flex; flex-direction: column; min-width: 0; }
         .name { font-size: 10pt; font-weight: 700; line-height: 1.25;
           word-break: break-word; }
-        .hex { font-size: 8pt; color: #000; font-variant-numeric: tabular-nums; }
+        .backup { font-size: 7pt; color: #000; line-height: 1.2; }
         .order { font-size: 9.5pt; font-weight: 700; margin: 0 0 8pt;
           padding: 4pt 6pt; border: 1pt solid #000; border-radius: 3pt; }
       </style></head>
@@ -1001,7 +1170,7 @@ export default function PalettePage() {
   };
 
   return (
-    <div className="w-full min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950 p-6 md:p-8">
+    <div className={PALETTE_PAGE_BACKGROUND}>
       {/* Import Dialog */}
       <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
         <DialogContent className="sm:max-w-md">
@@ -1063,12 +1232,12 @@ export default function PalettePage() {
 
       {/* Manual Import Dialog (file / JSON / ID) */}
       {isImportDialogOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 backdrop-blur-sm sm:p-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="bg-gray-900 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl border-2 border-white/10"
+            className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-lg border-2 border-white/10 bg-gray-900 p-4 shadow-2xl sm:p-6"
           >
             <h3 className="text-xl font-bold text-white mb-2">
               Import Palette
@@ -1115,7 +1284,7 @@ export default function PalettePage() {
                         value={importIdValue}
                         onChange={(e) => setImportIdValue(e.target.value)}
                         placeholder="Enter palette ID"
-                        className="flex-1 px-3 py-2 bg-gray-900 border border-white/10 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="min-w-0 flex-1 rounded-md border border-white/10 bg-gray-900 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
                     <p className="text-xs text-slate-400">
@@ -1132,7 +1301,7 @@ export default function PalettePage() {
 
                   <div className="space-y-2">
                     <textarea
-                      className="w-full h-40 p-3 text-sm bg-gray-800/40 border border-white/10 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="h-40 w-full rounded-md border border-white/10 bg-gray-800/40 p-3 text-sm focus:border-transparent focus:ring-2 focus:ring-blue-500"
                       placeholder='Paste JSON here, e.g. [{"hex":"#ff0000","name":"Red"},{"hex":"#00ff00","name":"Green"}] or TryColors format'
                       value={importText}
                       onChange={(e) => setImportText(e.target.value)}
@@ -1196,12 +1365,12 @@ export default function PalettePage() {
         </div>
       )}
 
-      <div className="max-w-[1800px] mx-auto space-y-6">
+      <div className="mx-auto flex h-full max-w-[1800px] min-h-0 flex-col gap-6">
         {/* Header */}
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between lg:space-x-4">
           <div className="space-y-2">
             <motion.h1
-              className="heading-hero"
+              className="text-3xl font-bold tracking-tight text-white sm:text-5xl"
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
@@ -1209,7 +1378,7 @@ export default function PalettePage() {
               Color Palette Studio
             </motion.h1>
             <motion.p
-              className="text-slate-400 max-w-3xl"
+              className="max-w-3xl text-sm text-slate-400 sm:text-base"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.2 }}
@@ -1224,7 +1393,7 @@ export default function PalettePage() {
         {/* Main Content */}
         <Tabs
           defaultValue={defaultTab}
-          className="w-full"
+          className="flex min-h-0 w-full flex-1 flex-col"
           value={activeTab}
           onValueChange={(value) => {
             // The Create tab is just where the in-progress palette lives.
@@ -1233,11 +1402,11 @@ export default function PalettePage() {
             setActiveTab(value as "create" | "saved" | "official" | "extract");
           }}
         >
-          <div className="flex items-center justify-between mb-6">
-            <TabsList className="grid w-full max-w-md grid-cols-4">
+          <div className="mb-6 flex shrink-0 items-center justify-between">
+            <TabsList className="grid w-full grid-cols-4 sm:max-w-md">
               <TabsTrigger
                 value="create"
-                className="data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-200"
+                className="px-2 text-xs data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-200 sm:text-sm"
               >
                 <div className="flex items-center gap-2">
                   <span>Custom</span>
@@ -1246,16 +1415,16 @@ export default function PalettePage() {
 
               <TabsTrigger
                 value="saved"
-                className="data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-200"
+                className="px-2 text-xs data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-200 sm:text-sm"
               >
                 <div className="flex items-center gap-2">
-                  <Palette className="h-4 w-4" />
+                  <Palette className="hidden h-4 w-4 sm:block" />
                   <span>Saved</span>
                 </div>
               </TabsTrigger>
               <TabsTrigger
                 value="official"
-                className="data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-200 group"
+                className="group px-2 text-xs data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-200 sm:text-sm"
               >
                 <div className="flex items-center gap-2 relative">
                   <motion.div
@@ -1277,7 +1446,7 @@ export default function PalettePage() {
                       ease: "easeInOut",
                     }}
                   />
-                  <BookOpen className="h-4 w-4 group-hover:text-blue-400 dark:group-hover:text-blue-300 transition-colors duration-300" />
+                  <BookOpen className="hidden h-4 w-4 transition-colors duration-300 group-hover:text-blue-400 dark:group-hover:text-blue-300 sm:block" />
                   <motion.span
                     className="group-hover:text-blue-400 dark:group-hover:text-blue-300 transition-colors duration-300"
                     whileHover={{ scale: 1.03 }}
@@ -1289,10 +1458,10 @@ export default function PalettePage() {
               </TabsTrigger>
               <TabsTrigger
                 value="extract"
-                className="data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-200"
+                className="px-2 text-xs data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-200 sm:text-sm"
               >
                 <div className="flex items-center gap-2">
-                  <ImageIcon className="h-4 w-4" />
+                  <ImageIcon className="hidden h-4 w-4 sm:block" />
                   <span>Photo</span>
                 </div>
               </TabsTrigger>
@@ -1394,7 +1563,7 @@ export default function PalettePage() {
             )}
           </div>
 
-          <TabsContent value="create" className="mt-0">
+          <TabsContent value="create" className="mt-0 min-h-0 flex-1">
             {/* Optional mobile inspiration button */}
             <div className="flex md:hidden justify-end mb-2 gap-2">
               <Button
@@ -1447,26 +1616,33 @@ export default function PalettePage() {
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
-                    <select
-                      aria-label="Ground to which paint brand"
+                    <Select
                       value={groundBrand}
-                      onChange={(e) =>
-                        setGroundBrand(e.target.value as BrandOption)
-                      }
-                      className="h-9 rounded-[10px] border border-white/10 bg-gray-900/80 px-3 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      title="Only match colors from this brand. ✓ = verified current color codes"
                       disabled={!paintColorsLoaded}
+                      onValueChange={(value) =>
+                        setGroundBrand(value as BrandOption)
+                      }
                     >
-                      {BRAND_OPTIONS.map((b) => (
-                        <option key={b} value={b}>
-                          {b === "Any"
-                            ? "Any brand"
-                            : VERIFIED_BRANDS.has(b)
-                              ? `${b}  ✓ verified`
-                              : b}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger
+                        aria-label="Ground to which paint brand"
+                        className="h-9 w-auto min-w-56 rounded-[10px] border-white/10 bg-gray-900/80 text-slate-200 focus:ring-blue-500 [&>span]:flex [&>span]:items-center [&>span]:gap-2 [&>span]:line-clamp-none"
+                        title="Only match colors from this brand. Verified badge = current color codes"
+                      >
+                        <SelectValue placeholder={ANY_BRAND_LABEL} />
+                      </SelectTrigger>
+                      <SelectContent className="border-white/10 bg-gray-950 text-slate-100">
+                        {BRAND_OPTIONS.map((brand) => (
+                          <SelectItem
+                            key={brand}
+                            value={brand}
+                            textValue={paintBrandPickerLabel(brand)}
+                            className="focus:bg-blue-500/15 focus:text-white"
+                          >
+                            <PaintBrandOptionLabel brand={brand} />
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <label
                       className="flex h-9 cursor-pointer select-none items-center gap-1.5 rounded-[10px] border border-white/10 bg-gray-900/80 px-3 text-sm text-slate-300"
                       title="Only ground to brands with verified current color codes (excludes Behr/PPG)"
@@ -1480,14 +1656,26 @@ export default function PalettePage() {
                       />
                       Verified only
                     </label>
-                    <Button
-                      onClick={groundPalette}
-                      className={BTN_PRIMARY}
-                      disabled={!paintColorsLoaded}
-                    >
-                      <Anchor className="w-4 h-4" />
-                      Convert to paint
-                    </Button>
+                    {isPalettePaintConverted ? (
+                      <Button
+                        onClick={convertPaintPaletteToHex}
+                        className={BTN_PRIMARY}
+                        title="Restore the original hex colors"
+                      >
+                        <Hash className="w-4 h-4" />
+                        Convert to hex
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={groundPalette}
+                        className={BTN_PRIMARY}
+                        disabled={!paintColorsLoaded}
+                        title="Convert palette colors to paint matches"
+                      >
+                        <Anchor className="w-4 h-4" />
+                        Convert to paint
+                      </Button>
+                    )}
                     <Dialog
                       open={isPrintDialogOpen}
                       onOpenChange={setIsPrintDialogOpen}
@@ -1501,9 +1689,20 @@ export default function PalettePage() {
                           Print 4×6 label
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="sm:max-w-md">
+                      <DialogContent
+                        className="sm:max-w-md"
+                        onOpenAutoFocus={(event) => {
+                          event.preventDefault();
+                          printDialogTitleRef.current?.focus();
+                        }}
+                      >
                         <DialogHeader>
-                          <DialogTitle>Print paint label</DialogTitle>
+                          <DialogTitle
+                            ref={printDialogTitleRef}
+                            tabIndex={PROGRAMMATIC_FOCUS_TAB_INDEX}
+                          >
+                            Print paint label
+                          </DialogTitle>
                           <DialogDescription>
                             Pick the sheen and can size to print on the 4×6
                             label for all {customPalette.length} colors.
@@ -1834,7 +2033,7 @@ export default function PalettePage() {
             </motion.div>
           </TabsContent>
 
-          <TabsContent value="extract" className="mt-0">
+          <TabsContent value="extract" className="mt-0 min-h-0 flex-1">
             <div className="flex md:hidden justify-end mb-2">
               <Button
                 onClick={() => setActiveTab("create")}
@@ -1872,7 +2071,7 @@ export default function PalettePage() {
             </motion.div>
           </TabsContent>
 
-          <TabsContent value="saved" className="mt-0">
+          <TabsContent value="saved" className="mt-0 min-h-0 flex-1">
             {/* Mobile action buttons */}
             <div className="flex md:hidden justify-end gap-2 mb-2">
               <Button
@@ -1980,7 +2179,7 @@ export default function PalettePage() {
             </motion.div>
           </TabsContent>
 
-          <TabsContent value="official" className="mt-0">
+          <TabsContent value="official" className="mt-0 min-h-0 flex-1">
             {/* Mobile creation button */}
             <div className="flex md:hidden justify-end gap-2 mb-2">
               <Button

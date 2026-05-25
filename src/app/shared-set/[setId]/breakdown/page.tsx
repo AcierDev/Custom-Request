@@ -123,13 +123,13 @@ export default function SetColorBreakdownPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container max-w-4xl mx-auto py-6 px-4">
+      <div className="container mx-auto max-w-4xl px-3 py-5 sm:px-4 sm:py-6">
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
           className="flex flex-col gap-6"
         >
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
             <Button asChild variant="ghost" size="sm">
               <Link href="/">
                 <ArrowLeft className="mr-2 h-4 w-4" />
@@ -148,12 +148,15 @@ export default function SetColorBreakdownPage() {
           </div>
 
           <header>
-            <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
+            <h1 className="flex items-center gap-2 text-xl font-semibold tracking-tight sm:text-2xl">
               <Palette className="h-6 w-6 text-muted-foreground" />
               Color breakdown
             </h1>
             <p className="text-muted-foreground mt-1">
-              Set <code className="rounded bg-muted px-1.5 py-0.5 text-sm">{data.setId}</code>
+              Set{" "}
+              <code className="break-all rounded bg-muted px-1.5 py-0.5 text-sm">
+                {data.setId}
+              </code>
               {" · "}
               {totalUniqueColors} unique color{totalUniqueColors !== 1 ? "s" : ""}
               {" · "}
@@ -182,7 +185,7 @@ export default function SetColorBreakdownPage() {
                           {item.hex}
                         </code>
                         {item.name && (
-                          <span className="text-sm text-muted-foreground">
+                          <span className="break-words text-sm text-muted-foreground">
                             {item.name}
                           </span>
                         )}
@@ -240,12 +243,12 @@ export default function SetColorBreakdownPage() {
                             className="h-8 w-12 shrink-0"
                             style={{ backgroundColor: c.hex }}
                           />
-                          <div className="pr-2 py-1">
+                          <div className="min-w-0 py-1 pr-2">
                             <span className="font-mono text-xs">
                               {c.hex}
                             </span>
                             {c.name && (
-                              <span className="text-xs text-muted-foreground ml-1">
+                              <span className="ml-1 break-words text-xs text-muted-foreground">
                                 {c.name}
                               </span>
                             )}

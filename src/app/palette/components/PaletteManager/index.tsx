@@ -735,7 +735,7 @@ export function PaletteManager() {
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.2, ease: "easeOut" }}
-          className="p-4 border border-blue-400/30 rounded-xl bg-gradient-to-br from-blue-600/15 to-indigo-600/10 backdrop-blur-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.10),0_2px_8px_rgba(0,0,0,0.25)]"
+          className="rounded-xl border border-blue-400/30 bg-gradient-to-br from-blue-600/15 to-indigo-600/10 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.10),0_2px_8px_rgba(0,0,0,0.25)] backdrop-blur-sm sm:p-4"
         >
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <motion.div
@@ -748,8 +748,8 @@ export function PaletteManager() {
               <span>Blend Colors</span>
             </motion.div>
 
-            <div className="flex-1 flex items-center gap-4">
-              <div className="w-full max-w-xs flex items-center gap-4">
+            <div className="flex w-full flex-1 flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+              <div className="flex w-full max-w-xs items-center gap-4">
                 <span className="text-sm text-slate-400 whitespace-nowrap">
                   Steps:
                 </span>
@@ -833,7 +833,7 @@ export function PaletteManager() {
       {/* Edit Color Modal */}
       {editingColor !== null && (
         <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 backdrop-blur-sm sm:p-4"
           onClick={() => setEditingColor(null)}
         >
           <motion.div
@@ -841,7 +841,7 @@ export function PaletteManager() {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-gray-900 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl border-2 border-white/10"
+            className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-lg border-2 border-white/10 bg-gray-900 p-4 shadow-2xl sm:p-6"
           >
             <h3 className="text-xl font-bold text-white mb-4">
               Edit Color

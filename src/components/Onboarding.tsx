@@ -406,7 +406,7 @@ export function Onboarding() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-background/80 p-3 backdrop-blur-sm sm:p-4"
         >
           {/* Animated background blobs */}
           <div className="absolute inset-0 overflow-hidden">
@@ -497,9 +497,9 @@ export function Onboarding() {
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
             transition={{ type: "spring", damping: 20 }}
-            className="w-full max-w-4xl relative z-10"
+            className="relative z-10 w-full max-w-4xl"
           >
-            <Card className="border-muted/30 shadow-xl overflow-hidden relative bg-background/95 backdrop-blur-md">
+            <Card className="relative max-h-[92dvh] overflow-y-auto border-muted/30 bg-background/95 shadow-xl backdrop-blur-md">
               <div className="absolute top-4 right-4 z-50">
                 <Button
                   variant="ghost"
@@ -513,7 +513,7 @@ export function Onboarding() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2">
-                <div className="relative h-64 md:h-auto overflow-hidden">
+                <div className="relative h-44 overflow-hidden sm:h-56 md:h-auto">
                   <div
                     className={`absolute inset-0 bg-gradient-to-br ${onboardingSteps[currentStep].accent} opacity-80`}
                   />
@@ -557,7 +557,7 @@ export function Onboarding() {
                     >
                       {onboardingSteps[currentStep].icon}
                     </div>
-                    <CardTitle className="text-2xl">
+                    <CardTitle className="text-xl sm:text-2xl">
                       {onboardingSteps[currentStep].title}
                     </CardTitle>
                     <CardDescription className="text-base">
@@ -565,7 +565,7 @@ export function Onboarding() {
                     </CardDescription>
                   </div>
 
-                  <div className="flex items-center justify-between mt-8">
+                  <div className="mt-8 grid grid-cols-2 gap-2 sm:flex sm:items-center sm:justify-between">
                     <Button
                       variant="ghost"
                       onClick={skipOnboarding}
