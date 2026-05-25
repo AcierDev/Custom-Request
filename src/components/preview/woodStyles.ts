@@ -19,12 +19,14 @@ export interface WoodStyle {
   metalness: number;
 }
 
-// Tuned to match viewer.everwoodus.com: `/textures/plywood.jpg` mapped with
-// `repeat.set(0.2, 0.2)`, `roughness: 0.8`, `metalness: 0.05`.
+// Tuned to match viewer.everwoodus.com. The grain texture is sampled per
+// square; a higher topScale shows more of the plywood.jpg per square so the
+// swirly grain & knots actually read, instead of each square landing on a
+// near-flat sliver.
 export const WOOD_STYLE: WoodStyle = {
   topTexture: "/textures/plywood.jpg",
   sideTexture: "/textures/wood-side-grain.jpg",
-  topScale: 0.2,
+  topScale: 1.0,
   roughness: 0.8,
   metalness: 0.05,
 };
