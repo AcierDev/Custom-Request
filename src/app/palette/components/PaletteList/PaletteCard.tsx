@@ -339,7 +339,7 @@ export const PaletteCard = ({
               )}
             </CardTitle>
           </div>
-          <CardDescription className="text-xs text-slate-400">
+          <CardDescription className="text-[0.8625rem] leading-snug text-slate-400">
             {new Date(palette.createdAt).toLocaleDateString()} •{" "}
             {palette.colors.length} colors • {versionCount}{" "}
             {versionCount === 1 ? "version" : "versions"}

@@ -459,7 +459,10 @@ function InstancedSquaresComponent({
     uvOffsetAttr.needsUpdate = true;
     uvRotAttr.needsUpdate = true;
     mesh.computeBoundingSphere();
-  }, [instances, geometry, revealNonce, bloomOnResize]);
+    // `material` is intentionally a dependency: it lives in the <instancedMesh>
+    // args, so toggling wood grain / metallic / wood style recreates the mesh
+    // with a zeroed instance buffer. Re-running here repopulates the new mesh.
+  }, [instances, geometry, material, revealNonce, bloomOnResize]);
 
   // One per-frame matrix writer for both the size-change bloom and the
   // split-panel drift. It stays idle (early return) unless the bloom is

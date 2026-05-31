@@ -171,7 +171,12 @@ const WINDOW_EMISSIVE_NIGHT = 0.12;
 const DOOR_COLOR = "#27496d"; // deep navy entry-door paint
 const DOOR_PANEL_COLOR = "#1f3c59"; // recessed panels read slightly darker
 const DOOR_HARDWARE_COLOR = "#caa64a"; // satin brass
-const DOOR_KICK_COLOR = "#b9bcbf"; // brushed-metal kick plate
+const DOOR_SILL_COLOR = "#a59b86"; // weatherproof aluminum threshold/saddle
+// The slab sits just off the floor on a flat, flush threshold plate that
+// extends a little into the room.
+const DOOR_LIFT = 0.04; // slab raised off the floor
+const DOOR_SILL_H = 0.05; // flat threshold plate height above floor
+const DOOR_SILL_PROUD = 0.55; // how far the saddle juts into the room (+z)
 
 // Plush pile depth (~1.8 in of thick carpet).
 const CARPET_PILE_H = 0.3;
@@ -179,7 +184,7 @@ const CARPET_PILE_H = 0.3;
 // Trim thicknesses.
 const BASEBOARD_H = 0.46;
 const TRIM_PROUD = 0.06; // how far moldings stand off the wall
-const DOOR_WALL_PROUD = 0;
+const DOOR_WALL_PROUD = TRIM_PROUD; // stand the door assembly off the wall so its back faces don't z-fight with the wall plane
 const DOOR_CASING_DEPTH = 0.16;
 const DOOR_CASING_Z = DOOR_CASING_DEPTH / 2;
 // Window casing border thickness. Verticals butt between the
@@ -921,11 +926,13 @@ const ART_MAT_BORDER = 0.55; // mat reveal around the print
 
 // Framed prints for the right-hand wall. `z` is a fraction of ROOM_DEPTH
 // from the back wall; `y` is a fraction of CEILING_HEIGHT above the floor.
-// Kept off the window (window sits at the room mid-depth).
+// Hung as an evenly-spaced gallery row: the larger piece centered with the
+// two squares flanking it, all sharing one horizontal centerline. Kept off
+// the window (window sits at the room mid-depth).
 const RIGHT_WALL_ART = [
-  { w: 5.0, h: 6.6, color: "#8298ad", z: 0.03, y: 0.58 },
-  { w: 4.2, h: 4.2, color: "#c08653", z: 0.11, y: 0.44 },
-  { w: 4.2, h: 4.2, color: "#7e9b86", z: 0.11, y: 0.82 },
+  { w: 4.2, h: 4.2, color: "#7e9b86", z: 0.093, y: 0.52 },
+  { w: 5.0, h: 6.6, color: "#8298ad", z: 0.14, y: 0.52 },
+  { w: 4.2, h: 4.2, color: "#c08653", z: 0.187, y: 0.52 },
 ] as const;
 
 // Soft neutral area rug so the colourful art stays the focal point.
@@ -1260,7 +1267,7 @@ const LOVESEAT_SEATS = 2;
 // Pulled off the left wall and angled so it sits out in the room
 // rather than tucked against the side wall.
 const LOVESEAT_X = -7; // left of centre but well into the room
-const LOVESEAT_FROM_WALL = 24; // center depth from back wall (forward, on the rug)
+const LOVESEAT_FROM_WALL = 32; // center depth from back wall (pushed forward so it clears the door)
 const LOVESEAT_TURN = Math.PI / 5; // ~36° toward the room centre / art
 
 /**
@@ -2242,9 +2249,10 @@ function RoomComponent({
         position={[-halfW + DOOR_WALL_PROUD, floorY + doorH / 2, doorZ]}
         rotation={[0, Math.PI / 2, 0]}
       >
-        {/* Solid painted slab. */}
-        <mesh position={[0, 0, 0.05]}>
-          <boxGeometry args={[doorW, doorH, 0.1]} />
+        {/* Solid painted slab — lifted a hair off the floor so a gap sits
+            above the threshold. */}
+        <mesh position={[0, DOOR_LIFT / 2, 0.05]}>
+          <boxGeometry args={[doorW, doorH - DOOR_LIFT, 0.1]} />
           <meshStandardMaterial
             color={DOOR_COLOR}
             roughness={0.45}
@@ -2286,15 +2294,6 @@ function RoomComponent({
             </mesh>
           </group>
         ))}
-        {/* Brushed-metal kick plate along the bottom. */}
-        <mesh position={[0, -doorH * 0.45, 0.105]}>
-          <boxGeometry args={[doorW * 0.86, doorH * 0.07, 0.03]} />
-          <meshStandardMaterial
-            color={DOOR_KICK_COLOR}
-            roughness={0.35}
-            metalness={0.8}
-          />
-        </mesh>
         {/* Entry handle set: deadbolt above a lever handle on a long
             backplate, brass, at the strike edge. */}
         <group position={[doorW * 0.38, -doorH * 0.05, 0.1]}>
@@ -2352,27 +2351,22 @@ function RoomComponent({
             />
           </mesh>
         ))}
-        {/* Aluminum threshold at the floor, with a sliver of daylight
-            leaking under the slab (dims to dusk at night with the
-            windows). */}
-        <mesh position={[0, -doorH / 2 + 0.05, 0.05]}>
-          <boxGeometry args={[doorW * 0.96, 0.1, 0.34]} />
-          <meshStandardMaterial
-            color={DOOR_KICK_COLOR}
-            roughness={0.3}
-            metalness={0.85}
-          />
-        </mesh>
-        <mesh position={[0, -doorH / 2 + 0.13, 0.052]}>
-          <boxGeometry args={[doorW * 0.86, 0.06, 0.02]} />
-          <meshStandardMaterial
-            color={windowColor}
-            emissive={windowColor}
-            emissiveIntensity={windowEmissive * 0.7}
-            roughness={1}
-            metalness={0}
-          />
-        </mesh>
+        {/* Flat threshold plate: a low, flush saddle on the floor beneath the
+            slab that extends a little into the room. */}
+        <group position={[0, -doorH / 2, 0]}>
+          <mesh
+            position={[0, DOOR_SILL_H / 2, (DOOR_SILL_PROUD - 0.1) / 2]}
+          >
+            <boxGeometry
+              args={[doorW + 0.34, DOOR_SILL_H, DOOR_SILL_PROUD + 0.1]}
+            />
+            <meshStandardMaterial
+              color={DOOR_SILL_COLOR}
+              roughness={0.4}
+              metalness={0.7}
+            />
+          </mesh>
+        </group>
       </group>
 
       {/*╔═══╗ WINDOW (right wall) ╚═══╝*/}

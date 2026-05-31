@@ -54,14 +54,19 @@ export function PaletteList({ onOpenImport, onImportById }: PaletteListProps) {
     handleCancel,
   } = usePaletteLoadConfirm();
 
-  // Filter palettes based on search query
-  const filteredPalettes = savedPalettes.filter(
-    (palette) =>
-      palette.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      palette.colors.some((color) =>
-        color.name?.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-  );
+  // Filter palettes based on search query, newest first
+  const filteredPalettes = savedPalettes
+    .filter(
+      (palette) =>
+        palette.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        palette.colors.some((color) =>
+          color.name?.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+    )
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
 
   const handleEdit = (id: string) => {
     const palette = savedPalettes.find((p) => p.id === id);

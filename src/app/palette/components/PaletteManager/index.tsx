@@ -133,6 +133,7 @@ export function PaletteManager() {
     editingPaletteId,
     resetPaletteEditor,
     setCustomPalette,
+    savedPalettes,
   } = useCustomStore();
 
   const [mixMode, setMixMode] = useState(false);
@@ -306,6 +307,32 @@ export function PaletteManager() {
 
   const handleResetEditor = () => {
     resetPaletteEditor();
+  };
+
+  // Resetting only loses work if the editor holds colors that aren't already
+  // persisted. Empty palette → nothing to lose. Editing a saved palette whose
+  // colors still match what's stored → nothing to lose. Otherwise (a new,
+  // unsaved palette or unsaved edits) → warn before wiping it.
+  const hasUnsavedChanges = useMemo(() => {
+    if (customPalette.length === 0) return false;
+    const saved = editingPaletteId
+      ? savedPalettes.find((p) => p.id === editingPaletteId)
+      : undefined;
+    if (!saved) return true;
+    if (saved.colors.length !== customPalette.length) return true;
+    return saved.colors.some((c, i) => {
+      const cur = customPalette[i];
+      return (
+        c.hex.toLowerCase() !== cur.hex.toLowerCase() ||
+        (c.name ?? "") !== (cur.name ?? "") ||
+        (c.extraPercent ?? 0) !== (cur.extraPercent ?? 0)
+      );
+    });
+  }, [customPalette, editingPaletteId, savedPalettes]);
+
+  const performReset = () => {
+    handleResetEditor();
+    toast.success("Palette reset!");
   };
 
   const resetAllTips = () => {
@@ -517,7 +544,25 @@ export function PaletteManager() {
               {/* Divider before the destructive action */}
               <div className="h-6 w-px bg-white/10" />
 
-              {/* Reset entire palette */}
+              {/* Reset entire palette — warn only when unsaved work is at stake */}
+              {!hasUnsavedChanges ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="sm"
+                      disabled={customPalette.length === 0}
+                      onClick={performReset}
+                      className={ACTION_RED}
+                    >
+                      <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+                      Reset Palette
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p>Reset your entire palette</p>
+                  </TooltipContent>
+                </Tooltip>
+              ) : (
               <Tooltip>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
@@ -552,10 +597,7 @@ export function PaletteManager() {
                       </AlertDialogCancel>
                       <AlertDialogAction
                         className="rounded-[10px] bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 ring-1 ring-red-400/40 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_1px_3px_rgba(0,0,0,0.25)] [text-shadow:_0_1px_2px_rgb(0_0_0_/_48%)]"
-                        onClick={() => {
-                          handleResetEditor();
-                          toast.success("Palette reset!");
-                        }}
+                        onClick={performReset}
                       >
                         Yes, Reset
                       </AlertDialogAction>
@@ -563,6 +605,7 @@ export function PaletteManager() {
                   </AlertDialogContent>
                 </AlertDialog>
               </Tooltip>
+              )}
 
               {/* Tips toggle */}
               {(customPalette.length >= 2 || showBlendingGuide) && (
