@@ -6,7 +6,7 @@ import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { memo, useEffect, useMemo, useRef } from "react";
 import { useCustomStore } from "@/store/customStore";
-import { METALLIC_PAINT, WOOD_STYLE } from "./woodStyles";
+import { GRAIN_ATLAS, METALLIC_PAINT, WOOD_STYLE } from "./woodStyles";
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ 🧱 INSTANCED SQUARES                                                  ║
@@ -36,10 +36,12 @@ export interface SquareInstance {
   rotationZ: number;
   scaleXY: number;
   scaleZ: number;
-  /** Per-square wood-grain UV transform (matches THREE setUvTransform). */
+  /** Per-square wood-grain UV transform (legacy; unused by the atlas path). */
   uvOffsetX: number;
   uvOffsetY: number;
   uvRot: number;
+  /** Which grain-atlas cell (0..GRAIN_ATLAS.count-1) this square samples. */
+  grainIndex: number;
 }
 
 interface InstancedSquaresProps {
@@ -304,7 +306,9 @@ function InstancedSquaresComponent({
   }, [gl, metallic]);
   useEffect(() => () => envMap?.dispose(), [envMap]);
 
-  const topTexture = useTexture(woodStyle.topTexture);
+  // The squares' grain is a 4×4 atlas of 14 distinct grain images; each
+  // square samples ONE cell (its grainIndex), exactly like production.
+  const grainAtlas = useTexture(GRAIN_ATLAS.texture);
 
   // Shared, instanced-attribute geometry. Rebuilt only when the instance
   // count changes (palette / pattern / size edits), not on orbit or hover.
@@ -312,23 +316,21 @@ function InstancedSquaresComponent({
     const g = createWedgeGeometry();
     const count = instances.length;
     g.setAttribute(
-      "aUvOffset",
-      new THREE.InstancedBufferAttribute(new Float32Array(count * 2), 2)
-    );
-    g.setAttribute(
-      "aUvRot",
+      "aGrainIndex",
       new THREE.InstancedBufferAttribute(new Float32Array(count), 1)
     );
     return g;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [instances.length]);
 
-  // One material for every square. Per-instance UV transform is injected
-  // into the standard shader so each square keeps unique grain.
+  // One material for every square. Each square samples its own grain-atlas
+  // cell (by aGrainIndex) and blends it over the flat color at GRAIN_ATLAS
+  // .opacity — mirroring production's `diffuse *= mix(white, grain, 0.4)`.
   const material = useMemo(() => {
-    const tex = topTexture as THREE.Texture | undefined;
+    const tex = grainAtlas as THREE.Texture | undefined;
     if (tex) {
-      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      // Clamp (not repeat) so a cell never wraps into its neighbour.
+      tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
       tex.colorSpace = THREE.SRGBColorSpace;
       tex.anisotropy = WOOD_TEXTURE_ANISOTROPY;
     }
@@ -344,43 +346,43 @@ function InstancedSquaresComponent({
       envMapIntensity: metallic ? METALLIC_PAINT.envMapIntensity : 1,
     });
 
-    // Only inject the per-instance UV transform when there's a grain map;
-    // without USE_MAP the `uv` attribute isn't declared by three's chunks.
+    // Only inject the grain sampler when there's a map; without USE_MAP the
+    // `uv` attribute isn't declared by three's chunks.
     if (showWoodGrain && tex)
       mat.onBeforeCompile = (shader) => {
-      shader.uniforms.uRepeat = { value: woodStyle.topScale };
-      shader.vertexShader =
-        `attribute vec2 aUvOffset;\nattribute float aUvRot;\nuniform float uRepeat;\nvarying vec2 vWoodUv;\n` +
-        shader.vertexShader.replace(
-          "#include <uv_vertex>",
-          `#include <uv_vertex>
+        shader.uniforms.uGrid = { value: GRAIN_ATLAS.grid };
+        shader.uniforms.uGrainOpacity = { value: GRAIN_ATLAS.opacity };
+        shader.vertexShader =
+          `attribute float aGrainIndex;\nuniform float uGrid;\nvarying vec2 vGrainUv;\n` +
+          shader.vertexShader.replace(
+            "#include <uv_vertex>",
+            `#include <uv_vertex>
           {
-            float wc = cos(aUvRot);
-            float ws = sin(aUvRot);
-            // Mirrors THREE.Matrix3.setUvTransform with center (0,0):
-            //   x' =  sx*c*u + sx*s*v + tx
-            //   y' = -sy*s*u + sy*c*v + ty
-            vWoodUv = vec2(
-               uRepeat * wc * uv.x + uRepeat * ws * uv.y + aUvOffset.x,
-              -uRepeat * ws * uv.x + uRepeat * wc * uv.y + aUvOffset.y
-            );
+            // Map this square's [0,1] face UV into its atlas cell. A small
+            // inset keeps mip filtering from bleeding across cell borders.
+            float col = mod(aGrainIndex, uGrid);
+            float row = floor(aGrainIndex / uGrid);
+            vec2 inset = (clamp(uv, 0.0, 1.0) - 0.5) * 0.94 + 0.5;
+            vGrainUv = (vec2(col, row) + inset) / uGrid;
           }`
-        );
-      shader.fragmentShader =
-        `varying vec2 vWoodUv;\n` +
-        shader.fragmentShader.replace(
-          "#include <map_fragment>",
-          `#ifdef USE_MAP
-             diffuseColor *= texture2D( map, vWoodUv );
+          );
+        shader.fragmentShader =
+          `uniform float uGrainOpacity;\nvarying vec2 vGrainUv;\n` +
+          shader.fragmentShader.replace(
+            "#include <map_fragment>",
+            `#ifdef USE_MAP
+             vec4 grainTexel = texture2D( map, vGrainUv );
+             // Blend grain over the flat square color (multiplicative).
+             diffuseColor *= mix( vec4( 1.0 ), grainTexel, uGrainOpacity );
            #endif`
-        );
-      (mat as unknown as { userData: { shader?: unknown } }).userData.shader =
-        shader;
-    };
+          );
+        (mat as unknown as { userData: { shader?: unknown } }).userData.shader =
+          shader;
+      };
 
     return mat;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [topTexture, showWoodGrain, woodStyle, metallic, envMap]);
+  }, [grainAtlas, showWoodGrain, woodStyle, metallic, envMap]);
 
   // Highlight material for the hovered / pinned square.
   const highlightMaterial = useMemo(
@@ -402,11 +404,8 @@ function InstancedSquaresComponent({
     const mesh = meshRef.current;
     if (!mesh) return;
 
-    const uvOffsetAttr = geometry.getAttribute(
-      "aUvOffset"
-    ) as THREE.InstancedBufferAttribute;
-    const uvRotAttr = geometry.getAttribute(
-      "aUvRot"
+    const grainIndexAttr = geometry.getAttribute(
+      "aGrainIndex"
     ) as THREE.InstancedBufferAttribute;
 
     // A changed instance count means the grid was rebuilt (size / mini /
@@ -449,15 +448,13 @@ function InstancedSquaresComponent({
       tmpColor.set(s.color);
       mesh.setColorAt(i, tmpColor);
 
-      uvOffsetAttr.setXY(i, s.uvOffsetX, s.uvOffsetY);
-      uvRotAttr.setX(i, s.uvRot);
+      grainIndexAttr.setX(i, s.grainIndex);
     }
 
     mesh.count = instances.length;
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-    uvOffsetAttr.needsUpdate = true;
-    uvRotAttr.needsUpdate = true;
+    grainIndexAttr.needsUpdate = true;
     mesh.computeBoundingSphere();
     // `material` is intentionally a dependency: it lives in the <instancedMesh>
     // args, so toggling wood grain / metallic / wood style recreates the mesh

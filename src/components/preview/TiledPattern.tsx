@@ -1,6 +1,6 @@
 "use client";
 
-import { useCustomStore } from "@/store/customStore";
+import { useCustomStore, type CustomColor } from "@/store/customStore";
 import { getDimensionsDetails } from "@/lib/utils";
 import { useRef, useMemo, useCallback, memo } from "react";
 import { Html } from "@react-three/drei";
@@ -54,7 +54,8 @@ export function TiledPattern({
   const isReversed = customDesign?.isReversed || storeIsReversed;
   const isRotated = customDesign?.isRotated || storeIsRotated;
   const useMini = customDesign?.useMini || storeUseMini;
-  const customPalette = customDesign?.customPalette || storeCustomPalette;
+  const customPalette: CustomColor[] =
+    customDesign?.customPalette || storeCustomPalette;
 
   const { showSplitPanel } = viewSettings;
 
@@ -65,13 +66,15 @@ export function TiledPattern({
     useStore(hoverStore);
 
   // Create a ref for the color map
-  const colorMapRef = useRef<ColorMapRef>();
+  const colorMapRef = useRef<ColorMapRef | undefined>(undefined);
 
   // Create a ref to store the random heights
-  const heightsRef = useRef<number[][]>();
+  const heightsRef = useRef<number[][] | undefined>(undefined);
 
   // Create a ref for texture variations
-  const textureVariationsRef = useRef<TextureVariation[][]>();
+  const textureVariationsRef = useRef<TextureVariation[][] | undefined>(
+    undefined
+  );
 
   // Check if we should use the drawn pattern for rendering
   const hasDrawnPattern: boolean =

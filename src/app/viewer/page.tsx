@@ -300,7 +300,6 @@ export default function DesignPage() {
   const dimensions = useCustomStore((s) => s.dimensions);
   const style = useCustomStore((s) => s.style);
   const showRuler = useCustomStore((s) => s.viewSettings.showRuler);
-  const showWoodGrain = useCustomStore((s) => s.viewSettings.showWoodGrain);
   const showColorInfo = useCustomStore((s) => s.viewSettings.showColorInfo);
   const showRoom = useCustomStore((s) => s.viewSettings.showRoom);
   const showUIControls = useCustomStore((s) => s.viewSettings.showUIControls);
@@ -663,22 +662,23 @@ export default function DesignPage() {
             visible={artVisible}
           >
           {/* Pattern based on style */}
+          {/* Wood grain is hardcoded ON to match the shared viewer, which
+              mounts <GeometricPattern /> with no prop (showWoodGrain defaults
+              to true). Decoupled from the view toggle so a persisted "off"
+              can never leave the main viewer's squares flat. */}
           {style === "geometric" && (
-            <GeometricPattern
-              showWoodGrain={showWoodGrain}
-              showColorInfo={showColorInfo}
-            />
+            <GeometricPattern showWoodGrain={true} showColorInfo={showColorInfo} />
           )}
           {/* Tiled / striped rendering preserved for potential re-enable.
           {style === "tiled" && (
             <TiledPattern
-              showWoodGrain={showWoodGrain}
+              showWoodGrain={true}
               showColorInfo={showColorInfo}
             />
           )}
           {style === "striped" && (
             <TiledPattern
-              showWoodGrain={showWoodGrain}
+              showWoodGrain={true}
               showColorInfo={showColorInfo}
             />
           )}

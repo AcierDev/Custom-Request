@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Custom-Request — Architecture</title>
+<style>
+  body { font-family: -apple-system, system-ui, sans-serif; max-width: 1100px; margin: 0 auto; padding: 2rem; background: #0d1117; color: #e6edf3; }
+  h1 { border-bottom: 1px solid #30363d; padding-bottom: .4rem; }
+  h2 { margin-top: 2.5rem; color: #58a6ff; }
+  .diagram { background: #fff; border-radius: 10px; padding: 1rem; margin: 1rem 0; overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
+  th, td { border: 1px solid #30363d; padding: .5rem .75rem; text-align: left; }
+  th { background: #161b22; }
+  code { background: #161b22; padding: .1rem .3rem; border-radius: 4px; }
+</style>
+</head>
+<body>
+<h1>Custom-Request — Architecture</h1>
+<p>Next.js 16 / React 19 custom wood-art designer with a React-Three-Fiber 3D preview, a large Zustand store, MongoDB persistence, multi-provider auth, Shopify checkout, and a paint/palette system.</p>
+
+<h2>1. High-level layers</h2>
+<div class="diagram"><pre class="mermaid">
+graph TD
+    subgraph client["Client (Browser)"]
+        UI["App Router Pages<br/>src/app/**"]
+        COMP["React Components<br/>src/components/**"]
+        R3F["3D Preview (R3F + three.js)<br/>src/components/preview/**"]
+        STORE["Zustand Store<br/>customStore.ts + hoverStore"]
+        AUTHCTX["Auth Context<br/>lib/auth-context.tsx"]
+    end
+    subgraph server["Next.js Server (custom server.js)"]
+        API["Route Handlers<br/>src/app/api/**"]
+        LIB["Server libs<br/>mongodb / token / email / userDataService"]
+    end
+    subgraph external["External Services"]
+        MONGO[("MongoDB")]
+        SHOPIFY["Shopify Admin API"]
+        GOOGLE["Google OAuth"]
+        FB["Facebook OAuth"]
+        ZEPTO["ZeptoMail"]
+    end
+    UI --> COMP --> R3F
+    UI --> STORE
+    COMP --> STORE
+    R3F --> STORE
+    UI --> AUTHCTX
+    STORE <-->|save / load| AUTHCTX
+    AUTHCTX -->|fetch| API
+    UI -->|fetch| API
+    API --> LIB --> MONGO
+    API -->|OAuth| GOOGLE
+    API -->|OAuth| FB
+    API -->|draft order| SHOPIFY
+    LIB -->|send| ZEPTO
+</pre></div>
+
+<h2>2. App Router page map</h2>
+<div class="diagram"><pre class="mermaid">
+graph LR
+    ROOT["layout.tsx<br/>AuthProvider / ThemeProvider / Navbar"]
+    ROOT --> HOME["/ (landing)"]
+    ROOT --> WELCOME["/welcome"]
+    ROOT --> VIEWER["/viewer (main designer)"]
+    ROOT --> DESIGN["/design PatternEditor"]
+    ROOT --> DRAW["/draw-pattern"]
+    ROOT --> PALETTE["/palette"]
+    ROOT --> PAINTSEL["/paint-selector"]
+    ROOT --> PROFILE["/profile"]
+    ROOT --> SHARED["/shared/[id]"]
+    ROOT --> SHAREDSET["/shared-set/[setId]/breakdown"]
+    ROOT --> ADMIN["/admin/palettes"]
+    ROOT --> SIGNIN["/sign-in"]
+    ROOT --> AUTHH["/auth/* handlers"]
+    ROOT --> LEGAL["/(legal) privacy / terms"]
+    VIEWER -.uses.-> GP["GeometricPattern (3D)"]
+    SHARED -.uses.-> GP
+    SHAREDSET -.uses.-> GP
+</pre></div>
+
+<h2>3. State, persistence & sharing</h2>
+<div class="diagram"><pre class="mermaid">
+graph TD
+    CS["useCustomStore<br/>dimensions / design / colorPattern<br/>customPalette / savedPalettes / draftSets / pricing"]
+    HS["hoverStore (transient)"]
+    CS -->|calculatePrice| PRICING["lib/pricing.ts"]
+    CS -->|blend / deltaE| COLOR["lib/colorUtils.ts"]
+    CS -->|paint-like mix| MIX["lib/paintMixSimulator.ts (spectral.js)"]
+    MIX --> COLOR
+    CS -->|color maps| CMAP["typings/color-maps.ts"]
+    CS -->|encode / decode| URLU["lib/urlUtils.ts (lz-string)"]
+    URLU -->|shareable link| LINK(["?state= / short URL"])
+    CS <-->|save/loadUserData| AUTH["lib/auth-context.tsx"]
+    AUTH -->|/api/user-data| UDAPI["api/user-data"]
+    UDAPI --> UDS["lib/userDataService.ts"]
+    UDS --> MONGO[("MongoDB userData")]
+    CS -.share.-> SDAPI["api/shared-designs<br/>api/shared-design-sets"]
+    SDAPI --> MONGO2[("MongoDB sharedDesigns / Sets")]
+</pre></div>
+
+<h2>4. 3D preview render pipeline</h2>
+<div class="diagram"><pre class="mermaid">
+graph TD
+    VIEWER["/viewer page"] --> CANVAS["Canvas (R3F)"]
+    CANVAS --> GP["GeometricPattern.tsx"]
+    CANVAS --> ROOM["Room.tsx (room2.glb)"]
+    CANVAS --> RULER["Ruler3D.tsx"]
+    GP --> INST["InstancedSquares.tsx"]
+    GP --> PLY["PlywoodBase.tsx"]
+    INST --> WS["woodStyles.ts (WOOD_STYLE / METALLIC_PAINT)"]
+    TILED["TiledPattern.tsx (alt path)"] --> SQ["Square.tsx"]
+    TILED --> PLY
+    GP -.reads.-> PU["patternUtils.ts"]
+    GP -.reads.-> CS2["useCustomStore"]
+    LC["LightingControls"] --> LS["LightingSetups"] --> RL["RotatableLighting"]
+    ROOM --> RL
+    VC["ViewControls.tsx"] --> CANVAS
+    ROOM --> WALL["wallColors.ts"]
+</pre></div>
+
+<h2>5. Auth & API routes</h2>
+<div class="diagram"><pre class="mermaid">
+graph TD
+    AUTHCTX["auth-context.tsx<br/>signIn / signOut / save / loadUserData"]
+    AUTHCTX -->|google| GAPI["api/auth/google/callback"]
+    AUTHCTX -->|facebook| FBAPI["api/auth/facebook/callback"]
+    AUTHCTX -->|email link| EAPI["api/auth/email + callback"]
+    GAPI -->|exchange| GOOGLE["oauth2.googleapis.com"]
+    FBAPI -->|exchange| FB["graph.facebook.com"]
+    EAPI --> EMAIL["lib/email.ts (ZeptoMail)"]
+    GAPI --> TOK["lib/token.ts"]
+    FBAPI --> TOK
+    EAPI --> TOK
+    TOK --> MONGO[("MongoDB tokens (TTL)")]
+    UD["api/user-data"] --> UDS["userDataService.ts"] --> MONGO
+    PAL["api/palettes/[id]"] --> MONGO
+    APAL["api/admin/palettes (lib/admin.ts)"] --> MONGO
+    SD["api/shared-designs"] --> MONGO
+    SDS["api/shared-design-sets"] --> MONGO
+    ORDER["api/create-draft-order"] --> SHOPIFY["Shopify Admin API"]
+</pre></div>
+
+<h2>6. Paint & palette subsystem</h2>
+<div class="diagram"><pre class="mermaid">
+graph LR
+    IMP["scripts/paints/import-*.mjs<br/>sherwin / behr / valspar / ppg / benjamin-moore"]
+    IMP --> PUB["public/paints/&lt;brand&gt;/*"]
+    PUB --> PAINTLIB["lib/paint.ts"]
+    PALPAGE["/palette page"] --> PM["PaletteManager<br/>ColorSwatch / ColorHarmonyGenerator / BlendingGuide"]
+    PALPAGE --> PL["PaletteList<br/>FolderSection / PaletteCard / VersionHistory"]
+    PALPAGE --> OP["OfficialPalettes"]
+    PALPAGE --> ICE["ImageColorExtractor<br/>ImageUploader / ImageColorPicker"]
+    PM --> CS["useCustomStore.customPalette"]
+    PAINTLIB --> MIX["paintMixSimulator.ts (spectral.js)"]
+    MIX --> COLOR["colorUtils.ts (deltaE2000)"]
+    OP --> APAL["api/admin/palettes"]
+</pre></div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({ startOnLoad: true, theme: 'default' });
+</script>
+</body>
+</html>

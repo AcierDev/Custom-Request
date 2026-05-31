@@ -537,6 +537,7 @@ function GeometricPatternComponent({
             uvOffsetX: textureVariation.offsetX,
             uvOffsetY: textureVariation.offsetY,
             uvRot: textureVariation.rotation,
+            grainIndex: textureVariation.textureIndex,
           });
         }
       }

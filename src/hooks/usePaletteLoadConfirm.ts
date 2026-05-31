@@ -2,7 +2,6 @@ import { useState, useCallback } from "react";
 import { useCustomStore } from "@/store/customStore";
 import { ItemDesigns } from "@/typings/types";
 import { DESIGN_COLORS } from "@/typings/color-maps";
-import type { CustomColor } from "@/store/customStore";
 
 interface PaletteToLoad {
   name: string;
@@ -19,9 +18,13 @@ export function usePaletteLoadConfirm() {
   );
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 
-  // Helper function to compare two color arrays
+  // Helper function to compare two color arrays. Accepts any color-like
+  // shape (CustomColor, official ColorInfo) since only hex/name matter.
   const colorsMatch = useCallback(
-    (colors1: CustomColor[], colors2: CustomColor[]) => {
+    (
+      colors1: ReadonlyArray<{ hex: string; name?: string }>,
+      colors2: ReadonlyArray<{ hex: string; name?: string }>
+    ) => {
       if (colors1.length !== colors2.length) return false;
 
       return colors1.every((color1, index) => {

@@ -18,6 +18,7 @@ import {
 import { subscribeWithSelector } from "zustand/middleware";
 import { shallow } from "zustand/shallow";
 import { DEFAULT_WOOD_STYLE_ID } from "@/components/preview/woodStyles";
+import { DEFAULT_WALL_COLOR } from "@/components/preview/wallColors";
 import { nanoid } from "nanoid";
 
 // Add debounce utility function
@@ -60,6 +61,18 @@ export type CustomColor = {
    * distance. Cleared when the color is edited directly.
    */
   paintMatch?: number;
+  /**
+   * Set by "Convert to paint": the original swatch this color was grounded
+   * from. Lets "Convert back to hex" restore the pre-paint hex/name.
+   */
+  paintSourceHex?: string;
+  paintSourceName?: string;
+  /**
+   * Set by "Convert to paint": the second-closest paint match (a fallback
+   * to suggest at the counter) and how close it is (0–100%).
+   */
+  paintBackup?: string;
+  paintBackupMatch?: number;
   /**
    * If present, this is a *mixed* color: a blend sitting `t` of the way
    * between two other ("primary") colors in the palette, referenced by
@@ -165,6 +178,8 @@ interface CustomState {
     showSplitPanel: boolean;
     showFPS: boolean;
     showUIControls: boolean;
+    showRoom: boolean;
+    wallColor: string;
     woodStyle: string;
     metallic: boolean;
   };
@@ -206,7 +221,7 @@ interface CustomStore extends CustomState {
   isReversed: boolean;
   setIsReversed: (value: boolean) => void;
   updateCurrentColors: (design: ItemDesigns) => void;
-  addCustomColor: (hex: string) => void;
+  addCustomColor: (hex: string, name?: string) => void;
   removeCustomColor: (index: number) => void;
   duplicateCustomColor: (index: number) => void;
   toggleColorSelection: (hex: string) => void;
@@ -228,6 +243,8 @@ interface CustomStore extends CustomState {
   setShowSplitPanel: (value: boolean) => void;
   setShowFPS: (value: boolean) => void;
   setShowUIControls: (value: boolean) => void;
+  setShowRoom: (value: boolean) => void;
+  setWallColor: (value: string) => void;
   savePalette: (name: string, folderId?: string) => void;
   updatePalette: (id: string, updates: Partial<SavedPalette>) => void;
   deletePalette: (id: string) => void;
@@ -511,6 +528,8 @@ interface PersistentState extends ShareableState {
     showSplitPanel: boolean;
     showFPS: boolean;
     showUIControls: boolean;
+    showRoom: boolean;
+    wallColor: string;
     woodStyle: string;
     metallic: boolean;
   };
@@ -655,6 +674,8 @@ export const useCustomStore = create<CustomStore>()(
       showSplitPanel: false,
       showFPS: false,
       showUIControls: true,
+      showRoom: true,
+      wallColor: DEFAULT_WALL_COLOR,
       woodStyle: DEFAULT_WOOD_STYLE_ID,
       metallic: false,
     },
@@ -819,11 +840,11 @@ export const useCustomStore = create<CustomStore>()(
     updateCurrentColors: (design: ItemDesigns) => {
       set({ currentColors: DESIGN_COLORS[design] });
     },
-    addCustomColor: (hex) =>
+    addCustomColor: (hex, name = "") =>
       set((state) => {
         const newPalette = [
           ...state.customPalette,
-          { id: nanoid(), hex, name: "" },
+          { id: nanoid(), hex, name },
         ];
 
         const newHistory = state.paletteHistory.slice(
@@ -1065,6 +1086,14 @@ export const useCustomStore = create<CustomStore>()(
     setShowUIControls: (value) =>
       set((state) => ({
         viewSettings: { ...state.viewSettings, showUIControls: value },
+      })),
+    setShowRoom: (value) =>
+      set((state) => ({
+        viewSettings: { ...state.viewSettings, showRoom: value },
+      })),
+    setWallColor: (value) =>
+      set((state) => ({
+        viewSettings: { ...state.viewSettings, wallColor: value },
       })),
     savePalette: (name: string, folderId?: string) => {
       const { customPalette } = get();
@@ -1747,6 +1776,8 @@ export const useCustomStore = create<CustomStore>()(
               showSplitPanel: data.viewSettings?.showSplitPanel ?? false,
               showFPS: data.viewSettings?.showFPS ?? false,
               showUIControls: data.viewSettings?.showUIControls ?? true,
+              showRoom: data.viewSettings?.showRoom ?? true,
+              wallColor: data.viewSettings?.wallColor ?? DEFAULT_WALL_COLOR,
               woodStyle: data.viewSettings?.woodStyle ?? DEFAULT_WOOD_STYLE_ID,
               metallic: data.viewSettings?.metallic ?? false,
             };
@@ -2065,6 +2096,12 @@ export const useCustomStore = create<CustomStore>()(
             showUIControls:
               mergedState.viewSettings?.showUIControls ??
               get().viewSettings.showUIControls,
+            showRoom:
+              mergedState.viewSettings?.showRoom ??
+              get().viewSettings.showRoom,
+            wallColor:
+              mergedState.viewSettings?.wallColor ??
+              get().viewSettings.wallColor,
             woodStyle:
               mergedState.viewSettings?.woodStyle ??
               get().viewSettings.woodStyle,

@@ -3,6 +3,7 @@
 import { ColorPattern } from "@/store/customStore";
 import { DESIGN_COLORS } from "@/typings/color-maps";
 import { ItemDesigns } from "@/typings/types";
+import { GRAIN_ATLAS } from "./woodStyles";
 
 /**
  * Shared types for pattern components
@@ -32,6 +33,8 @@ export interface TextureVariation {
   offsetX: number;
   offsetY: number;
   rotation: number;
+  /** Which of the GRAIN_ATLAS cells (0..count-1) this square samples. */
+  textureIndex: number;
 }
 
 /**
@@ -105,6 +108,15 @@ export function initializeRotationSeeds(
 }
 
 /**
+ * Max per-square grain TILT (radians) layered on top of the 90° block
+ * rotation. The block rotation gives the real basketweave (grain runs along
+ * each block's axis, like the product photos); this is only a small organic
+ * wobble. Kept tiny so grain reads "tight & straight" instead of diagonal /
+ * jagged — was Math.PI/6 (±30°), which threw the grain badly off-axis.
+ */
+const GRAIN_TILT_JITTER_RAD = Math.PI / 60; // ±3°
+
+/**
  * Initialize texture variations for squares
  */
 export function initializeTextureVariations(
@@ -120,7 +132,14 @@ export function initializeTextureVariations(
           scale: 0.15 + Math.abs(Math.sin(x * y * 3.14)) * 0.2,
           offsetX: Math.abs((Math.sin(x * 2.5) * Math.cos(y * 1.7)) % 1),
           offsetY: Math.abs((Math.cos(x * 1.8) * Math.sin(y * 2.2)) % 1),
-          rotation: (Math.sin(x * y) * Math.PI) / 6,
+          rotation: Math.sin(x * y) * GRAIN_TILT_JITTER_RAD,
+          // Stable per-square pick of one of the 14 grain images (mirrors
+          // production's Math.floor(14*random()), but deterministic so it
+          // doesn't reshuffle on every re-render).
+          textureIndex: Math.floor(
+            (Math.abs(Math.sin(x * 127.1 + y * 311.7) * 43758.5453) % 1) *
+              GRAIN_ATLAS.count
+          ),
         }))
     );
 }
