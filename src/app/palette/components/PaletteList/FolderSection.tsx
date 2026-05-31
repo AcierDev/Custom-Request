@@ -36,6 +36,13 @@ import { toast } from "sonner";
 import { ImportCard } from "./ImportCard";
 import { useFolderCollapse } from "@/hooks/useFolderCollapse";
 
+// Newest palettes first. Sorts a copy so the store array is left untouched.
+const sortByNewest = (palettes: SavedPalette[]): SavedPalette[] =>
+  [...palettes].sort(
+    (a, b) =>
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+
 interface FolderItemProps {
   folder: Folder;
   palettes: SavedPalette[];
@@ -102,21 +109,21 @@ const FolderItem = ({
 
   return (
     <div className="mb-4">
-      <div className="flex items-center justify-between bg-gray-800/40/50 rounded-lg p-2 mb-2">
+      <div className="flex items-center justify-between rounded-lg p-2 mb-2 border border-amber-400/25 bg-amber-500/10 ring-1 ring-inset ring-amber-300/10 shadow-[0_1px_3px_rgba(0,0,0,0.25)]">
         <div
           className="flex items-center flex-1 cursor-pointer"
           onClick={handleToggle}
         >
           {isOpen ? (
-            <ChevronDown className="h-4 w-4 text-slate-400 mr-2" />
+            <ChevronDown className="h-4 w-4 text-amber-300/80 mr-2" />
           ) : (
-            <ChevronRight className="h-4 w-4 text-slate-400 mr-2" />
+            <ChevronRight className="h-4 w-4 text-amber-300/80 mr-2" />
           )}
           <FolderIcon className="h-5 w-5 text-amber-500 dark:text-amber-400 mr-2" />
-          <span className="font-medium text-slate-200">
+          <span className="font-semibold text-amber-50">
             {folder.name}
           </span>
-          <span className="ml-2 text-xs text-slate-400">
+          <span className="ml-2 text-xs text-amber-200/60">
             ({palettes.length} {palettes.length === 1 ? "palette" : "palettes"})
           </span>
         </div>
@@ -283,7 +290,7 @@ const UnorganizedPalettes = ({
   return (
     <div className="mb-4">
       <div
-        className="flex items-center bg-gray-800/40/50 rounded-lg p-2 mb-2 cursor-pointer"
+        className="flex items-center rounded-lg p-2 mb-2 cursor-pointer border border-white/5 bg-gray-800/40"
         onClick={handleToggle}
       >
         {isOpen ? (
@@ -453,15 +460,17 @@ export const FolderSection = ({
     currentFolderId?: string;
   } | null>(null);
 
-  // Group palettes by folder
+  // Group palettes by folder (newest first within each folder)
   const palettesByFolder = paletteFolders.map((folder) => ({
     folder,
-    palettes: savedPalettes.filter((palette) => palette.folderId === folder.id),
+    palettes: sortByNewest(
+      savedPalettes.filter((palette) => palette.folderId === folder.id)
+    ),
   }));
 
-  // Get palettes not in any folder
-  const unorganizedPalettes = savedPalettes.filter(
-    (palette) => !palette.folderId
+  // Get palettes not in any folder (newest first)
+  const unorganizedPalettes = sortByNewest(
+    savedPalettes.filter((palette) => !palette.folderId)
   );
 
   const handleCreateFolder = () => {

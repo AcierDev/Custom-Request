@@ -122,7 +122,7 @@ export default function SetColorBreakdownPage() {
     colorBreakdown;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background select-none">
       <div className="container mx-auto max-w-4xl px-3 py-5 sm:px-4 sm:py-6">
         <motion.div
           initial={{ opacity: 0, y: -8 }}

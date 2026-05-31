@@ -21,6 +21,7 @@ import {
   Eye,
   EyeOff,
   SlidersHorizontal,
+  Palette,
   X,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -70,6 +71,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { PatternEditor } from "./components/PatternEditor";
+import { PaletteColorEditor } from "./components/PaletteColorEditor";
 import { Slider } from "@/components/ui/slider";
 import { WALL_COLOR_OPTIONS } from "@/components/preview/wallColors";
 
@@ -311,6 +313,7 @@ export default function DesignPage() {
   // dark blue so the viewer is never empty.
   const currentWallColor = wallColor || WALL_COLOR;
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  const [showPatternEditor, setShowPatternEditor] = useState(false);
   const [mobileOptionsOpen, setMobileOptionsOpen] = useState(false);
   const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>("afternoon");
 
@@ -346,6 +349,14 @@ export default function DesignPage() {
       setMobileOptionsOpen(false);
     }
   }, [isMobile, showUIControls]);
+
+  // The Pattern Editor panel is part of the UI overlay, so hiding the
+  // UI (Eye toggle / "h") closes it too.
+  useEffect(() => {
+    if (!showUIControls) {
+      setShowPatternEditor(false);
+    }
+  }, [showUIControls]);
 
   // Only dim / show the "empty" hint when there is genuinely nothing to
   // preview. If a custom palette has colors (or a pattern grid exists),
@@ -450,7 +461,7 @@ export default function DesignPage() {
   if (!mounted) return null;
 
   return (
-    <div className="w-full h-screen relative">
+    <div className="w-full h-screen relative select-none">
       {/* Ambient backdrop — deep indigo/sky environment matching the
           Tuesday theme. Gives the glass panels' backdrop-blur and
           saturation something to work over so they read as glass. */}
@@ -743,6 +754,23 @@ export default function DesignPage() {
             variant="outline"
             size={isMobile ? "icon" : "default"}
             className={cn(
+              "glass-surface hover:bg-gray-900/50 hover:border-white/30 hover:text-white",
+              showPatternEditor
+                ? "bg-indigo-600/80 border-indigo-400/40 text-white"
+                : "text-gray-200",
+              isMobile && "h-9 w-9 rounded-full"
+            )}
+            onClick={() => setShowPatternEditor((v) => !v)}
+          >
+            <Palette className={cn("w-4 h-4", !isMobile && "mr-2")} />
+            {!isMobile && "Pattern Editor"}
+          </Button>
+        )}
+        {showUIControls && (
+          <Button
+            variant="outline"
+            size={isMobile ? "icon" : "default"}
+            className={cn(
               "glass-surface text-gray-200 hover:bg-gray-900/50 hover:border-white/30 hover:text-white",
               isMobile && "h-9 w-9 rounded-full"
             )}
@@ -765,6 +793,56 @@ export default function DesignPage() {
           </Button>
         )}
       </div>
+
+      {/* ╔═══╗ ═══════════════════════════════════════════════════════ ╔═══╗
+          ║ 🎨 PATTERN EDITOR PANEL — palette color editing             ║
+          ╚═══╝ ═══════════════════════════════════════════════════════ ╚═══╝ */}
+      {/* Desktop: left-side scrollable panel. Capped height + scroll so
+          a large palette never runs off-screen. */}
+      <AnimatePresence>
+        {showUIControls && showPatternEditor && !isMobile && (
+          <motion.div
+            key="pattern-editor-desktop"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.18 }}
+            className="absolute bottom-6 left-6 z-50 w-80 max-h-[calc(100vh-3rem)] overflow-y-auto no-scrollbar"
+          >
+            <PaletteColorEditor
+              onClose={() => setShowPatternEditor(false)}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Mobile: bottom-sheet overlay (matches the Options sheet). */}
+      <AnimatePresence>
+        {showUIControls && showPatternEditor && isMobile && (
+          <>
+            <motion.button
+              aria-label="Close pattern editor"
+              className="fixed inset-0 z-40 bg-slate-950/30 backdrop-blur-[1px]"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowPatternEditor(false)}
+            />
+            <motion.div
+              key="pattern-editor-mobile"
+              className="fixed inset-x-2 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-50 max-h-[72dvh] overflow-y-auto no-scrollbar"
+              initial={{ y: "105%", opacity: 0.8 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: "105%", opacity: 0.8 }}
+              transition={{ type: "spring", stiffness: 420, damping: 36 }}
+            >
+              <PaletteColorEditor
+                onClose={() => setShowPatternEditor(false)}
+              />
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Share Dialog */}
       <ShareDialog

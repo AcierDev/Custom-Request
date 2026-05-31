@@ -200,7 +200,7 @@ export default function SharedDesignPage() {
   }
 
   return (
-    <div className="relative h-dvh w-full overflow-hidden">
+    <div className="relative h-dvh w-full overflow-hidden select-none">
       {backdrop}
 
       {/* ╔═══╗ ═══════════════════════════════════════════════════════ ╔═══╗
