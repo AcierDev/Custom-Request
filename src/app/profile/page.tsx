@@ -66,10 +66,12 @@ export default function ProfilePage() {
     if (!isLoading && !user && !isGuest) {
       router.push("/sign-in");
     }
-    if (user?.name) {
+    // Don't re-seed while the edit dialog is open, or a re-emitted `user`
+    // object reference would wipe whatever the user is typing.
+    if (user?.name && !isEditing) {
       setDisplayName(user.name);
     }
-  }, [user, isGuest, isLoading, router]);
+  }, [user, isGuest, isLoading, router, isEditing]);
 
   const formatLastSaved = () => {
     if (!lastSaved) return "Never";

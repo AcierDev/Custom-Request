@@ -29,13 +29,6 @@ const tutorialSteps: TutorialStep[] = [
     position: "left",
   },
   {
-    id: "style-selector",
-    title: "Pick a Style",
-    description: "Change the overall style of your wooden art piece.",
-    selector: ".style-card",
-    position: "left",
-  },
-  {
     id: "pattern-controls",
     title: "Pattern Options",
     description: "Customize the pattern orientation and style.",

@@ -27,10 +27,9 @@ import {
 import { Card } from "@/components/ui/card";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
+import { TOUCH } from "three";
 import { useSpring, animated } from "@react-spring/three";
 import { GeometricPattern } from "@/components/preview/GeometricPattern";
-// Tiled option hidden from UI — preserved for potential re-enable.
-// import { TiledPattern } from "@/components/preview/TiledPattern";
 import {
   RotatableLighting,
   type TimeOfDay,
@@ -39,8 +38,11 @@ import {
   Room,
   evenBackWallLayout,
   roomCameraMaxDistance,
+  fitWidthDistance,
   roomBounds,
   rightWindowWorldPos,
+  leftLampWorldPos,
+  ceilingLightWorldPos,
   ORBIT_MIN_POLAR,
   ORBIT_MAX_POLAR,
   ORBIT_MAX_AZIMUTH,
@@ -55,9 +57,9 @@ import { ItemDesigns } from "@/typings/types";
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { SizeCard } from "@/components/cards/SizeCard";
-import { StyleCard } from "@/components/cards/StyleCard";
 import { DesignCard } from "@/components/cards/DesignCard";
 import { ShareDialog } from "@/components/ShareDialog";
+import { ARButton } from "@/components/ARButton";
 import { DraftSetControls } from "@/components/DraftSetControls";
 import { DesignTutorial } from "@/components/DesignTutorial";
 import { EmptyPaletteWarning } from "@/components/EmptyPaletteWarning";
@@ -73,7 +75,7 @@ import {
 import { PatternEditor } from "./components/PatternEditor";
 import { PaletteColorEditor } from "./components/PaletteColorEditor";
 import { Slider } from "@/components/ui/slider";
-import { WALL_COLOR_OPTIONS } from "@/components/preview/wallColors";
+import { WallColorPicker } from "@/components/preview/WallColorPicker";
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ 🎥 ROOM COLLISION                                                     ║
@@ -86,6 +88,22 @@ const CAMERA_FOLLOW_EASE = 0.08;
 const CAMERA_FOLLOW_SETTLE = 0.001;
 const CAMERA_FOV = 40;
 const CAMERA_ZOOM = 1;
+// Wheel / trackpad scroll-to-zoom speed. 87.5% faster than OrbitControls'
+// default (1.0) so laptop trackpad + mouse-wheel zoom feels snappier. (Touch
+// pinch-zoom uses its own gesture path — see TOUCH_GESTURES below.)
+const ZOOM_SPEED = 1.875;
+// Touch gesture map: one finger orbits, two fingers pinch-zoom (dolly). Pan is
+// disabled (enablePan={false}) so the two-finger gesture only moves the camera
+// in/out — it does NOT resize the art (size is still changed via the Size
+// badge). (Desktop wheel/trackpad zoom is a wheel event, not a touch.)
+const TOUCH_GESTURES = { ONE: TOUCH.ROTATE, TWO: TOUCH.DOLLY_PAN } as const;
+// Breathing room left around the full-width reference piece when fitting
+// it to the viewport WIDTH. On a narrow (portrait) phone the room's
+// floor/ceiling zoom cap leaves a wide piece overflowing the sides, so
+// the zoom-out limit is extended to whatever distance frames the whole
+// piece with this much margin. Wide screens already fit it, so they're
+// unaffected. See fitWidthDistance() in Room.tsx.
+const ZOOM_FIT_WIDTH_MARGIN = 1.12;
 
 // Pieces 24 squares WIDE or smaller don't fill the back wall, so the
 // art (with its flanking plant & lamp) spreads evenly between the
@@ -197,9 +215,13 @@ function ArtCameraFollow({ target }: { target: [number, number, number] }) {
 function RoomCollision({
   bounds,
   fallbackMax,
+  fitWidth,
+  fitMargin,
 }: {
   bounds: { wallHalfX: number; floorY: number; ceilingY: number };
   fallbackMax: number;
+  fitWidth: number;
+  fitMargin: number;
 }) {
   const camera = useThree((s) => s.camera);
   const controls = useThree((s) => s.controls) as
@@ -215,7 +237,7 @@ function RoomCollision({
     targetX: NaN,
     targetY: NaN,
     targetZ: NaN,
-    fallbackMax: NaN,
+    effectiveMax: NaN,
     wallHalfX: NaN,
     floorY: NaN,
     ceilingY: NaN,
@@ -223,6 +245,20 @@ function RoomCollision({
 
   useFrame(() => {
     if (!controls) return;
+    // Narrow (portrait) screens get a larger straight-back cap so the
+    // full-width piece still fits horizontally — recomputed live off the
+    // camera's current aspect so it tracks device rotation / resize.
+    const persp = camera as {
+      isPerspectiveCamera?: boolean;
+      aspect?: number;
+      fov?: number;
+    };
+    const aspect = persp.isPerspectiveCamera ? persp.aspect ?? 1.6 : 1.6;
+    const fov = persp.isPerspectiveCamera ? persp.fov ?? CAMERA_FOV : CAMERA_FOV;
+    const effectiveMax = Math.max(
+      fallbackMax,
+      fitWidthDistance(fitWidth, fov, aspect, fitMargin)
+    );
     const t = controls.target;
     const sample = lastSample.current;
     if (
@@ -232,7 +268,7 @@ function RoomCollision({
       sample.targetX === t.x &&
       sample.targetY === t.y &&
       sample.targetZ === t.z &&
-      sample.fallbackMax === fallbackMax &&
+      sample.effectiveMax === effectiveMax &&
       sample.wallHalfX === bounds.wallHalfX &&
       sample.floorY === bounds.floorY &&
       sample.ceilingY === bounds.ceilingY
@@ -245,7 +281,7 @@ function RoomCollision({
     sample.targetX = t.x;
     sample.targetY = t.y;
     sample.targetZ = t.z;
-    sample.fallbackMax = fallbackMax;
+    sample.effectiveMax = effectiveMax;
     sample.wallHalfX = bounds.wallHalfX;
     sample.floorY = bounds.floorY;
     sample.ceilingY = bounds.ceilingY;
@@ -268,10 +304,10 @@ function RoomCollision({
     if (oy > 0) f = Math.min(f, (ceil - t.y) / oy);
     if (oy < 0) f = Math.min(f, (floor - t.y) / oy);
 
-    const boundaryDist = Number.isFinite(f) ? offsetLen * f : fallbackMax;
+    const boundaryDist = Number.isFinite(f) ? offsetLen * f : effectiveMax;
     const allowed = Math.max(
       ROOM_COLLISION_MIN_DISTANCE,
-      Math.min(fallbackMax, boundaryDist)
+      Math.min(effectiveMax, boundaryDist)
     );
 
     // Feed OrbitControls the limit for next update (prevents the dolly
@@ -301,6 +337,7 @@ export default function DesignPage() {
   const style = useCustomStore((s) => s.style);
   const showRuler = useCustomStore((s) => s.viewSettings.showRuler);
   const showColorInfo = useCustomStore((s) => s.viewSettings.showColorInfo);
+  const showWoodGrain = useCustomStore((s) => s.viewSettings.showWoodGrain);
   const showRoom = useCustomStore((s) => s.viewSettings.showRoom);
   const showUIControls = useCustomStore((s) => s.viewSettings.showUIControls);
   const wallColor = useCustomStore((s) => s.viewSettings.wallColor);
@@ -446,10 +483,43 @@ export default function DesignPage() {
     () => roomCameraMaxDistance(sceneW, sceneH),
     [sceneW, sceneH]
   );
+  // Initial straight-back cap, widened on narrow screens so the whole
+  // piece is framed on load (and zoom-out reaches it). RoomCollision
+  // keeps this accurate live on resize / rotation; this is just the
+  // mount value for the camera position + OrbitControls.maxDistance.
+  const fitMaxDistance = useMemo(() => {
+    const aspect =
+      typeof window !== "undefined" && window.innerHeight > 0
+        ? window.innerWidth / window.innerHeight
+        : 1.6;
+    return Math.max(
+      maxCamDistance,
+      fitWidthDistance(ROOM_REF_WIDTH, CAMERA_FOV, aspect, ZOOM_FIT_WIDTH_MARGIN)
+    );
+  }, [maxCamDistance]);
   const camBounds = useMemo(() => roomBounds(sceneW, sceneH), [sceneW, sceneH]);
   const windowPos = useMemo(
     () => rightWindowWorldPos(ROOM_REF_WIDTH, ROOM_REF_HEIGHT),
     []
+  );
+  // Lamp bulb position (left of the art) so the lamp-side shadow lines
+  // up with the visible floor lamp — same art width/centre the room
+  // itself uses to place the lamp.
+  const lampPos = useMemo(
+    () =>
+      leftLampWorldPos(
+        ROOM_REF_WIDTH,
+        ROOM_REF_HEIGHT,
+        roomDims.width * 0.5,
+        artCenterX
+      ),
+    [roomDims.width, artCenterX]
+  );
+  // Ceiling-downlight position above the art so the overhead shadow drops
+  // straight down the piece wherever it hangs.
+  const downlightPos = useMemo(
+    () => ceilingLightWorldPos(ROOM_REF_WIDTH, ROOM_REF_HEIGHT, artCenterX),
+    [artCenterX]
   );
   const artCenter = useMemo<[number, number, number]>(
     () => [displayArtCenterX, ART_CENTER_Y, ART_CENTER_Z],
@@ -485,7 +555,7 @@ export default function DesignPage() {
           marginLeft: !isMobile && showUIControls ? "336px" : "0px",
         }}
       >
-        <h1 className="heading-section select-none">3D Preview</h1>
+        {!isMobile && <h1 className="heading-section select-none">3D Preview</h1>}
         <div className="flex items-center gap-2">
           {showUIControls && !isMobile && (
             <DraftSetControls compact={false} />
@@ -511,11 +581,11 @@ export default function DesignPage() {
         <>
           <Button
             type="button"
-            className="fixed right-3 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-50 rounded-full bg-indigo-600 px-4 shadow-2xl ring-1 ring-indigo-300/40 hover:bg-indigo-500"
+            className="fixed right-3 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-50 rounded-full h-9 inline-flex items-center gap-1.5 px-3 text-xs font-medium bg-indigo-600 hover:bg-indigo-500 text-white ring-1 ring-indigo-400/40 shadow-lg transition-colors"
             onClick={() => setMobileOptionsOpen(true)}
           >
-            <SlidersHorizontal className="mr-2 h-4 w-4" />
-            Options
+            <SlidersHorizontal className="h-4 w-4 shrink-0" />
+            <span>Options</span>
           </Button>
 
           <AnimatePresence>
@@ -596,7 +666,7 @@ export default function DesignPage() {
             position: [
               initialCameraTarget.current[0],
               initialCameraTarget.current[1],
-              maxCamDistance,
+              fitMaxDistance,
             ],
             fov: CAMERA_FOV,
             zoom: CAMERA_ZOOM,
@@ -633,7 +703,9 @@ export default function DesignPage() {
           <RotatableLighting
             timeOfDay={timeOfDay}
             style={style}
+            downlightPos={downlightPos}
             windowPos={windowPos}
+            lampPos={lampPos}
             artCenter={artCenter}
           />
 
@@ -661,28 +733,14 @@ export default function DesignPage() {
             scale={artScale}
             visible={artVisible}
           >
-          {/* Pattern based on style */}
-          {/* Wood grain is hardcoded ON to match the shared viewer, which
-              mounts <GeometricPattern /> with no prop (showWoodGrain defaults
-              to true). Decoupled from the view toggle so a persisted "off"
-              can never leave the main viewer's squares flat. */}
+          {/* Pattern based on style. Wood grain follows the view toggle:
+              off → each square renders its flat wood color with no grain. */}
           {style === "geometric" && (
-            <GeometricPattern showWoodGrain={true} showColorInfo={showColorInfo} />
-          )}
-          {/* Tiled / striped rendering preserved for potential re-enable.
-          {style === "tiled" && (
-            <TiledPattern
-              showWoodGrain={true}
+            <GeometricPattern
+              showWoodGrain={showWoodGrain}
               showColorInfo={showColorInfo}
             />
           )}
-          {style === "striped" && (
-            <TiledPattern
-              showWoodGrain={true}
-              showColorInfo={showColorInfo}
-            />
-          )}
-          */}
 
           {/* Ruler if enabled */}
           {showRuler && (
@@ -702,8 +760,10 @@ export default function DesignPage() {
               regardless is safe. */}
           <OrbitControls
             enablePan={false}
+            touches={TOUCH_GESTURES}
+            zoomSpeed={ZOOM_SPEED}
             minDistance={ROOM_COLLISION_MIN_DISTANCE}
-            maxDistance={maxCamDistance}
+            maxDistance={fitMaxDistance}
             minAzimuthAngle={-ORBIT_MAX_AZIMUTH}
             maxAzimuthAngle={ORBIT_MAX_AZIMUTH}
             minPolarAngle={ORBIT_MIN_POLAR}
@@ -712,7 +772,12 @@ export default function DesignPage() {
             makeDefault
           />
           <ArtCameraFollow target={artCenter} />
-          <RoomCollision bounds={camBounds} fallbackMax={maxCamDistance} />
+          <RoomCollision
+            bounds={camBounds}
+            fallbackMax={maxCamDistance}
+            fitWidth={ROOM_REF_WIDTH}
+            fitMargin={ZOOM_FIT_WIDTH_MARGIN}
+          />
         </Canvas>
       </div>
 
@@ -733,15 +798,19 @@ export default function DesignPage() {
             <TooltipTrigger asChild>
               <Button
                 variant="ghost"
-                size="icon"
-                className="rounded-full w-9 h-9 glass-surface hover:bg-gray-900/50 hover:border-white/30 transition-colors"
+                size={isMobile ? "sm" : "icon"}
+                className={cn(
+                  "glass-surface hover:bg-gray-900/50 hover:border-white/30 transition-colors text-gray-300",
+                  isMobile ? "rounded-full ring-1 ring-white/15 text-xs font-medium" : "rounded-full w-9 h-9"
+                )}
                 onClick={() => setShowUIControls(!showUIControls)}
               >
                 {showUIControls ? (
-                  <EyeOff className="w-4 h-4 text-gray-300" />
+                  <EyeOff className="w-4 h-4 shrink-0" />
                 ) : (
-                  <Eye className="w-4 h-4 text-gray-300" />
+                  <Eye className="w-4 h-4 shrink-0" />
                 )}
+                {isMobile && <span>{showUIControls ? "Hide" : "Show"}</span>}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
@@ -752,47 +821,64 @@ export default function DesignPage() {
         {showUIControls && (
           <Button
             variant="outline"
-            size={isMobile ? "icon" : "default"}
+            size={isMobile ? "sm" : "default"}
             className={cn(
               "glass-surface hover:bg-gray-900/50 hover:border-white/30 hover:text-white",
               showPatternEditor
                 ? "bg-indigo-600/80 border-indigo-400/40 text-white"
                 : "text-gray-200",
-              isMobile && "h-9 w-9 rounded-full"
+              isMobile && "rounded-full ring-1 ring-white/15 text-xs font-medium border-0"
             )}
             onClick={() => setShowPatternEditor((v) => !v)}
           >
-            <Palette className={cn("w-4 h-4", !isMobile && "mr-2")} />
-            {!isMobile && "Pattern Editor"}
+            <Palette className="w-4 h-4 shrink-0" />
+            {(isMobile || !isMobile) && (isMobile ? "Pattern" : "Pattern Editor")}
           </Button>
         )}
         {showUIControls && (
           <Button
             variant="outline"
-            size={isMobile ? "icon" : "default"}
+            size={isMobile ? "sm" : "default"}
             className={cn(
               "glass-surface text-gray-200 hover:bg-gray-900/50 hover:border-white/30 hover:text-white",
-              isMobile && "h-9 w-9 rounded-full"
+              isMobile && "rounded-full ring-1 ring-white/15 text-xs font-medium border-0"
             )}
           >
-            <Download className={cn("w-4 h-4", !isMobile && "mr-2")} />
-            {!isMobile && "Save Image"}
+            <Download className="w-4 h-4 shrink-0" />
+            {(isMobile || !isMobile) && (isMobile ? "Save" : "Save Image")}
           </Button>
         )}
+        {/* iOS-mobile-only — renders null elsewhere. Bakes a life-size,
+            grain-baked USDZ of the current design and launches AR Quick Look
+            so it can be hung on a real wall. */}
+        {showUIControls && <ARButton variant="viewer" />}
         {showUIControls && (
           <Button
-            size={isMobile ? "icon" : "default"}
+            size={isMobile ? "sm" : "default"}
             className={cn(
               "bg-indigo-600 hover:bg-indigo-500 ring-1 ring-indigo-400/40 text-white",
-              isMobile && "h-9 w-9 rounded-full"
+              isMobile && "rounded-full text-xs font-medium"
             )}
             onClick={() => setIsShareDialogOpen(true)}
           >
-            <Share className={cn("w-4 h-4", !isMobile && "mr-2")} />
-            {!isMobile && "Share Design"}
+            <Share className="w-4 h-4 shrink-0" />
+            {(isMobile || !isMobile) && (isMobile ? "Share" : "Share Design")}
           </Button>
         )}
       </div>
+
+      {/* Quick Design + Size badges (mobile only — desktop already shows
+          these in the always-visible options stack). Anchored bottom-left so
+          they clear the top action cluster and the bottom-right Options
+          button; each opens a small popover to change the value without
+          opening the full options sheet. Hidden while a bottom sheet is up so
+          they don't poke through it. */}
+      {showUIControls && isMobile && !mobileOptionsOpen && !showPatternEditor && (
+        <div className="fixed left-3 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-50 flex items-center gap-2 select-none">
+          <DesignCard compact bare />
+          <SizeCard compact bare />
+        </div>
+      )}
 
       {/* ╔═══╗ ═══════════════════════════════════════════════════════ ╔═══╗
           ║ 🎨 PATTERN EDITOR PANEL — palette color editing             ║
@@ -898,9 +984,6 @@ function ViewerOptionsStack({
           </div>
         </div>
       </Card>
-      <div className="style-card">
-        <StyleCard compact />
-      </div>
       <MiniCard compact />
       <div className="pattern-controls">
         <PatternControls />
@@ -920,28 +1003,7 @@ function WallColorControls({
     <Card className="glass-surface rounded-[0.7rem] shadow-lg">
       <div className="p-3 space-y-2">
         <Label className="text-sm text-gray-300">Wall Color</Label>
-        <div className="grid grid-cols-4 gap-2">
-          {WALL_COLOR_OPTIONS.map((option) => {
-            const selected = value.toLowerCase() === option.hex.toLowerCase();
-
-            return (
-              <button
-                key={option.name}
-                type="button"
-                aria-label={option.name}
-                title={option.name}
-                onClick={() => onChange(option.hex)}
-                className={cn(
-                  "h-7 rounded-md border transition-all",
-                  selected
-                    ? "border-indigo-300 ring-2 ring-indigo-400/60"
-                    : "border-white/15 hover:border-white/40"
-                )}
-                style={{ backgroundColor: option.hex }}
-              />
-            );
-          })}
-        </div>
+        <WallColorPicker value={value} onChange={onChange} />
       </div>
     </Card>
   );

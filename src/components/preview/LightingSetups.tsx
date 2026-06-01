@@ -11,12 +11,21 @@ interface RigLightingProps {
   lightColor?: string;
 }
 
-// The shadow key additionally needs to know where the real window is and
-// where the art is, so the cast shadow matches the visible daylight
-// source instead of a hand-picked direction.
+// The shadow keys additionally need to know where the real room light
+// sources are (the always-on ceiling downlights, the right-wall daylight
+// window and the left-side floor lamp) and where the art is, so each cast
+// shadow matches its visible source instead of a hand-picked direction.
+// The overhead ceiling shadow is always present; `dayAmount` fades the
+// window shadow out after dark, and `lampAmount` fades the lamp shadow in
+// — so by day the art reads as lit from overhead + the window, and after
+// dark from overhead + the lamp, never the window.
 interface ShadowKeyProps extends RigLightingProps {
+  downlightPos: [number, number, number];
   windowPos: [number, number, number];
+  lampPos: [number, number, number];
   artCenter: [number, number, number];
+  dayAmount: number;
+  lampAmount: number;
 }
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
@@ -48,23 +57,53 @@ const WINDOW_KEY_INTENSITY = 0.5; // was 0.7 — less single-direction punch
 // Opposite (left) fill, lifted a touch so the key no longer dominates.
 const FILL_LIGHT_INTENSITY = 0.45; // was 0.3
 
-// The art's cast shadow is thrown by a SINGLE dedicated key. It is
-// anchored to the REAL window: it comes from whatever side the window is
-// on (so the shadow agrees with the visible daylight) and is aimed at
-// the art's centre (so the shadow frustum tracks the piece). Aiming the
-// key straight from the window to the art makes daylight hit the relief
-// almost head-on, which casts no shadow — so the virtual sun is lifted
-// above the piece and pulled toward the room front by these ratios,
-// giving a raking angle that actually shows the tile relief while still
-// reading as light from the window side. It lives OUTSIDE the
-// time-of-day rotation so the shadow doesn't swing as the rig rotates.
-const WINDOW_SHADOW_INTENSITY = 0.55;
-// Virtual-sun direction, relative to the window→art side vector:
+// The art's cast shadows are thrown by THREE dedicated keys, each
+// anchored to a REAL room light source so every shadow agrees with where
+// its light actually comes from, and each aimed at the art's centre so
+// the shadow frustums track the piece. All live OUTSIDE the time-of-day
+// rotation so the shadows don't swing as the fill rig rotates. More than
+// one is live at a time — the room genuinely has multiple lights:
+//
+//  • OVERHEAD key — the recessed ceiling downlights ("the lights"),
+//    directly above the piece. Always on (the cans never switch off), so
+//    every time of day has a soft shadow straight down the relief. This
+//    is the room's base lighting; the window/lamp keys are the directional
+//    accents layered on top.
+//  • WINDOW key — daylight from the right-wall window. Aiming the key
+//    straight from the window to the art makes daylight hit the relief
+//    almost head-on (no shadow), so the virtual sun keeps the window's
+//    SIDE but is lifted above the piece and pulled toward the room front
+//    by these ratios, giving a raking angle that shows the tile relief
+//    while still reading as light from the window side. DAYTIME ONLY —
+//    fades fully out at night (dayAmount → 0) when the window goes dark,
+//    so after dark the window never drives a shadow.
+//  • LAMP key — the left-side floor lamp. It sits in roughly the art's
+//    own plane, off to the left and a touch low, so light from its real
+//    position already rakes hard across the relief from the left. NIGHT
+//    ONLY (lampAmount → 0 by day, 1 at night), matching when it glows.
+const WINDOW_SHADOW_INTENSITY = 0.5;
+// Window virtual-sun direction, relative to the window→art side vector:
 const SHADOW_SUN_LIFT = 0.62; // how far above the art the sun sits
 const SHADOW_SUN_FRONT = 0.5; // how far toward the room front it sits
 // Far enough that the light reads as directional, well within the
-// shadow camera's far plane.
+// shadow camera's far plane. Shared by all keys.
 const SHADOW_SUN_DISTANCE = 60;
+
+// Overhead ceiling-downlight key. Soft warm-white, always present, and a
+// touch weaker than the directional accents so it reads as ambient
+// overhead fill (a gentle drop shadow) rather than a hard cast.
+const OVERHEAD_SHADOW_INTENSITY = 0.5;
+const OVERHEAD_SHADOW_COLOR = "#fff6e8";
+
+// Lamp key. Warm incandescent tint (matches the lamp's glow in <Room/>),
+// and a gentle lift so the side-lamp rakes from the upper-left rather
+// than uplighting the piece from slightly below the bulb.
+const LAMP_SHADOW_INTENSITY = 0.6;
+const LAMP_SHADOW_COLOR = "#ffdca8";
+// Replace the lamp's small vertical offset with a lift proportional to
+// its lateral distance, so the lamp light rakes down across the relief
+// (≈ this many units up per unit sideways) instead of from below.
+const LAMP_SHADOW_LIFT = 0.4;
 
 // Flatten a light position's lateral (x,y) offset while keeping its
 // distance from the piece (z) so shadows are less raked.
@@ -136,44 +175,40 @@ function useDisposeLightsOnUnmount(
 }
 
 /**
- * The art's only shadow caster: one directional light coming from the
- * real window's side, lifted above and toward the room front so it rakes
- * the tile relief (a straight window→art shot is too head-on to cast any
- * shadow). Its target is the art, so the orthographic shadow frustum
- * tracks the piece even when small pieces are shifted off-centre.
- * Rendered OUTSIDE the time-of-day rotation so the shadow doesn't swing
- * around as the fill rig rotates.
+ * One directional shadow caster placed a fixed distance from the art
+ * along `sunDir` (a normalized direction the light shines FROM), aimed
+ * at the art centre so the orthographic shadow frustum tracks the piece
+ * even when small pieces are shifted off-centre. The single source of
+ * the art's cast shadows; the window and lamp keys below are just two
+ * instances of this with different directions, colours and intensities.
  */
-export function WindowShadowKey({
-  intensityScale = 1,
-  lightColor = "#ffffff",
-  windowPos,
+function DirectionalShadowKey({
+  sunDir,
   artCenter,
-}: ShadowKeyProps) {
+  intensity,
+  color,
+}: {
+  sunDir: THREE.Vector3;
+  artCenter: [number, number, number];
+  intensity: number;
+  color: string;
+}) {
   const lightRef = useRef<THREE.DirectionalLight>(null);
   const targetRef = useRef<THREE.Object3D>(null);
   const half = useShadowFrustum();
 
-  // Build the virtual-sun position from the window: same side as the
-  // window in X, but lifted above the art and pulled toward the room
-  // front so daylight rakes the relief instead of hitting it flat.
-  const sunPos = useMemo<[number, number, number]>(() => {
-    const sideSign = Math.sign(windowPos[0] - artCenter[0]) || 1;
-    const dir = new THREE.Vector3(
-      sideSign,
-      SHADOW_SUN_LIFT,
-      SHADOW_SUN_FRONT
-    ).normalize();
-    return [
-      artCenter[0] + dir.x * SHADOW_SUN_DISTANCE,
-      artCenter[1] + dir.y * SHADOW_SUN_DISTANCE,
-      artCenter[2] + dir.z * SHADOW_SUN_DISTANCE,
-    ];
-  }, [windowPos, artCenter]);
+  const sunPos = useMemo<[number, number, number]>(
+    () => [
+      artCenter[0] + sunDir.x * SHADOW_SUN_DISTANCE,
+      artCenter[1] + sunDir.y * SHADOW_SUN_DISTANCE,
+      artCenter[2] + sunDir.z * SHADOW_SUN_DISTANCE,
+    ],
+    [sunDir, artCenter]
+  );
 
   // Point the light (and therefore its shadow camera) at the art, and
-  // keep the projection matrix in sync whenever the frustum, window or
-  // art position changes.
+  // keep the projection matrix in sync whenever the frustum, direction
+  // or art position changes.
   useEffect(() => {
     const light = lightRef.current;
     const tgt = targetRef.current;
@@ -194,11 +229,99 @@ export function WindowShadowKey({
       <directionalLight
         ref={lightRef}
         position={sunPos}
-        color={lightColor}
-        intensity={WINDOW_SHADOW_INTENSITY * intensityScale}
+        color={color}
+        intensity={intensity}
         {...shadowProps(half)}
       />
       <object3D ref={targetRef} position={artCenter} />
+    </>
+  );
+}
+
+/**
+ * The art's cast shadows, thrown by up to three keys anchored to the real
+ * room light sources so the shadows reflect where the light actually
+ * comes from: the always-on ceiling downlights (a soft shadow straight
+ * down), plus a directional accent that's the right-wall daylight window
+ * by day and the left-side floor lamp after dark. Rendered OUTSIDE the
+ * time-of-day rotation so the shadows don't swing as the fill rig
+ * rotates. The overhead key is always live; the window and lamp keys mount
+ * only while their source is lit (window by day, lamp at night), so the
+ * window never drives a shadow after dark and the lamp never does by day.
+ */
+export function ArtShadowKeys({
+  intensityScale = 1,
+  lightColor = "#ffffff",
+  downlightPos,
+  windowPos,
+  lampPos,
+  artCenter,
+  dayAmount,
+  lampAmount,
+}: ShadowKeyProps) {
+  // OVERHEAD: straight from the ceiling cans above the piece toward the
+  // art — a near-vertical sun that drops a soft shadow down the relief at
+  // every time of day (the room's base lighting).
+  const overheadDir = useMemo(() => {
+    const dx = downlightPos[0] - artCenter[0];
+    const dy = downlightPos[1] - artCenter[1];
+    const dz = downlightPos[2] - artCenter[2];
+    return new THREE.Vector3(dx, dy, dz).normalize();
+  }, [downlightPos, artCenter]);
+
+  // WINDOW: keep the window's SIDE (sign in X) but lift the sun above
+  // the art and pull it toward the room front so daylight rakes the
+  // relief instead of hitting it head-on.
+  const windowDir = useMemo(() => {
+    const sideSign = Math.sign(windowPos[0] - artCenter[0]) || 1;
+    return new THREE.Vector3(
+      sideSign,
+      SHADOW_SUN_LIFT,
+      SHADOW_SUN_FRONT
+    ).normalize();
+  }, [windowPos, artCenter]);
+
+  // LAMP: use the lamp's REAL lateral/front direction (it's off to the
+  // left, roughly in the art's plane), but swap its small vertical
+  // offset for a lift proportional to that lateral reach so the side
+  // lamp rakes down across the relief rather than uplighting it.
+  const lampDir = useMemo(() => {
+    const dx = lampPos[0] - artCenter[0];
+    const dz = lampPos[2] - artCenter[2];
+    const lateral = Math.hypot(dx, dz) || 1;
+    return new THREE.Vector3(dx, lateral * LAMP_SHADOW_LIFT, dz).normalize();
+  }, [lampPos, artCenter]);
+
+  const overheadIntensity = OVERHEAD_SHADOW_INTENSITY * intensityScale;
+  const windowIntensity = WINDOW_SHADOW_INTENSITY * intensityScale * dayAmount;
+  const lampIntensity = LAMP_SHADOW_INTENSITY * lampAmount;
+
+  return (
+    <>
+      {overheadIntensity > 0.01 && (
+        <DirectionalShadowKey
+          sunDir={overheadDir}
+          artCenter={artCenter}
+          intensity={overheadIntensity}
+          color={OVERHEAD_SHADOW_COLOR}
+        />
+      )}
+      {windowIntensity > 0.01 && (
+        <DirectionalShadowKey
+          sunDir={windowDir}
+          artCenter={artCenter}
+          intensity={windowIntensity}
+          color={lightColor}
+        />
+      )}
+      {lampIntensity > 0.01 && (
+        <DirectionalShadowKey
+          sunDir={lampDir}
+          artCenter={artCenter}
+          intensity={lampIntensity}
+          color={LAMP_SHADOW_COLOR}
+        />
+      )}
     </>
   );
 }

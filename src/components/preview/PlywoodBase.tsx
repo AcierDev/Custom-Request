@@ -168,10 +168,10 @@ export function PlywoodBase({
   adjustedModelHeight,
   useMini,
 }: PlywoodBaseProps) {
-  // Only load texture if it will be used
-  const texture = showWoodGrain
-    ? useLoader(TextureLoader, "/textures/plywood.jpg")
-    : null;
+  // Load unconditionally — hooks must run on every render (a conditional
+  // useLoader breaks the rules of hooks and crashes when the wood-grain
+  // toggle flips). Each panel still applies it only when showWoodGrain.
+  const texture = useLoader(TextureLoader, "/textures/plywood.jpg");
 
   const selectedDesign = useCustomStore((s) => s.selectedDesign);
   const customPalette = useCustomStore((s) => s.customPalette);

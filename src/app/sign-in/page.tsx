@@ -121,7 +121,7 @@ function SignInContent() {
   const handleProviderSignIn = async (provider: string) => {
     try {
       setError(null);
-      setIsLoading({ ...isLoading, [provider]: true });
+      setIsLoading((prev) => ({ ...prev, [provider]: true }));
 
       // Set a flag that we're initiating sign-in
       sessionStorage.setItem("signin_initiated", provider);
@@ -133,7 +133,7 @@ function SignInContent() {
       setError(`Failed to sign in with ${provider}. Please try again.`);
       sessionStorage.removeItem("signin_initiated");
     } finally {
-      setIsLoading({ ...isLoading, [provider]: false });
+      setIsLoading((prev) => ({ ...prev, [provider]: false }));
     }
   };
 
@@ -144,7 +144,7 @@ function SignInContent() {
     try {
       setError(null);
       setEmailSent(false);
-      setIsLoading({ ...isLoading, email: true });
+      setIsLoading((prev) => ({ ...prev, email: true }));
       await signIn("email", email);
       // If we get here, the email was sent successfully
       setEmailSent(true);
@@ -152,14 +152,14 @@ function SignInContent() {
       console.error("Error signing in with email:", error);
       setError("Failed to sign in with email. Please try again.");
     } finally {
-      setIsLoading({ ...isLoading, email: false });
+      setIsLoading((prev) => ({ ...prev, email: false }));
     }
   };
 
   const handleGuestAccess = () => {
     try {
       setError(null);
-      setIsLoading({ ...isLoading, guest: true });
+      setIsLoading((prev) => ({ ...prev, guest: true }));
       continueAsGuest();
 
       // Check if onboarding is completed
@@ -176,7 +176,7 @@ function SignInContent() {
     } catch (error) {
       console.error("Error continuing as guest:", error);
       setError("Failed to continue as guest. Please try again.");
-      setIsLoading({ ...isLoading, guest: false });
+      setIsLoading((prev) => ({ ...prev, guest: false }));
     }
   };
 

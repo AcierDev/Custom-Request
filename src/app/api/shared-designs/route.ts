@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
       shareId: sharedDesign.shareId,
       designData: sharedDesign.designData,
       createdAt: sharedDesign.createdAt,
-      accessCount: sharedDesign.accessCount + 1, // Return updated count
+      accessCount: (sharedDesign.accessCount ?? 0) + 1, // Return updated count
     });
   } catch (error) {
     console.error("Error retrieving shared design:", error);

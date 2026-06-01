@@ -233,7 +233,7 @@ export async function GET(request: NextRequest) {
       setId: sharedSet.setId,
       designs: sharedSet.designs,
       createdAt: sharedSet.createdAt,
-      accessCount: sharedSet.accessCount + (wantBreakdown ? 0 : 1),
+      accessCount: (sharedSet.accessCount ?? 0) + (wantBreakdown ? 0 : 1),
       setUrl: `${VIEWER_BASE_URL}/?setId=${setId}`,
     };
 

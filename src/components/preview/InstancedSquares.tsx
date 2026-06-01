@@ -36,10 +36,6 @@ export interface SquareInstance {
   rotationZ: number;
   scaleXY: number;
   scaleZ: number;
-  /** Per-square wood-grain UV transform (legacy; unused by the atlas path). */
-  uvOffsetX: number;
-  uvOffsetY: number;
-  uvRot: number;
   /** Which grain-atlas cell (0..GRAIN_ATLAS.count-1) this square samples. */
   grainIndex: number;
 }
@@ -51,9 +47,25 @@ interface InstancedSquaresProps {
   driftAmount: number;
   /** Live split-panel drift factor (0 → 1) from the react-spring value. */
   getDriftFactor: () => number;
-  onHover: (x: number, y: number, color: string, name?: string) => void;
+  onHover: (
+    x: number,
+    y: number,
+    color: string,
+    name: string | undefined,
+    worldX: number,
+    worldY: number,
+    worldZ: number
+  ) => void;
   onUnhover: () => void;
-  onClick: (x: number, y: number, color: string, name?: string) => void;
+  onClick: (
+    x: number,
+    y: number,
+    color: string,
+    name: string | undefined,
+    worldX: number,
+    worldY: number,
+    worldZ: number
+  ) => void;
   /** Fired when a size-change bloom begins / lands — lets the parent
    *  hide the plywood + hanger until the squares have finished revealing. */
   onBloomStart?: () => void;
@@ -73,26 +85,51 @@ interface InstancedSquaresProps {
 // Wedge geometry — same shape as Square.tsx's geometric wedge, but built
 // fresh here so we can attach instanced attributes without mutating the
 // geometry shared by the legacy Square path.
-function createWedgeGeometry(): THREE.BufferGeometry {
+// Exported so the AR/USDZ exporter (src/lib/ar) can bake the IDENTICAL wedge
+// into a flattened, grain-baked model — keeping the relief + grain parity.
+export function createWedgeGeometry(): THREE.BufferGeometry {
   const geometry = new THREE.BufferGeometry();
   const angleInRadians = (21.5 * Math.PI) / 180;
   const h = Math.tan(angleInRadians);
 
+  // Verts 0..7 build the back face + the four sides. The angled (front)
+  // face gets its OWN copies of the raised edge — verts 8..11 — so a
+  // per-vertex grain mask can isolate it: grain shows ONLY on the angled
+  // face, while the back + sides stay flat color (verts can't be shared
+  // or the mask would interpolate across the shared edges).
   const positions = [
-    -0.5, -0.5, 0, 0.5, -0.5, 0, 0.5, 0.5, 0, -0.5, 0.5, 0, -0.5, -0.5, h, 0.5,
-    -0.5, h, 0.5, 0.5, 0, -0.5, 0.5, 0,
+    // 0..3 — back face (z = 0)
+    -0.5, -0.5, 0, 0.5, -0.5, 0, 0.5, 0.5, 0, -0.5, 0.5, 0,
+    // 4..7 — raised front edge, shared by the side faces
+    -0.5, -0.5, h, 0.5, -0.5, h, 0.5, 0.5, 0, -0.5, 0.5, 0,
+    // 8..11 — dedicated angled-face verts (copies of 4,5,6,7)
+    -0.5, -0.5, h, 0.5, -0.5, h, 0.5, 0.5, 0, -0.5, 0.5, 0,
   ];
   const indices = [
-    0, 2, 1, 0, 3, 2, 4, 5, 6, 4, 6, 7, 0, 4, 7, 0, 7, 3, 1, 2, 6, 1, 6, 5, 0,
-    1, 5, 0, 5, 4, 3, 7, 6, 3, 6, 2,
+    0, 2, 1, 0, 3, 2, // back
+    8, 9, 10, 8, 10, 11, // angled face (its own verts)
+    0, 4, 7, 0, 7, 3, // left side
+    1, 2, 6, 1, 6, 5, // right side
+    0, 1, 5, 0, 5, 4, // bottom side
+    3, 7, 6, 3, 6, 2, // top side
   ];
-  const uvs = [0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1];
+  const uvs = [
+    0, 0, 1, 0, 1, 1, 0, 1, // 0..3
+    0, 0, 1, 0, 1, 1, 0, 1, // 4..7
+    0, 0, 1, 0, 1, 1, 0, 1, // 8..11 (angled face)
+  ];
+  // 1 only on the angled-face verts → the shader shows grain there alone.
+  const grainMask = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1];
 
   geometry.setAttribute(
     "position",
     new THREE.Float32BufferAttribute(positions, 3)
   );
   geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+  geometry.setAttribute(
+    "aGrainMask",
+    new THREE.Float32BufferAttribute(grainMask, 1)
+  );
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
   geometry.center();
@@ -107,7 +144,20 @@ const tmpEuler = new THREE.Euler();
 const tmpColor = new THREE.Color();
 const METALLIC_ENV_BLUR = 0.04;
 const WOOD_TEXTURE_ANISOTROPY = 8;
-const HIGHLIGHT_SCALE = 1.04;
+const HIGHLIGHT_SCALE = 1.06;
+// The hover glow draws after the squares (high render order) so it layers over
+// them, not z-fights with the coincident wedge.
+const HIGHLIGHT_RENDER_ORDER = 3;
+
+// Picking proxy depth. Each square is a wedge that protrudes toward the
+// camera, so at an orbit angle a ray near a square's edge skims past the
+// front square and hits the one behind it — highlighting the wrong (or a
+// second) square as the cursor moves. Instead of raycasting the bumpy
+// wedges, we raycast a flat coplanar quad per square: a flat surface maps
+// each cursor pixel to exactly one square. The slanted wedge face is
+// centred on the instance z, so a small forward offset best matches where
+// the eye reads the square's centre and keeps parallax minimal.
+const PICK_PLANE_Z_OFFSET = 0.1;
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ ✨ SIZE-CHANGE BLOOM                                                   ║
@@ -262,6 +312,9 @@ function InstancedSquaresComponent({
   enablePatternEditing = false,
 }: InstancedSquaresProps) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
+  // Flat picking proxy — see PICK_PLANE_Z_OFFSET. Pointer events are bound to
+  // this, not the protruding wedges.
+  const pickMeshRef = useRef<THREE.InstancedMesh>(null);
   const highlightRef = useRef<THREE.Mesh>(null);
   const hoveredInstanceRef = useRef<number | undefined>(undefined);
 
@@ -322,6 +375,9 @@ function InstancedSquaresComponent({
     return g;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [instances.length]);
+  // Geometry is rebuilt when the square count changes; dispose the previous
+  // one (and its GPU buffers) so resizes don't leak.
+  useEffect(() => () => geometry.dispose(), [geometry]);
 
   // One material for every square. Each square samples its own grain-atlas
   // cell (by aGrainIndex) and blends it over the flat color at GRAIN_ATLAS
@@ -333,18 +389,39 @@ function InstancedSquaresComponent({
       tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
       tex.colorSpace = THREE.SRGBColorSpace;
       tex.anisotropy = WOOD_TEXTURE_ANISOTROPY;
+      // Index the atlas in file-space (row 0 = top row of the image). Without
+      // this the default flipY=true makes grainIndex row 0 sample the BOTTOM of
+      // the image — the row holding the 2 blank cells — so squares with
+      // grainIndex 2 or 3 render flat with no grain. flipY=false aligns the
+      // shader's top-down row math with the atlas so the blank cells (14,15,
+      // which are never indexed) stay unused. needsUpdate re-uploads in case the
+      // texture was already bound with the old flip.
+      tex.flipY = false;
+      tex.needsUpdate = true;
     }
 
-    // "Metallic" is a paint finish layered over the wood grain — the grain
-    // map stays; only the PBR finish changes to a soft (low-gloss) sheen.
-    const mat = new THREE.MeshStandardMaterial({
-      map: showWoodGrain ? tex ?? null : null,
-      color: 0xffffff,
-      roughness: metallic ? METALLIC_PAINT.roughness : woodStyle.roughness,
-      metalness: metallic ? METALLIC_PAINT.metalness : woodStyle.metalness,
-      envMap: metallic ? envMap : null,
-      envMapIntensity: metallic ? METALLIC_PAINT.envMapIntensity : 1,
-    });
+    // "Metallic" is a paint finish layered over the wood grain — a glossy
+    // PBR sheen (MeshStandardMaterial + room env reflection), so its highlights
+    // are intended. The DEFAULT wood is matte: MeshStandardMaterial gives
+    // dielectrics a white Fresnel specular that lights the wedge bevels/sides
+    // as a bright white rim at grazing angles (the "white highlight on the
+    // sides"). MeshPhongMaterial with black specular is pure diffuse, so the
+    // sides read as a flat solid colour with no sheen.
+    const mat = metallic
+      ? new THREE.MeshStandardMaterial({
+          map: showWoodGrain ? tex ?? null : null,
+          color: 0xffffff,
+          roughness: METALLIC_PAINT.roughness,
+          metalness: METALLIC_PAINT.metalness,
+          envMap,
+          envMapIntensity: METALLIC_PAINT.envMapIntensity,
+        })
+      : new THREE.MeshPhongMaterial({
+          map: showWoodGrain ? tex ?? null : null,
+          color: 0xffffff,
+          specular: 0x000000,
+          shininess: 0,
+        });
 
     // Only inject the grain sampler when there's a map; without USE_MAP the
     // `uv` attribute isn't declared by three's chunks.
@@ -352,29 +429,42 @@ function InstancedSquaresComponent({
       mat.onBeforeCompile = (shader) => {
         shader.uniforms.uGrid = { value: GRAIN_ATLAS.grid };
         shader.uniforms.uGrainOpacity = { value: GRAIN_ATLAS.opacity };
+        shader.uniforms.uBrightness = { value: GRAIN_ATLAS.brightness };
+        // Fraction of the cell sampled: the border inset, zoomed in further so
+        // the grain reads larger (less tight). Lower value = bigger grain.
+        shader.uniforms.uCellSample = {
+          value: GRAIN_ATLAS.cellInset / GRAIN_ATLAS.zoom,
+        };
         shader.vertexShader =
-          `attribute float aGrainIndex;\nuniform float uGrid;\nvarying vec2 vGrainUv;\n` +
+          `attribute float aGrainIndex;\nattribute float aGrainMask;\nuniform float uGrid;\nuniform float uCellSample;\nvarying vec2 vGrainUv;\nvarying float vGrainMask;\n` +
           shader.vertexShader.replace(
             "#include <uv_vertex>",
             `#include <uv_vertex>
           {
-            // Map this square's [0,1] face UV into its atlas cell. A small
-            // inset keeps mip filtering from bleeding across cell borders.
+            // Map this square's [0,1] face UV into its atlas cell. Sampling a
+            // centered sub-region (uCellSample) both keeps mip filtering from
+            // bleeding across cell borders and zooms the grain in.
             float col = mod(aGrainIndex, uGrid);
             float row = floor(aGrainIndex / uGrid);
-            vec2 inset = (clamp(uv, 0.0, 1.0) - 0.5) * 0.94 + 0.5;
+            vec2 inset = (clamp(uv, 0.0, 1.0) - 0.5) * uCellSample + 0.5;
             vGrainUv = (vec2(col, row) + inset) / uGrid;
+            // 1 on the angled face, 0 on the back + sides.
+            vGrainMask = aGrainMask;
           }`
           );
         shader.fragmentShader =
-          `uniform float uGrainOpacity;\nvarying vec2 vGrainUv;\n` +
+          `uniform float uGrainOpacity;\nuniform float uBrightness;\nvarying vec2 vGrainUv;\nvarying float vGrainMask;\n` +
           shader.fragmentShader.replace(
             "#include <map_fragment>",
             `#ifdef USE_MAP
              vec4 grainTexel = texture2D( map, vGrainUv );
-             // Blend grain over the flat square color (multiplicative).
-             diffuseColor *= mix( vec4( 1.0 ), grainTexel, uGrainOpacity );
-           #endif`
+             // Grain ONLY on the angled face (vGrainMask = 1). The back and
+             // side faces keep the flat square color — no wood texture.
+             float grainAmt = uGrainOpacity * vGrainMask;
+             diffuseColor *= mix( vec4( 1.0 ), grainTexel, grainAmt );
+           #endif
+           // Overall darken/brighten applied after the grain blend.
+           diffuseColor.rgb *= uBrightness;`
           );
         (mat as unknown as { userData: { shader?: unknown } }).userData.shader =
           shader;
@@ -383,8 +473,16 @@ function InstancedSquaresComponent({
     return mat;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [grainAtlas, showWoodGrain, woodStyle, metallic, envMap]);
+  // The material (and its compiled shader program) is recreated on grain /
+  // style / metallic toggles; dispose the previous one to avoid a GPU leak.
+  useEffect(() => () => material.dispose(), [material]);
 
-  // Highlight material for the hovered / pinned square.
+  // Highlight material for the hovered / pinned square. depthTest is OFF so
+  // the glow layers fully over the square it wraps: the highlight wedge is
+  // coincident with the opaque square (which writes depth), so WITH depth
+  // testing the square occludes all but a flickering rim — the glow then
+  // covers only part of the square. Drawing it on top (high render order,
+  // below) makes it wrap the whole face + sides cleanly.
   const highlightMaterial = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
@@ -392,10 +490,41 @@ function InstancedSquaresComponent({
         emissive: 0xffffff,
         emissiveIntensity: 0.45,
         transparent: true,
-        opacity: 0.35,
+        opacity: 0.4,
         depthWrite: false,
+        depthTest: false,
       }),
     []
+  );
+  useEffect(() => () => highlightMaterial.dispose(), [highlightMaterial]);
+
+  // Dedicated highlight geometry — a fresh wedge, NOT the instanced grid
+  // geometry (which carries the per-instance aGrainIndex attribute and is
+  // rebuilt on every resize). Keeps the hover glow stable and decoupled.
+  const highlightGeometry = useMemo(() => createWedgeGeometry(), []);
+  useEffect(() => () => highlightGeometry.dispose(), [highlightGeometry]);
+
+  // Flat picking proxy: an invisible 1×1 quad instanced once per square. It
+  // renders nothing (opacity 0, no depth write) but is the only pickable
+  // surface, so hovering always resolves to exactly the square under the
+  // cursor — no skim-past-into-the-square-behind.
+  const pickGeometry = useMemo(() => new THREE.PlaneGeometry(1, 1), []);
+  const pickMaterial = useMemo(
+    () =>
+      new THREE.MeshBasicMaterial({
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      }),
+    []
+  );
+  useEffect(
+    () => () => {
+      pickGeometry.dispose();
+      pickMaterial.dispose();
+    },
+    [pickGeometry, pickMaterial]
   );
 
   // Fill instance matrices, colours and UV attributes whenever the
@@ -403,6 +532,7 @@ function InstancedSquaresComponent({
   useEffect(() => {
     const mesh = meshRef.current;
     if (!mesh) return;
+    const pickMesh = pickMeshRef.current;
 
     const grainIndexAttr = geometry.getAttribute(
       "aGrainIndex"
@@ -449,6 +579,15 @@ function InstancedSquaresComponent({
       mesh.setColorAt(i, tmpColor);
 
       grainIndexAttr.setX(i, s.grainIndex);
+
+      // Flat pick proxy: full size (never collapsed by the bloom), a touch
+      // in front of the wedge. Same rotation (tmpQuat) so seams line up.
+      if (pickMesh) {
+        tmpPos.set(s.px, s.py, s.pz + PICK_PLANE_Z_OFFSET);
+        tmpScale.set(s.scaleXY, s.scaleXY, 1);
+        tmpMatrix.compose(tmpPos, tmpQuat, tmpScale);
+        pickMesh.setMatrixAt(i, tmpMatrix);
+      }
     }
 
     mesh.count = instances.length;
@@ -456,6 +595,11 @@ function InstancedSquaresComponent({
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     grainIndexAttr.needsUpdate = true;
     mesh.computeBoundingSphere();
+    if (pickMesh) {
+      pickMesh.count = instances.length;
+      pickMesh.instanceMatrix.needsUpdate = true;
+      pickMesh.computeBoundingSphere();
+    }
     // `material` is intentionally a dependency: it lives in the <instancedMesh>
     // args, so toggling wood grain / metallic / wood style recreates the mesh
     // with a zeroed instance buffer. Re-running here repopulates the new mesh.
@@ -469,6 +613,7 @@ function InstancedSquaresComponent({
   useFrame(({ clock }) => {
     const mesh = meshRef.current;
     if (!mesh) return;
+    const pickMesh = pickMeshRef.current;
 
     const f = getDriftFactor();
     const driftMoving = Math.abs(f - lastDrift.current) >= 1e-4;
@@ -502,8 +647,17 @@ function InstancedSquaresComponent({
       tmpScale.set(s.scaleXY * sc, s.scaleXY * sc, s.scaleZ * sc);
       tmpMatrix.compose(tmpPos, tmpQuat, tmpScale);
       mesh.setMatrixAt(i, tmpMatrix);
+
+      // Keep the flat pick proxy aligned with the drifted square (full size).
+      if (pickMesh) {
+        tmpPos.set(px, s.py, s.pz + PICK_PLANE_Z_OFFSET);
+        tmpScale.set(s.scaleXY, s.scaleXY, 1);
+        tmpMatrix.compose(tmpPos, tmpQuat, tmpScale);
+        pickMesh.setMatrixAt(i, tmpMatrix);
+      }
     }
     mesh.instanceMatrix.needsUpdate = true;
+    if (pickMesh) pickMesh.instanceMatrix.needsUpdate = true;
 
     if (blooming && allDone) {
       bloomActiveRef.current = false;
@@ -547,7 +701,10 @@ function InstancedSquaresComponent({
     hoveredInstanceRef.current = id;
     const s = instances[id];
     moveHighlight(id);
-    onHover(s.x, s.y, s.color, s.colorName);
+    // Anchor overlays on the square's actual position, not its grid index.
+    // Z is the pick-plane (the square's picked face), so the label pins to the
+    // surface instead of floating in front of it and parallax-drifting away.
+    onHover(s.x, s.y, s.color, s.colorName, s.baseX, s.py, s.pz + PICK_PLANE_Z_OFFSET);
   };
 
   const handleOut = () => {
@@ -561,7 +718,7 @@ function InstancedSquaresComponent({
     const id = e.instanceId;
     if (id === undefined || !instances[id]) return;
     const s = instances[id];
-    onClick(s.x, s.y, s.color, s.colorName);
+    onClick(s.x, s.y, s.color, s.colorName, s.baseX, s.py, s.pz + PICK_PLANE_Z_OFFSET);
   };
 
   return (
@@ -572,6 +729,15 @@ function InstancedSquaresComponent({
         castShadow
         receiveShadow
         frustumCulled={false}
+        // Not pickable: the protruding wedges cause skim-past-into-behind
+        // mis-picks. Picking is handled by the flat proxy below.
+        raycast={() => null}
+      />
+      {/* Invisible flat pick proxy — the only pointer-interactive surface. */}
+      <instancedMesh
+        ref={pickMeshRef}
+        args={[pickGeometry, pickMaterial, instances.length]}
+        frustumCulled={false}
         onPointerMove={showColorInfo ? handleMove : undefined}
         onPointerOut={showColorInfo ? handleOut : undefined}
         onClick={
@@ -580,8 +746,9 @@ function InstancedSquaresComponent({
       />
       <mesh
         ref={highlightRef}
-        geometry={geometry}
+        geometry={highlightGeometry}
         material={highlightMaterial}
+        renderOrder={HIGHLIGHT_RENDER_ORDER}
         visible={false}
         raycast={() => undefined}
       />

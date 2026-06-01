@@ -109,6 +109,7 @@ export const generateShortShareableUrl = (stateData: any): string => {
       random: 3,
       fade: 4,
       "center-fade": 5,
+      scatter: 6,
     };
     minimalState.cp = patternMap[stateData.colorPattern];
   }
@@ -197,6 +198,7 @@ export const extractStateFromShortUrl = <T>(compressedData: string): T => {
         "random",
         "fade",
         "center-fade",
+        "scatter",
       ];
       fullState.colorPattern = patternMap[minimalState.cp];
     }

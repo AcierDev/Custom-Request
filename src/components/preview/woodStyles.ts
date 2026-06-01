@@ -6,16 +6,9 @@
 // per-mesh Square path. The SQUARES' grain is NOT a single sampled texture —
 // it's the GRAIN ATLAS below (one of 14 distinct grain images per square),
 // exactly like production viewer.everwoodus.com. plywood.jpg is only the
-// literal backing board (see PlywoodBase). topTexture/topScale here are kept
-// only for the legacy Square.tsx path and PlywoodBase fallbacks.
+// literal backing board (see PlywoodBase).
 
 export interface WoodStyle {
-  /** Grain image used on the top / front faces. */
-  topTexture: string;
-  /** Grain image used on the side faces. */
-  sideTexture: string;
-  /** THREE texture repeat factor — lower = larger grain. */
-  topScale: number;
   /** PBR roughness — higher = more matte. */
   roughness: number;
   /** PBR metalness — small values add a subtle sheen. */
@@ -23,9 +16,6 @@ export interface WoodStyle {
 }
 
 export const WOOD_STYLE: WoodStyle = {
-  topTexture: "/textures/plywood.jpg",
-  sideTexture: "/textures/wood-side-grain.jpg",
-  topScale: 1.0,
   roughness: 0.8,
   metalness: 0.05,
 };
@@ -51,6 +41,15 @@ export const GRAIN_ATLAS = {
   count: 14,
   /** Blend strength of grain over the flat square color (production = 0.4). */
   opacity: 0.4,
+  /** Fraction of the cell kept clear of the border so mip filtering can't
+   *  bleed one grain image into its neighbour. */
+  cellInset: 0.94,
+  /** Grain zoom — higher = larger / less-tight grain (samples a smaller,
+   *  centered region of each cell). 1.1 = zoomed in 10% vs. the base inset. */
+  zoom: 1.1,
+  /** Overall square brightness multiplier applied after the grain blend.
+   *  <1 darkens the squares (0.9 = 10% darker). */
+  brightness: 0.9,
 } as const;
 
 // Identifier for the single shipped wood look. The picker that swapped

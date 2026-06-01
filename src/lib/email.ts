@@ -24,7 +24,6 @@ export async function sendEmail({
 }> {
   try {
     const ZEPTOMAIL_TOKEN = process.env.ZEPTOMAIL_TOKEN;
-    console.log(ZEPTOMAIL_TOKEN);
 
     if (!ZEPTOMAIL_TOKEN) {
       throw new Error(

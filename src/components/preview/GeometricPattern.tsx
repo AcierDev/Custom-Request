@@ -4,10 +4,13 @@ import { useCustomStore } from "@/store/customStore";
 import { getDimensionsDetails } from "@/lib/utils";
 import { memo, useRef, useEffect, useState, useMemo, useCallback } from "react";
 import { Html } from "@react-three/drei";
+import { useFrame, useThree } from "@react-three/fiber";
+import * as THREE from "three";
 import { hoverStore } from "@/store/customStore";
 import { useStore } from "zustand";
 import { InstancedSquares, SquareInstance } from "./InstancedSquares";
 import { PlywoodBase } from "./PlywoodBase";
+import { publishArtSnapshot } from "@/lib/ar/artSnapshot";
 import { ItemDesigns } from "@/typings/types";
 import {
   PatternProps,
@@ -31,55 +34,147 @@ const EMPTY_FALLBACK_PALETTE = [
   { hex: EMPTY_FALLBACK_BLUE, name: "Dark Blue" },
 ];
 
-function ColorInfoOverlays() {
+// Place the color label to the RIGHT of the square it points at — beside it,
+// out of the way but still attached. The horizontal offset (group-local world
+// units) is recomputed every frame as: a small constant clearance past the
+// square edge, PLUS a constant on-screen pixel gap converted to world units
+// from the live camera distance + FOV. So the on-screen gap stays roughly the
+// same at every zoom — the world gap shrinks as you zoom in (label hugs the
+// square) and grows as you zoom out (never sits on it). Tune to taste.
+const LABEL_CLEAR_WORLD = 0.3; // ≈ a square half-width: clears the square edge
+const LABEL_GAP_PX = 16; // constant breathing room past that edge, on screen
+// Vertical centering on the square's row is a screen-space transform on the box.
+const LABEL_BOX_TRANSFORM = "translateY(-50%)";
+
+// Reused each frame to avoid per-frame allocation in LabelAnchor's useFrame.
+const labelAnchorWorld = new THREE.Vector3();
+
+//╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
+//║ 🏷️ LABEL ANCHOR — zoom-aware "just to the right of the square" placement ║
+//╚═══╝ ════════════════════════════════════════════════════════════════ ╚═══╝
+
+/** Renders its children (an <Html> label) in a group nudged to the right of
+ *  the square at [anchorX, anchorY, anchorZ], by a distance that keeps the
+ *  on-screen gap constant across zoom levels (see LABEL_CLEAR_WORLD / _PX). */
+function LabelAnchor({
+  anchorX,
+  anchorY,
+  anchorZ,
+  children,
+}: {
+  anchorX: number;
+  anchorY: number;
+  anchorZ: number;
+  children: React.ReactNode;
+}) {
+  const groupRef = useRef<THREE.Group>(null);
+  const camera = useThree((s) => s.camera);
+  const viewportHeight = useThree((s) => s.size.height);
+
+  useFrame(() => {
+    const g = groupRef.current;
+    if (!g) return;
+    // The square's WORLD position — through the parent art group's centering /
+    // orientation transform — so the camera-distance read is accurate.
+    labelAnchorWorld.set(anchorX, anchorY, anchorZ);
+    if (g.parent) labelAnchorWorld.applyMatrix4(g.parent.matrixWorld);
+    const distance = camera.position.distanceTo(labelAnchorWorld);
+    const fov = (camera as THREE.PerspectiveCamera).isPerspectiveCamera
+      ? (camera as THREE.PerspectiveCamera).fov
+      : 40;
+    // World units one screen pixel spans at the square's depth.
+    const worldPerPixel =
+      (2 * distance * Math.tan((fov * Math.PI) / 360)) / viewportHeight;
+    const offsetX = LABEL_CLEAR_WORLD + LABEL_GAP_PX * worldPerPixel;
+    g.position.set(anchorX + offsetX, anchorY, anchorZ);
+  });
+
+  return (
+    <group ref={groupRef} position={[anchorX, anchorY, anchorZ]}>
+      {children}
+    </group>
+  );
+}
+
+function ColorInfoOverlays({ allowPin = true }: { allowPin?: boolean }) {
   const hoverInfo = useStore(hoverStore, (s) => s.hoverInfo);
   const pinnedInfo = useStore(hoverStore, (s) => s.pinnedInfo);
   const setPinnedInfo = useStore(hoverStore, (s) => s.setPinnedInfo);
 
+  // Anchor on the square's actual position in the art (worldPosition);
+  // fall back to grid coords only for legacy callers that omit it. The Z is
+  // the square's picked face plane — anchoring there keeps the label pinned to
+  // the square instead of parallax-drifting half a square off at an orbit
+  // angle (legacy callers without a Z fall back to the old 0.5 plane).
+  const hoverAnchor = hoverInfo?.worldPosition ?? hoverInfo?.position;
+  const hoverZ = hoverInfo?.worldPosition?.[2] ?? 0.5;
+  const pinnedAnchor = pinnedInfo?.worldPosition ?? pinnedInfo?.position;
+  const pinnedZ = pinnedInfo?.worldPosition?.[2] ?? 0.5;
+
   return (
     <>
-      {hoverInfo && (
-        <Html position={[hoverInfo.position[0], hoverInfo.position[1], 0.5]}>
-          <div className="bg-gray-900 p-2 rounded shadow-md text-xs whitespace-nowrap">
-            <div className="flex items-center gap-2">
-              <div
-                className="w-3 h-3 rounded-full"
-                style={{ backgroundColor: hoverInfo.color }}
-              ></div>
-              <span className="font-medium text-slate-200">
-                {hoverInfo.colorName || "Custom Color"}
-              </span>
+      {hoverInfo && hoverAnchor && (
+        <LabelAnchor
+          anchorX={hoverAnchor[0]}
+          anchorY={hoverAnchor[1]}
+          anchorZ={hoverZ}
+        >
+          <Html position={[0, 0, 0]}>
+            <div
+              className="bg-gray-900 p-2 rounded shadow-md text-xs whitespace-nowrap"
+              // pointerEvents none so the box — now beside the square — never
+              // intercepts hover and flickers the label as the cursor moves.
+              style={{ transform: LABEL_BOX_TRANSFORM, pointerEvents: "none" }}
+            >
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-3 h-3 rounded-full"
+                  style={{ backgroundColor: hoverInfo.color }}
+                ></div>
+                <span className="font-medium text-slate-200">
+                  {hoverInfo.colorName || "Custom Color"}
+                </span>
+              </div>
+              <div className="text-slate-400 mt-1">
+                {hoverInfo.color.toUpperCase()}
+              </div>
             </div>
-            <div className="text-slate-400 mt-1">
-              {hoverInfo.color.toUpperCase()}
-            </div>
-          </div>
-        </Html>
+          </Html>
+        </LabelAnchor>
       )}
 
-      {pinnedInfo && (
-        <Html position={[pinnedInfo.position[0], pinnedInfo.position[1], 0.5]}>
-          <div className="bg-gray-900 border-2 border-blue-500 p-2 rounded shadow-md text-xs whitespace-nowrap">
-            <div className="flex items-center gap-2">
-              <div
-                className="w-3 h-3 rounded-full"
-                style={{ backgroundColor: pinnedInfo.color }}
-              ></div>
-              <span className="font-medium text-slate-200">
-                {pinnedInfo.colorName || "Custom Color"}
-              </span>
-              <button
-                className="ml-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                onClick={() => setPinnedInfo(null)}
-              >
-                ✕
-              </button>
+      {allowPin && pinnedInfo && pinnedAnchor && (
+        <LabelAnchor
+          anchorX={pinnedAnchor[0]}
+          anchorY={pinnedAnchor[1]}
+          anchorZ={pinnedZ}
+        >
+          <Html position={[0, 0, 0]}>
+            <div
+              className="bg-gray-900 border-2 border-blue-500 p-2 rounded shadow-md text-xs whitespace-nowrap"
+              style={{ transform: LABEL_BOX_TRANSFORM }}
+            >
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-3 h-3 rounded-full"
+                  style={{ backgroundColor: pinnedInfo.color }}
+                ></div>
+                <span className="font-medium text-slate-200">
+                  {pinnedInfo.colorName || "Custom Color"}
+                </span>
+                <button
+                  className="ml-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  onClick={() => setPinnedInfo(null)}
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="text-slate-400 mt-1">
+                {pinnedInfo.color.toUpperCase()}
+              </div>
             </div>
-            <div className="text-slate-400 mt-1">
-              {pinnedInfo.color.toUpperCase()}
-            </div>
-          </div>
-        </Html>
+          </Html>
+        </LabelAnchor>
       )}
     </>
   );
@@ -89,7 +184,10 @@ function GeometricPatternComponent({
   showColorInfo = true,
   showWoodGrain = true,
   customDesign = null,
-}: PatternProps & { customDesign?: any }) {
+  // Read-only hosts (the shared gallery) hover-to-reveal color, but must NOT
+  // let a click pin the label on the screen. Defaults on for the builder.
+  allowPin = true,
+}: PatternProps & { customDesign?: any; allowPin?: boolean }) {
   const storeDimensions = useCustomStore((s) => s.dimensions);
   const storeSelectedDesign = useCustomStore((s) => s.selectedDesign);
   const storeColorPattern = useCustomStore((s) => s.colorPattern);
@@ -259,7 +357,6 @@ function GeometricPatternComponent({
       colorMapRef.current.colorPattern !== colorPattern ||
       colorMapRef.current.isReversed !== isReversed ||
       colorMapRef.current.isRotated !== isRotated ||
-      colorMapRef.current.isRotated !== isRotated ||
       colorMapRef.current.selectedDesign !== selectedDesign ||
       (selectedDesign === ItemDesigns.Custom &&
         colorMapRef.current.customPaletteLength !== customPalette.length) ||
@@ -369,9 +466,18 @@ function GeometricPatternComponent({
 
   // Memoize event handlers to prevent recreation on each render
   const handleSquareHover = useCallback(
-    (x: number, y: number, color: string, name?: string) => {
+    (
+      x: number,
+      y: number,
+      color: string,
+      name: string | undefined,
+      worldX: number,
+      worldY: number,
+      worldZ: number
+    ) => {
       setHoverInfo({
         position: [x, y],
+        worldPosition: [worldX, worldY, worldZ],
         color,
         colorName: name,
       });
@@ -384,7 +490,15 @@ function GeometricPatternComponent({
   }, [setHoverInfo]);
 
   const handleSquareClick = useCallback(
-    (x: number, y: number, color: string, name?: string) => {
+    (
+      x: number,
+      y: number,
+      color: string,
+      name: string | undefined,
+      worldX: number,
+      worldY: number,
+      worldZ: number
+    ) => {
       // Check if we're in pattern editing mode
       if (
         isPatternEditorActive &&
@@ -407,16 +521,19 @@ function GeometricPatternComponent({
             [overrideKey]: patternEditingMode.selectedColorIndex,
           });
         }
-      } else {
-        // Handle normal pinning behavior
+      } else if (allowPin) {
+        // Handle normal pinning behavior — read-only hosts (shared gallery)
+        // disable this so a click can't leave the color label stuck on screen.
         setPinnedInfo({
           position: [x, y],
+          worldPosition: [worldX, worldY, worldZ],
           color,
           colorName: name,
         });
       }
     },
     [
+      allowPin,
       isPatternEditorActive,
       patternEditingMode,
       patternOverride,
@@ -534,9 +651,6 @@ function GeometricPatternComponent({
             rotationZ: rotation,
             scaleXY: squareSize * sizeScale,
             scaleZ: squareSize * sizeScale,
-            uvOffsetX: textureVariation.offsetX,
-            uvOffsetY: textureVariation.offsetY,
-            uvRot: textureVariation.rotation,
             grainIndex: textureVariation.textureIndex,
           });
         }
@@ -567,6 +681,32 @@ function GeometricPatternComponent({
     scatterWidth,
     scatterAmount,
     patternOverride,
+  ]);
+
+  // Publish the EXACT computed art to the AR snapshot so "View in your room"
+  // (USDZ export) is pixel-faithful to what's on screen — on the viewer AND the
+  // shared page (both mount this component). The instances carry Math.random-
+  // seeded tile rotations + grain cells, so re-deriving them elsewhere would
+  // not match; we hand off the live array instead.
+  useEffect(() => {
+    publishArtSnapshot({
+      instances,
+      orientationRotationZ: orientation === "vertical" ? Math.PI / 2 : 0,
+      totalWidth,
+      totalHeight,
+      squareSize,
+      useMini,
+      showWoodGrain,
+      updatedAt: Date.now(),
+    });
+  }, [
+    instances,
+    orientation,
+    totalWidth,
+    totalHeight,
+    squareSize,
+    useMini,
+    showWoodGrain,
   ]);
 
   // Handle group click outside of render to prevent unnecessary recreations
@@ -625,9 +765,12 @@ function GeometricPatternComponent({
           bloomOnResize={false}
           enablePatternEditing={isPatternEditorActive}
         />
-      </group>
 
-      {showColorInfo && <ColorInfoOverlays />}
+        {/* Overlays live INSIDE the transformed group so their anchor
+            inherits the same centering/orientation rotation as the squares
+            they label — otherwise the tooltip floats off behind the art. */}
+        {showColorInfo && <ColorInfoOverlays allowPin={allowPin} />}
+      </group>
     </>
   );
 }

@@ -27,17 +27,21 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Exchange code for access token
-    const tokenResponse = await fetch(
-      "https://graph.facebook.com/v19.0/oauth/access_token",
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        cache: "no-store",
-      }
+    // Exchange code for access token. Facebook's token endpoint expects the
+    // app credentials, redirect URI and code as query params — without them
+    // the exchange always fails and access_token comes back undefined.
+    const tokenUrl = new URL(
+      "https://graph.facebook.com/v19.0/oauth/access_token"
     );
+    tokenUrl.searchParams.set("client_id", FACEBOOK_CLIENT_ID);
+    tokenUrl.searchParams.set("client_secret", FACEBOOK_CLIENT_SECRET);
+    tokenUrl.searchParams.set("redirect_uri", FACEBOOK_REDIRECT_URI);
+    tokenUrl.searchParams.set("code", code);
+
+    const tokenResponse = await fetch(tokenUrl, {
+      method: "GET",
+      cache: "no-store",
+    });
 
     if (!tokenResponse.ok) {
       const error = await tokenResponse.text();

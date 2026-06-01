@@ -24,6 +24,13 @@ const interpolatePrice = (squares: number): number => {
     return exactMatch.price;
   }
 
+  // Below the smallest tabulated size, clamp to the first price instead of
+  // linearly extrapolating the 67→98 slope downward (which under-prices tiny
+  // designs). Mirrors the above-max fallback, which clamps to the last price.
+  if (squares <= PRICE_DATA_POINTS[0].squares) {
+    return PRICE_DATA_POINTS[0].price;
+  }
+
   for (let i = 1; i < PRICE_DATA_POINTS.length; i++) {
     const lower = PRICE_DATA_POINTS[i - 1];
     const upper = PRICE_DATA_POINTS[i];

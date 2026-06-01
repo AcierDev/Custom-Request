@@ -143,8 +143,19 @@ const DOOR_EXTRA_LEFT = DOOR_EXTRA_LEFT_IN * SCENE_UNITS_PER_INCH;
 export const WALL_COLOR = DEFAULT_WALL_COLOR; // greige, 10% darker
 const TRIM_COLOR = "#f4f1e8";
 // Pile shades: the height field blends dark valleys → light tufts.
-const CARPET_DARK = "#9a9c9f";
-const CARPET_LIGHT = "#d8dadd";
+// Slightly wider spread than a flat grey so the heathered nap has depth.
+const CARPET_DARK = "#8d8f95";
+const CARPET_LIGHT = "#dde0e4";
+// One-time procedural carpet texture resolution. Bumped so the now much
+// larger physical tile (see RUG_TILE_UNITS) still reads crisp up close.
+const CARPET_TEX_SIZE = 1024;
+// ± luminance swing of the directional cut-pile "nap lanes" — the raked /
+// freshly-vacuumed sheen of a real plush rug. Subtle so it reads as nap
+// catching light, not painted stripes.
+const CARPET_NAP_CONTRAST = 0.11;
+// Warm↔cool wool dye blend weight: how much heathered yarn variation
+// shows over the base pile shade. Higher = more lived-in, less flat.
+const CARPET_FLECK = 0.17;
 // Medium-dark hardwood plank floor. Grain blends deep → mid → figure;
 // plank seams and end joints carve dark grooves the normal map catches.
 const WOOD_DEEP = "#4a2f1b"; // darkest grain / groove shadow
@@ -246,6 +257,32 @@ export function roomCameraMaxDistance(width: number, height: number) {
 }
 
 /**
+ * Dolly distance at which a piece `worldWidth` wide (plus `margin`) just
+ * spans the viewport WIDTH for the given vertical `fovDeg` and viewport
+ * `aspect` (width / height).
+ *
+ * `CAMERA_FOV` is the *vertical* field of view, so the horizontal field
+ * of view shrinks with the aspect ratio: a wide desktop sees the whole
+ * piece long before the floor/ceiling cap, but a narrow portrait phone
+ * still has the full-width art overflowing the sides even fully zoomed
+ * out. Take max(roomCameraMaxDistance, fitWidthDistance) so the camera
+ * may pull back as far as a narrow screen needs to frame the whole
+ * piece — matching desktop — while wide screens (where this returns a
+ * smaller distance) keep the existing room cap unchanged.
+ */
+export function fitWidthDistance(
+  worldWidth: number,
+  fovDeg: number,
+  aspect: number,
+  margin: number
+) {
+  // horizontal half-FOV tangent = tan(vertical half-FOV) * aspect
+  const hHalfTan = Math.tan((fovDeg * Math.PI) / 360) * aspect;
+  if (hHalfTan <= CAMERA_REACH_FACTOR_EPSILON) return Infinity;
+  return (worldWidth * margin) / (2 * hHalfTan);
+}
+
+/**
  * Axis-aligned interior bounds of the room in world space (the art
  * center sits at y = 0). Used by the viewer to clamp the camera against
  * the ceiling and side walls only at the moment it would actually cross
@@ -273,6 +310,55 @@ export function rightWindowWorldPos(
   const backZ = -WALL_OFFSET;
   const midZ = backZ + ROOM_DEPTH / 2;
   return [wallWidth / 2, floorY + CEILING_HEIGHT * 0.52, midZ];
+}
+
+/**
+ * World-space position of the floor lamp's glowing BULB (left of the
+ * art). The art's lamp-side cast shadow is driven from this exact point
+ * (toward the art) so it matches the visible lamp instead of a hand-
+ * tuned direction. Mirrors the lamp placement in <Room/> (lampX0 + the
+ * lamp group's floor settle/back inset) and the bulb's local offset
+ * inside <FloorLamp/>, so the shadow and the visible lamp can't drift
+ * apart. Lamp constants are module-level consts resolved at call time.
+ */
+export function leftLampWorldPos(
+  width: number,
+  height: number,
+  artWidth: number,
+  artCenterX: number
+): [number, number, number] {
+  const halfW = roomWallWidth(width) / 2;
+  const floorY = -(height / 2 + FLOOR_GAP);
+  const backZ = -WALL_OFFSET;
+  const artHalf = artWidth / 2;
+  const lampX = Math.max(
+    -(halfW - PLANT_WALL_INSET),
+    artCenterX - (artHalf + FURNITURE_ART_GAP + LAMP_NEAR_CLEARANCE)
+  );
+  // The lamp group settles on the floor; its bulb sits up inside the
+  // shade (local y = LAMP_H − LAMP_SHADE_H/2). Same z as the lamp group.
+  const bulbY = floorY - LAMP_FLOOR_SETTLE + (LAMP_H - LAMP_SHADE_H / 2);
+  return [lampX, bulbY, backZ + PLANT_BACK_INSET];
+}
+
+/**
+ * World-space position of the room's recessed ceiling downlights ("the
+ * lights"), as a single representative point directly above the art at
+ * the downlight grid's depth. The art's overhead cast shadow is driven
+ * from here so it reads as light from the ceiling cans (a soft shadow
+ * straight down the piece), present at every time of day. Mirrors the
+ * <RecessedLights/> grid placement (ceiling height + DOWNLIGHT_Z_FROM_WALL
+ * forward of the back wall). Constants resolve at call time.
+ */
+export function ceilingLightWorldPos(
+  width: number,
+  height: number,
+  artCenterX: number
+): [number, number, number] {
+  const floorY = -(height / 2 + FLOOR_GAP);
+  const ceilingY = floorY + CEILING_HEIGHT;
+  const backZ = -WALL_OFFSET;
+  return [artCenterX, ceilingY, backZ + DOWNLIGHT_Z_FROM_WALL];
 }
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
@@ -464,43 +550,55 @@ function addOctaveAniso(
 // reads as lino, not carpet). Returns colour + normal + roughness.
 function carpetMaps() {
   if (typeof document === "undefined") return null;
-  const size = 512;
+  const size = CARPET_TEX_SIZE;
   const n = size * size;
 
-  // period (lattice cells) / amplitude. The tile is repeated many
-  // times across the rug, so any strong low-frequency content reads
-  // as an obvious repeating grid of blobs. We keep the broad clumps
-  // weak and push the energy into fine tuft grain, which tiles
-  // invisibly and still reads as a dense nap.
+  // Seamless 0..1 normalize in place.
+  const norm = (F: Float32Array) => {
+    let lo = Infinity;
+    let hi = -Infinity;
+    for (let i = 0; i < n; i++) {
+      if (F[i] < lo) lo = F[i];
+      if (F[i] > hi) hi = F[i];
+    }
+    const inv = 1 / (hi - lo || 1);
+    for (let i = 0; i < n; i++) F[i] = (F[i] - lo) * inv;
+  };
+
+  // Pile height field. This used to be ALL high-frequency speckle, so
+  // from across the room the rug read as a flat uniform slab — cheap.
+  // We now layer in genuine low-frequency clumps (coprime-ish periods so
+  // the macro tone drifts organically instead of snapping to a tidy
+  // grid) for a heathered wool look, keeping the fine tuft grain on top.
+  // Combined with the far larger physical tile (RUG_TILE_UNITS), the old
+  // obvious tiling no longer reads. Every octave wraps → seamless.
   const H = new Float32Array(n);
-  addOctave(H, size, 96, 0.22);
-  addOctave(H, size, 190, 0.5);
-  addOctave(H, size, 360, 0.78);
-  addOctave(H, size, 640, 0.42);
+  addOctave(H, size, 3, 0.18); // broad heather clumps
+  addOctave(H, size, 6, 0.15);
+  addOctave(H, size, 13, 0.13);
+  addOctave(H, size, 28, 0.2);
+  addOctave(H, size, 70, 0.3); // mid nap
+  addOctave(H, size, 150, 0.5);
+  addOctave(H, size, 340, 0.62); // individual tufts
+  addOctave(H, size, 640, 0.42); // fine fibre speckle
+  norm(H);
 
-  let lo = Infinity;
-  let hi = -Infinity;
-  for (let i = 0; i < n; i++) {
-    if (H[i] < lo) lo = H[i];
-    if (H[i] > hi) hi = H[i];
-  }
-  const inv = 1 / (hi - lo || 1);
-  for (let i = 0; i < n; i++) H[i] = (H[i] - lo) * inv;
+  // Directional cut-pile nap: long vertical lanes (narrow X, tall Y) like
+  // a freshly raked / vacuumed plush rug. Drives a faint lightness +
+  // roughness shift — sheen, not relief — so adjacent lanes catch the
+  // room light differently and the field stops looking like printed felt.
+  const nap = new Float32Array(n);
+  addOctaveAniso(nap, size, 6, 70, 0.7);
+  addOctaveAniso(nap, size, 13, 120, 0.3);
+  norm(nap);
 
-  // Subtle wool-fleck tint field: fine per-tuft warm/cool variation so
-  // the rug looks dyed/lived-in instead of a flat grey lerp. Kept high
-  // frequency so the tiled repeat doesn't show as colour patches.
+  // Wool dye variation: broad warm/cool blotches (low freq) plus a fine
+  // per-tuft fleck, so the yarn looks dyed and lived-in, not flat-lerped.
   const T = new Float32Array(n);
-  addOctave(T, size, 150, 0.55);
-  addOctave(T, size, 330, 0.45);
-  let tlo = Infinity;
-  let thi = -Infinity;
-  for (let i = 0; i < n; i++) {
-    if (T[i] < tlo) tlo = T[i];
-    if (T[i] > thi) thi = T[i];
-  }
-  const tinv = 1 / (thi - tlo || 1);
-  for (let i = 0; i < n; i++) T[i] = (T[i] - tlo) * tinv;
+  addOctave(T, size, 4, 0.5); // broad dye blotches
+  addOctave(T, size, 9, 0.35);
+  addOctave(T, size, 200, 0.25); // fine fleck
+  norm(T);
   // warm (beige) ←→ cool (slate) fleck endpoints
   const warm = [201, 188, 168];
   const cool = [150, 158, 170];
@@ -540,20 +638,22 @@ function carpetMaps() {
       const h = H[i];
 
       // Colour: blend the dark/light pile shades by height, mix in a
-      // faint warm/cool wool fleck, then darken the deep valleys with a
-      // soft baked ambient occlusion so the nap reads thick, not flat.
+      // warm/cool wool fleck, darken the deep valleys with a soft baked
+      // ambient occlusion so the nap reads thick, then add the directional
+      // nap sheen so lit/shaded lanes alternate across the field.
       const t = T[i];
-      const fleck = 0.12; // fleck blend weight
-      const ao = 0.78 + 0.22 * h; // valleys ~22% darker than tufts
+      const lane = (nap[i] - 0.5) * CARPET_NAP_CONTRAST * 255; // ± sheen
+      const fleck = CARPET_FLECK; // fleck blend weight
+      const ao = 0.74 + 0.26 * h; // valleys ~26% darker than tufts
       const cr = (dark[0] + (light[0] - dark[0]) * h) * (1 - fleck) +
         (warm[0] + (cool[0] - warm[0]) * t) * fleck;
       const cg = (dark[1] + (light[1] - dark[1]) * h) * (1 - fleck) +
         (warm[1] + (cool[1] - warm[1]) * t) * fleck;
       const cb = (dark[2] + (light[2] - dark[2]) * h) * (1 - fleck) +
         (warm[2] + (cool[2] - warm[2]) * t) * fleck;
-      cd[o] = cr * ao;
-      cd[o + 1] = cg * ao;
-      cd[o + 2] = cb * ao;
+      cd[o] = cr * ao + lane;
+      cd[o + 1] = cg * ao + lane;
+      cd[o + 2] = cb * ao + lane;
       cd[o + 3] = 255;
 
       // Normal from wrapped central differences (seamless).
@@ -572,8 +672,10 @@ function carpetMaps() {
       nd[o + 2] = (nz / len) * 0.5 * 255 + 127.5;
       nd[o + 3] = 255;
 
-      // Roughness: lifted tufts a touch glossier than crushed valleys.
-      const rv = 235 - h * 28;
+      // Roughness: lifted tufts a touch glossier than crushed valleys,
+      // and the nap lanes alternate glossier/rougher so the sheen banding
+      // shows up under the room lights, not just in the colour map.
+      const rv = 235 - h * 28 - (nap[i] - 0.5) * 22;
       rd[o] = rd[o + 1] = rd[o + 2] = rv;
       rd[o + 3] = 255;
 
@@ -929,10 +1031,18 @@ const ART_MAT_BORDER = 0.55; // mat reveal around the print
 // Hung as an evenly-spaced gallery row: the larger piece centered with the
 // two squares flanking it, all sharing one horizontal centerline. Kept off
 // the window (window sits at the room mid-depth).
+// z values pulled 5 ft total (3 ft + 2 ft) toward the back wall so the
+// row sits closer to the main art. 5 ft = 60 in = 10 units ≈ 0.0417·ROOM_DEPTH.
+// All three are the same size for a uniform gallery row. The blue piece is
+// centered over the couch (COUCH_FROM_WALL/ROOM_DEPTH = 18/240 = 0.075) and
+// must stay there. Green (0.051) and orange (0.099) were the original even
+// 0.024 spacing; each flanking piece is then moved a further 8 in away from
+// blue along the wall so the row reads less bunched.
+const RIGHT_WALL_ART_FLANK_SHIFT = (8 * SCENE_UNITS_PER_INCH) / ROOM_DEPTH;
 const RIGHT_WALL_ART = [
-  { w: 4.2, h: 4.2, color: "#7e9b86", z: 0.093, y: 0.52 },
-  { w: 5.0, h: 6.6, color: "#8298ad", z: 0.14, y: 0.52 },
-  { w: 4.2, h: 4.2, color: "#c08653", z: 0.187, y: 0.52 },
+  { w: 4.2, h: 4.2, color: "#7e9b86", z: 0.051 - RIGHT_WALL_ART_FLANK_SHIFT, y: 0.52 },
+  { w: 4.2, h: 4.2, color: "#8298ad", z: 0.075, y: 0.52 },
+  { w: 4.2, h: 4.2, color: "#c08653", z: 0.099 + RIGHT_WALL_ART_FLANK_SHIFT, y: 0.52 },
 ] as const;
 
 // Soft neutral area rug so the colourful art stays the focal point.
@@ -951,6 +1061,11 @@ const RUG_ACCENT_W = 1.1;
 // crushes like a dense cut-pile nap instead of a flat painted plane.
 const RUG_PILE_DEPTH = 0.09;
 const RUG_PILE_SEGMENTS = 260;
+// Physical footprint (scene units; 1 unit = 6 in) each procedural carpet
+// tile covers. ~3 units ≈ 18 in, vs the old ~7 in tile — the single
+// biggest fix for the "repeating grid" look. Density is the same on both
+// axes so the tufts stay isotropic regardless of the rug's clipped width.
+const RUG_TILE_UNITS = 3.2;
 // Distance of the rug's center from the back wall. Pulled ~2 ft further
 // out than before (was 14; +4 units @ 6 in/unit ≈ 2 ft).
 const RUG_FROM_WALL = 18;
@@ -962,6 +1077,24 @@ const RUG_DEPTH = 26;
 const RUG_TO_COUCH_GAP = 2;
 // The rug's left edge stays this far from the door / left wall (3 ft).
 const RUG_TO_DOOR_GAP = 3 * 12 * SCENE_UNITS_PER_INCH; // 6 units
+// Overall rug scale, applied to both width and depth about its centre so
+// it shrinks symmetrically and the surrounding gaps grow evenly.
+const RUG_SCALE = 0.85; // 15% smaller
+
+// ── Front-door mat ──────────────────────────────────────────────────
+// Coir-style entry mat just inside the door, on the floor past the
+// threshold saddle. Built like the rug (bound edge + textured field) so
+// it reads in the same material language.
+const DOORMAT_COLOR = "#6f5d44"; // natural coir tan-brown
+const DOORMAT_BORDER_COLOR = "#3c3325"; // dark bound edge
+const DOORMAT_THICKNESS = 0.06; // lies nearly flat
+const DOORMAT_BORDER_W = 0.16; // bound-edge band width
+const DOORMAT_W_FRAC = 0.9; // mat width along the wall vs. the door width
+const DOORMAT_DEPTH = 18 * SCENE_UNITS_PER_INCH; // 18 in into the room
+const DOORMAT_GAP = 0.18; // clearance past the threshold saddle
+// Tight repeat so the reused carpet weave reads as a fine fibre mat.
+const DOORMAT_REPEAT_X = 6;
+const DOORMAT_REPEAT_Y = 4;
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ 🛋️ COUCH (right side)                                                 ║
@@ -2092,7 +2225,8 @@ function RoomComponent({
     rugFullW / 2,
     couchX - COUCH_D / 2 - RUG_TO_COUCH_GAP
   );
-  const rugW = Math.max(rugRightX - rugLeftX, 4);
+  const rugW = Math.max(rugRightX - rugLeftX, 4) * RUG_SCALE;
+  const rugDepth = RUG_DEPTH * RUG_SCALE;
   const rugCenterX = (rugLeftX + rugRightX) / 2;
 
   // Plant (right) & lamp (left) always sit FURNITURE_ART_GAP_FT (1 ft)
@@ -2152,13 +2286,17 @@ function RoomComponent({
     };
   }, [wood, wallWidth]);
 
-  // Plush pile for the area rug: tighter repeat than the old floor so
-  // the tufts read dense and deep, giving it a thick fluffy nap.
+  // Plush pile for the area rug. The repeat is derived from the rug's
+  // real footprint at a fixed per-unit density (RUG_TILE_UNITS) — a far
+  // larger, less-often-repeated tile than the old fixed 16×20, so the
+  // heathered nap reads as one continuous rug instead of a tiled grid.
+  const rugRepX = Math.max(2, Math.round(rugW / RUG_TILE_UNITS));
+  const rugRepY = Math.max(2, Math.round(rugDepth / RUG_TILE_UNITS));
   const rugPileTiled = useMemo(() => {
     if (!carpet) return null;
     const tile = (src: THREE.Texture) => {
       const t = src.clone();
-      t.repeat.set(16, 20);
+      t.repeat.set(rugRepX, rugRepY);
       t.needsUpdate = true;
       return t;
     };
@@ -2167,6 +2305,23 @@ function RoomComponent({
       normalMap: tile(carpet.normalMap),
       roughnessMap: tile(carpet.roughnessMap),
       displacementMap: tile(carpet.displacementMap),
+    };
+  }, [carpet, rugRepX, rugRepY]);
+
+  // Reuse the carpet weave for the entry mat, but at a tight repeat so it
+  // reads as a fine coir fibre rather than plush wool.
+  const doorMatTiled = useMemo(() => {
+    if (!carpet) return null;
+    const tile = (src: THREE.Texture) => {
+      const t = src.clone();
+      t.repeat.set(DOORMAT_REPEAT_X, DOORMAT_REPEAT_Y);
+      t.needsUpdate = true;
+      return t;
+    };
+    return {
+      map: tile(carpet.map),
+      normalMap: tile(carpet.normalMap),
+      roughnessMap: tile(carpet.roughnessMap),
     };
   }, [carpet]);
 
@@ -2178,6 +2333,44 @@ function RoomComponent({
     t.needsUpdate = true;
     return t;
   }, [ceilTex, wallWidth]);
+
+  // Dispose procedural textures so they don't leak GPU memory. The base maps
+  // are built once (freed on unmount); the tiled clones are rebuilt whenever
+  // wallWidth / rug size changes, so each cleanup frees the *previous* clones
+  // before the new ones replace them.
+  useEffect(
+    () => () => {
+      if (carpet) Object.values(carpet).forEach((t) => t.dispose());
+    },
+    [carpet]
+  );
+  useEffect(
+    () => () => {
+      if (wood) Object.values(wood).forEach((t) => t.dispose());
+    },
+    [wood]
+  );
+  useEffect(() => () => ceilTex?.dispose(), [ceilTex]);
+  useEffect(
+    () => () => {
+      if (woodMapsTiled)
+        Object.values(woodMapsTiled).forEach((t) => t.dispose());
+    },
+    [woodMapsTiled]
+  );
+  useEffect(
+    () => () => {
+      if (rugPileTiled) Object.values(rugPileTiled).forEach((t) => t.dispose());
+    },
+    [rugPileTiled]
+  );
+  useEffect(
+    () => () => {
+      if (doorMatTiled) Object.values(doorMatTiled).forEach((t) => t.dispose());
+    },
+    [doorMatTiled]
+  );
+  useEffect(() => () => ceilTexTiled?.dispose(), [ceilTexTiled]);
 
   // Daylight window on the right-hand wall, centered on the art.
   const winW = CEILING_HEIGHT * 0.42;
@@ -2208,6 +2401,12 @@ function RoomComponent({
     doorW / 2 +
     0.35 +
     DOOR_EXTRA_LEFT;
+
+  // Entry-mat footprint, in the door's local frame (+z juts into the
+  // room). Sits flat on the floor just past the threshold saddle.
+  const doorMatW = doorW * DOORMAT_W_FRAC;
+  const doorMatZ =
+    DOOR_SILL_PROUD - 0.05 + DOORMAT_GAP + DOORMAT_DEPTH / 2;
 
   return (
     <group>
@@ -2364,6 +2563,43 @@ function RoomComponent({
               color={DOOR_SILL_COLOR}
               roughness={0.4}
               metalness={0.7}
+            />
+          </mesh>
+        </group>
+
+        {/* Coir entry mat on the floor just inside the door: a dark bound
+            edge with a textured fibre field (the carpet weave at a tight
+            repeat), built in the same language as the area rug. */}
+        <group position={[0, -doorH / 2 + 0.002, doorMatZ]}>
+          {/* Bound edge / backing — only its rim shows around the field. */}
+          <mesh receiveShadow position={[0, DOORMAT_THICKNESS / 2, 0]}>
+            <boxGeometry args={[doorMatW, DOORMAT_THICKNESS, DOORMAT_DEPTH]} />
+            <meshStandardMaterial
+              color={DOORMAT_BORDER_COLOR}
+              roughness={1}
+              metalness={0}
+            />
+          </mesh>
+          {/* Textured coir field, inset past the bound edge. */}
+          <mesh
+            receiveShadow
+            position={[0, DOORMAT_THICKNESS + 0.001, 0]}
+            rotation={[-Math.PI / 2, 0, 0]}
+          >
+            <planeGeometry
+              args={[
+                doorMatW - DOORMAT_BORDER_W * 2,
+                DOORMAT_DEPTH - DOORMAT_BORDER_W * 2,
+              ]}
+            />
+            <meshStandardMaterial
+              color={DOORMAT_COLOR}
+              map={doorMatTiled?.map}
+              normalMap={doorMatTiled?.normalMap}
+              normalScale={[1.2, 1.2]}
+              roughnessMap={doorMatTiled?.roughnessMap}
+              roughness={1}
+              metalness={0}
             />
           </mesh>
         </group>
@@ -2631,7 +2867,7 @@ function RoomComponent({
         {/* Low backing — only its thin side edge shows, as the
             slightly darker bound serge tape around the rug. */}
         <mesh receiveShadow position={[0, RUG_THICKNESS / 2, 0]}>
-          <boxGeometry args={[rugW, RUG_THICKNESS, RUG_DEPTH]} />
+          <boxGeometry args={[rugW, RUG_THICKNESS, rugDepth]} />
           <meshStandardMaterial
             color={RUG_BORDER_COLOR}
             roughness={1}
@@ -2648,7 +2884,7 @@ function RoomComponent({
           <planeGeometry
             args={[
               rugW - RUG_BORDER_W * 2,
-              RUG_DEPTH - RUG_BORDER_W * 2,
+              rugDepth - RUG_BORDER_W * 2,
               RUG_PILE_SEGMENTS,
               RUG_PILE_SEGMENTS,
             ]}
@@ -2677,7 +2913,7 @@ function RoomComponent({
           <planeGeometry
             args={[
               rugW - (RUG_BORDER_W + RUG_ACCENT_W) * 2,
-              RUG_DEPTH - (RUG_BORDER_W + RUG_ACCENT_W) * 2,
+              rugDepth - (RUG_BORDER_W + RUG_ACCENT_W) * 2,
               RUG_PILE_SEGMENTS,
               RUG_PILE_SEGMENTS,
             ]}

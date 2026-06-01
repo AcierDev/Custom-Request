@@ -5,7 +5,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import {
   GeometricLighting,
-  WindowShadowKey,
+  ArtShadowKeys,
   // TiledLighting, // Tiled option hidden from UI — preserved for potential re-enable.
   StripedLighting,
 } from "./LightingSetups";
@@ -17,9 +17,13 @@ export type TimeOfDay = "morning" | "afternoon" | "night";
 interface RotatableLightingProps {
   timeOfDay: TimeOfDay;
   style: "geometric" | "tiled" | "striped";
-  // Real right-window world position and the art's centre, used to aim
-  // the cast-shadow key so the shadow matches the visible daylight.
+  // Real world positions of the room light sources (overhead ceiling
+  // downlights, right-wall window, left-side floor lamp) and the art's
+  // centre, used to aim the cast-shadow keys so each shadow matches its
+  // visible source.
+  downlightPos: [number, number, number];
   windowPos: [number, number, number];
+  lampPos: [number, number, number];
   artCenter: [number, number, number];
 }
 
@@ -88,7 +92,9 @@ function sampleAtPhase<T>(
 function RotatableLightingComponent({
   timeOfDay,
   style,
+  downlightPos,
   windowPos,
+  lampPos,
   artCenter,
 }: RotatableLightingProps) {
   const groupRef = useRef<THREE.Group>(null);
@@ -143,17 +149,30 @@ function RotatableLightingComponent({
   );
   const lightColor = sampleAtPhase(TIME_COLOR, phase, blendHexColors);
 
+  // Which source owns the cast shadow, eased on the same phase axis:
+  // the window (daylight) by day, the lamp after dark. Phase 0/1 are
+  // morning/afternoon (full daylight), phase 2 is night (lamp on). They
+  // cross-fade across the afternoon→night leg so neither shadow snaps.
+  const nightFrac = Math.max(0, Math.min(1, phase - 1));
+  const dayAmount = 1 - nightFrac;
+  const lampAmount = nightFrac;
+
   return (
     <>
-      {/* Fixed window-direction shadow key — NOT inside the rotating
-          group, so the art's shadow always reads as light through the
-          window regardless of time of day. */}
+      {/* Source-anchored shadow keys — NOT inside the rotating group, so
+          the art's shadows always read as light from the ceiling lights
+          (always), the window (by day) and the floor lamp (after dark)
+          regardless of the fill rig's time-of-day rotation. */}
       {style === "geometric" && (
-        <WindowShadowKey
+        <ArtShadowKeys
           intensityScale={intensityScale}
           lightColor={lightColor}
+          downlightPos={downlightPos}
           windowPos={windowPos}
+          lampPos={lampPos}
           artCenter={artCenter}
+          dayAmount={dayAmount}
+          lampAmount={lampAmount}
         />
       )}
 

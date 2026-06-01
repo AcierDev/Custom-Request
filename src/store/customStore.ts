@@ -136,7 +136,13 @@ export type StyleType = "geometric" | "tiled" | "striped";
 
 // Add new types for hover state
 export interface HoverInfo {
+  /** Grid coordinates of the square (used for pattern editing & equality). */
   position: [number, number];
+  /** Group-local 3D position of the square (the picked face plane), for
+   *  anchoring overlays in space. Absent for legacy callers that only carry
+   *  grid coords. The Z keeps the label pinned to the square's surface so it
+   *  doesn't parallax-drift off the square at an orbit angle. */
+  worldPosition?: [number, number, number];
   color: string;
   colorName?: string;
 }
@@ -863,6 +869,7 @@ export const useCustomStore = create<CustomStore>()(
       }),
     removeCustomColor: (index) =>
       set((state) => {
+        if (index < 0 || index >= state.customPalette.length) return state;
         const removedColorId = state.customPalette[index].id;
         const newPalette = state.customPalette.filter((_, i) => i !== index);
 
@@ -1732,6 +1739,10 @@ export const useCustomStore = create<CustomStore>()(
           customPalette: loadedPalette,
           isRotated: designData.isRotated,
           style: designData.style,
+          // Honor the sharer's square-size choice (the snapshot carries it).
+          ...(typeof designData.useMini === "boolean"
+            ? { useMini: designData.useMini }
+            : {}),
           activeCustomMode: designData.activeCustomMode || "palette",
           currentColors:
             designData.selectedDesign === ItemDesigns.Custom &&

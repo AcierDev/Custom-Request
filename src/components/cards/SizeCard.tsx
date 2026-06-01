@@ -333,6 +333,9 @@ function CompactSizeCard({ bare = false }: { bare?: boolean }) {
             align="start"
             sideOffset={8}
             className="w-72 p-3 bg-gray-900 border border-white/10 space-y-2"
+            // Don't steal focus into the custom-size input on open — that pops the
+            // mobile keyboard. The keyboard should only appear when the user taps it.
+            onOpenAutoFocus={(e) => e.preventDefault()}
           >
             <input
               size={1}

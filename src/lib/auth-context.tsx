@@ -114,7 +114,11 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
       !pathname.includes("/auth/") &&
       // Check for any routes that should be accessible to all users
       !pathname.includes("/about") &&
-      !pathname.includes("/contact")
+      !pathname.includes("/contact") &&
+      // Shared design / set links are public by design — a recipient
+      // (often without an account) must be able to view them without
+      // being forced to sign in. This is the whole point of sharing.
+      !pathname.includes("/shared")
     ) {
       // Check if there's a share parameter in the URL
       const regularShareData = searchParams.get("share");

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { validateToken } from "@/lib/token";
+import { validateToken, invalidateToken } from "@/lib/token";
 import { sendEmail } from "@/lib/email";
 
 export async function GET(request: NextRequest) {
@@ -23,6 +23,10 @@ export async function GET(request: NextRequest) {
         new URL("/sign-in?error=invalid_token", request.url)
       );
     }
+
+    // Magic links are single-use: consume the token now so the link can't
+    // be replayed within its lifetime.
+    await invalidateToken(token);
 
     // Create a user object to be stored in localStorage
     const userObject = {

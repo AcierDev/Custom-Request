@@ -1,6 +1,7 @@
 "use client";
 
 import localFont from "next/font/local";
+import { usePathname } from "next/navigation";
 import "./globals.css";
 import { Navbar } from "@/components/navbar";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -22,6 +23,20 @@ const geistMono = localFont({
 });
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+
+  // Public shared-design / set links are a standalone, full-bleed gallery
+  // experience for recipients who often have no account — no app navbar,
+  // no sidebar offset, no desktop-only mobile warning.
+  if (pathname?.startsWith("/shared")) {
+    return (
+      <div className="h-dvh w-full overflow-hidden bg-gray-900 text-gray-100">
+        <SpeedInsights />
+        {children}
+      </div>
+    );
+  }
+
   // Sidebar is permanently collapsed, so content always clears the
   // collapsed-width rail.
   return (

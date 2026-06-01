@@ -9,8 +9,6 @@ import { useEffect, useState, useRef, ReactNode } from "react";
 import { Maximize, ExternalLink, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GeometricPattern } from "@/components/preview/GeometricPattern";
-// Tiled option hidden from UI — preserved for potential re-enable.
-// import { TiledPattern } from "@/components/preview/TiledPattern";
 import {
   GeometricLighting,
   // TiledLighting,
@@ -136,20 +134,6 @@ export function PreviewCard({ zoom = 1.4 }: { zoom?: number }) {
                     showColorInfo={showColorInfo}
                   />
                 )}
-                {/* Tiled / striped rendering preserved for potential re-enable.
-                {style === "tiled" && (
-                  <TiledPattern
-                    showWoodGrain={showWoodGrain}
-                    showColorInfo={showColorInfo}
-                  />
-                )}
-                {style === "striped" && (
-                  <TiledPattern
-                    showWoodGrain={showWoodGrain}
-                    showColorInfo={showColorInfo}
-                  />
-                )}
-                */}
               </LimitedRotation>
 
               {/* Orbit controls for manual interaction, but without autoRotate */}
