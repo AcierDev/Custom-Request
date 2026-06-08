@@ -37,6 +37,8 @@ export interface ColorSwatchProps {
 // Add color button component props
 export interface AddColorButtonProps {
   onColorAdd: (hex: string) => void;
+  /** Bulk-add (e.g. from pasted paint codes). Falls back to onColorAdd. */
+  onColorsAdd?: (colors: { hex: string; name: string }[]) => void;
   isEmpty?: boolean;
 }
 

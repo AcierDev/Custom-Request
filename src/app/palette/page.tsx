@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, type ChangeEvent } from "react";
 import { motion } from "framer-motion";
 import { nanoid } from "nanoid";
-import { useCustomStore } from "@/store/customStore";
+import { useCustomStore, type CustomColor } from "@/store/customStore";
 import { PaletteManager } from "./components/PaletteManager";
 import { PaletteList } from "./components/PaletteList";
 import { OfficialPalettes } from "./components/OfficialPalettes";
@@ -253,44 +253,6 @@ export default function PalettePage() {
     loadPaintColors();
   }, []);
 
-  // Helper function to get color luminance
-  const getLuminance = (hex: string): number => {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  };
-
-  const chooseDirectionalPaintMatch = (
-    matches: PaintMatch[],
-    previousMatch: PaintMatch | null,
-    previousSourceHex: string,
-    currentSourceHex: string
-  ) => {
-    if (!previousMatch) return matches[PRIMARY_PAINT_MATCH_INDEX];
-
-    const previousKey = paintMatchKey(previousMatch);
-    const nonDuplicateMatches = matches.filter(
-      (match) => paintMatchKey(match) !== previousKey
-    );
-    const previousSourceLuminance = getLuminance(previousSourceHex);
-    const currentSourceLuminance = getLuminance(currentSourceHex);
-    const previousPaintLuminance = getLuminance(previousMatch.paintColor.hex);
-    const isGettingLighter = currentSourceLuminance > previousSourceLuminance;
-    const isGettingDarker = currentSourceLuminance < previousSourceLuminance;
-
-    return (
-      nonDuplicateMatches.find((match) => {
-        const paintLuminance = getLuminance(match.paintColor.hex);
-        if (isGettingLighter) return paintLuminance > previousPaintLuminance;
-        if (isGettingDarker) return paintLuminance < previousPaintLuminance;
-        return true;
-      }) ??
-      nonDuplicateMatches[PRIMARY_PAINT_MATCH_INDEX] ??
-      matches[PRIMARY_PAINT_MATCH_INDEX]
-    );
-  };
-
   // Color distance calculation using Delta E (CIE76)
   const hexToLab = (hex: string): [number, number, number] => {
     // Convert hex to RGB
@@ -483,20 +445,16 @@ export default function PalettePage() {
       lab: hexToLab(paintColor.hex),
     }));
 
-    let previousMatch: PaintMatch | null = null;
-    let previousSourceHex = "";
     const groundedColors = customPalette.map((customColor) => {
       const matches = findClosestPaintMatches(
         customColor.hex,
         paintLabs,
         PAINT_MATCH_CANDIDATE_COUNT
       );
-      const primaryMatch = chooseDirectionalPaintMatch(
-        matches,
-        previousMatch,
-        previousSourceHex,
-        customColor.hex
-      );
+      // Always ground to the single nearest paint (smallest ΔE2000).
+      // Match accuracy is the priority: never skip the closest color to
+      // preserve a light→dark gradient across the palette.
+      const primaryMatch = matches[PRIMARY_PAINT_MATCH_INDEX];
 
       if (!primaryMatch) return customColor;
 
@@ -504,8 +462,6 @@ export default function PalettePage() {
       const backupMatch = matches.find(
         (match) => paintMatchKey(match) !== primaryKey
       );
-      previousMatch = primaryMatch;
-      previousSourceHex = customColor.hex;
 
       // Name carries the real purchase identifier — the manufacturer
       // code ("SW 6258 — Tricorn Black") when we have it, so it can be
@@ -864,6 +820,22 @@ export default function PalettePage() {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [activeTab, undoPaletteAction, redoPaletteAction]);
+
+  // Whether the open palette differs from its last saved version. Used to
+  // block "Save Version" when nothing changed (saving would only stack an
+  // identical version). Compares the editable color fields, ignoring the
+  // volatile per-color `id` that loading may regenerate.
+  const colorsSignature = (colors: CustomColor[]) =>
+    JSON.stringify(
+      colors.map(({ id, ...rest }) => rest)
+    );
+  const editingBasePalette = editingPaletteId
+    ? savedPalettes.find((p) => p.id === editingPaletteId)
+    : undefined;
+  const hasUnsavedChanges =
+    !editingBasePalette ||
+    colorsSignature(customPalette) !==
+      colorsSignature(editingBasePalette.colors);
 
   const handleSavePalette = () => {
     if (editingPaletteId) {
@@ -1858,8 +1830,17 @@ export default function PalettePage() {
                       )}
                       <Button
                         className={BTN_PRIMARY}
-                        disabled={customPalette.length === 0 || saveSuccess}
+                        disabled={
+                          customPalette.length === 0 ||
+                          saveSuccess ||
+                          !hasUnsavedChanges
+                        }
                         onClick={handleSavePalette}
+                        title={
+                          !hasUnsavedChanges
+                            ? "No changes to save since the last version"
+                            : undefined
+                        }
                       >
                         <Save className="mr-2 h-4 w-4" />
                         Save Version

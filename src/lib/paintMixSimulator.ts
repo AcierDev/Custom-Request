@@ -86,12 +86,27 @@ const CIEDE2000_SH_WEIGHT = 0.015;
 const MIX_FACTOR_MIN = 0;
 const MIX_FACTOR_MAX = 1;
 const PERCENT_SCALE = 100;
+const PERCENT_MIN = 0;
 const PERCENT_DECIMALS = 0;
 const DELTA_E_DECIMALS = 1;
 const SIMULATION_ERROR_DELTA_E = 99;
 
 export const HAND_MIX_DELTA_E_MIX_LIMIT = 3;
 export const HAND_MIX_DELTA_E_TEST_LIMIT = 7;
+
+// A human "% match" for a hand mix — how closely the predicted mix lands
+// on the target color. One ΔE unit costs HAND_MIX_MATCH_DE_FALLOFF
+// points, clamped to 0–100. Shown alongside the Mix OK / Test first label.
+export const HAND_MIX_MATCH_DE_FALLOFF = 1;
+export function handMixMatchPercent(deltaE: number): number {
+  return Math.round(
+    clamp(
+      PERCENT_SCALE - deltaE * HAND_MIX_MATCH_DE_FALLOFF,
+      PERCENT_MIN,
+      PERCENT_SCALE
+    )
+  );
+}
 
 const DECISION_COPY: Record<
   HandMixDecision,

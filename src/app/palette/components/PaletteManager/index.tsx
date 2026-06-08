@@ -20,7 +20,10 @@ import {
 import { HexColorPicker } from "react-colorful";
 import { useCustomStore } from "@/store/customStore";
 import { blendHexColors } from "@/lib/colorUtils";
-import { simulatePaintLikeMix } from "@/lib/paintMixSimulator";
+import {
+  simulatePaintLikeMix,
+  handMixMatchPercent,
+} from "@/lib/paintMixSimulator";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -350,6 +353,22 @@ export function PaletteManager() {
     if (customPalette.length >= 2) {
       setShowBlendingGuide(true);
     }
+  };
+
+  // Bulk-add colors resolved from pasted paint codes (e.g. "SW 6910").
+  // Names already carry the full purchase label, and setCustomPalette
+  // records one undo step for the whole paste.
+  const handleAddColorsByCode = (
+    colors: { hex: string; name: string }[]
+  ) => {
+    if (colors.length === 0) return;
+    setCustomPalette([
+      ...customPalette,
+      ...colors.map((c) => ({ id: nanoid(), hex: c.hex, name: c.name })),
+    ]);
+    toast.success(
+      `Added ${colors.length} color${colors.length === 1 ? "" : "s"} from codes`
+    );
   };
 
   const handleAddHarmonyColors = (colors: string[]) => {
@@ -734,6 +753,7 @@ export function PaletteManager() {
 
               <AddColorButton
                 onColorAdd={handleAddColor}
+                onColorsAdd={handleAddColorsByCode}
                 isEmpty={customPalette.length === 0}
               />
 
@@ -855,6 +875,9 @@ export function PaletteManager() {
                           style={{ backgroundColor: mix.predictedHex }}
                         />
                         <span className="truncate">{mix.label}</span>
+                        <span className="shrink-0 tabular-nums opacity-80">
+                          · {handMixMatchPercent(mix.deltaE)}%
+                        </span>
                       </div>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" className="max-w-64">
@@ -862,7 +885,10 @@ export function PaletteManager() {
                         <div className="font-medium">{mix.recipe}</div>
                         <div>Target {mix.targetHex}</div>
                         <div>Hand mix {mix.predictedHex}</div>
-                        <div>ΔE {mix.deltaE}</div>
+                        <div>
+                          {handMixMatchPercent(mix.deltaE)}% match · ΔE{" "}
+                          {mix.deltaE}
+                        </div>
                       </div>
                     </TooltipContent>
                   </Tooltip>

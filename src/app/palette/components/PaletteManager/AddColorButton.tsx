@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { HexColorPicker } from "react-colorful";
 import { Check, RefreshCw, Copy, Plus } from "lucide-react";
@@ -15,46 +15,217 @@ import {
 } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import { purchaseLabel } from "@/lib/paint";
 import { AddColorButtonProps } from "./types";
 
-// Color suggestions by category
-const colorSuggestions = {
-  primary: [
-    { hex: "#6D28D9", name: "Purple" },
-    { hex: "#2563EB", name: "Blue" },
-    { hex: "#059669", name: "Green" },
-    { hex: "#DC2626", name: "Red" },
-    { hex: "#D97706", name: "Amber" },
-    { hex: "#DB2777", name: "Pink" },
-  ],
-  neutrals: [
-    { hex: "#111827", name: "Gray 900" },
-    { hex: "#374151", name: "Gray 700" },
-    { hex: "#6B7280", name: "Gray 500" },
-    { hex: "#9CA3AF", name: "Gray 400" },
-    { hex: "#D1D5DB", name: "Gray 300" },
-    { hex: "#F3F4F6", name: "Gray 100" },
-  ],
-  pastels: [
-    { hex: "#FBCFE8", name: "Pastel Pink" },
-    { hex: "#DDD6FE", name: "Pastel Purple" },
-    { hex: "#BFDBFE", name: "Pastel Blue" },
-    { hex: "#BAE6FD", name: "Pastel Sky" },
-    { hex: "#A7F3D0", name: "Pastel Green" },
-    { hex: "#FED7AA", name: "Pastel Orange" },
-  ],
+// Suggestions are drawn only from real, currently-orderable paint colors
+// (the verified-brand datasets that carry manufacturer codes), so every
+// suggested swatch is something the user can actually buy at the counter —
+// not an arbitrary screen color.
+const VERIFIED_PAINT_SOURCES = [
+  "/paints/sherwin/colors.json",
+  "/paints/valspar/colors.json",
+  "/paints/benjamin_moore/colors.json",
+] as const;
+
+type SuggestionColor = {
+  hex: string;
+  name: string;
+  brand: string;
+  code?: string;
 };
+
+// Hue families the suggestions are grouped into, plus how many swatches to
+// show per family and the saturation below which a color reads as neutral.
+const SUGGESTION_CATEGORY_ORDER = [
+  "Reds",
+  "Oranges",
+  "Yellows",
+  "Greens",
+  "Blues",
+  "Purples",
+  "Neutrals",
+] as const;
+const SWATCHES_PER_CATEGORY = 12;
+const NEUTRAL_MAX_SATURATION = 0.12;
+
+const hexToHsl = (hex: string): { h: number; s: number; l: number } => {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  const d = max - min;
+  let h = 0;
+  let s = 0;
+  if (d !== 0) {
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r:
+        h = (g - b) / d + (g < b ? 6 : 0);
+        break;
+      case g:
+        h = (b - r) / d + 2;
+        break;
+      default:
+        h = (r - g) / d + 4;
+    }
+    h *= 60;
+  }
+  return { h, s, l };
+};
+
+const categorizeColor = (
+  hex: string
+): (typeof SUGGESTION_CATEGORY_ORDER)[number] => {
+  const { h, s } = hexToHsl(hex);
+  if (s < NEUTRAL_MAX_SATURATION) return "Neutrals";
+  if (h < 15 || h >= 345) return "Reds";
+  if (h < 45) return "Oranges";
+  if (h < 70) return "Yellows";
+  if (h < 170) return "Greens";
+  if (h < 255) return "Blues";
+  return "Purples";
+};
+
+// Evenly sample `count` items across an array sorted by lightness, so each
+// family shows a spread from dark to light rather than a clump.
+const sampleEvenly = <T,>(items: T[], count: number): T[] => {
+  if (items.length <= count) return items;
+  const step = (items.length - 1) / (count - 1);
+  return Array.from({ length: count }, (_, i) => items[Math.round(i * step)]);
+};
+
+const isValidHex = (hex: string): boolean => /^#[0-9a-fA-F]{6}$/.test(hex);
+
+// Sherwin-Williams codes are always "SW " + a 4-digit number. We pull
+// every SW#### out of arbitrary pasted text, so a bare "SW 6910, SW 6903"
+// list and a full "SW 6910 Daisy (mustard), SW 6903 Cheerful …" both work,
+// preserving order. A match must start with "SW", so list numbering like
+// "1." is ignored.
+const SW_CODE_DIGITS = 4;
+const SW_CODE_REGEX = /sw[\s-]*?(\d{1,4})/gi;
+
+// Normalize any "SW 6910" / "sw6910" / "6910" to its 4-digit key so the
+// pasted text and the dataset codes index the same way.
+const swDigitsKey = (raw: string): string =>
+  raw.replace(/\D/g, "").padStart(SW_CODE_DIGITS, "0");
 
 export function AddColorButton({
   onColorAdd,
+  onColorsAdd,
   isEmpty = false,
 }: AddColorButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [color, setColor] = useState("#6d28d9"); // Default to a nice purple
-  const [activeTab, setActiveTab] = useState<"picker" | "suggestions">(
-    "picker"
-  );
+  const [activeTab, setActiveTab] = useState<
+    "picker" | "suggestions" | "codes"
+  >("picker");
+  const [codeInput, setCodeInput] = useState("");
   const [copiedToClipboard, setCopiedToClipboard] = useState(false);
+  const [paintColors, setPaintColors] = useState<SuggestionColor[]>([]);
+  const [paintLoaded, setPaintLoaded] = useState(false);
+
+  // Load the verified, orderable paint colors once the dialog is first
+  // opened (deferred so it doesn't cost anything until needed).
+  useEffect(() => {
+    if (!isOpen || paintLoaded) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const datasets = await Promise.all(
+          VERIFIED_PAINT_SOURCES.map((url) =>
+            fetch(url).then((r) => (r.ok ? r.json() : []))
+          )
+        );
+        if (cancelled) return;
+        const valid = datasets
+          .flat()
+          .filter(
+            (c: { hex?: string; available?: boolean }) =>
+              c?.hex && isValidHex(c.hex) && c.available !== false
+          )
+          .map((c: SuggestionColor) => ({
+            ...c,
+            hex: c.hex.toUpperCase(),
+          }));
+        setPaintColors(valid);
+        setPaintLoaded(true);
+      } catch {
+        if (!cancelled) setPaintLoaded(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, paintLoaded]);
+
+  // Group the orderable paints into hue families, deduped by hex and
+  // sampled to a manageable spread per family.
+  const suggestionCategories = useMemo(() => {
+    const buckets = new Map<string, SuggestionColor[]>();
+    const seen = new Set<string>();
+    for (const c of paintColors) {
+      if (seen.has(c.hex)) continue;
+      seen.add(c.hex);
+      const family = categorizeColor(c.hex);
+      if (!buckets.has(family)) buckets.set(family, []);
+      buckets.get(family)!.push(c);
+    }
+    return SUGGESTION_CATEGORY_ORDER.map((family) => {
+      const list = (buckets.get(family) ?? []).sort(
+        (a, b) => hexToHsl(a.hex).l - hexToHsl(b.hex).l
+      );
+      return {
+        category: family,
+        colors: sampleEvenly(list, SWATCHES_PER_CATEGORY),
+      };
+    }).filter((group) => group.colors.length > 0);
+  }, [paintColors]);
+
+  // Index the loaded Sherwin-Williams colors by their numeric code so a
+  // pasted "SW 6910" resolves straight to its hex + name.
+  const sherwinByCode = useMemo(() => {
+    const map = new Map<string, SuggestionColor>();
+    for (const c of paintColors) {
+      if (!c.code || !/^sherwin/i.test(c.brand)) continue;
+      map.set(swDigitsKey(c.code), c);
+    }
+    return map;
+  }, [paintColors]);
+
+  // Parse the pasted text into ordered { code, color? } entries — color
+  // is undefined when that code isn't in the (loaded) Sherwin dataset.
+  const parsedCodes = useMemo(() => {
+    const entries: { code: string; color?: SuggestionColor }[] = [];
+    for (const match of codeInput.matchAll(SW_CODE_REGEX)) {
+      const key = swDigitsKey(match[1]);
+      entries.push({ code: `SW ${key}`, color: sherwinByCode.get(key) });
+    }
+    return entries;
+  }, [codeInput, sherwinByCode]);
+
+  const matchedCodes = parsedCodes.filter(
+    (e): e is { code: string; color: SuggestionColor } => Boolean(e.color)
+  );
+  const unmatchedCodes = [
+    ...new Set(parsedCodes.filter((e) => !e.color).map((e) => e.code)),
+  ];
+
+  const handleAddCodes = () => {
+    if (matchedCodes.length === 0) return;
+    // Carry the full purchase label so pasted colors print / "Convert to
+    // paint" like grounded ones, not as a bare hex.
+    const colors = matchedCodes.map(({ color }) => ({
+      hex: color.hex,
+      name: purchaseLabel(color),
+    }));
+    if (onColorsAdd) onColorsAdd(colors);
+    else colors.forEach((c) => onColorAdd(c.hex));
+    setCodeInput("");
+    setIsOpen(false);
+  };
 
   const handleAddColor = () => {
     if (color) {
@@ -176,9 +347,10 @@ export function AddColorButton({
               }
               className="mt-4"
             >
-              <TabsList className="grid grid-cols-2 mb-4">
-                <TabsTrigger value="picker">Color Picker</TabsTrigger>
+              <TabsList className="grid grid-cols-3 mb-4">
+                <TabsTrigger value="picker">Picker</TabsTrigger>
                 <TabsTrigger value="suggestions">Suggestions</TabsTrigger>
+                <TabsTrigger value="codes">Codes</TabsTrigger>
               </TabsList>
 
               <TabsContent value="picker" className="space-y-4">
@@ -274,7 +446,17 @@ export function AddColorButton({
               </TabsContent>
 
               <TabsContent value="suggestions" className="space-y-4">
-                {Object.entries(colorSuggestions).map(([category, colors]) => (
+                {!paintLoaded && (
+                  <p className="py-8 text-center text-sm text-slate-400">
+                    Loading paint colors…
+                  </p>
+                )}
+                {paintLoaded && suggestionCategories.length === 0 && (
+                  <p className="py-8 text-center text-sm text-slate-400">
+                    Couldn&apos;t load paint colors. Use the picker instead.
+                  </p>
+                )}
+                {suggestionCategories.map(({ category, colors }) => (
                   <div key={category} className="space-y-2">
                     <h4 className="text-sm font-medium text-slate-300 capitalize">
                       {category}
@@ -312,6 +494,12 @@ export function AddColorButton({
                                 <p className="font-medium">
                                   {colorOption.name}
                                 </p>
+                                <p className="text-slate-400">
+                                  {colorOption.brand}
+                                  {colorOption.code
+                                    ? ` · ${colorOption.code}`
+                                    : ""}
+                                </p>
                                 <p className="font-mono">{colorOption.hex}</p>
                               </div>
                             </TooltipContent>
@@ -322,6 +510,74 @@ export function AddColorButton({
                   </div>
                 ))}
               </TabsContent>
+
+              <TabsContent value="codes" className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="sw-codes" className="text-xs">
+                    Sherwin-Williams codes
+                  </Label>
+                  <p className="text-xs text-slate-400">
+                    Paste codes separated by commas or new lines — e.g.{" "}
+                    <span className="font-mono text-slate-300">
+                      SW 6910, SW 6903, SW 7588
+                    </span>
+                    . They&apos;re added in the order pasted.
+                  </p>
+                  <textarea
+                    id="sw-codes"
+                    value={codeInput}
+                    onChange={(e) => setCodeInput(e.target.value)}
+                    placeholder="SW 6910, SW 6903, SW 7588, SW 6868 …"
+                    className="h-28 w-full rounded-md border border-white/10 bg-gray-800/40 p-3 font-mono text-sm text-white focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                {!paintLoaded && codeInput.trim() !== "" && (
+                  <p className="text-xs text-slate-400">
+                    Loading paint colors…
+                  </p>
+                )}
+
+                {matchedCodes.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-slate-300">
+                      {matchedCodes.length} color
+                      {matchedCodes.length === 1 ? "" : "s"} found
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {matchedCodes.map(({ code, color: c }, i) => (
+                        <TooltipProvider
+                          key={`${code}-${i}`}
+                          delayDuration={300}
+                        >
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div
+                                className="h-7 w-7 rounded-md shadow-sm ring-1 ring-white/10"
+                                style={{ backgroundColor: c.hex }}
+                              />
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom">
+                              <div className="text-xs">
+                                <p className="font-medium">{c.name}</p>
+                                <p className="font-mono text-slate-400">
+                                  {code} · {c.hex}
+                                </p>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {paintLoaded && unmatchedCodes.length > 0 && (
+                  <p className="text-xs text-amber-400/90">
+                    Couldn&apos;t find: {unmatchedCodes.join(", ")}
+                  </p>
+                )}
+              </TabsContent>
             </Tabs>
 
             <div className="mt-6 grid grid-cols-2 gap-2 sm:flex sm:justify-end">
@@ -329,10 +585,17 @@ export function AddColorButton({
                 Cancel
               </Button>
               <Button
-                onClick={handleAddColor}
-                className="bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white"
+                onClick={activeTab === "codes" ? handleAddCodes : handleAddColor}
+                disabled={activeTab === "codes" && matchedCodes.length === 0}
+                className="bg-blue-600 hover:bg-blue-500 ring-1 ring-blue-400/40 text-white disabled:opacity-50"
               >
-                Add Color
+                {activeTab === "codes"
+                  ? matchedCodes.length > 0
+                    ? `Add ${matchedCodes.length} color${
+                        matchedCodes.length === 1 ? "" : "s"
+                      }`
+                    : "Add colors"
+                  : "Add Color"}
               </Button>
             </div>
             </motion.div>

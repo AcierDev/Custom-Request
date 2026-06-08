@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { handMixMatchPercent } from "@/lib/paintMixSimulator";
 import { ColorSwatchProps } from "./types";
 
 const BAR_HEIGHT_CLASS = "h-64 sm:h-80";
@@ -245,6 +246,9 @@ export function ColorSwatch({
                       return <Icon className="h-3 w-3 shrink-0" />;
                     })()}
                     <span className="truncate">{handMix.label}</span>
+                    <span className="shrink-0 tabular-nums opacity-80">
+                      · {handMixMatchPercent(handMix.deltaE)}%
+                    </span>
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="top" className="max-w-64">
@@ -266,7 +270,8 @@ export function ColorSwatch({
                       <span className="font-mono">{handMix.predictedHex}</span>
                     </div>
                     <div>
-                      ΔE {handMix.deltaE} · {handMix.recipe}
+                      {handMixMatchPercent(handMix.deltaE)}% match · ΔE{" "}
+                      {handMix.deltaE} · {handMix.recipe}
                     </div>
                   </div>
                 </TooltipContent>

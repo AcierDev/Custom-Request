@@ -8,6 +8,34 @@ import { Button } from "@/components/ui/button"
 import { Upload, ImageIcon } from "lucide-react"
 import { toast } from "sonner"
 
+const MAX_IMAGE_SIZE_MB = 5
+const MAX_IMAGE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024
+
+// Validate + read an image File into a data URL. Shared by the file
+// picker, drag-and-drop, and clipboard paste so all three behave the
+// same. Returns true once a valid image starts loading.
+export function loadImageFile(
+  file: File,
+  onImageUpload: (imageDataUrl: string) => void
+): boolean {
+  if (!file.type.match("image.*")) {
+    toast.error("Please select an image file")
+    return false
+  }
+  if (file.size > MAX_IMAGE_BYTES) {
+    toast.error(`Image size should be less than ${MAX_IMAGE_SIZE_MB}MB`)
+    return false
+  }
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    if (e.target?.result) {
+      onImageUpload(e.target.result as string)
+    }
+  }
+  reader.readAsDataURL(file)
+  return true
+}
+
 interface ImageUploaderProps {
   onImageUpload: (imageDataUrl: string) => void
 }
@@ -42,25 +70,7 @@ export function ImageUploader({ onImageUpload }: ImageUploaderProps) {
   }
 
   const handleFile = (file: File) => {
-    // Check if file is an image
-    if (!file.type.match("image.*")) {
-      toast.error("Please select an image file")
-      return
-    }
-
-    // Check file size (limit to 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image size should be less than 5MB")
-      return
-    }
-
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      if (e.target?.result) {
-        onImageUpload(e.target.result as string)
-      }
-    }
-    reader.readAsDataURL(file)
+    loadImageFile(file, onImageUpload)
   }
 
   return (
@@ -87,7 +97,8 @@ export function ImageUploader({ onImageUpload }: ImageUploaderProps) {
         <div className="space-y-2">
           <h3 className="text-lg font-medium text-white">Upload an Image</h3>
           <p className="text-sm text-slate-400 max-w-md mx-auto">
-            Drag and drop an image, or click to browse your files
+            Drag and drop an image, paste from your clipboard (⌘/Ctrl+V), or
+            click to browse your files
           </p>
         </div>
 
