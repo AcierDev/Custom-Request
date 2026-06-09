@@ -42,6 +42,163 @@ export interface TextureVariation {
 const SOLID_LINE_BLEND_FRACTION = 0.08;
 
 /**
+ * Minimum seam-blend density: at least one swap per this many squares along the
+ * border, regardless of SOLID_LINE_BLEND_FRACTION. Without this, a tall/wide
+ * border (e.g. 16 squares → floor(16 * 0.08) = 1) rounds down to a single stray
+ * swap; this scales the dither to the border length so the seam always reads as
+ * blended.
+ */
+const SOLID_LINE_MIN_SWAP_SPACING = 5;
+
+/**
+ * Hard cap on how many consecutive squares along a seam may lack a swapped-in
+ * ("mixed") square. Mixes are spread one-per-bucket so the boundary never shows
+ * a clean run longer than this.
+ */
+const MAX_RUN_WITHOUT_MIX = 7;
+
+/**
+ * Number of squares to swap across a solid-color seam of `borderLength` squares.
+ * Takes the larger of the fraction-based count and the minimum-density floor,
+ * then caps at half the border (each swap consumes two distinct positions).
+ */
+function solidLineSwapCount(borderLength: number): number {
+  const target = Math.max(
+    Math.floor(borderLength * SOLID_LINE_BLEND_FRACTION),
+    Math.ceil(borderLength / SOLID_LINE_MIN_SWAP_SPACING)
+  );
+  return Math.min(target, Math.floor(borderLength / 2));
+}
+
+/**
+ * Swap squares between the two solid lines straddling a seam to stipple the
+ * boundary. Mixed squares are spread one-per-bucket along the seam (rather than
+ * placed at random) so the boundary never shows a run longer than
+ * MAX_RUN_WITHOUT_MIX squares without a mix. `read`/`write` abstract over column
+ * vs row orientation.
+ */
+function swapAcrossSeam(
+  lineA: number,
+  lineB: number,
+  lineLength: number,
+  read: (line: number, pos: number) => number,
+  write: (line: number, pos: number, color: number) => void
+): void {
+  // Largest bucket whose worst-case internal run (a mix at one bucket's start
+  // and the next at the following bucket's end leaves 2*size - 2 empty squares)
+  // stays within MAX_RUN_WITHOUT_MIX.
+  const maxBucketSize = Math.max(1, Math.floor((MAX_RUN_WITHOUT_MIX + 2) / 2));
+
+  // Total mixed rows across both columns: the denser of the swap-count density
+  // and the spacing floor, made even so each column gets an equal share.
+  let mixedRows = Math.max(
+    solidLineSwapCount(lineLength) * 2,
+    Math.ceil(lineLength / maxBucketSize)
+  );
+  mixedRows = Math.min(mixedRows, lineLength);
+  mixedRows -= mixedRows % 2;
+  const pairs = mixedRows / 2;
+  if (pairs <= 0) return;
+
+  // One mixed row per evenly sized bucket, placed randomly within the bucket so
+  // mixes are spread along the seam and never cluster.
+  const positions: number[] = [];
+  for (let i = 0; i < mixedRows; i++) {
+    const start = Math.floor((i * lineLength) / mixedRows);
+    const end = Math.floor(((i + 1) * lineLength) / mixedRows);
+    const span = Math.max(1, end - start);
+    positions.push(start + Math.floor(Math.random() * span));
+  }
+
+  // Alternate buckets between the two columns and swap each pair, conserving
+  // color counts (each swap exchanges one square from each side).
+  for (let i = 0; i < pairs; i++) {
+    const posA = positions[i * 2];
+    const posB = positions[i * 2 + 1];
+    const temp = read(lineA, posA);
+    write(lineA, posA, read(lineB, posB));
+    write(lineB, posB, temp);
+  }
+}
+
+/**
+ * Soften the seams between adjacent solid-color bands by swapping squares across
+ * each seam, while guaranteeing every band keeps at least one fully solid line
+ * (a column when filling horizontally, a row when vertically) — unless the band
+ * is a single line wide, where it is literally impossible.
+ *
+ * A band only loses solidity at its edge lines, so: bands ≥3 wide always keep a
+ * solid interior; a 2-wide band blends just one of its two seams so one line
+ * survives (the other seam stays a hard edge); a 1-wide band can't be preserved
+ * and blends on one side only.
+ */
+function blendSolidSeams(
+  colorMap: number[][],
+  modelWidth: number,
+  modelHeight: number,
+  orientation: "horizontal" | "vertical"
+): void {
+  const horizontal = orientation === "horizontal";
+  const lineCount = horizontal ? modelWidth : modelHeight;
+  const lineLength = horizontal ? modelHeight : modelWidth;
+  const read = (line: number, pos: number) =>
+    horizontal ? colorMap[line][pos] : colorMap[pos][line];
+  const write = (line: number, pos: number, color: number) => {
+    if (horizontal) colorMap[line][pos] = color;
+    else colorMap[pos][line] = color;
+  };
+
+  // Each line's solid color, or null if the line is already mixed.
+  const lineColor: (number | null)[] = [];
+  for (let line = 0; line < lineCount; line++) {
+    const first = read(line, 0);
+    let solid = true;
+    for (let pos = 1; pos < lineLength; pos++) {
+      if (read(line, pos) !== first) {
+        solid = false;
+        break;
+      }
+    }
+    lineColor.push(solid ? first : null);
+  }
+
+  // Group consecutive solid lines of the same color into bands.
+  const bands: { start: number; end: number; width: number }[] = [];
+  for (let line = 0; line < lineCount; ) {
+    if (lineColor[line] === null) {
+      line++;
+      continue;
+    }
+    let end = line;
+    while (end + 1 < lineCount && lineColor[end + 1] === lineColor[line]) end++;
+    bands.push({ start: line, end, width: end - line + 1 });
+    line = end + 1;
+  }
+
+  // Solid lines still available per band; one is consumed per blended seam.
+  const solidRemaining = bands.map((band) => band.width);
+
+  for (let k = 0; k < bands.length - 1; k++) {
+    const left = bands[k];
+    const right = bands[k + 1];
+    // Only seams between immediately-adjacent bands of differing color.
+    if (right.start !== left.end + 1) continue;
+    if (lineColor[left.end] === lineColor[right.start]) continue;
+
+    // Blend unless it would erase a band's last solid line — allowed only when
+    // the band is one line wide and can't keep one anyway.
+    const haveFresh = solidRemaining[k] >= 1 && solidRemaining[k + 1] >= 1;
+    const canBlendLeft = left.width === 1 || solidRemaining[k] >= 2;
+    const canBlendRight = right.width === 1 || solidRemaining[k + 1] >= 2;
+    if (!haveFresh || !canBlendLeft || !canBlendRight) continue;
+
+    swapAcrossSeam(left.end, right.start, lineLength, read, write);
+    solidRemaining[k] -= 1;
+    solidRemaining[k + 1] -= 1;
+  }
+}
+
+/**
  * Get color entries from selected design or custom palette
  */
 export function getColorEntries(selectedDesign: string, customPalette: any[]) {
@@ -378,160 +535,14 @@ export function generateColorMap(
       }
     }
 
-    // After distributing all colors, check for adjacent columns with different single colors
-    // and blend them by swapping 25% of squares. Blend axis follows effectiveOrientation.
-    if (effectiveOrientation === "horizontal") {
-      for (let x = 0; x < adjustedModelWidth - 1; x++) {
-        const currentColumn = colorMap[x];
-        const nextColumn = colorMap[x + 1];
-
-        // Check if both columns are single color
-        const currentColor = currentColumn[0];
-        const nextColor = nextColumn[0];
-
-        let currentColumnSingleColor = true;
-        let nextColumnSingleColor = true;
-
-        // Check if current column is all the same color
-        for (let y = 0; y < adjustedModelHeight; y++) {
-          if (currentColumn[y] !== currentColor) {
-            currentColumnSingleColor = false;
-            break;
-          }
-        }
-
-        // Check if next column is all the same color
-        for (let y = 0; y < adjustedModelHeight; y++) {
-          if (nextColumn[y] !== nextColor) {
-            nextColumnSingleColor = false;
-            break;
-          }
-        }
-
-        // If both columns are single color and different, blend them
-        if (
-          currentColumnSingleColor &&
-          nextColumnSingleColor &&
-          currentColor !== nextColor
-        ) {
-          const squaresToSwap = Math.floor(
-            adjustedModelHeight * SOLID_LINE_BLEND_FRACTION
-          );
-
-          // Choose random positions from the first column
-          const allPositions = Array.from(
-            { length: adjustedModelHeight },
-            (_, i) => i
-          );
-          // Use a different seed for each column pair to ensure true randomization
-          const shuffledPositions = shuffleArray(
-            [...allPositions],
-            Math.random() * 10000 + x
-          );
-          const positionsFromFirstColumn = shuffledPositions.slice(
-            0,
-            squaresToSwap
-          );
-
-          // Choose random positions from the second column (excluding the ones from first column)
-          const remainingPositions = shuffledPositions.slice(squaresToSwap);
-          const positionsFromSecondColumn = remainingPositions.slice(
-            0,
-            squaresToSwap
-          );
-
-          // Swap the squares
-          for (let i = 0; i < squaresToSwap; i++) {
-            const firstY = positionsFromFirstColumn[i];
-            const secondY = positionsFromSecondColumn[i];
-
-            // Swap the colors
-            const tempColor = colorMap[x][firstY];
-            colorMap[x][firstY] = colorMap[x + 1][secondY];
-            colorMap[x + 1][secondY] = tempColor;
-          }
-        }
-      }
-    } else {
-      // For vertical fill axis, blend adjacent rows instead of columns
-      for (let y = 0; y < adjustedModelHeight - 1; y++) {
-        const currentRow = [];
-        const nextRow = [];
-
-        // Extract the current and next rows
-        for (let x = 0; x < adjustedModelWidth; x++) {
-          currentRow.push(colorMap[x][y]);
-          nextRow.push(colorMap[x][y + 1]);
-        }
-
-        // Check if both rows are single color
-        const currentColor = currentRow[0];
-        const nextColor = nextRow[0];
-
-        let currentRowSingleColor = true;
-        let nextRowSingleColor = true;
-
-        // Check if current row is all the same color
-        for (let x = 0; x < adjustedModelWidth; x++) {
-          if (currentRow[x] !== currentColor) {
-            currentRowSingleColor = false;
-            break;
-          }
-        }
-
-        // Check if next row is all the same color
-        for (let x = 0; x < adjustedModelWidth; x++) {
-          if (nextRow[x] !== nextColor) {
-            nextRowSingleColor = false;
-            break;
-          }
-        }
-
-        // If both rows are single color and different, blend them
-        if (
-          currentRowSingleColor &&
-          nextRowSingleColor &&
-          currentColor !== nextColor
-        ) {
-          const squaresToSwap = Math.floor(
-            adjustedModelWidth * SOLID_LINE_BLEND_FRACTION
-          );
-
-          // Choose random positions from the first row
-          const allPositions = Array.from(
-            { length: adjustedModelWidth },
-            (_, i) => i
-          );
-          // Use a different seed for each row pair to ensure true randomization
-          const shuffledPositions = shuffleArray(
-            [...allPositions],
-            Math.random() * 10000 + y
-          );
-          const positionsFromFirstRow = shuffledPositions.slice(
-            0,
-            squaresToSwap
-          );
-
-          // Choose random positions from the second row (excluding the ones from first row)
-          const remainingPositions = shuffledPositions.slice(squaresToSwap);
-          const positionsFromSecondRow = remainingPositions.slice(
-            0,
-            squaresToSwap
-          );
-
-          // Swap the squares
-          for (let i = 0; i < squaresToSwap; i++) {
-            const firstX = positionsFromFirstRow[i];
-            const secondX = positionsFromSecondRow[i];
-
-            // Swap the colors
-            const tempColor = colorMap[firstX][y];
-            colorMap[firstX][y] = colorMap[secondX][y + 1];
-            colorMap[secondX][y + 1] = tempColor;
-          }
-        }
-      }
-    }
+    // After distributing all colors, soften the seams between adjacent solid
+    // color bands while keeping at least one solid line per band where possible.
+    blendSolidSeams(
+      colorMap,
+      adjustedModelWidth,
+      adjustedModelHeight,
+      effectiveOrientation
+    );
   } else if (colorPattern === "center-fade") {
     // For center-fade patterns, create a mirrored color array
     const totalSquares = adjustedModelWidth * adjustedModelHeight;
@@ -707,160 +718,14 @@ export function generateColorMap(
       }
     }
 
-    // After distributing all colors, check for adjacent columns with different single colors
-    // and blend them by swapping 25% of squares. Blend axis follows effectiveOrientation.
-    if (effectiveOrientation === "horizontal") {
-      for (let x = 0; x < adjustedModelWidth - 1; x++) {
-        const currentColumn = colorMap[x];
-        const nextColumn = colorMap[x + 1];
-
-        // Check if both columns are single color
-        const currentColor = currentColumn[0];
-        const nextColor = nextColumn[0];
-
-        let currentColumnSingleColor = true;
-        let nextColumnSingleColor = true;
-
-        // Check if current column is all the same color
-        for (let y = 0; y < adjustedModelHeight; y++) {
-          if (currentColumn[y] !== currentColor) {
-            currentColumnSingleColor = false;
-            break;
-          }
-        }
-
-        // Check if next column is all the same color
-        for (let y = 0; y < adjustedModelHeight; y++) {
-          if (nextColumn[y] !== nextColor) {
-            nextColumnSingleColor = false;
-            break;
-          }
-        }
-
-        // If both columns are single color and different, blend them
-        if (
-          currentColumnSingleColor &&
-          nextColumnSingleColor &&
-          currentColor !== nextColor
-        ) {
-          const squaresToSwap = Math.floor(
-            adjustedModelHeight * SOLID_LINE_BLEND_FRACTION
-          );
-
-          // Choose random positions from the first column
-          const allPositions = Array.from(
-            { length: adjustedModelHeight },
-            (_, i) => i
-          );
-          // Use a different seed for each column pair to ensure true randomization
-          const shuffledPositions = shuffleArray(
-            [...allPositions],
-            Math.random() * 10000 + x
-          );
-          const positionsFromFirstColumn = shuffledPositions.slice(
-            0,
-            squaresToSwap
-          );
-
-          // Choose random positions from the second column (excluding the ones from first column)
-          const remainingPositions = shuffledPositions.slice(squaresToSwap);
-          const positionsFromSecondColumn = remainingPositions.slice(
-            0,
-            squaresToSwap
-          );
-
-          // Swap the squares
-          for (let i = 0; i < squaresToSwap; i++) {
-            const firstY = positionsFromFirstColumn[i];
-            const secondY = positionsFromSecondColumn[i];
-
-            // Swap the colors
-            const tempColor = colorMap[x][firstY];
-            colorMap[x][firstY] = colorMap[x + 1][secondY];
-            colorMap[x + 1][secondY] = tempColor;
-          }
-        }
-      }
-    } else {
-      // For vertical fill axis, blend adjacent rows instead of columns
-      for (let y = 0; y < adjustedModelHeight - 1; y++) {
-        const currentRow = [];
-        const nextRow = [];
-
-        // Extract the current and next rows
-        for (let x = 0; x < adjustedModelWidth; x++) {
-          currentRow.push(colorMap[x][y]);
-          nextRow.push(colorMap[x][y + 1]);
-        }
-
-        // Check if both rows are single color
-        const currentColor = currentRow[0];
-        const nextColor = nextRow[0];
-
-        let currentRowSingleColor = true;
-        let nextRowSingleColor = true;
-
-        // Check if current row is all the same color
-        for (let x = 0; x < adjustedModelWidth; x++) {
-          if (currentRow[x] !== currentColor) {
-            currentRowSingleColor = false;
-            break;
-          }
-        }
-
-        // Check if next row is all the same color
-        for (let x = 0; x < adjustedModelWidth; x++) {
-          if (nextRow[x] !== nextColor) {
-            nextRowSingleColor = false;
-            break;
-          }
-        }
-
-        // If both rows are single color and different, blend them
-        if (
-          currentRowSingleColor &&
-          nextRowSingleColor &&
-          currentColor !== nextColor
-        ) {
-          const squaresToSwap = Math.floor(
-            adjustedModelWidth * SOLID_LINE_BLEND_FRACTION
-          );
-
-          // Choose random positions from the first row
-          const allPositions = Array.from(
-            { length: adjustedModelWidth },
-            (_, i) => i
-          );
-          // Use a different seed for each row pair to ensure true randomization
-          const shuffledPositions = shuffleArray(
-            [...allPositions],
-            Math.random() * 10000 + y
-          );
-          const positionsFromFirstRow = shuffledPositions.slice(
-            0,
-            squaresToSwap
-          );
-
-          // Choose random positions from the second row (excluding the ones from first row)
-          const remainingPositions = shuffledPositions.slice(squaresToSwap);
-          const positionsFromSecondRow = remainingPositions.slice(
-            0,
-            squaresToSwap
-          );
-
-          // Swap the squares
-          for (let i = 0; i < squaresToSwap; i++) {
-            const firstX = positionsFromFirstRow[i];
-            const secondX = positionsFromSecondRow[i];
-
-            // Swap the colors
-            const tempColor = colorMap[firstX][y];
-            colorMap[firstX][y] = colorMap[secondX][y + 1];
-            colorMap[secondX][y + 1] = tempColor;
-          }
-        }
-      }
-    }
+    // After distributing all colors, soften the seams between adjacent solid
+    // color bands while keeping at least one solid line per band where possible.
+    blendSolidSeams(
+      colorMap,
+      adjustedModelWidth,
+      adjustedModelHeight,
+      effectiveOrientation
+    );
   } else if (colorPattern === "scatter") {
     // Scatter pattern with mass conservation (1-to-1 swaps)
     // We achieve this by calculating exact counts, assigning scores to positions,

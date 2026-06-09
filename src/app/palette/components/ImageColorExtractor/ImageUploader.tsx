@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Upload, ImageIcon } from "lucide-react"
 import { toast } from "sonner"
 
-const MAX_IMAGE_SIZE_MB = 5
+const MAX_IMAGE_SIZE_MB = 10
 const MAX_IMAGE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024
 
 // Validate + read an image File into a data URL. Shared by the file
@@ -111,7 +111,7 @@ export function ImageUploader({ onImageUpload }: ImageUploaderProps) {
             Browse Files
           </Button>
 
-          <p className="text-xs text-slate-400">Supported formats: JPG, PNG, GIF, WebP (max 5MB)</p>
+          <p className="text-xs text-slate-400">Supported formats: JPG, PNG, GIF, WebP (max {MAX_IMAGE_SIZE_MB}MB)</p>
         </div>
 
         <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />

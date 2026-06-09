@@ -46,16 +46,29 @@ const SHADOW_MAP_SIZE = 2048;
 // 0.5 reduction, then the remaining angle cut another 25% (0.5 * 0.75).
 const SHADOW_ANGLE_REDUCTION = 0.625;
 
-// Daylight comes from the right-wall window. The two shadow-casting
-// key lights sit on that (+X) side; pushing them much further back
-// (larger Z) makes the light hit the piece more head-on, so its
-// shadow is softer and no longer rakes hard in one direction.
-const WINDOW_KEY_X = 15; // window side (+X), unchanged direction
-const WINDOW_KEY_Y = 5; // top/bottom pair splits around center
-const WINDOW_KEY_Z = 13; // pulled back from 5 → 13 (softer, less raked)
-const WINDOW_KEY_INTENSITY = 0.5; // was 0.7 — less single-direction punch
-// Opposite (left) fill, lifted a touch so the key no longer dominates.
-const FILL_LIGHT_INTENSITY = 0.45; // was 0.3
+// ── Geometric ART RIG — ported from the original viewer.everwoodus.com
+// (AcierDev/Custom-Request-Viewer). Five directional lights at their FULL
+// (un-angled) positions, each casting its own shadow, throw the raked,
+// relief-revealing self-shadows the old viewer had — the look this repo's
+// later "head-on + single source-anchored key" rework had flattened. The
+// art is relit with these while the gallery room + time-of-day are kept
+// (time of day still scales brightness and tints colour below). Positions
+// and intensities are the old viewer's store defaults.
+const ART_RIG_AMBIENT_INTENSITY = 1;
+// Positions are the old viewer's rig MIRRORED in X — the dominant key now
+// rakes from the LEFT, so highlights sit on the left and the relief shading
+// falls to the RIGHT, agreeing with the (now right-throwing) shadow keys
+// and the requested shadow side. (The old viewer lit from the right.)
+const ART_RIG_KEY_POS: [number, number, number] = [-15, 5, 5];
+const ART_RIG_KEY_INTENSITY = 0.7;
+const ART_RIG_FILL_POS: [number, number, number] = [-15, -5, 5];
+const ART_RIG_FILL_INTENSITY = 0.5;
+const ART_RIG_BACK_POS: [number, number, number] = [5, -5, 10];
+const ART_RIG_BACK_INTENSITY = 0.3;
+const ART_RIG_RIM_POS: [number, number, number] = [15, -2, 5];
+const ART_RIG_RIM_INTENSITY = 0.5;
+const ART_RIG_REAR_POS: [number, number, number] = [0, 0, -5];
+const ART_RIG_REAR_INTENSITY = 0.3;
 
 // The art's cast shadows are thrown by THREE dedicated keys, each
 // anchored to a REAL room light source so every shadow agrees with where
@@ -269,11 +282,14 @@ export function ArtShadowKeys({
     return new THREE.Vector3(dx, dy, dz).normalize();
   }, [downlightPos, artCenter]);
 
-  // WINDOW: keep the window's SIDE (sign in X) but lift the sun above
-  // the art and pull it toward the room front so daylight rakes the
-  // relief instead of hitting it head-on.
+  // WINDOW: rake the daytime sun from the LEFT so the relief's shadow
+  // falls to the RIGHT (requested), matching the night floor-lamp key on
+  // the same side — day and night then throw their shadow the same way.
+  // The window sits on the right (+X), so this reads as daylight bouncing
+  // across the room rather than direct sun, but the sun is still lifted
+  // above the art and pulled toward the room front so it rakes the relief.
   const windowDir = useMemo(() => {
-    const sideSign = Math.sign(windowPos[0] - artCenter[0]) || 1;
+    const sideSign = -(Math.sign(windowPos[0] - artCenter[0]) || 1);
     return new THREE.Vector3(
       sideSign,
       SHADOW_SUN_LIFT,
@@ -333,44 +349,51 @@ export function GeometricLighting({
   const lightGroupRef = useRef<THREE.Group>(null);
   useDisposeLightsOnUnmount(lightGroupRef);
 
-  // All shadowless fill — the single window key (rendered separately,
-  // outside the rotation) owns the cast shadow. These just shape the
-  // brightness/colour and rotate for the time-of-day sweep.
+  // Old-viewer art rig, but SHADOWLESS. The cast shadows belong to the
+  // lights that physically exist in the room — the ceiling cans, the
+  // window, the floor lamp — thrown by <ArtShadowKeys/>, so a shadow only
+  // appears where there's a real light to throw it (one clean shadow on
+  // the wall + relief, not five from abstract keys). These five lights
+  // only SHAPE the relief: at their full, un-angled positions they rake
+  // across the tiles so the surface reads 3D (the head-on angled() rig
+  // looked flat). Intensities are the old viewer's defaults; time of day
+  // scales them (intensityScale) and tints them (lightColor), and the
+  // group rotates with the time-of-day sweep.
   return (
     <group ref={lightGroupRef}>
-      {/* Ambient light - softer for geometric patterns to enhance shadows */}
-      <ambientLight intensity={1 * intensityScale} />
-
-      {/* Window-side fill (+X), split above/below the centre line. */}
-      <directionalLight
-        position={angled([WINDOW_KEY_X, WINDOW_KEY_Y, WINDOW_KEY_Z])}
-        color={lightColor}
-        intensity={WINDOW_KEY_INTENSITY * intensityScale}
+      <ambientLight
+        intensity={ART_RIG_AMBIENT_INTENSITY * intensityScale}
+        color="#ffffff"
       />
-
+      {/* Key — top right */}
       <directionalLight
-        position={angled([WINDOW_KEY_X, -WINDOW_KEY_Y, WINDOW_KEY_Z])}
+        position={ART_RIG_KEY_POS}
         color={lightColor}
-        intensity={WINDOW_KEY_INTENSITY * intensityScale}
+        intensity={ART_RIG_KEY_INTENSITY * intensityScale}
       />
-
-      {/* Secondary light source (bottom-left-back) */}
+      {/* Fill — bottom right */}
       <directionalLight
-        position={angled([-5, -5, 10])}
+        position={ART_RIG_FILL_POS}
         color={lightColor}
-        intensity={0.5 * intensityScale}
+        intensity={ART_RIG_FILL_INTENSITY * intensityScale}
       />
-
+      {/* Back — bottom left */}
       <directionalLight
-        position={angled([-15, -2, 5])}
+        position={ART_RIG_BACK_POS}
         color={lightColor}
-        intensity={FILL_LIGHT_INTENSITY * intensityScale}
+        intensity={ART_RIG_BACK_INTENSITY * intensityScale}
       />
-
+      {/* Rim — left */}
       <directionalLight
-        position={angled([0, 0, -5])}
+        position={ART_RIG_RIM_POS}
         color={lightColor}
-        intensity={0.5 * intensityScale}
+        intensity={ART_RIG_RIM_INTENSITY * intensityScale}
+      />
+      {/* Rear back light */}
+      <directionalLight
+        position={ART_RIG_REAR_POS}
+        color={lightColor}
+        intensity={ART_RIG_REAR_INTENSITY * intensityScale}
       />
     </group>
   );

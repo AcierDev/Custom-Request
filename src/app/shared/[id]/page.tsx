@@ -17,6 +17,7 @@ import { useCustomStore } from "@/store/customStore";
 import { Button } from "@/components/ui/button";
 import { GalleryArtScene } from "@/components/preview/GalleryArtScene";
 import { LightingControls } from "@/components/preview/LightingControls";
+import { PatternControls } from "@/components/preview/PatternControls";
 import type { TimeOfDay } from "@/components/preview/RotatableLighting";
 import { DEFAULT_WALL_COLOR } from "@/components/preview/wallColors";
 import { WallColorPicker } from "@/components/preview/WallColorPicker";
@@ -24,9 +25,9 @@ import { PaintColorPicker } from "@/components/preview/PaintColorPicker";
 import { SizeCard } from "@/components/cards/SizeCard";
 import { DESIGN_COLORS } from "@/typings/color-maps";
 import { ItemDesigns } from "@/typings/types";
-import { SIZE_STRING } from "@/typings/constants";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { cn } from "@/lib/utils";
+import { sizeToInchLabel } from "@/lib/size-pills";
 import { decompressJsonFromUrl } from "@/lib/urlUtils";
 import { ARButton } from "@/components/ARButton";
 
@@ -246,7 +247,7 @@ export default function SharedDesignPage() {
           timeOfDay={timeOfDay}
           wallColor={wallColor}
           showRoom
-          showColorInfo
+          showColorInfo={false}
           autoOrbit={!reducedMotion}
           isMobile={isMobile}
           className="w-full h-full"
@@ -280,7 +281,7 @@ export default function SharedDesignPage() {
             animate={reducedMotion ? undefined : { opacity: 1, y: 0 }}
             exit={reducedMotion ? undefined : { opacity: 0, y: -8 }}
             transition={{ duration: 0.3, delay: 0.05 }}
-            className="absolute top-5 right-5 z-40 w-60"
+            className="absolute top-5 right-5 z-40 w-72 max-h-[calc(100dvh-2.5rem)] overflow-y-auto no-scrollbar"
           >
             <ViewingControls
               timeOfDay={timeOfDay}
@@ -654,8 +655,9 @@ function ViewingControls({
     <div className="space-y-3">
       <div className="glass-surface rounded-[0.7rem] p-3 shadow-lg">
         <div className="mb-2 text-sm text-slate-300">See it at another size</div>
-        <SizeCard compact bare />
+        <SizeCard compact bare inchLabels />
       </div>
+      <PatternControls />
       <LightingControls value={timeOfDay} onChange={onTimeOfDay} />
       <div className="glass-surface rounded-[0.7rem] p-3 shadow-lg">
         <div className="mb-2 text-sm text-slate-300">Try it on your wall</div>
@@ -844,14 +846,12 @@ function designName(selectedDesign: string): string {
 }
 
 /**
- * Real-world size label. `dimensions` are SQUARE COUNTS, not inches — the
- * catalog maps each size to a marketed dimension (e.g. 40×16 squares →
- * `48" x 10 Feet`). Falls back to a squares label (no inch mark) for any
- * non-catalog custom size.
+ * Real-world size label, always in inches. `dimensions` are SQUARE COUNTS
+ * (3″ per square), shown height-first to match the catalog convention
+ * (e.g. 16×10 squares → `30" × 48"`).
  */
 function sizeLabel(width: number, height: number): string {
-  const real = (SIZE_STRING as Record<string, string>)[`${width} x ${height}`];
-  return real ?? `${width} × ${height} squares`;
+  return sizeToInchLabel(`${width} x ${height}`);
 }
 
 /** Build the placard palette for both custom palettes and official designs. */

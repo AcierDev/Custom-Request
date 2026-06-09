@@ -46,6 +46,15 @@ const LABEL_GAP_PX = 16; // constant breathing room past that edge, on screen
 // Vertical centering on the square's row is a screen-space transform on the box.
 const LABEL_BOX_TRANSFORM = "translateY(-50%)";
 
+// Squares are placed edge-to-edge (centers one square-size apart), so adjacent
+// wedges abut with exactly zero overlap. When zoomed far out each square covers
+// only a few pixels and those coincident seams crack along the rasteriser's
+// sub-pixel edges — the lighter plywood backing bleeds through as thin grid
+// lines. Growing each square a hair past its cell makes neighbours overlap so
+// there's no seam to bleed through; small enough to stay hidden by the wood
+// relief up close. XY only — the relief depth (scaleZ) is untouched.
+const SQUARE_EDGE_OVERLAP = 0.007;
+
 // Reused each frame to avoid per-frame allocation in LabelAnchor's useFrame.
 const labelAnchorWorld = new THREE.Vector3();
 
@@ -649,7 +658,7 @@ function GeometricPatternComponent({
             baseX: baseXPos,
             driftDir: driftDirForColumn(x),
             rotationZ: rotation,
-            scaleXY: squareSize * sizeScale,
+            scaleXY: squareSize * sizeScale * (1 + SQUARE_EDGE_OVERLAP),
             scaleZ: squareSize * sizeScale,
             grainIndex: textureVariation.textureIndex,
           });

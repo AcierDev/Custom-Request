@@ -438,6 +438,37 @@ export function PlywoodBase({
         color={rightColor}
         rotation={[0, Math.PI / 2, 0]}
       />
+
+      {/* Top edge — spans the board width (rotated about X so the cap's
+          depth runs through the board thickness), centred on the board
+          centre (centerX). Static: the split-panel drift only separates the
+          left/right halves horizontally. */}
+      <PlywoodPanel
+        position={[
+          centerX,
+          centerY + totalHeight / 2 - BACKBOARD_INSET,
+          -baseThickness / 2,
+        ]}
+        args={[totalWidth - 2 * BACKBOARD_INSET, baseThickness + 0.001, 0.005]}
+        texture={null}
+        showWoodGrain={false}
+        color={leftColor}
+        rotation={[Math.PI / 2, 0, 0]}
+      />
+
+      {/* Bottom edge */}
+      <PlywoodPanel
+        position={[
+          centerX,
+          centerY - totalHeight / 2 + BACKBOARD_INSET,
+          -baseThickness / 2,
+        ]}
+        args={[totalWidth - 2 * BACKBOARD_INSET, baseThickness + 0.001, 0.005]}
+        texture={null}
+        showWoodGrain={false}
+        color={rightColor}
+        rotation={[Math.PI / 2, 0, 0]}
+      />
     </>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { ItemSizes } from "@/typings/types";
+import { SQUARE_SIZE } from "@/lib/utils";
 
 const SIZE_TONE_BASE =
   "shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_1px_2px_rgba(0,0,0,0.10)] [text-shadow:_0_1px_2px_rgb(0_0_0_/_48%)] text-white";
@@ -28,6 +29,17 @@ export function parseSizeWh(
   const h = parseInt(m[2] ?? "", 10);
   if (!w || !h) return null;
   return { w, h };
+}
+
+/**
+ * Convert a `"<w> x <h>"` squares label into an inches label, height-first to
+ * match the catalog convention (e.g. `16 x 10` squares → `30" × 48"`: height
+ * 10×3″ then width 16×3″). Non-parseable input is returned unchanged.
+ */
+export function sizeToInchLabel(size: string | undefined | null): string {
+  const parsed = parseSizeWh(size);
+  if (!parsed) return size?.toString() ?? "";
+  return `${parsed.h * SQUARE_SIZE}" × ${parsed.w * SQUARE_SIZE}"`;
 }
 
 function nearestKnownHeight(h: number): number {

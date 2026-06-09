@@ -82,15 +82,33 @@ interface InstancedSquaresProps {
   enablePatternEditing?: boolean;
 }
 
-// Wedge geometry — same shape as Square.tsx's geometric wedge, but built
-// fresh here so we can attach instanced attributes without mutating the
-// geometry shared by the legacy Square path.
+// ── Wedge tile geometry config ───────────────────────────────────────────
+// Physical scale: 1 scene unit = 6 inches (Room SCENE_UNITS_PER_INCH = 1/6),
+// and each square is `squareSize` = 0.5 scene units wide (GeometricPattern).
+// The wedge below is built in NORMALIZED space (edge = 1.0), so one geometry
+// unit == 0.5 × 6 = 3 inches.
+const INCHES_PER_SCENE_UNIT = 6;
+const SQUARE_SIZE_SCENE_UNITS = 0.5;
+const INCHES_PER_GEOMETRY_UNIT =
+  SQUARE_SIZE_SCENE_UNITS * INCHES_PER_SCENE_UNIT; // 3"
+// Tilt of the relief (front) face.
+const WEDGE_ANGLE_DEG = 21.5;
+// Lip added on the backboard side: the relief face used to taper down to a
+// zero-thickness knife edge where it met the backboard. This recesses the back
+// face so every tile keeps at least this much thickness at that edge — a small
+// lip between the backboard and the square, same physical piece.
+const BACKBOARD_LIP_INCHES = 3 / 16;
+const BACKBOARD_LIP = BACKBOARD_LIP_INCHES / INCHES_PER_GEOMETRY_UNIT; // ≈0.0625
+
+// Wedge geometry — built fresh here so we can attach instanced attributes
+// without mutating shared geometry.
 // Exported so the AR/USDZ exporter (src/lib/ar) can bake the IDENTICAL wedge
 // into a flattened, grain-baked model — keeping the relief + grain parity.
 export function createWedgeGeometry(): THREE.BufferGeometry {
   const geometry = new THREE.BufferGeometry();
-  const angleInRadians = (21.5 * Math.PI) / 180;
+  const angleInRadians = (WEDGE_ANGLE_DEG * Math.PI) / 180;
   const h = Math.tan(angleInRadians);
+  const lip = BACKBOARD_LIP;
 
   // Verts 0..7 build the back face + the four sides. The angled (front)
   // face gets its OWN copies of the raised edge — verts 8..11 — so a
@@ -98,8 +116,9 @@ export function createWedgeGeometry(): THREE.BufferGeometry {
   // face, while the back + sides stay flat color (verts can't be shared
   // or the mask would interpolate across the shared edges).
   const positions = [
-    // 0..3 — back face (z = 0)
-    -0.5, -0.5, 0, 0.5, -0.5, 0, 0.5, 0.5, 0, -0.5, 0.5, 0,
+    // 0..3 — back face, recessed by `lip` toward the backboard so the thin
+    // edge (verts 6/7) keeps a 3/16" lip instead of tapering to a knife edge.
+    -0.5, -0.5, -lip, 0.5, -0.5, -lip, 0.5, 0.5, -lip, -0.5, 0.5, -lip,
     // 4..7 — raised front edge, shared by the side faces
     -0.5, -0.5, h, 0.5, -0.5, h, 0.5, 0.5, 0, -0.5, 0.5, 0,
     // 8..11 — dedicated angled-face verts (copies of 4,5,6,7)
@@ -133,6 +152,10 @@ export function createWedgeGeometry(): THREE.BufferGeometry {
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
   geometry.center();
+  // center() splits the added `lip` evenly across both faces; shift back by
+  // half so the relief (front) face stays exactly where it was and the full
+  // lip extends only toward the backboard.
+  geometry.translate(0, 0, -lip / 2);
   return geometry;
 }
 
@@ -561,6 +584,14 @@ function InstancedSquaresComponent({
       bloomStartRef.current = -1; // resolved on first animated frame
       onBloomStartRef.current?.();
       invalidate();
+    } else {
+      // No reveal this pass (first mount with bloomOnResize off, or a plain
+      // recolour). Without a bloom the frame loop never reaches the
+      // allDone → onBloomComplete path, so signal completion now — otherwise
+      // a parent that hides the plywood/hanger on bloom start would keep them
+      // hidden forever, waiting on a bloom that never runs.
+      bloomActiveRef.current = false;
+      onBloomCompleteRef.current?.();
     }
 
     for (let i = 0; i < instances.length; i++) {

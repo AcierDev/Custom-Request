@@ -32,18 +32,17 @@ export function ShareDialog({ isOpen, onClose }: ShareDialogProps) {
   );
 
   const [shareableLink, setShareableLink] = useState("");
-  const [copied, setCopied] = useState<"builder" | "viewer" | null>(null);
+  const [copied, setCopied] = useState<"builder" | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [shareId, setShareId] = useState("");
   const [builderLink, setBuilderLink] = useState("");
-  const [viewerLink, setViewerLink] = useState("");
 
-  // Production share targets. On a local/dev host there is no shared-
-  // designs database, so we instead embed the design in the URL and point
-  // the links at the current origin — letting the shared viewer be opened
-  // and tested locally and while signed out.
+  // Production share target. On a local/dev host there is no shared-designs
+  // database, so we instead embed the design in the URL and point the link
+  // at the current origin — letting the shared viewer be opened and tested
+  // locally and while signed out. The legacy viewer.everwoodus.com link was
+  // dropped: every share now opens the gallery-room page (/shared/<id>).
   const PROD_BUILDER_ORIGIN = "https://custom.everwood.shop";
-  const PROD_VIEWER_ORIGIN = "https://viewer.everwoodus.com";
 
   // Generate link when dialog opens
   useEffect(() => {
@@ -74,7 +73,6 @@ export function ShareDialog({ isOpen, onClose }: ShareDialogProps) {
         setShareId("preview");
         setShareableLink(link);
         setBuilderLink(link);
-        setViewerLink(link);
         return;
       }
 
@@ -84,7 +82,6 @@ export function ShareDialog({ isOpen, onClose }: ShareDialogProps) {
         setShareId(result.shareId);
         setShareableLink(result.shareUrl || "");
         setBuilderLink(`${PROD_BUILDER_ORIGIN}/shared/${result.shareId}`);
-        setViewerLink(`${PROD_VIEWER_ORIGIN}/?shareId=${result.shareId}`);
       } else {
         toast.error(result.error || "Failed to create shared design");
       }
@@ -104,7 +101,7 @@ export function ShareDialog({ isOpen, onClose }: ShareDialogProps) {
     return query ? `${base}?…` : base;
   };
 
-  const handleCopy = (url: string, which: "builder" | "viewer") => {
+  const handleCopy = (url: string, which: "builder") => {
     navigator.clipboard.writeText(url);
     setCopied(which);
     toast.success("Link copied to clipboard!");
@@ -127,7 +124,7 @@ export function ShareDialog({ isOpen, onClose }: ShareDialogProps) {
 
         <div className="space-y-5 py-2 min-w-0">
           <p className="text-sm text-slate-400">
-            Your design is saved. Share it using either link below.
+            Your design is saved. Share the link below.
           </p>
 
           {isGenerating ? (
@@ -174,54 +171,6 @@ export function ShareDialog({ isOpen, onClose }: ShareDialogProps) {
                       }
                     >
                       {copied === "builder" ? (
-                        <Check className="h-4 w-4" />
-                      ) : (
-                        <Copy className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* Viewer row */}
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.05 }}
-                className="rounded-lg border border-white/10 bg-gray-900 p-3"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="text-xs uppercase tracking-wide text-slate-400">
-                      Viewer
-                    </div>
-                    <div className="text-sm font-medium text-white truncate">
-                      {displayLink(viewerLink)}
-                    </div>
-                  </div>
-                  <div className="flex shrink-0 gap-2">
-                    <Button
-                      type="button"
-                      disabled={!viewerLink}
-                      onClick={() =>
-                        viewerLink &&
-                        window.open(viewerLink, "_blank", "noopener")
-                      }
-                      className="gap-2"
-                    >
-                      <ExternalLink className="h-4 w-4" /> Open
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => handleCopy(viewerLink, "viewer")}
-                      className={
-                        copied === "viewer"
-                          ? "bg-green-600 hover:bg-green-700 text-white"
-                          : ""
-                      }
-                    >
-                      {copied === "viewer" ? (
                         <Check className="h-4 w-4" />
                       ) : (
                         <Copy className="h-4 w-4" />

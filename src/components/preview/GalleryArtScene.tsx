@@ -18,6 +18,9 @@ import {
   ORBIT_MIN_POLAR,
   ORBIT_MAX_POLAR,
   ORBIT_MAX_AZIMUTH,
+  ORBIT_FREE_MIN_POLAR,
+  ORBIT_FREE_MAX_POLAR,
+  ORBIT_FREE_MAX_AZIMUTH,
   WALL_COLOR,
 } from "./Room";
 import { Ruler3D } from "./Ruler3D";
@@ -569,20 +572,24 @@ export function GalleryArtScene({
         zoomSpeed={ZOOM_SPEED}
         minDistance={ROOM_COLLISION_MIN_DISTANCE}
         maxDistance={fitMaxDistance}
-        minAzimuthAngle={-ORBIT_MAX_AZIMUTH}
-        maxAzimuthAngle={ORBIT_MAX_AZIMUTH}
-        minPolarAngle={ORBIT_MIN_POLAR}
-        maxPolarAngle={ORBIT_MAX_POLAR}
+        minAzimuthAngle={showRoom ? -ORBIT_MAX_AZIMUTH : -ORBIT_FREE_MAX_AZIMUTH}
+        maxAzimuthAngle={showRoom ? ORBIT_MAX_AZIMUTH : ORBIT_FREE_MAX_AZIMUTH}
+        minPolarAngle={showRoom ? ORBIT_MIN_POLAR : ORBIT_FREE_MIN_POLAR}
+        maxPolarAngle={showRoom ? ORBIT_MAX_POLAR : ORBIT_FREE_MAX_POLAR}
         target={initialCameraTarget.current}
         makeDefault
       />
       <ArtCameraFollow target={artCenter} />
-      <RoomCollision
-        bounds={camBounds}
-        fallbackMax={maxCamDistance}
-        fitWidth={ROOM_REF_WIDTH}
-        fitMargin={ZOOM_FIT_WIDTH_MARGIN}
-      />
+      {/* With the room hidden the art is free-floating, so skip collision —
+          otherwise the invisible walls cap how far back you can circle. */}
+      {showRoom && (
+        <RoomCollision
+          bounds={camBounds}
+          fallbackMax={maxCamDistance}
+          fitWidth={ROOM_REF_WIDTH}
+          fitMargin={ZOOM_FIT_WIDTH_MARGIN}
+        />
+      )}
       <PreInteractionOrbit enabled={autoOrbit} />
       <ResizeInvalidator width={dimensions.width} height={dimensions.height} />
     </Canvas>

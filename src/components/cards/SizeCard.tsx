@@ -28,7 +28,9 @@ import {
   SizeTilePrefix,
   parseSizeWh,
   sizePillFullClass,
+  sizeToInchLabel,
 } from "@/lib/size-pills";
+import { SQUARE_SIZE } from "@/lib/utils";
 
 const sizeOptions = [...Object.values(ItemSizes), "custom"];
 
@@ -38,13 +40,19 @@ interface SizeCardProps {
   compact?: boolean;
   /** Render only the trigger/popover without the surrounding glass Card. */
   bare?: boolean;
+  /** Show every size label in inches (height″ × width″) instead of squares. */
+  inchLabels?: boolean;
 }
 
 // 14x7 is a mini-square panel by definition (14x7 mini squares ≈ 36" x 18").
 // Picking it should switch the model into mini squares automatically.
 const MINI_DEFAULT_SIZE = ItemSizes.Fourteen_By_Seven;
 
-export function SizeCard({ compact = false, bare = false }: SizeCardProps) {
+export function SizeCard({
+  compact = false,
+  bare = false,
+  inchLabels = false,
+}: SizeCardProps) {
   const { dimensions, setDimensions, setUseMini } = useCustomStore();
   const [customWidth, setCustomWidth] = useState(dimensions.width.toString());
   const [customHeight, setCustomHeight] = useState(
@@ -132,7 +140,7 @@ export function SizeCard({ compact = false, bare = false }: SizeCardProps) {
   };
 
   if (compact) {
-    return <CompactSizeCard bare={bare} />;
+    return <CompactSizeCard bare={bare} inchLabels={inchLabels} />;
   }
 
   return (
@@ -285,7 +293,13 @@ function groupSizesByHeight(sizes: ItemSizes[]) {
   return [...map.entries()].sort((a, b) => a[0] - b[0]);
 }
 
-function CompactSizeCard({ bare = false }: { bare?: boolean }) {
+function CompactSizeCard({
+  bare = false,
+  inchLabels = false,
+}: {
+  bare?: boolean;
+  inchLabels?: boolean;
+}) {
   const { dimensions, setDimensions, setUseMini } = useCustomStore();
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -299,21 +313,40 @@ function CompactSizeCard({ bare = false }: { bare?: boolean }) {
       );
     }) as ItemSizes | undefined) ?? "custom";
 
-  const triggerLabel =
+  // The squares string drives the pill color + dot-grid prefix; only the
+  // visible text flips to inches so the colorful tiles stay intact.
+  const triggerSize =
     currentSize === "custom"
       ? `${dimensions.width} x ${dimensions.height}`
       : currentSize;
+  const fmt = (size: string) => (inchLabels ? sizeToInchLabel(size) : size);
+  const triggerLabel = fmt(triggerSize);
 
   const grouped = groupSizesByHeight(Object.values(ItemSizes));
 
   const trimmed = query.trim();
   const parsedCustom = parseSizeWh(trimmed);
-  const isKnownSize = (Object.values(ItemSizes) as string[]).includes(trimmed);
-  const showCustomOption = parsedCustom !== null && !isKnownSize;
+  // In inch mode the typed numbers are inches; convert to the square counts
+  // the model actually uses (SQUARE_SIZE″ per square).
+  const customSquares = parsedCustom
+    ? inchLabels
+      ? {
+          w: Math.max(1, Math.round(parsedCustom.w / SQUARE_SIZE)),
+          h: Math.max(1, Math.round(parsedCustom.h / SQUARE_SIZE)),
+        }
+      : parsedCustom
+    : null;
+  const customSquareKey = customSquares
+    ? `${customSquares.w} x ${customSquares.h}`
+    : "";
+  const isKnownSize = (Object.values(ItemSizes) as string[]).includes(
+    customSquareKey
+  );
+  const showCustomOption = customSquares !== null && !isKnownSize;
 
   const applyCustom = () => {
-    if (!parsedCustom) return;
-    setDimensions({ width: parsedCustom.w, height: parsedCustom.h });
+    if (!customSquares) return;
+    setDimensions({ width: customSquares.w, height: customSquares.h });
     setQuery("");
     setIsOpen(false);
   };
@@ -323,9 +356,9 @@ function CompactSizeCard({ bare = false }: { bare?: boolean }) {
           <PopoverTrigger asChild>
             <button
               type="button"
-              className={`${sizePillFullClass(triggerLabel)} ${PILL_INTERACTIVE} w-auto !h-7 leading-none`}
+              className={`${sizePillFullClass(triggerSize)} ${PILL_INTERACTIVE} w-auto !h-7 leading-none`}
             >
-              <SizeTilePrefix size={triggerLabel} />
+              <SizeTilePrefix size={triggerSize} />
               <span className="truncate leading-none">{triggerLabel}</span>
             </button>
           </PopoverTrigger>
@@ -347,25 +380,29 @@ function CompactSizeCard({ bare = false }: { bare?: boolean }) {
                   applyCustom();
                 }
               }}
-              placeholder="Custom size (e.g. 30 x 14)"
+              placeholder={
+                inchLabels
+                  ? `Custom size in inches (e.g. 30" x 48")`
+                  : "Custom size (e.g. 30 x 14)"
+              }
               className="box-border block w-full min-w-0 px-3 h-8 rounded-md text-sm bg-gray-800 text-gray-100 placeholder:text-gray-400 border border-white/10 focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
             {showCustomOption && (
               <button
                 type="button"
                 onClick={applyCustom}
-                className={`${sizePillFullClass(trimmed)} ${PILL_INTERACTIVE}`}
+                className={`${sizePillFullClass(customSquareKey)} ${PILL_INTERACTIVE}`}
               >
-                <SizeTilePrefix size={trimmed} />
+                <SizeTilePrefix size={customSquareKey} />
                 <span className="truncate leading-none">
-                  Use &ldquo;{trimmed}&rdquo;
+                  Use &ldquo;{fmt(customSquareKey)}&rdquo;
                 </span>
               </button>
             )}
             {grouped.map(([height, sizes]) => (
               <div key={height}>
                 <div className="text-[0.625rem] font-semibold uppercase tracking-wider text-slate-400 mb-1.5 px-0.5">
-                  {height} Tall
+                  {inchLabels ? `${height * SQUARE_SIZE}" Tall` : `${height} Tall`}
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {sizes.map((size) => {
@@ -384,7 +421,7 @@ function CompactSizeCard({ bare = false }: { bare?: boolean }) {
                         }`}
                       >
                         <SizeTilePrefix size={size} />
-                        <span className="truncate leading-none">{size}</span>
+                        <span className="truncate leading-none">{fmt(size)}</span>
                       </button>
                     );
                   })}

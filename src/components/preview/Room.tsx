@@ -211,6 +211,14 @@ const WINDOW_CASING_T = 0.18;
 export const ORBIT_MIN_POLAR = Math.PI / 3; // ~60° — top-down cap
 export const ORBIT_MAX_POLAR = Math.PI / 1.7; // ~105.9° — look-up cap
 export const ORBIT_MAX_AZIMUTH = Math.PI / 3; // ±60° — side-to-side
+
+// Free-orbit limits used when the room is hidden — the art becomes a
+// free-floating object you can circle all the way around (full azimuth) and
+// tilt over/under (full polar). three's OrbitControls applies its own EPS
+// clamp at the poles, so 0 / PI never gimbal-lock.
+export const ORBIT_FREE_MIN_POLAR = 0;
+export const ORBIT_FREE_MAX_POLAR = Math.PI;
+export const ORBIT_FREE_MAX_AZIMUTH = Infinity; // ±∞ — full 360° spin
 const CAMERA_REACH_FACTOR_EPSILON = 1e-3;
 const CAMERA_ZOOM_OUT_BASE_MULTIPLIER = 2.25;
 const CAMERA_ZOOM_OUT_EXTRA_MULTIPLIER = 1.05;
@@ -405,9 +413,12 @@ function texFromCanvas(canvas: HTMLCanvasElement) {
 // shadow — so use a radial-gradient sprite that's soft at the centre
 // and fades to nothing at the edge, the way real ambient contact
 // occlusion looks. Built once, shared by every furnishing.
-const SHADOW_CORE_ALPHA = 0.5; // darkest, directly under the object
+// Eased back from 0.5/0.26 now that the furniture also throws a real
+// soft cast shadow (RoomShadowLight) — the two stack directly under each
+// piece, so a lighter disc keeps the combined contact from going muddy.
+const SHADOW_CORE_ALPHA = 0.4; // darkest, directly under the object
 const SHADOW_MID_STOP = 0.45; // gradient knee
-const SHADOW_MID_ALPHA = 0.26;
+const SHADOW_MID_ALPHA = 0.2;
 
 let _softShadowTex: THREE.CanvasTexture | null | undefined;
 function softShadowTexture(): THREE.CanvasTexture | null {
@@ -468,6 +479,100 @@ function ContactShadow({
         depthWrite={false}
       />
     </mesh>
+  );
+}
+
+//╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
+//║ 🌑 ROOM CONTACT-SHADOW LIGHT                                          ║
+//╚═══╝ ════════════════════════════════════════════════════════════════ ╚═══╝
+
+// A single soft directional light, aimed almost straight down over the
+// furnished zone, whose only job is to ground the freestanding furniture
+// (plant, lamp, sofas, bookcase) with a slight REAL cast shadow on the
+// floor — the look the old fake contact discs faked. Because it points
+// nearly straight down, it lights the HORIZONTAL floor (and furniture
+// tops) but a vertical wall / forward-facing art surface catches almost
+// none of it (n·l ≈ 0), so it adds the floor shadows without disturbing
+// the wall paint or the art's own carefully-tuned shadow rig.
+const ROOM_SHADOW_INTENSITY = 0.22; // slight — grounds the floor, doesn't relight it
+const ROOM_SHADOW_COLOR = "#fff1de"; // warm, matches the ceiling cans
+// The cans dim a touch after dark (the lamp takes over), so fade the
+// cast shadow down at night instead of leaving it at full daytime weight.
+const ROOM_SHADOW_NIGHT_FALLOFF = 0.3;
+// Light height above the floor and how far it leans off vertical (as a
+// fraction of that height). A small lean lets each shadow peek out from
+// under its object — toward the room front (+Z) and left (−X) so it
+// reads to a front camera — without lighting the walls.
+const ROOM_SHADOW_HEIGHT = 46;
+const ROOM_SHADOW_LEAN_X = 0.18;
+const ROOM_SHADOW_LEAN_Z = -0.12;
+// Furnished-zone centre depth from the back wall (≈ the rug/couch centre)
+// and the orthographic half-extent that brackets the furniture footprint.
+const ROOM_SHADOW_ZONE_FROM_WALL = 18;
+const ROOM_SHADOW_FRUSTUM_HALF = 28;
+const ROOM_SHADOW_NEAR = 1;
+const ROOM_SHADOW_FAR = 96;
+const ROOM_SHADOW_MAP_SIZE = 2048;
+const ROOM_SHADOW_RADIUS = 6; // PCF-soft penumbra
+const ROOM_SHADOW_NORMAL_BIAS = 0.04; // kills acne on the large flat floor
+
+/**
+ * Overhead directional light that throws a slight grounded shadow of the
+ * room's freestanding furniture onto the floor. Near-vertical so it can't
+ * disturb the walls / art (see the block comment above). One target
+ * object3D, aimed at the furnished-zone centre, keeps the shadow frustum
+ * on the furniture.
+ */
+function RoomShadowLight({
+  floorY,
+  centerZ,
+  intensity,
+}: {
+  floorY: number;
+  centerZ: number;
+  intensity: number;
+}) {
+  const lightRef = useRef<THREE.DirectionalLight>(null);
+  const targetRef = useRef<THREE.Object3D>(null);
+
+  useEffect(() => {
+    const light = lightRef.current;
+    const tgt = targetRef.current;
+    if (!light || !tgt) return;
+    light.target = tgt;
+    tgt.updateMatrixWorld();
+    light.shadow.camera.updateProjectionMatrix();
+  }, [floorY, centerZ]);
+
+  useEffect(() => () => lightRef.current?.dispose(), []);
+
+  if (intensity <= 0.01) return null;
+
+  return (
+    <>
+      <directionalLight
+        ref={lightRef}
+        position={[
+          ROOM_SHADOW_HEIGHT * ROOM_SHADOW_LEAN_X,
+          floorY + ROOM_SHADOW_HEIGHT,
+          centerZ + ROOM_SHADOW_HEIGHT * ROOM_SHADOW_LEAN_Z,
+        ]}
+        color={ROOM_SHADOW_COLOR}
+        intensity={intensity}
+        castShadow
+        shadow-mapSize-width={ROOM_SHADOW_MAP_SIZE}
+        shadow-mapSize-height={ROOM_SHADOW_MAP_SIZE}
+        shadow-camera-near={ROOM_SHADOW_NEAR}
+        shadow-camera-far={ROOM_SHADOW_FAR}
+        shadow-camera-left={-ROOM_SHADOW_FRUSTUM_HALF}
+        shadow-camera-right={ROOM_SHADOW_FRUSTUM_HALF}
+        shadow-camera-top={ROOM_SHADOW_FRUSTUM_HALF}
+        shadow-camera-bottom={-ROOM_SHADOW_FRUSTUM_HALF}
+        shadow-radius={ROOM_SHADOW_RADIUS}
+        shadow-normalBias={ROOM_SHADOW_NORMAL_BIAS}
+      />
+      <object3D ref={targetRef} position={[0, floorY, centerZ]} />
+    </>
   );
 }
 
@@ -924,6 +1029,10 @@ function PlantPot() {
         width={PLANT_POT_TOP_R * 5.6}
         depth={PLANT_POT_TOP_R * 5.6}
       />
+      {/* No real cast shadow — the plant is grounded by its soft contact
+          disc alone, so its shadow stays much subtler than the heavier
+          furniture (per-object shadow strength isn't a thing with a single
+          shared shadow light, so this is how the plant reads "lighter"). */}
       <mesh position={[0, PLANT_POT_H / 2, 0]}>
         <cylinderGeometry
           args={[PLANT_POT_TOP_R, PLANT_POT_BOT_R, PLANT_POT_H, 28]}
@@ -1200,8 +1309,10 @@ function FloorLamp({ glow = 0 }: { glow?: number }) {
   );
   return (
     <group>
-      {/* Soft contact shadow (real cast shadows triple up under the
-          multi-light rig and clip outside the art shadow frustum). */}
+      {/* Soft contact shadow only — like the plant, the lamp is grounded by
+          its disc rather than a hard cast, so its shadow reads much lighter
+          than the heavier furniture (it's off during the day, so this is
+          just its daytime shadow; the shade glows on at night). */}
       <ContactShadow width={5.6} depth={5.6} />
       <mesh position={[0, 0.08, 0]}>
         <cylinderGeometry args={[1.0, 1.1, 0.16, 24]} />
@@ -1470,6 +1581,7 @@ function Sofa({
 
       {/* Skirted base — softened edges. */}
       <RoundedBox
+        castShadow
         args={[width, COUCH_BASE_H, COUCH_D]}
         radius={COUCH_EDGE_R}
         smoothness={4}
@@ -1489,6 +1601,7 @@ function Sofa({
         rotation={[-COUCH_BACK_TILT, 0, 0]}
       >
         <RoundedBox
+          castShadow
           args={[width, COUCH_BACK_H, COUCH_BACK_T]}
           radius={COUCH_EDGE_R}
           smoothness={4}
@@ -1525,6 +1638,7 @@ function Sofa({
           rotation={[COUCH_ARM_SLOPE, 0, -s * COUCH_ARM_CANT]}
         >
           <RoundedBox
+            castShadow
             args={[COUCH_ARM_W, COUCH_ARM_H, COUCH_D]}
             radius={COUCH_EDGE_R}
             smoothness={4}
@@ -1539,6 +1653,7 @@ function Sofa({
       {seatXs.map((sx, i) => (
         <RoundedBox
           key={`seat-${i}`}
+          castShadow
           args={[seatW - 0.16, COUCH_SEAT_H, seatDepth]}
           radius={COUCH_EDGE_R}
           smoothness={4}
@@ -1792,6 +1907,7 @@ function Bookshelf() {
       {[-1, 1].map((s) => (
         <mesh
           key={s}
+          castShadow
           position={[s * sideX, BOOKCASE_H / 2, 0]}
         >
           <boxGeometry args={[BOOKCASE_PANEL, BOOKCASE_H, BOOKCASE_D]} />
@@ -1802,6 +1918,7 @@ function Bookshelf() {
       {Array.from({ length: BOOKCASE_BAYS + 1 }, (_, i) => (
         <mesh
           key={`shelf-${i}`}
+          castShadow
           position={[0, BOOKCASE_PANEL / 2 + i * bayH, 0]}
         >
           <boxGeometry args={[innerW, BOOKCASE_PANEL, BOOKCASE_D]} />
@@ -1809,7 +1926,7 @@ function Bookshelf() {
         </mesh>
       ))}
       {/* Thin back panel. */}
-      <mesh position={[0, BOOKCASE_H / 2, -BOOKCASE_D / 2 + 0.05]}>
+      <mesh castShadow position={[0, BOOKCASE_H / 2, -BOOKCASE_D / 2 + 0.05]}>
         <boxGeometry args={[innerW, innerH, 0.08]} />
         <meshStandardMaterial
           color={BOOKCASE_WOOD}
@@ -2182,6 +2299,10 @@ function RoomComponent({
   // night switches it off instantly (no fade-out).
   const easedLamp = useEasedValue(useDelayedNight(isNight) ? 1 : 0);
   const lampGlow = isNight ? easedLamp : 0;
+  // Weight of the overhead furniture cast shadow, dimmed a touch after
+  // dark so it stays "slight" once the lamp takes over from the cans.
+  const roomShadowIntensity =
+    ROOM_SHADOW_INTENSITY * (1 - ROOM_SHADOW_NIGHT_FALLOFF * nightAmount);
   const windowColor = useMemo(
     () =>
       new THREE.Color(WINDOW_GLOW_COLOR).lerp(
@@ -2412,7 +2533,10 @@ function RoomComponent({
     <group>
       {/*╔═══╗ WALLS ╚═══╝*/}
 
-      {/* Back wall — plain drywall, floor to ceiling. */}
+      {/* Back wall — plain drywall, floor to ceiling. Receives the art's
+          shadow, but only the source-anchored room keys (ArtShadowKeys) cast
+          now, so it shows ONE clean shadow from the real room light (window
+          by day, lamp at night), not the abstract fill rig. */}
       <mesh position={[0, wallHeight / 2 + floorY, backZ]} receiveShadow>
         <planeGeometry args={[wallWidth, wallHeight]} />
         <meshStandardMaterial
@@ -2718,6 +2842,18 @@ function RoomComponent({
           </mesh>
         ))}
       </group>
+
+      {/*╔═══╗ ROOM CONTACT-SHADOW LIGHT ╚═══╝*/}
+
+      {/* Soft overhead light that throws a slight grounded shadow of the
+          freestanding furniture onto the floor. Near-vertical, so it lights
+          the floor (and furniture tops) but barely the walls / art — the
+          art's own shadow rig (ArtShadowKeys) is untouched. */}
+      <RoomShadowLight
+        floorY={floorY}
+        centerZ={backZ + ROOM_SHADOW_ZONE_FROM_WALL}
+        intensity={roomShadowIntensity}
+      />
 
       {/*╔═══╗ FLOOR — medium-dark hardwood planks ╚═══╝*/}
 

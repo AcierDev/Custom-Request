@@ -149,8 +149,8 @@ function RotatableLightingComponent({
   );
   const lightColor = sampleAtPhase(TIME_COLOR, phase, blendHexColors);
 
-  // Which source owns the cast shadow, eased on the same phase axis:
-  // the window (daylight) by day, the lamp after dark. Phase 0/1 are
+  // Which real room source owns the cast shadow, eased on the same phase
+  // axis: the window (daylight) by day, the lamp after dark. Phase 0/1 are
   // morning/afternoon (full daylight), phase 2 is night (lamp on). They
   // cross-fade across the afternoon→night leg so neither shadow snaps.
   const nightFrac = Math.max(0, Math.min(1, phase - 1));
@@ -159,10 +159,13 @@ function RotatableLightingComponent({
 
   return (
     <>
-      {/* Source-anchored shadow keys — NOT inside the rotating group, so
-          the art's shadows always read as light from the ceiling lights
-          (always), the window (by day) and the floor lamp (after dark)
-          regardless of the fill rig's time-of-day rotation. */}
+      {/* Source-anchored shadow keys — the ONLY shadow casters, each
+          anchored to a light that physically exists in the room (the
+          always-on ceiling cans, the window by day, the floor lamp at
+          night). So every cast shadow — on the relief AND on the walls —
+          comes from a real room light, never the abstract fill rig below.
+          Kept OUTSIDE the rotating group so the shadows don't swing as the
+          fill rig rotates for the time-of-day sweep. */}
       {style === "geometric" && (
         <ArtShadowKeys
           intensityScale={intensityScale}
@@ -176,6 +179,8 @@ function RotatableLightingComponent({
         />
       )}
 
+      {/* Shadowless fill rig — shapes the relief and rotates with the
+          time-of-day sweep. Casts nothing (see ArtShadowKeys above). */}
       <group ref={groupRef}>
         {style === "geometric" && (
           <GeometricLighting
