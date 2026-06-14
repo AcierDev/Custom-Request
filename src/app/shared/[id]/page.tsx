@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -44,6 +44,11 @@ const FETCH_TIMEOUT_MS = 10000;
 // Only show the view count once it reads as real social proof, never
 // "Viewed 1 time".
 const VIEW_COUNT_THRESHOLD = 5;
+// The share isn't frozen: the API lays the owner's latest saved palette
+// over the snapshot on every read. While the page is open, re-check on
+// this cadence (the builder autosaves to the database about every 30s,
+// so polling faster would mostly re-fetch unchanged data).
+const LIVE_PALETTE_POLL_MS = 30000;
 
 type ErrorKind = "notfound" | "network";
 
@@ -52,6 +57,8 @@ interface SharedDesignData {
   designData: any;
   createdAt: string;
   accessCount: number;
+  // The owner's latest saved palette name, when the share is live-linked.
+  paletteName?: string | null;
 }
 
 interface PaletteColor {
@@ -92,6 +99,11 @@ export default function SharedDesignPage() {
   const customPalette = useCustomStore((s) => s.customPalette);
   const loadFromDatabaseData = useCustomStore((s) => s.loadFromDatabaseData);
   const setAutoSaveEnabled = useCustomStore((s) => s.setAutoSaveEnabled);
+
+  // JSON of the design payload currently applied to the store. Lets the
+  // live-palette poll skip re-applying identical data (which would create
+  // fresh store identities and needlessly re-render the scene).
+  const lastAppliedRef = useRef<string | null>(null);
 
   // This is a read-only preview of SOMEONE ELSE'S design. Loading it into
   // the store would otherwise let the global 30s autosave overwrite the
@@ -136,6 +148,7 @@ export default function SharedDesignPage() {
           const designData = JSON.parse(decompressJsonFromUrl(inlineData));
           if (!isActive()) return;
           if (loadFromDatabaseData(designData)) {
+            lastAppliedRef.current = JSON.stringify(designData);
             setSharedDesign({
               shareId,
               designData,
@@ -166,6 +179,7 @@ export default function SharedDesignPage() {
         const data: SharedDesignData = await response.json();
         if (!isActive()) return;
         if (loadFromDatabaseData(data.designData)) {
+          lastAppliedRef.current = JSON.stringify(data.designData);
           setSharedDesign(data);
         } else {
           setError("notfound");
@@ -193,6 +207,56 @@ export default function SharedDesignPage() {
       controller.abort();
     };
   }, [shareId, runFetch]);
+
+  // Keep an open share tracking the owner's newest save: poll the API
+  // (which overlays the latest saved palette) and re-apply only when the
+  // payload actually changed. Skipped while the tab is hidden; a
+  // visibilitychange refresh catches the tab up the moment it's back.
+  useEffect(() => {
+    if (!shareId || loading || error) return;
+    // Inline ?d= previews carry the whole design in the URL — there is no
+    // database record to track.
+    if (/[?&]d=/.test(window.location.search)) return;
+
+    let cancelled = false;
+    const refresh = async () => {
+      if (document.hidden) return;
+      try {
+        const response = await fetch(
+          `/api/shared-designs?id=${shareId}&poll=1`
+        );
+        if (cancelled || !response.ok) return;
+        const data: SharedDesignData = await response.json();
+        const snapshot = JSON.stringify(data.designData);
+        if (cancelled || snapshot === lastAppliedRef.current) return;
+        if (loadFromDatabaseData(data.designData)) {
+          lastAppliedRef.current = snapshot;
+          setSharedDesign((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  designData: data.designData,
+                  paletteName: data.paletteName,
+                }
+              : prev
+          );
+        }
+      } catch {
+        // A failed poll is harmless — the next tick retries.
+      }
+    };
+
+    const interval = setInterval(refresh, LIVE_PALETTE_POLL_MS);
+    const onVisibilityChange = () => {
+      if (!document.hidden) refresh();
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [shareId, loading, error, loadFromDatabaseData]);
 
   // User-initiated retry from the error state (not tied to a mount).
   const retry = useCallback(() => {
@@ -226,9 +290,11 @@ export default function SharedDesignPage() {
     () => buildPalette(selectedDesign, customPalette),
     [selectedDesign, customPalette]
   );
+  // Prefer the owner's saved palette name on the placard — it tracks the
+  // live palette, where designName would just say "Custom Piece".
   const pieceName = useMemo(
-    () => designName(selectedDesign),
-    [selectedDesign]
+    () => sharedDesign?.paletteName || designName(selectedDesign),
+    [sharedDesign?.paletteName, selectedDesign]
   );
 
   if (loading) return <LoadingState reducedMotion={reducedMotion} />;

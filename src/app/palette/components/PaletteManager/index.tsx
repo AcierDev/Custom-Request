@@ -718,6 +718,7 @@ export function PaletteManager() {
                         name={color.name}
                         mixed={!!color.mix}
                         paintMatch={color.paintMatch}
+                        paintMixRecipe={color.paintMixRecipe}
                         handMix={color.handMix}
                         index={index}
                         isSelected={

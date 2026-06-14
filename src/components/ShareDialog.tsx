@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useCustomStore } from "@/store/customStore";
+import { useAuth } from "@/lib/auth-context";
 import {
   Dialog,
   DialogContent,
@@ -30,6 +31,10 @@ export function ShareDialog({ isOpen, onClose }: ShareDialogProps) {
   const getShareableStateSnapshot = useCustomStore(
     (state) => state.getShareableStateSnapshot
   );
+  // Linking the share to its owner is what lets the shared viewer resolve
+  // the owner's latest saved palette on every visit instead of the frozen
+  // snapshot. Guest shares have no server-side identity and stay frozen.
+  const { user } = useAuth();
 
   const [shareableLink, setShareableLink] = useState("");
   const [copied, setCopied] = useState<"builder" | null>(null);
@@ -76,7 +81,7 @@ export function ShareDialog({ isOpen, onClose }: ShareDialogProps) {
         return;
       }
 
-      const result = await createSharedDesign();
+      const result = await createSharedDesign(user?.id, user?.email);
 
       if (result.success && result.shareId) {
         setShareId(result.shareId);

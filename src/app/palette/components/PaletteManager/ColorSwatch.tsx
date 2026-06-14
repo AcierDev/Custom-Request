@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   FlaskConical,
   ShoppingCart,
+  Beaker,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -66,6 +67,7 @@ export function ColorSwatch({
   name,
   mixed,
   paintMatch,
+  paintMixRecipe,
   handMix,
   isSelected,
   onSelect,
@@ -229,6 +231,72 @@ export function ColorSwatch({
             >
               {paintMatch}% match
             </div>
+          )}
+          {paintMixRecipe && (
+            <TooltipProvider delayDuration={225}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="mt-1 inline-flex max-w-full items-center gap-1.5 rounded-[10px] bg-violet-600/85 px-1.5 py-1 text-[10px] font-semibold text-white ring-1 ring-violet-300/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_1px_2px_rgba(0,0,0,0.20)]">
+                    <Beaker className="h-3 w-3 shrink-0" />
+                    <span className="truncate">
+                      Mix{" "}
+                      {paintMixRecipe.components
+                        .map((c) => c.parts)
+                        .join(" : ")}
+                    </span>
+                    <span className="shrink-0 tabular-nums opacity-80">
+                      · {paintMixRecipe.matchPercent}%
+                    </span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-72">
+                  <div className="space-y-2 text-xs">
+                    <div className="font-medium">
+                      Mix to get closer ({paintMixRecipe.matchPercent}% match ·
+                      ΔE {paintMixRecipe.deltaE})
+                    </div>
+                    <div className="space-y-1">
+                      {paintMixRecipe.components.map((component) => (
+                        <div
+                          key={`${component.paintColor.brand}-${
+                            component.paintColor.code ??
+                            component.paintColor.name
+                          }-${component.paintColor.hex}`}
+                          className="flex items-center gap-2"
+                        >
+                          <span className="w-10 shrink-0 tabular-nums font-semibold">
+                            {component.parts} part
+                            {component.parts === 1 ? "" : "s"}
+                          </span>
+                          <span
+                            className="h-3 w-6 shrink-0 rounded-sm ring-1 ring-white/30"
+                            style={{
+                              backgroundColor: component.paintColor.hex,
+                            }}
+                          />
+                          <span className="truncate">
+                            {component.paintColor.code
+                              ? `${component.paintColor.code} — `
+                              : ""}
+                            {component.paintColor.name}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-2 border-t border-white/15 pt-2">
+                      <span className="font-medium">Result</span>
+                      <span
+                        className="h-3 w-8 rounded-sm ring-1 ring-white/30"
+                        style={{ backgroundColor: paintMixRecipe.predictedHex }}
+                      />
+                      <span className="font-mono">
+                        {paintMixRecipe.predictedHex}
+                      </span>
+                    </div>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )}
           {handMix && (
             <TooltipProvider delayDuration={225}>

@@ -103,36 +103,52 @@ const extractDominantColors = (url: string): Promise<string[]> =>
   });
 
 export function ImageColorExtractor() {
-  const { addCustomColor, customPalette } = useCustomStore();
-  const [image, setImage] = useState<string | null>(null);
+  const {
+    addCustomColor,
+    customPalette,
+    imageExtractor,
+    setImageExtractorImage,
+    setImageExtractorResult,
+    setImageExtractorPickedColors,
+    setImageExtractorSelectedAutoColors,
+  } = useCustomStore();
 
-  // Colors picked by hand off the image (eyedropper).
-  const [extractedColors, setExtractedColors] = useState<string[]>([]);
+  // The image and the colors derived from it live in the store so a pasted
+  // or uploaded photo survives tab switches and route changes within a
+  // session (see ImageExtractorSession). `extractedColors` is the list of
+  // hand-picked eyedropper colors.
+  const {
+    image,
+    extractedFrom,
+    dominantColors,
+    pickedColors: extractedColors,
+    selectedAutoColors,
+  } = imageExtractor;
+
+  // Ephemeral swatch-editor state — fine to reset on navigation, so it
+  // stays local to the component.
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [colorName, setColorName] = useState("");
-
-  // Recommended colors — the most common ones, grabbed automatically on
-  // upload. The user multi-selects a few of these to add.
-  const [dominantColors, setDominantColors] = useState<string[]>([]);
-  const [selectedAutoColors, setSelectedAutoColors] = useState<string[]>([]);
   const [isExtracting, setIsExtracting] = useState(false);
 
-  // On every new image: clear prior state, then auto-extract the most
-  // common colors so recommendations are ready without any extra clicks.
+  // Clear the ephemeral swatch editor whenever the image itself changes.
   useEffect(() => {
-    setExtractedColors([]);
     setSelectedColor(null);
     setColorName("");
-    setDominantColors([]);
-    setSelectedAutoColors([]);
+  }, [image]);
 
-    if (!image) return;
+  // Auto-extract the most common colors when a new image is loaded, so
+  // recommendations are ready without extra clicks. Skips re-running when
+  // returning to the tab with an already-processed image (`extractedFrom`
+  // marks which image `dominantColors` came from).
+  useEffect(() => {
+    if (!image || image === extractedFrom) return;
 
     let cancelled = false;
     setIsExtracting(true);
     extractDominantColors(image)
       .then((colors) => {
-        if (!cancelled) setDominantColors(colors);
+        if (!cancelled) setImageExtractorResult(image, colors);
       })
       .catch((error) => {
         if (cancelled) return;
@@ -146,7 +162,7 @@ export function ImageColorExtractor() {
     return () => {
       cancelled = true;
     };
-  }, [image]);
+  }, [image, extractedFrom, setImageExtractorResult]);
 
   // Paste an image straight from the clipboard (e.g. a screenshot) while
   // the Photo tab is open. Only acts on image clipboard items, so pasting
@@ -162,7 +178,8 @@ export function ImageColorExtractor() {
           const file = item.getAsFile();
           if (file) {
             e.preventDefault();
-            if (loadImageFile(file, setImage)) toast.success("Image pasted!");
+            if (loadImageFile(file, setImageExtractorImage))
+              toast.success("Image pasted!");
           }
           return;
         }
@@ -170,15 +187,15 @@ export function ImageColorExtractor() {
     };
     window.addEventListener("paste", handlePaste);
     return () => window.removeEventListener("paste", handlePaste);
-  }, []);
+  }, [setImageExtractorImage]);
 
   const handleImageUpload = (imageDataUrl: string) => {
-    setImage(imageDataUrl);
+    setImageExtractorImage(imageDataUrl);
   };
 
   const handleColorExtraction = (hex: string) => {
     if (!extractedColors.includes(hex)) {
-      setExtractedColors((prev) => [...prev, hex]);
+      setImageExtractorPickedColors([...extractedColors, hex]);
     }
     setSelectedColor(hex);
   };
@@ -207,7 +224,9 @@ export function ImageColorExtractor() {
   };
 
   const handleRemoveColor = (hex: string) => {
-    setExtractedColors((prev) => prev.filter((color) => color !== hex));
+    setImageExtractorPickedColors(
+      extractedColors.filter((color) => color !== hex)
+    );
     if (selectedColor === hex) {
       setSelectedColor(null);
       setColorName("");
@@ -215,7 +234,7 @@ export function ImageColorExtractor() {
   };
 
   const handleClearColors = () => {
-    setExtractedColors([]);
+    setImageExtractorPickedColors([]);
     setSelectedColor(null);
     setColorName("");
   };
@@ -225,8 +244,10 @@ export function ImageColorExtractor() {
   //╚═══╝ ══════════════════════════════════════════════════════════════ ╚═══╝
 
   const toggleAutoColor = (hex: string) => {
-    setSelectedAutoColors((prev) =>
-      prev.includes(hex) ? prev.filter((c) => c !== hex) : [...prev, hex]
+    setImageExtractorSelectedAutoColors(
+      selectedAutoColors.includes(hex)
+        ? selectedAutoColors.filter((c) => c !== hex)
+        : [...selectedAutoColors, hex]
     );
   };
 
@@ -240,7 +261,9 @@ export function ImageColorExtractor() {
     selectedAutoColors.length === selectableDominant.length;
 
   const toggleSelectAllAuto = () => {
-    setSelectedAutoColors(allAutoSelected ? [] : [...selectableDominant]);
+    setImageExtractorSelectedAutoColors(
+      allAutoSelected ? [] : [...selectableDominant]
+    );
   };
 
   const handleAddRecommended = () => {
@@ -253,14 +276,14 @@ export function ImageColorExtractor() {
     );
     if (toAdd.length === 0) {
       toast.info("Those colors are already in your palette.");
-      setSelectedAutoColors([]);
+      setImageExtractorSelectedAutoColors([]);
       return;
     }
     toAdd.forEach((hex) => addCustomColor(hex));
     toast.success(
       `Added ${toAdd.length} color${toAdd.length > 1 ? "s" : ""} to palette!`
     );
-    setSelectedAutoColors([]);
+    setImageExtractorSelectedAutoColors([]);
   };
 
   return (
@@ -399,7 +422,7 @@ export function ImageColorExtractor() {
             <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:justify-end">
               <Button
                 variant="outline"
-                onClick={() => setImage(null)}
+                onClick={() => setImageExtractorImage(null)}
                 className="border-white/10"
               >
                 <Upload className="mr-2 h-4 w-4" />

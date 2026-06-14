@@ -65,6 +65,7 @@ import {
   VERIFIED_BRANDS,
   purchaseLabel,
 } from "@/lib/paint";
+import { findBestPaintMix } from "@/lib/paintMixOptimizer";
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ 🎨 BUTTON THEME                                                       ║
@@ -96,6 +97,13 @@ const PRIMARY_PAINT_MATCH_INDEX = 0;
 const BACKUP_PAINT_MATCH_INDEX = 1;
 const PAINT_MATCH_COUNT_WITH_BACKUP = 2;
 const PAINT_MATCH_CANDIDATE_COUNT = 12;
+// L* is the first element of a [L, a, b] triple.
+const LAB_LIGHTNESS_INDEX = 0;
+// A recipe of one paint is just "buy the can" — no mixing to show.
+const SINGLE_COMPONENT_COUNT = 1;
+// Let React paint the grounding spinner between colors (the spectral mix
+// search is heavy enough to drop a frame per color otherwise).
+const YIELD_DELAY_MS = 0;
 const VERIFIED_BRAND_BADGE_LABEL = "Verified";
 const ANY_BRAND_LABEL = "Any brand";
 
@@ -130,6 +138,12 @@ function PaintBrandOptionLabel({ brand }: { brand: BrandOption }) {
     </span>
   );
 }
+
+// Auto-save names used when "Create Palette" rescues unsaved editor work
+// before clearing it: a still-open palette keeps its own name, an unnamed
+// draft gets a dated default so it's findable on the Saved tab.
+const NEW_PALETTE_NAME_PREFIX = "Palette";
+const UNTITLED_PALETTE_NAME = "Untitled";
 
 export default function PalettePage() {
   const {
@@ -175,6 +189,27 @@ export default function PalettePage() {
   // When on, ground only to brands with verified current color codes
   // (skips Behr/PPG), so every match is genuinely orderable.
   const [verifiedOnly, setVerifiedOnly] = useState(false);
+  // True while a (re-)grounding pass runs — the mix optimizer is heavy,
+  // so the convert button shows a spinner and controls lock.
+  const [isGrounding, setIsGrounding] = useState(false);
+  // Serialize grounding passes: a brand/verified change mid-run is parked
+  // here and replayed when the in-flight pass finishes, so the last
+  // selection always wins without overlapping setState races.
+  const groundingInFlightRef = useRef(false);
+  const pendingGroundRef = useRef<{
+    brand: BrandOption;
+    verified: boolean;
+  } | null>(null);
+  // The brand/verified combo the palette is actually grounded to. Lets an
+  // auto re-ground that lands on an empty pool snap the controls back, so
+  // the dropdown never claims a brand the palette isn't grounded to.
+  const lastGroundedSelectionRef = useRef<{
+    brand: BrandOption;
+    verified: boolean;
+  } | null>(null);
+  // Set when we revert the controls programmatically, so the resulting
+  // brand/verified change doesn't fire a redundant re-ground.
+  const suppressReGroundRef = useRef(false);
 
   // 4×6 label print options — what to tell the paint counter. Printed in
   // the header so every color on the sheet is ordered at one sheen/size.
@@ -398,25 +433,42 @@ export default function PalettePage() {
       .slice(MATCH_LIST_START_INDEX, matchCount);
   };
 
-  const getGroundablePaintColors = () =>
+  const getGroundablePaintColors = (
+    brand: BrandOption,
+    verified: boolean
+  ): PaintColor[] =>
     allPaintColors.filter((c) => {
       if (c.available === false) return false;
-      if (verifiedOnly && !VERIFIED_BRANDS.has(c.brand)) return false;
-      if (groundBrand === "Any") return true;
-      return c.brand === groundBrand;
+      if (verified && !VERIFIED_BRANDS.has(c.brand)) return false;
+      if (brand === "Any") return true;
+      return c.brand === brand;
     });
 
-  const groundPalette = () => {
-    if (customPalette.length === 0) {
+  // The color a grounded swatch came from — so re-grounding (e.g. after
+  // switching brand) always matches against the user's ORIGINAL color,
+  // never compounds off a previous paint match.
+  const sourceHexOf = (color: CustomColor) =>
+    color.paintSourceHex ?? color.hex;
+  const sourceNameOf = (color: CustomColor) =>
+    color.paintSourceName ?? color.name;
+
+  // Ground every palette color to the chosen brand pool. Idempotent:
+  // always works from each color's source hex, so it can be re-run when
+  // the brand / "verified only" filter changes. Reads the live palette
+  // from the store so the brand-change effect never grounds a stale copy.
+  const runGrounding = async (brand: BrandOption, verified: boolean) => {
+    // A pass is already running — park this request and let the running
+    // pass replay it when it finishes, so the last selection wins.
+    if (groundingInFlightRef.current) {
+      pendingGroundRef.current = { brand, verified };
+      return;
+    }
+
+    const palette = useCustomStore.getState().customPalette;
+    if (palette.length === 0) {
       toast.error("Palette is empty");
       return;
     }
-
-    if (isPalettePaintConverted) {
-      toast.error("Palette is already converted to paint");
-      return;
-    }
-    
     if (!paintColorsLoaded || allPaintColors.length === 0) {
       toast.error("Paint colors not loaded yet. Please wait a moment.");
       return;
@@ -426,69 +478,151 @@ export default function PalettePage() {
     // ground onto a discontinued color (available === false). Records
     // without an `available` flag (brands whose importer isn't built
     // yet) are kept so those brands still work.
-    const pool = getGroundablePaintColors();
-
+    const pool = getGroundablePaintColors(brand, verified);
     if (pool.length === 0) {
       toast.error(
-        verifiedOnly
-          ? `No verified ${groundBrand === "Any" ? "" : groundBrand + " "}` +
+        verified
+          ? `No verified ${brand === "Any" ? "" : brand + " "}` +
             `colors — uncheck "Verified only" or pick another brand.`
-          : `No purchasable ${groundBrand} colors yet. Try "Any".`
+          : `No purchasable ${brand} colors yet. Try "Any".`
       );
+      // If the palette is already grounded, snap the controls back to the
+      // brand it's actually grounded to so the dropdown doesn't lie.
+      const lastGood = lastGroundedSelectionRef.current;
+      if (
+        lastGood &&
+        (lastGood.brand !== brand || lastGood.verified !== verified)
+      ) {
+        suppressReGroundRef.current = true;
+        setGroundBrand(lastGood.brand);
+        setVerifiedOnly(lastGood.verified);
+      }
       return;
     }
 
-    // Convert every paint to LAB once up front instead of re-deriving
-    // it for every palette color (was O(palette × paints) conversions).
-    const paintLabs = pool.map((paintColor) => ({
-      paintColor,
-      lab: hexToLab(paintColor.hex),
-    }));
+    groundingInFlightRef.current = true;
+    setIsGrounding(true);
+    try {
+      // Convert every paint to LAB once up front instead of re-deriving
+      // it for every palette color (was O(palette × paints) conversions).
+      const paintLabs = pool.map((paintColor) => ({
+        paintColor,
+        lab: hexToLab(paintColor.hex),
+      }));
 
-    const groundedColors = customPalette.map((customColor) => {
-      const matches = findClosestPaintMatches(
-        customColor.hex,
-        paintLabs,
-        PAINT_MATCH_CANDIDATE_COUNT
+      // Pool extremes by lightness — handed to the mix optimizer as
+      // anchors so it always has a way to push a match darker or lighter,
+      // which the nearest-match candidates alone often can't.
+      const sortedByLightness = [...paintLabs].sort(
+        (a, b) => a.lab[LAB_LIGHTNESS_INDEX] - b.lab[LAB_LIGHTNESS_INDEX]
       );
-      // Always ground to the single nearest paint (smallest ΔE2000).
-      // Match accuracy is the priority: never skip the closest color to
-      // preserve a light→dark gradient across the palette.
-      const primaryMatch = matches[PRIMARY_PAINT_MATCH_INDEX];
+      const mixAnchors = [
+        sortedByLightness[MATCH_LIST_START_INDEX].paintColor,
+        sortedByLightness[sortedByLightness.length - 1].paintColor,
+      ];
 
-      if (!primaryMatch) return customColor;
+      const groundedColors: CustomColor[] = [];
+      for (const customColor of palette) {
+        const sourceHex = sourceHexOf(customColor);
+        const matches = findClosestPaintMatches(
+          sourceHex,
+          paintLabs,
+          PAINT_MATCH_CANDIDATE_COUNT
+        );
+        // Always ground to the single nearest paint (smallest ΔE2000).
+        // Match accuracy is the priority: never skip the closest color to
+        // preserve a light→dark gradient across the palette.
+        const primaryMatch = matches[PRIMARY_PAINT_MATCH_INDEX];
+        if (!primaryMatch) {
+          groundedColors.push(customColor);
+          continue;
+        }
 
-      const primaryKey = paintMatchKey(primaryMatch);
-      const backupMatch = matches.find(
-        (match) => paintMatchKey(match) !== primaryKey
+        const primaryKey = paintMatchKey(primaryMatch);
+        const backupMatch = matches.find(
+          (match) => paintMatchKey(match) !== primaryKey
+        );
+
+        // The closest ACHIEVABLE color: a 2–3 paint recipe (in integer
+        // parts) that lands nearer the source than the single can. Only
+        // kept when it actually has more than one component — otherwise
+        // buying the nearest can is already the best move.
+        const mixRecipe = findBestPaintMix(sourceHex, {
+          candidates: matches.map((m) => m.paintColor),
+          anchors: mixAnchors,
+        });
+        const paintMixRecipe =
+          mixRecipe && mixRecipe.components.length > SINGLE_COMPONENT_COUNT
+            ? mixRecipe
+            : undefined;
+
+        // Name carries the real purchase identifier — the manufacturer
+        // code ("SW 6258 — Tricorn Black") when we have it, so it can be
+        // searched/ordered at the counter, not just an ambiguous name.
+        groundedColors.push({
+          ...customColor,
+          hex: primaryMatch.paintColor.hex,
+          name: purchaseLabel(primaryMatch.paintColor),
+          paintMatch: paintMatchPercent(primaryMatch.distance),
+          paintSourceHex: sourceHex,
+          paintSourceName: sourceNameOf(customColor),
+          paintBackup: backupMatch
+            ? purchaseLabel(backupMatch.paintColor)
+            : undefined,
+          paintBackupMatch: backupMatch
+            ? paintMatchPercent(backupMatch.distance)
+            : undefined,
+          paintMixRecipe,
+        });
+        // Yield so the spinner can paint between colors — the spectral
+        // mix search is heavy enough to jank the frame otherwise.
+        await new Promise((resolve) => setTimeout(resolve, YIELD_DELAY_MS));
+      }
+
+      setCustomPalette(groundedColors);
+      lastGroundedSelectionRef.current = { brand, verified };
+      const where = brand === "Any" ? "" : ` (${brand})`;
+      toast.success(
+        `Grounded ${groundedColors.length} colors to nearest paint matches${where}`
       );
+    } finally {
+      groundingInFlightRef.current = false;
+      setIsGrounding(false);
+    }
 
-      // Name carries the real purchase identifier — the manufacturer
-      // code ("SW 6258 — Tricorn Black") when we have it, so it can be
-      // searched/ordered at the counter, not just an ambiguous name.
-      return {
-        ...customColor,
-        hex: primaryMatch.paintColor.hex,
-        name: purchaseLabel(primaryMatch.paintColor),
-        paintMatch: paintMatchPercent(primaryMatch.distance),
-        paintSourceHex: customColor.hex,
-        paintSourceName: customColor.name,
-        paintBackup: backupMatch
-          ? purchaseLabel(backupMatch.paintColor)
-          : undefined,
-        paintBackupMatch: backupMatch
-          ? paintMatchPercent(backupMatch.distance)
-          : undefined,
-      };
-    });
-
-    setCustomPalette(groundedColors);
-    const where =
-      groundBrand === "Any" ? "" : ` (${groundBrand})`;
-    toast.success(
-      `Grounded ${customPalette.length} colors to nearest paint matches${where}`
-    );
+    // Replay the most recent brand/verified change that arrived mid-run.
+    const pending = pendingGroundRef.current;
+    if (pending) {
+      pendingGroundRef.current = null;
+      void runGrounding(pending.brand, pending.verified);
+    }
   };
+
+  const groundPalette = () => {
+    void runGrounding(groundBrand, verifiedOnly);
+  };
+
+  // Re-ground automatically when the brand or "verified only" filter
+  // changes while the palette is already converted — without this, the
+  // controls silently do nothing after the first conversion (the source
+  // of the "I unchecked verified but it still shows Behr" confusion).
+  const skipInitialReGroundRef = useRef(true);
+  useEffect(() => {
+    if (skipInitialReGroundRef.current) {
+      skipInitialReGroundRef.current = false;
+      return;
+    }
+    // Skip the change we triggered ourselves to revert an empty-pool pick.
+    if (suppressReGroundRef.current) {
+      suppressReGroundRef.current = false;
+      return;
+    }
+    if (!isPalettePaintConverted) return;
+    void runGrounding(groundBrand, verifiedOnly);
+    // runGrounding reads the live palette from the store and is stable
+    // enough for this filter-change trigger; depending on it would loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groundBrand, verifiedOnly]);
 
   const convertPaintPaletteToHex = () => {
     const restoredColors = customPalette.map((color) => {
@@ -497,6 +631,7 @@ export default function PalettePage() {
         paintMatch: _paintMatch,
         paintBackup: _paintBackup,
         paintBackupMatch: _paintBackupMatch,
+        paintMixRecipe: _paintMixRecipe,
         paintSourceHex,
         paintSourceName,
         ...rest
@@ -505,6 +640,7 @@ export default function PalettePage() {
       void _paintMatch;
       void _paintBackup;
       void _paintBackupMatch;
+      void _paintMixRecipe;
 
       return {
         ...rest,
@@ -545,7 +681,10 @@ export default function PalettePage() {
         .map((part) => part.trim())
         .filter(Boolean)
         .join(" · ");
-    const printPaintLabs = getGroundablePaintColors().map((paintColor) => ({
+    const printPaintLabs = getGroundablePaintColors(
+      groundBrand,
+      verifiedOnly
+    ).map((paintColor) => ({
       paintColor,
       lab: hexToLab(paintColor.hex),
     }));
@@ -875,6 +1014,23 @@ export default function PalettePage() {
       // Switch to the saved palettes tab
       setActiveTab("saved");
     }
+  };
+
+  // "Create Palette" from the Saved tab = start a brand-new palette. Never
+  // silently drop whatever is in the editor: save it first (an open palette
+  // stacks a new version; an unsaved draft gets a dated auto-name), then
+  // clear the editor and jump to the Custom tab with a blank canvas.
+  const handleCreatePalette = () => {
+    if (customPalette.length > 0 && hasUnsavedChanges) {
+      const name = editingPaletteId
+        ? savedPalettes.find((p) => p.id === editingPaletteId)?.name ??
+          UNTITLED_PALETTE_NAME
+        : `${NEW_PALETTE_NAME_PREFIX} ${new Date().toLocaleDateString()}`;
+      savePalette(name);
+      toast.success(`Saved "${name}" before starting a new palette`);
+    }
+    resetPaletteEditor();
+    setActiveTab("create");
   };
 
   // Set initial palette name when editing
@@ -1470,7 +1626,7 @@ export default function PalettePage() {
                   Get Inspired
                 </Button>
                 <Button
-                  onClick={() => setActiveTab("create")}
+                  onClick={handleCreatePalette}
                   className={`${BTN_PRIMARY} text-xs`}
                   size="sm"
                 >
@@ -1590,7 +1746,7 @@ export default function PalettePage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <Select
                       value={groundBrand}
-                      disabled={!paintColorsLoaded}
+                      disabled={!paintColorsLoaded || isGrounding}
                       onValueChange={(value) =>
                         setGroundBrand(value as BrandOption)
                       }
@@ -1623,12 +1779,21 @@ export default function PalettePage() {
                         type="checkbox"
                         checked={verifiedOnly}
                         onChange={(e) => setVerifiedOnly(e.target.checked)}
-                        disabled={!paintColorsLoaded}
+                        disabled={!paintColorsLoaded || isGrounding}
                         className="accent-blue-500"
                       />
                       Verified only
                     </label>
-                    {isPalettePaintConverted ? (
+                    {isGrounding ? (
+                      <Button
+                        className={BTN_PRIMARY}
+                        disabled
+                        title="Matching colors to paint…"
+                      >
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Matching…
+                      </Button>
+                    ) : isPalettePaintConverted ? (
                       <Button
                         onClick={convertPaintPaletteToHex}
                         className={BTN_PRIMARY}
@@ -2056,7 +2221,7 @@ export default function PalettePage() {
             {/* Mobile action buttons */}
             <div className="flex md:hidden justify-end gap-2 mb-2">
               <Button
-                onClick={() => setActiveTab("create")}
+                onClick={handleCreatePalette}
                 className={`${BTN_PRIMARY} text-xs`}
                 size="sm"
               >
@@ -2117,7 +2282,7 @@ export default function PalettePage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setActiveTab("create")}
+                        onClick={handleCreatePalette}
                       >
                         Create New Palette
                       </Button>

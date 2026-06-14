@@ -6,6 +6,7 @@ import {
   simulatePaintLikeMix,
   type HandMixSimulation,
 } from "@/lib/paintMixSimulator";
+import { type PaintMixRecipe } from "@/lib/paintMixOptimizer";
 import { DESIGN_COLORS } from "@/typings/color-maps";
 import { createStore } from "zustand/vanilla";
 import { createWithEqualityFn } from "zustand/traditional";
@@ -73,6 +74,12 @@ export type CustomColor = {
    */
   paintBackup?: string;
   paintBackupMatch?: number;
+  /**
+   * Set by "Convert to paint": a 2–3 paint mixing recipe (integer parts)
+   * that lands closer to the original swatch than the single nearest
+   * paint. Only stored when mixing genuinely beats buying one can.
+   */
+  paintMixRecipe?: PaintMixRecipe;
   /**
    * If present, this is a *mixed* color: a blend sitting `t` of the way
    * between two other ("primary") colors in the palette, referenced by
@@ -154,6 +161,21 @@ export type PatternCell = {
   colorName?: string;
 };
 
+// Transient session state for the Photo tab's image color extractor. Kept
+// in the store (not local component state) so a pasted/uploaded image and
+// the colors derived from it survive tab switches and route changes within
+// a session. Deliberately excluded from PersistentState — data URLs are
+// large and only meaningful for the current session.
+export interface ImageExtractorSession {
+  image: string | null;
+  // The image URL that `dominantColors` were extracted from, so returning
+  // to the tab doesn't re-run extraction on an already-processed image.
+  extractedFrom: string | null;
+  dominantColors: string[];
+  pickedColors: string[];
+  selectedAutoColors: string[];
+}
+
 interface CustomState {
   dimensions: Dimensions;
   selectedDesign: ItemDesigns;
@@ -176,6 +198,8 @@ interface CustomState {
   // Transient UI: which saved palette's version history is open (in a
   // dialog). Not persisted — purely view state.
   historyPaletteId: string | null;
+  // See ImageExtractorSession — transient, not persisted.
+  imageExtractor: ImageExtractorSession;
   viewSettings: {
     showRuler: boolean;
     showWoodGrain: boolean;
@@ -267,6 +291,14 @@ interface CustomStore extends CustomState {
   loadPaletteForEditing: (paletteId: string) => void;
   setEditingPaletteId: (id: string | null) => void;
   setActiveTab: (tab: "create" | "saved" | "official" | "extract") => void;
+  // Set the extractor image; a new image clears everything derived from it.
+  setImageExtractorImage: (image: string | null) => void;
+  setImageExtractorResult: (
+    extractedFrom: string,
+    dominantColors: string[]
+  ) => void;
+  setImageExtractorPickedColors: (colors: string[]) => void;
+  setImageExtractorSelectedAutoColors: (colors: string[]) => void;
   updateColorName: (index: number, name: string) => void;
   updateColorHex: (index: number, hex: string) => void;
   /** Apply hex and/or name in one shot — a single undo step. */
@@ -384,6 +416,38 @@ export const hoverStore = createStore<HoverState>((set) => ({
   setHoverInfo: (info) => set({ hoverInfo: info }),
   setPinnedInfo: (info) => set({ pinnedInfo: info }),
 }));
+
+// A manual hex edit makes a color primary and severs every tie to its
+// previous identity: the mix link, the hand-mix prediction, AND the
+// "Convert to paint" metadata (match %, mix recipe, the original source
+// it was grounded from, and the backup suggestion). Dropping only some
+// of these leaves a stale source/backup that a later re-ground or
+// convert-to-hex would silently restore over the user's edit, so they
+// must all go together.
+function detachColorMetadata(
+  color: CustomColor
+): CustomColor {
+  const {
+    mix: _droppedMix,
+    handMix: _droppedHandMix,
+    paintMatch: _droppedMatch,
+    paintMixRecipe: _droppedRecipe,
+    paintSourceHex: _droppedSourceHex,
+    paintSourceName: _droppedSourceName,
+    paintBackup: _droppedBackup,
+    paintBackupMatch: _droppedBackupMatch,
+    ...rest
+  } = color;
+  void _droppedMix;
+  void _droppedHandMix;
+  void _droppedMatch;
+  void _droppedRecipe;
+  void _droppedSourceHex;
+  void _droppedSourceName;
+  void _droppedBackup;
+  void _droppedBackupMatch;
+  return rest;
+}
 
 // Helper function to create a ColorMap from CustomColor array
 // Recompute every mixed color from its two primary parents' *current*
@@ -672,6 +736,13 @@ export const useCustomStore = create<CustomStore>()(
     activeTab: "create",
     editingPaletteId: null,
     historyPaletteId: null,
+    imageExtractor: {
+      image: null,
+      extractedFrom: null,
+      dominantColors: [],
+      pickedColors: [],
+      selectedAutoColors: [],
+    },
     viewSettings: {
       showRuler: true,
       showWoodGrain: true,
@@ -1360,14 +1431,11 @@ export const useCustomStore = create<CustomStore>()(
           return state;
 
         const newPalette = [...state.customPalette];
-        // Manually setting a hex makes the color primary: if it was a
-        // mixed color the user has taken it over, so drop the mix link
-        // (otherwise the reblend below would immediately overwrite it).
-        const { mix: _droppedMix, handMix: _droppedHandMix, ...rest } =
-          newPalette[index];
-        void _droppedMix;
-        void _droppedHandMix;
-        newPalette[index] = { ...rest, hex };
+        // Manually setting a hex makes the color primary: the user has
+        // taken it over, so sever its mix link and any stale paint-match
+        // identity (otherwise the reblend below would overwrite it, or a
+        // later re-ground/convert-to-hex would restore the old color).
+        newPalette[index] = { ...detachColorMetadata(newPalette[index]), hex };
 
         // Re-derive every mixed color that descends from the changed
         // primary so the whole palette stays consistent in one edit.
@@ -1397,19 +1465,14 @@ export const useCustomStore = create<CustomStore>()(
 
         const newPalette = [...state.customPalette];
         if (hex !== undefined) {
-          // Manual hex makes the color primary — drop its mix link so
-          // the reblend below can't immediately overwrite it. The old
-          // paint-match % no longer describes this new color, so drop it.
-          const {
-            mix: _droppedMix,
-            handMix: _droppedHandMix,
-            paintMatch: _droppedMatch,
-            ...rest
-          } = newPalette[index];
-          void _droppedMix;
-          void _droppedHandMix;
-          void _droppedMatch;
-          newPalette[index] = { ...rest, hex };
+          // Manual hex makes the color primary — sever its mix link and
+          // every stale paint-match field (match %, recipe, the original
+          // source it was grounded from, backup) so the edit fully
+          // detaches it from its prior grounding.
+          newPalette[index] = {
+            ...detachColorMetadata(newPalette[index]),
+            hex,
+          };
         }
         if (name !== undefined) {
           newPalette[index] = { ...newPalette[index], name };
@@ -1464,6 +1527,36 @@ export const useCustomStore = create<CustomStore>()(
       }),
     setActiveTab: (tab: "create" | "saved" | "official" | "extract") =>
       set({ activeTab: tab }),
+    setImageExtractorImage: (image: string | null) =>
+      // A new image invalidates everything derived from the previous one.
+      set({
+        imageExtractor: {
+          image,
+          extractedFrom: null,
+          dominantColors: [],
+          pickedColors: [],
+          selectedAutoColors: [],
+        },
+      }),
+    setImageExtractorResult: (extractedFrom: string, dominantColors: string[]) =>
+      set((state) => ({
+        imageExtractor: {
+          ...state.imageExtractor,
+          extractedFrom,
+          dominantColors,
+        },
+      })),
+    setImageExtractorPickedColors: (colors: string[]) =>
+      set((state) => ({
+        imageExtractor: { ...state.imageExtractor, pickedColors: colors },
+      })),
+    setImageExtractorSelectedAutoColors: (colors: string[]) =>
+      set((state) => ({
+        imageExtractor: {
+          ...state.imageExtractor,
+          selectedAutoColors: colors,
+        },
+      })),
     setHistoryPaletteId: (id: string | null) =>
       set({ historyPaletteId: id }),
     resetPaletteEditor: () =>

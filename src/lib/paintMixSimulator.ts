@@ -117,7 +117,7 @@ const DECISION_COPY: Record<
   buy: { confidence: "low", label: "Buy paint" },
 };
 
-type Lab = [number, number, number];
+export type Lab = [number, number, number];
 
 function normalizeHex(hex: string): string | null {
   if (!HEX_COLOR_PATTERN.test(hex)) return null;
@@ -147,7 +147,7 @@ function labPivot(value: number): number {
     : LAB_KAPPA * value + LAB_OFFSET;
 }
 
-function hexToLab(hex: string): Lab {
+export function hexToLab(hex: string): Lab {
   const red = parseInt(hex.slice(HEX_RED_START, HEX_RED_END), HEX_CHANNEL_RADIX);
   const green = parseInt(
     hex.slice(HEX_GREEN_START, HEX_GREEN_END),
@@ -183,7 +183,7 @@ function hueDegrees(b: number, a: number): number {
   return hue >= MIX_FACTOR_MIN ? hue : hue + DEGREES_PER_FULL_TURN;
 }
 
-function deltaE2000(lab1: Lab, lab2: Lab): number {
+export function deltaE2000(lab1: Lab, lab2: Lab): number {
   const [L1, a1, b1] = lab1;
   const [L2, a2, b2] = lab2;
   const degreesToRadians = Math.PI / DEGREES_PER_HALF_TURN;

@@ -1,6 +1,7 @@
 import type { MouseEvent } from "react";
 import { CustomColor } from "@/store/customStore";
 import type { HandMixSimulation } from "@/lib/paintMixSimulator";
+import type { PaintMixRecipe } from "@/lib/paintMixOptimizer";
 
 // Types for PaletteManager components
 
@@ -23,6 +24,9 @@ export interface ColorSwatchProps {
   mixed?: boolean;
   /** "Convert to paint" closeness (0–100%). Shown under the name. */
   paintMatch?: number;
+  /** "Convert to paint" mix recipe (parts of 2–3 paints) that lands
+   *  closer than the single nearest can. Shown as a "Mix" pill. */
+  paintMixRecipe?: PaintMixRecipe;
   /** Paint-like prediction for whether this generated blend is hand-mixable. */
   handMix?: HandMixSimulation;
   /** Extra proportion of squares for this color (e.g. 50 = +50%). 0–500. */
