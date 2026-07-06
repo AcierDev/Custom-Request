@@ -65,7 +65,8 @@ import {
   VERIFIED_BRANDS,
   purchaseLabel,
 } from "@/lib/paint";
-import { findBestPaintMix } from "@/lib/paintMixOptimizer";
+import { findBestPaintMix, type PaintMixRecipe } from "@/lib/paintMixOptimizer";
+import { cn } from "@/lib/utils";
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ 🎨 BUTTON THEME                                                       ║
@@ -101,6 +102,21 @@ const PAINT_MATCH_CANDIDATE_COUNT = 12;
 const LAB_LIGHTNESS_INDEX = 0;
 // A recipe of one paint is just "buy the can" — no mixing to show.
 const SINGLE_COMPONENT_COUNT = 1;
+// When mixing to get closer, which paints the recipe may draw from:
+//  - "palette":  only paints the palette itself resolves to, plus white
+//    and black (the pool's lightness anchors) which are always allowed.
+//  - "purchase": any nearby purchasable paint, even ones not in the
+//    palette — buys the closest possible match at the cost of extra cans.
+type MixSource = "palette" | "purchase";
+const DEFAULT_MIX_SOURCE: MixSource = "palette";
+// One grounding request: which brand pool, whether to restrict to verified
+// codes, whether to also compute mix recipes, and (if so) their source.
+type GroundSelection = {
+  brand: BrandOption;
+  verified: boolean;
+  mix: boolean;
+  mixSource: MixSource;
+};
 // Let React paint the grounding spinner between colors (the spectral mix
 // search is heavy enough to drop a frame per color otherwise).
 const YIELD_DELAY_MS = 0;
@@ -189,6 +205,14 @@ export default function PalettePage() {
   // When on, ground only to brands with verified current color codes
   // (skips Behr/PPG), so every match is genuinely orderable.
   const [verifiedOnly, setVerifiedOnly] = useState(false);
+  // Default off: just buy the single nearest can. When on, also compute a
+  // 2–3 paint mix recipe that lands even closer to each source color (the
+  // heavier spectral search). Off keeps grounding fast + one-can-simple.
+  const DEFAULT_MIX_TO_MATCH = false;
+  const [mixToMatch, setMixToMatch] = useState(DEFAULT_MIX_TO_MATCH);
+  // Only meaningful when mixToMatch is on: restrict mix ingredients to the
+  // palette's own paints (+ white/black) or let it buy any nearby paint.
+  const [mixSource, setMixSource] = useState<MixSource>(DEFAULT_MIX_SOURCE);
   // True while a (re-)grounding pass runs — the mix optimizer is heavy,
   // so the convert button shows a spinner and controls lock.
   const [isGrounding, setIsGrounding] = useState(false);
@@ -196,17 +220,11 @@ export default function PalettePage() {
   // here and replayed when the in-flight pass finishes, so the last
   // selection always wins without overlapping setState races.
   const groundingInFlightRef = useRef(false);
-  const pendingGroundRef = useRef<{
-    brand: BrandOption;
-    verified: boolean;
-  } | null>(null);
+  const pendingGroundRef = useRef<GroundSelection | null>(null);
   // The brand/verified combo the palette is actually grounded to. Lets an
   // auto re-ground that lands on an empty pool snap the controls back, so
   // the dropdown never claims a brand the palette isn't grounded to.
-  const lastGroundedSelectionRef = useRef<{
-    brand: BrandOption;
-    verified: boolean;
-  } | null>(null);
+  const lastGroundedSelectionRef = useRef<GroundSelection | null>(null);
   // Set when we revert the controls programmatically, so the resulting
   // brand/verified change doesn't fire a redundant re-ground.
   const suppressReGroundRef = useRef(false);
@@ -456,11 +474,12 @@ export default function PalettePage() {
   // always works from each color's source hex, so it can be re-run when
   // the brand / "verified only" filter changes. Reads the live palette
   // from the store so the brand-change effect never grounds a stale copy.
-  const runGrounding = async (brand: BrandOption, verified: boolean) => {
+  const runGrounding = async (selection: GroundSelection) => {
+    const { brand, verified, mix, mixSource: mixSrc } = selection;
     // A pass is already running — park this request and let the running
     // pass replay it when it finishes, so the last selection wins.
     if (groundingInFlightRef.current) {
-      pendingGroundRef.current = { brand, verified };
+      pendingGroundRef.current = selection;
       return;
     }
 
@@ -521,6 +540,28 @@ export default function PalettePage() {
         sortedByLightness[sortedByLightness.length - 1].paintColor,
       ];
 
+      // "Palette only" mix mode: the real paints the whole palette resolves
+      // to (each color's single nearest can), deduped. These are the only
+      // ingredients a recipe may draw from — so mixing never asks the user
+      // to buy a can they aren't already buying — plus the white/black
+      // anchors above, which stay available no matter what.
+      const palettePaintPool: PaintColor[] = [];
+      if (mix && mixSrc === "palette") {
+        const seenPalettePaint = new Set<string>();
+        for (const customColor of palette) {
+          const nearest = findClosestPaintMatches(
+            sourceHexOf(customColor),
+            paintLabs,
+            PAINT_MATCH_COUNT_WITH_BACKUP
+          )[PRIMARY_PAINT_MATCH_INDEX];
+          if (!nearest) continue;
+          const key = paintMatchKey(nearest);
+          if (seenPalettePaint.has(key)) continue;
+          seenPalettePaint.add(key);
+          palettePaintPool.push(nearest.paintColor);
+        }
+      }
+
       const groundedColors: CustomColor[] = [];
       for (const customColor of palette) {
         const sourceHex = sourceHexOf(customColor);
@@ -545,16 +586,31 @@ export default function PalettePage() {
 
         // The closest ACHIEVABLE color: a 2–3 paint recipe (in integer
         // parts) that lands nearer the source than the single can. Only
-        // kept when it actually has more than one component — otherwise
-        // buying the nearest can is already the best move.
-        const mixRecipe = findBestPaintMix(sourceHex, {
-          candidates: matches.map((m) => m.paintColor),
-          anchors: mixAnchors,
-        });
-        const paintMixRecipe =
-          mixRecipe && mixRecipe.components.length > SINGLE_COMPONENT_COUNT
-            ? mixRecipe
-            : undefined;
+        // computed when the user opts into mixing; otherwise we just buy
+        // the nearest can. Kept only when it beats a single component.
+        let paintMixRecipe: PaintMixRecipe | undefined;
+        if (mix) {
+          // "palette" mode mixes only from paints the palette already uses
+          // (ordered nearest-first so the most useful land in the search
+          // window); "purchase" mode is free to buy any nearby paint.
+          const sourceLab = hexToLab(sourceHex);
+          const mixCandidates =
+            mixSrc === "palette"
+              ? [...palettePaintPool].sort(
+                  (a, b) =>
+                    deltaE2000(sourceLab, hexToLab(a.hex)) -
+                    deltaE2000(sourceLab, hexToLab(b.hex))
+                )
+              : matches.map((m) => m.paintColor);
+          const mixRecipe = findBestPaintMix(sourceHex, {
+            candidates: mixCandidates,
+            anchors: mixAnchors,
+          });
+          paintMixRecipe =
+            mixRecipe && mixRecipe.components.length > SINGLE_COMPONENT_COUNT
+              ? mixRecipe
+              : undefined;
+        }
 
         // Name carries the real purchase identifier — the manufacturer
         // code ("SW 6258 — Tricorn Black") when we have it, so it can be
@@ -580,7 +636,7 @@ export default function PalettePage() {
       }
 
       setCustomPalette(groundedColors);
-      lastGroundedSelectionRef.current = { brand, verified };
+      lastGroundedSelectionRef.current = selection;
       const where = brand === "Any" ? "" : ` (${brand})`;
       toast.success(
         `Grounded ${groundedColors.length} colors to nearest paint matches${where}`
@@ -590,21 +646,28 @@ export default function PalettePage() {
       setIsGrounding(false);
     }
 
-    // Replay the most recent brand/verified change that arrived mid-run.
+    // Replay the most recent selection change that arrived mid-run.
     const pending = pendingGroundRef.current;
     if (pending) {
       pendingGroundRef.current = null;
-      void runGrounding(pending.brand, pending.verified);
+      void runGrounding(pending);
     }
   };
 
+  const currentGroundSelection = (): GroundSelection => ({
+    brand: groundBrand,
+    verified: verifiedOnly,
+    mix: mixToMatch,
+    mixSource,
+  });
+
   const groundPalette = () => {
-    void runGrounding(groundBrand, verifiedOnly);
+    void runGrounding(currentGroundSelection());
   };
 
-  // Re-ground automatically when the brand or "verified only" filter
-  // changes while the palette is already converted — without this, the
-  // controls silently do nothing after the first conversion (the source
+  // Re-ground automatically when the brand, "verified only", or mixing
+  // options change while the palette is already converted — without this,
+  // the controls silently do nothing after the first conversion (the source
   // of the "I unchecked verified but it still shows Behr" confusion).
   const skipInitialReGroundRef = useRef(true);
   useEffect(() => {
@@ -618,11 +681,11 @@ export default function PalettePage() {
       return;
     }
     if (!isPalettePaintConverted) return;
-    void runGrounding(groundBrand, verifiedOnly);
+    void runGrounding(currentGroundSelection());
     // runGrounding reads the live palette from the store and is stable
     // enough for this filter-change trigger; depending on it would loop.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groundBrand, verifiedOnly]);
+  }, [groundBrand, verifiedOnly, mixToMatch, mixSource]);
 
   const convertPaintPaletteToHex = () => {
     const restoredColors = customPalette.map((color) => {
@@ -1753,7 +1816,7 @@ export default function PalettePage() {
                     >
                       <SelectTrigger
                         aria-label="Ground to which paint brand"
-                        className="h-9 w-auto min-w-56 rounded-[10px] border-white/10 bg-gray-900/80 text-slate-200 focus:ring-blue-500 [&>span]:flex [&>span]:items-center [&>span]:gap-2 [&>span]:line-clamp-none"
+                        className="h-9 w-full sm:w-auto sm:min-w-56 rounded-[10px] border-white/10 bg-gray-900/80 text-slate-200 focus:ring-blue-500 [&>span]:flex [&>span]:items-center [&>span]:gap-2 [&>span]:line-clamp-none"
                         title="Only match colors from this brand. Verified badge = current color codes"
                       >
                         <SelectValue placeholder={ANY_BRAND_LABEL} />
@@ -1784,6 +1847,64 @@ export default function PalettePage() {
                       />
                       Verified only
                     </label>
+                    {/* Mixing opt-in + its ingredient source, grouped so the
+                        dropdown always reads as "part of" the checkbox and the
+                        two wrap together rather than drifting onto separate
+                        rows. Violet ties them to the swatch "Mix" badge. */}
+                    <div
+                      className={cn(
+                        "flex flex-wrap items-center gap-2 rounded-[10px] transition-colors",
+                        mixToMatch &&
+                          "bg-violet-500/10 p-1 ring-1 ring-violet-400/25"
+                      )}
+                    >
+                      <label
+                        className="flex h-9 cursor-pointer select-none items-center gap-1.5 rounded-[10px] border border-white/10 bg-gray-900/80 px-3 text-sm text-slate-300"
+                        title="Also compute a 2–3 paint mix recipe that lands even closer than the nearest single can"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={mixToMatch}
+                          onChange={(e) => setMixToMatch(e.target.checked)}
+                          disabled={!paintColorsLoaded || isGrounding}
+                          className="accent-violet-500"
+                        />
+                        Mix to get closer
+                      </label>
+                      {mixToMatch && (
+                        <Select
+                          value={mixSource}
+                          disabled={!paintColorsLoaded || isGrounding}
+                          onValueChange={(value) =>
+                            setMixSource(value as MixSource)
+                          }
+                        >
+                          <SelectTrigger
+                            aria-label="Which paints the mix may use"
+                            className="h-9 w-auto min-w-52 rounded-[10px] border-white/10 bg-gray-900/80 text-slate-200 focus:ring-violet-500"
+                            title="Which paints a mix recipe may draw from"
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="border-white/10 bg-gray-950 text-slate-100">
+                            <SelectItem
+                              value="palette"
+                              textValue="Using palette + white/black"
+                              className="focus:bg-violet-500/15 focus:text-white"
+                            >
+                              Using palette + white/black
+                            </SelectItem>
+                            <SelectItem
+                              value="purchase"
+                              textValue="Buying any paint"
+                              className="focus:bg-violet-500/15 focus:text-white"
+                            >
+                              Buying any paint
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
                     {isGrounding ? (
                       <Button
                         className={BTN_PRIMARY}
@@ -1933,7 +2054,7 @@ export default function PalettePage() {
                 <CardContent>
                   <PaletteManager />
                 </CardContent>
-                <CardFooter className="flex justify-between border-t border-white/10 pt-4">
+                <CardFooter className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
                   <div className="flex items-center gap-2">
                     <motion.div whileTap={{ scale: 0.9 }}>
                       <Button
@@ -1967,7 +2088,7 @@ export default function PalettePage() {
                     </span>
                   </div>
                   {editingPaletteId ? (
-                    <div className="flex items-center gap-4">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-4">
                       <span className="text-sm text-slate-400 tabular-nums">
                         {customPalette.length}{" "}
                         {customPalette.length === 1 ? "color" : "colors"}
@@ -2012,7 +2133,7 @@ export default function PalettePage() {
                       </Button>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-4">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-4">
                       <span className="text-sm text-slate-400 tabular-nums">
                         {customPalette.length}{" "}
                         {customPalette.length === 1 ? "color" : "colors"}

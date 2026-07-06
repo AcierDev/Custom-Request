@@ -30,7 +30,9 @@ export function SortableColorSwatch({ id, ...props }: SortableColorSwatchProps) 
       style={style} 
       {...attributes}
       {...listeners}
-      className="flex-1 min-w-0 touch-none"
+      // touch-manipulation (not touch-none) so swipes still scroll the
+      // page on mobile; the TouchSensor's long-press starts a drag.
+      className="flex-1 min-w-0 touch-manipulation select-none"
     >
       <ColorSwatch 
         id={id} 

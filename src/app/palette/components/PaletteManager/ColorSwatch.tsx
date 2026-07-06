@@ -24,7 +24,9 @@ import { toast } from "sonner";
 import { handMixMatchPercent } from "@/lib/paintMixSimulator";
 import { ColorSwatchProps } from "./types";
 
-const BAR_HEIGHT_CLASS = "h-64 sm:h-80";
+// Mobile: short grid tiles so many colors stay tappable; sm+: tall
+// side-by-side paint-strip bars.
+const BAR_HEIGHT_CLASS = "h-28 sm:h-80";
 const HAND_MIX_DECISION_THEME = {
   mix: {
     className: "bg-emerald-600/85 ring-emerald-300/45",
@@ -172,13 +174,31 @@ export function ColorSwatch({
         </TooltipProvider>
       )}
 
+      {/* Mobile-only remove button — the one action that must stay a
+          single tap (everything else lives in the edit modal) */}
+      <Button
+        size="icon"
+        variant="ghost"
+        aria-label="Remove color"
+        className="absolute bottom-1.5 right-1.5 z-40 h-7 w-7 rounded-full bg-black/25 backdrop-blur-sm hover:bg-black/40 sm:hidden"
+        style={textColorStyle}
+        onClick={(e) => {
+          e.stopPropagation();
+          onRemove();
+        }}
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+      </Button>
+
       <div className="h-full p-2 flex flex-col justify-between overflow-hidden">
         {/* Top: name + hex — click to copy the hex */}
+        {/* pointer-events-none on mobile: taps anywhere on the tile go to
+            the tile itself (select/edit); copy-on-click stays desktop-only */}
         <button
           type="button"
           onClick={copyHex}
           title="Click to copy hex"
-          className="min-w-0 text-left cursor-pointer rounded-sm hover:opacity-80 transition-opacity"
+          className="min-w-0 text-left cursor-pointer rounded-sm hover:opacity-80 transition-opacity pointer-events-none sm:pointer-events-auto"
         >
           {(() => {
             const { brand, code, name: readable } = splitPaintLabel(
@@ -348,9 +368,10 @@ export function ColorSwatch({
           )}
         </button>
 
-        {/* Bottom: hover actions */}
+        {/* Bottom: hover actions (desktop only — mobile tiles are too
+            small for four buttons; tap opens the edit modal instead) */}
         <div className="flex flex-col gap-1">
-          <div className="flex flex-wrap items-center gap-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+          <div className="hidden sm:flex flex-wrap items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
             <TooltipProvider delayDuration={225}>
               <Tooltip>
                 <TooltipTrigger asChild>

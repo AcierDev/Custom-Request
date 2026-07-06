@@ -7,7 +7,8 @@ import {
   DndContext,
   closestCenter,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   DragEndEvent,
@@ -15,7 +16,7 @@ import {
 import {
   arrayMove,
   SortableContext,
-  horizontalListSortingStrategy,
+  rectSortingStrategy,
 } from "@dnd-kit/sortable";
 import { HexColorPicker } from "react-colorful";
 import { useCustomStore } from "@/store/customStore";
@@ -110,6 +111,12 @@ const ACTION_BLUE = `${ACTION_BTN} bg-blue-600 hover:bg-blue-500 ring-blue-400/4
 const ACTION_SLATE = `${ACTION_BTN} bg-slate-700 hover:bg-slate-600 ring-slate-400/30`;
 const ACTION_RED = `${ACTION_BTN} bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 ring-red-400/40`;
 const SELECTED_BLEND_COLOR_COUNT = 2;
+// Drag-to-reorder activation. Mouse starts after a small movement; touch
+// requires a long-press so quick swipes over the palette scroll the page
+// instead of grabbing a swatch.
+const MOUSE_DRAG_DISTANCE_PX = 8;
+const TOUCH_DRAG_DELAY_MS = 250;
+const TOUCH_DRAG_TOLERANCE_PX = 8;
 const FIRST_SELECTED_INDEX = 0;
 const SECOND_SELECTED_INDEX = 1;
 const FIRST_BLEND_STEP = 1;
@@ -455,9 +462,15 @@ export function PaletteManager() {
   };
 
   const sensors = useSensors(
-    useSensor(PointerSensor, {
+    useSensor(MouseSensor, {
       activationConstraint: {
-        distance: 8,
+        distance: MOUSE_DRAG_DISTANCE_PX,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: TOUCH_DRAG_DELAY_MS,
+        tolerance: TOUCH_DRAG_TOLERANCE_PX,
       },
     }),
     useSensor(KeyboardSensor)
@@ -701,12 +714,15 @@ export function PaletteManager() {
         >
           <SortableContext
             items={customPalette.map((c) => c.id)}
-            strategy={horizontalListSortingStrategy}
+            strategy={rectSortingStrategy}
           >
-            <div className="flex w-full items-stretch gap-2 list-none p-0 m-0">
+            {/* Mobile: wrapping grid of tappable tiles (a single row would
+                squeeze swatches into un-tappable slivers). Desktop (sm+):
+                the original side-by-side paint-strip row. */}
+            <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-stretch list-none p-0 m-0">
               {customPalette.length > 0 && (
                 <div
-                  className="flex min-w-0 basis-0 gap-1"
+                  className="grid grid-cols-3 gap-1.5 sm:flex sm:min-w-0 sm:basis-0 sm:gap-1"
                   style={{ flexGrow: customPalette.length }}
                 >
                   <AnimatePresence>
@@ -752,42 +768,47 @@ export function PaletteManager() {
                 </div>
               )}
 
-              <AddColorButton
-                onColorAdd={handleAddColor}
-                onColorsAdd={handleAddColorsByCode}
-                isEmpty={customPalette.length === 0}
-              />
+              {/* Mobile: Add + Mix share a full-width row of comfortable
+                  touch targets. Desktop (sm:contents): they rejoin the
+                  strip row as the original slim side columns. */}
+              <div className="flex w-full items-stretch gap-2 sm:contents">
+                <AddColorButton
+                  onColorAdd={handleAddColor}
+                  onColorsAdd={handleAddColorsByCode}
+                  isEmpty={customPalette.length === 0}
+                />
 
-              {/* Mix toggle - color selection for blending is only
-                  enabled while mix mode is active */}
-              {customPalette.length >= 2 && (
-                <button
-                  type="button"
-                  onClick={toggleMixMode}
-                  className={cn(
-                    "h-64 sm:h-80 w-16 sm:w-20 flex-shrink-0 rounded-lg",
-                    "flex flex-col items-center justify-center gap-2",
-                    "cursor-pointer transition-colors duration-300 border-2",
-                    mixMode
-                      ? "bg-blue-600 hover:bg-blue-500 border-blue-400/60 text-white"
-                      : "bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/30 hover:border-blue-400/70 text-blue-300"
-                  )}
-                >
-                  <div
+                {/* Mix toggle - color selection for blending is only
+                    enabled while mix mode is active */}
+                {customPalette.length >= 2 && (
+                  <button
+                    type="button"
+                    onClick={toggleMixMode}
                     className={cn(
-                      "flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full ring-1 transition-colors duration-300",
+                      "h-16 min-w-0 flex-1 sm:h-80 sm:w-20 sm:flex-none rounded-lg",
+                      "flex flex-row sm:flex-col items-center justify-center gap-2",
+                      "cursor-pointer transition-colors duration-300 border-2",
                       mixMode
-                        ? "bg-white/15 ring-white/40"
-                        : "bg-white/5 ring-white/15"
+                        ? "bg-blue-600 hover:bg-blue-500 border-blue-400/60 text-white"
+                        : "bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/30 hover:border-blue-400/70 text-blue-300"
                     )}
                   >
-                    <Blend className="h-5 w-5 sm:h-6 sm:w-6" />
-                  </div>
-                  <span className="text-[10px] sm:text-xs font-medium tracking-wide">
-                    {mixMode ? "Cancel Mix" : "Mix"}
-                  </span>
-                </button>
-              )}
+                    <div
+                      className={cn(
+                        "flex h-9 w-9 sm:h-12 sm:w-12 items-center justify-center rounded-full ring-1 transition-colors duration-300",
+                        mixMode
+                          ? "bg-white/15 ring-white/40"
+                          : "bg-white/5 ring-white/15"
+                      )}
+                    >
+                      <Blend className="h-5 w-5 sm:h-6 sm:w-6" />
+                    </div>
+                    <span className="text-xs font-medium tracking-wide">
+                      {mixMode ? "Cancel Mix" : "Mix"}
+                    </span>
+                  </button>
+                )}
+              </div>
             </div>
           </SortableContext>
         </DndContext>

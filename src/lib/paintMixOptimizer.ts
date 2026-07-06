@@ -439,5 +439,12 @@ export function findBestPaintMix(
 
   const trimmed = dropTraceComponents(best);
   const quantized = quantizeToParts(targetLab, trimmed);
+  // The continuous optimum beat the single can, but rounding to integer
+  // parts (≤ MAX_TOTAL_PARTS) can nudge the achievable mix back past it.
+  // When the rounded mix is no closer than buying the nearest can, return
+  // the single — a "get closer" recipe must never land farther than one can.
+  if (quantized.deltaE >= single.deltaE) {
+    return buildRecipe(single, quantizeToParts(targetLab, single));
+  }
   return buildRecipe(trimmed, quantized);
 }
