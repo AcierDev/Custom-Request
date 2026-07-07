@@ -63,6 +63,8 @@ import {
   type BrandOption,
   type PaintColor,
   VERIFIED_BRANDS,
+  LOWES_MATCHES,
+  isLowesColor,
   purchaseLabel,
 } from "@/lib/paint";
 import { findBestPaintMix, type PaintMixRecipe } from "@/lib/paintMixOptimizer";
@@ -147,10 +149,13 @@ function VerifiedBrandBadge() {
 }
 
 function PaintBrandOptionLabel({ brand }: { brand: BrandOption }) {
+  // "Lowe's matches" pools Valspar + HGTV Home, both orderable, so it
+  // earns the same "Verified" trust badge as the single verified brands.
+  const verified = brand === LOWES_MATCHES || VERIFIED_BRANDS.has(brand);
   return (
     <span className="inline-flex items-center gap-2">
       <span>{paintBrandPickerLabel(brand)}</span>
-      {VERIFIED_BRANDS.has(brand) && <VerifiedBrandBadge />}
+      {verified && <VerifiedBrandBadge />}
     </span>
   );
 }
@@ -201,7 +206,11 @@ export default function PalettePage() {
   const [paintColorsLoaded, setPaintColorsLoaded] = useState(false);
   // Which paint brand to ground to. Grounding only matches that brand
   // (and skips discontinued colors) so suggestions are purchasable.
-  const [groundBrand, setGroundBrand] = useState<BrandOption>("Any");
+  // Default to the Lowe's wall (Valspar + HGTV Home) so every match is
+  // guaranteed orderable in-store at Lowe's. "Any"/single-brand pools can
+  // surface SW-store fandeck, Behr, PPG or Benjamin Moore colors that a
+  // Lowe's paint desk cannot mix, so they're opt-in only.
+  const [groundBrand, setGroundBrand] = useState<BrandOption>(LOWES_MATCHES);
   // When on, ground only to brands with verified current color codes
   // (skips Behr/PPG), so every match is genuinely orderable.
   const [verifiedOnly, setVerifiedOnly] = useState(false);
@@ -266,12 +275,16 @@ export default function PalettePage() {
           valsparResponse,
           ppgResponse,
           benjaminMooreResponse,
+          hgtvHomeResponse,
         ] = await Promise.all([
           fetch("/paints/behr/colors.json"),
           fetch("/paints/sherwin/colors.json"),
           fetch("/paints/valspar/colors.json"),
           fetch("/paints/ppg/colors.json"),
           fetch("/paints/benjamin_moore/colors.json"),
+          // HGTV Home by Sherwin-Williams — the second Lowe's-exclusive
+          // line, so "Lowe's matches" can draw from the whole Lowe's wall.
+          fetch("/paints/hgtv_home/colors.json"),
         ]);
 
         const [
@@ -280,12 +293,14 @@ export default function PalettePage() {
           valsparColors,
           ppgColors,
           benjaminMooreColors,
+          hgtvHomeColors,
         ] = await Promise.all([
           behrResponse.json(),
           sherwinResponse.json(),
           valsparResponse.json(),
           ppgResponse.json(),
           benjaminMooreResponse.json(),
+          hgtvHomeResponse.json(),
         ]);
 
         const combinedColors = [
@@ -294,6 +309,7 @@ export default function PalettePage() {
           ...valsparColors,
           ...ppgColors,
           ...benjaminMooreColors,
+          ...hgtvHomeColors,
         ];
 
         setAllPaintColors(combinedColors);
@@ -457,6 +473,10 @@ export default function PalettePage() {
   ): PaintColor[] =>
     allPaintColors.filter((c) => {
       if (c.available === false) return false;
+      // "Lowe's matches": ignore the single-brand + verified filters and
+      // keep anything on the Lowe's wall (Valspar + HGTV Home), which is
+      // already all verified/orderable.
+      if (brand === LOWES_MATCHES) return isLowesColor(c);
       if (verified && !VERIFIED_BRANDS.has(c.brand)) return false;
       if (brand === "Any") return true;
       return c.brand === brand;

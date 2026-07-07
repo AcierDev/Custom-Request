@@ -9,7 +9,7 @@
 // discontinued/archived entries, so every color here is current.
 // Valspar is sold at Lowe's.
 
-import { writeFile, mkdir } from "node:fs/promises";
+import { writeFile, mkdir, readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -19,6 +19,11 @@ const RETAILER = "Lowe's";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const OUT = join(here, "..", "..", "public", "paints", "valspar", "colors.json");
+// Discontinued / "Creative Ideas for Color" (CI) Valspar colors that Lowe's
+// can still custom-mix but that the Prism `valspar` feed no longer lists.
+// Curated by hand (hex verified against valspar.com / myperfectcolor RGB) so
+// a re-import never drops them. Add future discontinued colors here.
+const SUPPLEMENTAL = join(here, "valspar-discontinued.json");
 
 function normalize(raw) {
   const seen = new Set();
@@ -55,10 +60,27 @@ async function main() {
     throw new Error("Prism API returned no Valspar colors");
 
   const colors = normalize(raw);
+
+  // Merge in the hand-curated discontinued/CI colors, skipping any the feed
+  // now carries (dedupe by code), then re-sort so the file stays stable.
+  let supplemental = [];
+  try {
+    supplemental = JSON.parse(await readFile(SUPPLEMENTAL, "utf8"));
+  } catch {
+    process.stderr.write(`(no supplemental file at ${SUPPLEMENTAL}, skipping)\n`);
+  }
+  const feedCodes = new Set(colors.map((c) => c.code.toUpperCase()));
+  const extra = supplemental.filter(
+    (c) => c.code && !feedCodes.has(c.code.toUpperCase())
+  );
+  const merged = [...colors, ...extra].sort((a, b) =>
+    a.code.localeCompare(b.code, undefined, { numeric: true })
+  );
+
   await mkdir(dirname(OUT), { recursive: true });
-  await writeFile(OUT, JSON.stringify(colors, null, 2) + "\n");
+  await writeFile(OUT, JSON.stringify(merged, null, 2) + "\n");
   process.stdout.write(
-    `Wrote ${colors.length} current Valspar colors -> ${OUT}\n`
+    `Wrote ${merged.length} Valspar colors (${colors.length} current + ${extra.length} discontinued) -> ${OUT}\n`
   );
 }
 

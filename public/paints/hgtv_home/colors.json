@@ -1,0 +1,8102 @@
+[
+  {
+    "name": "Curio Gray",
+    "code": "HGSW0024",
+    "hex": "#988977",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 26
+  },
+  {
+    "name": "Rachel Pink",
+    "code": "HGSW0026",
+    "hex": "#e8b9ae",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 55
+  },
+  {
+    "name": "Antiquarian Brown",
+    "code": "HGSW0045",
+    "hex": "#946644",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 16
+  },
+  {
+    "name": "Bunglehouse Blue",
+    "code": "HGSW0048",
+    "hex": "#47626f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 11
+  },
+  {
+    "name": "Porcelain",
+    "code": "HGSW0053",
+    "hex": "#e9e0d5",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 76
+  },
+  {
+    "name": "Alexandrite",
+    "code": "HGSW0060",
+    "hex": "#598c74",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 22
+  },
+  {
+    "name": "Copen Blue",
+    "code": "HGSW0068",
+    "hex": "#c2ccc4",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 58
+  },
+  {
+    "name": "Dutch Tulip",
+    "code": "HGSW1183",
+    "hex": "#ffd566",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 71
+  },
+  {
+    "name": "Tint of Honey",
+    "code": "HGSW1187",
+    "hex": "#f1ead8",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 82
+  },
+  {
+    "name": "Thunder Clap",
+    "code": "HGSW1492",
+    "hex": "#7f7b73",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 20
+  },
+  {
+    "name": "Modernist Gray",
+    "code": "HGSW1495",
+    "hex": "#beb9b0",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 49
+  },
+  {
+    "name": "Stone Isle",
+    "code": "HGSW1496",
+    "hex": "#cbc7bf",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 58
+  },
+  {
+    "name": "Pineapple Cream",
+    "code": "HGSW1668",
+    "hex": "#f2eac3",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 82
+  },
+  {
+    "name": "Falcon Taupe",
+    "code": "HGSW2493",
+    "hex": "#917c6a",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 21
+  },
+  {
+    "name": "Caribou Brown",
+    "code": "HGSW2503",
+    "hex": "#755c48",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 12
+  },
+  {
+    "name": "Truffle Oil",
+    "code": "HGSW2504",
+    "hex": "#a48d77",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 28
+  },
+  {
+    "name": "Rockweed",
+    "code": "HGSW2735",
+    "hex": "#443735",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 4
+  },
+  {
+    "name": "Old Towne",
+    "code": "HGSW3162",
+    "hex": "#855d42",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 13
+  },
+  {
+    "name": "Tranquil Tan",
+    "code": "HGSW3163",
+    "hex": "#ab8b6e",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 28
+  },
+  {
+    "name": "Flax Seed",
+    "code": "HGSW3165",
+    "hex": "#dabe9e",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 54
+  },
+  {
+    "name": "Arid Sands",
+    "code": "HGSW3167",
+    "hex": "#f1dbbd",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 73
+  },
+  {
+    "name": "White Gallery",
+    "code": "HGSW4002",
+    "hex": "#f5f2e9",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 84
+  },
+  {
+    "name": "Iconic White",
+    "code": "HGSW4004",
+    "hex": "#eeece3",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 84
+  },
+  {
+    "name": "Oxford White",
+    "code": "HGSW4026",
+    "hex": "#eeefeb",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 86
+  },
+  {
+    "name": "White Cotton",
+    "code": "HGSW4027",
+    "hex": "#ecece7",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 84
+  },
+  {
+    "name": "Bohemian Lace",
+    "code": "HGSW4052",
+    "hex": "#f1eee6",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 86
+  },
+  {
+    "name": "Timeless White",
+    "code": "HGSW4055",
+    "hex": "#f0ebe0",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 83
+  },
+  {
+    "name": "Grayish",
+    "code": "HGSW6001",
+    "hex": "#cfcac7",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 60
+  },
+  {
+    "name": "Proper Gray",
+    "code": "HGSW6003",
+    "hex": "#ada8a5",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 39
+  },
+  {
+    "name": "Mink",
+    "code": "HGSW6004",
+    "hex": "#847b77",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 21
+  },
+  {
+    "name": "Folkstone",
+    "code": "HGSW6005",
+    "hex": "#6d6562",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 14
+  },
+  {
+    "name": "Black Bean",
+    "code": "HGSW6006",
+    "hex": "#403330",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 4
+  },
+  {
+    "name": "Imagine",
+    "code": "HGSW6009",
+    "hex": "#c2b6b6",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 48
+  },
+  {
+    "name": "Flexible Gray",
+    "code": "HGSW6010",
+    "hex": "#b1a3a1",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 38
+  },
+  {
+    "name": "Chinchilla",
+    "code": "HGSW6011",
+    "hex": "#867875",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 20
+  },
+  {
+    "name": "Browse Brown",
+    "code": "HGSW6012",
+    "hex": "#6e615f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 13
+  },
+  {
+    "name": "Bitter Chocolate",
+    "code": "HGSW6013",
+    "hex": "#4d3c3c",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 5
+  },
+  {
+    "name": "Vaguely Mauve",
+    "code": "HGSW6015",
+    "hex": "#d1c5c4",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 57
+  },
+  {
+    "name": "Chaise Mauve",
+    "code": "HGSW6016",
+    "hex": "#c1b2b3",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 47
+  },
+  {
+    "name": "Intuitive",
+    "code": "HGSW6017",
+    "hex": "#b3a3a5",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 38
+  },
+  {
+    "name": "Enigma",
+    "code": "HGSW6018",
+    "hex": "#8b7c7e",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 20
+  },
+  {
+    "name": "Poetry Plum",
+    "code": "HGSW6019",
+    "hex": "#6f5c5f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 12
+  },
+  {
+    "name": "Marooned",
+    "code": "HGSW6020",
+    "hex": "#4e3132",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 4
+  },
+  {
+    "name": "Breathless",
+    "code": "HGSW6022",
+    "hex": "#d6c2be",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 57
+  },
+  {
+    "name": "Insightful Rose",
+    "code": "HGSW6023",
+    "hex": "#c9b0ab",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 46
+  },
+  {
+    "name": "Dressy Rose",
+    "code": "HGSW6024",
+    "hex": "#b89d9a",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 37
+  },
+  {
+    "name": "Socialite",
+    "code": "HGSW6025",
+    "hex": "#907676",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 19
+  },
+  {
+    "name": "River Rouge",
+    "code": "HGSW6026",
+    "hex": "#76595d",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 12
+  },
+  {
+    "name": "Cordovan",
+    "code": "HGSW6027",
+    "hex": "#5f3d3f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 6
+  },
+  {
+    "name": "White Truffle",
+    "code": "HGSW6029",
+    "hex": "#d7c8c2",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 60
+  },
+  {
+    "name": "Artistic Taupe",
+    "code": "HGSW6030",
+    "hex": "#c3b1ac",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 46
+  },
+  {
+    "name": "Glamour",
+    "code": "HGSW6031",
+    "hex": "#b6a09a",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 38
+  },
+  {
+    "name": "Bateau Brown",
+    "code": "HGSW6033",
+    "hex": "#7a5f5a",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 13
+  },
+  {
+    "name": "Dark Auburn",
+    "code": "HGSW6034",
+    "hex": "#5a3532",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 5
+  },
+  {
+    "name": "Angora",
+    "code": "HGSW6036",
+    "hex": "#d1c5be",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 57
+  },
+  {
+    "name": "Temperate Taupe",
+    "code": "HGSW6037",
+    "hex": "#bfb1aa",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 46
+  },
+  {
+    "name": "Truly Taupe",
+    "code": "HGSW6038",
+    "hex": "#ac9e97",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 35
+  },
+  {
+    "name": "Poised Taupe",
+    "code": "HGSW6039",
+    "hex": "#8c7e78",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 22
+  },
+  {
+    "name": "Nutshell",
+    "code": "HGSW6040",
+    "hex": "#756761",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 14
+  },
+  {
+    "name": "Otter",
+    "code": "HGSW6041",
+    "hex": "#56433b",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 6
+  },
+  {
+    "name": "Unfussy Beige",
+    "code": "HGSW6043",
+    "hex": "#d6c8c0",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 60
+  },
+  {
+    "name": "Doeskin",
+    "code": "HGSW6044",
+    "hex": "#c6b3a9",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 47
+  },
+  {
+    "name": "Emerging Taupe",
+    "code": "HGSW6045",
+    "hex": "#b8a196",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 38
+  },
+  {
+    "name": "Hot Cocoa",
+    "code": "HGSW6047",
+    "hex": "#806257",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 14
+  },
+  {
+    "name": "Terra Brun",
+    "code": "HGSW6048",
+    "hex": "#5a382d",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 5
+  },
+  {
+    "name": "Gorgeous White",
+    "code": "HGSW6049",
+    "hex": "#e7dbd3",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 72
+  },
+  {
+    "name": "Abalone Shell",
+    "code": "HGSW6050",
+    "hex": "#dbc7bd",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 60
+  },
+  {
+    "name": "Sashay Sand",
+    "code": "HGSW6051",
+    "hex": "#cfb4a8",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 49
+  },
+  {
+    "name": "Reddened Earth",
+    "code": "HGSW6053",
+    "hex": "#9c6e63",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 19
+  },
+  {
+    "name": "Fiery Brown",
+    "code": "HGSW6055",
+    "hex": "#5d3831",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 6
+  },
+  {
+    "name": "Malted Milk",
+    "code": "HGSW6057",
+    "hex": "#decabd",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 62
+  },
+  {
+    "name": "Likeable Sand",
+    "code": "HGSW6058",
+    "hex": "#d1b7a8",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 50
+  },
+  {
+    "name": "Interface Tan",
+    "code": "HGSW6059",
+    "hex": "#c1a392",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 40
+  },
+  {
+    "name": "Tanbark",
+    "code": "HGSW6061",
+    "hex": "#896656",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 15
+  },
+  {
+    "name": "Vintage Leather",
+    "code": "HGSW6062",
+    "hex": "#694336",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 7
+  },
+  {
+    "name": "Nice White",
+    "code": "HGSW6063",
+    "hex": "#e6ddd5",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 74
+  },
+  {
+    "name": "Bona Fide Beige",
+    "code": "HGSW6065",
+    "hex": "#cbb9ab",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 50
+  },
+  {
+    "name": "Sand Trap",
+    "code": "HGSW6066",
+    "hex": "#bba595",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 40
+  },
+  {
+    "name": "Mocha",
+    "code": "HGSW6067",
+    "hex": "#967a6a",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 21
+  },
+  {
+    "name": "Brevity Brown",
+    "code": "HGSW6068",
+    "hex": "#715243",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 10
+  },
+  {
+    "name": "French Roast",
+    "code": "HGSW6069",
+    "hex": "#4f3426",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 4
+  },
+  {
+    "name": "Popular Gray",
+    "code": "HGSW6071",
+    "hex": "#d4ccc3",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 61
+  },
+  {
+    "name": "Versatile Gray",
+    "code": "HGSW6072",
+    "hex": "#c1b6ab",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 48
+  },
+  {
+    "name": "Perfect Greige",
+    "code": "HGSW6073",
+    "hex": "#b7ab9f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 40
+  },
+  {
+    "name": "Garret Gray",
+    "code": "HGSW6075",
+    "hex": "#756861",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 15
+  },
+  {
+    "name": "Turkish Coffee",
+    "code": "HGSW6076",
+    "hex": "#4d3930",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 5
+  },
+  {
+    "name": "Realist Beige",
+    "code": "HGSW6078",
+    "hex": "#d3c8bd",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 59
+  },
+  {
+    "name": "Diverse Beige",
+    "code": "HGSW6079",
+    "hex": "#c2b4a7",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 47
+  },
+  {
+    "name": "Utterly Beige",
+    "code": "HGSW6080",
+    "hex": "#b5a597",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 39
+  },
+  {
+    "name": "Down Home",
+    "code": "HGSW6081",
+    "hex": "#907865",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 20
+  },
+  {
+    "name": "Cobble Brown",
+    "code": "HGSW6082",
+    "hex": "#7a6455",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 14
+  },
+  {
+    "name": "Sable",
+    "code": "HGSW6083",
+    "hex": "#5f4b3f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 8
+  },
+  {
+    "name": "Simplify Beige",
+    "code": "HGSW6085",
+    "hex": "#d6c7b9",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 59
+  },
+  {
+    "name": "Trusty Tan",
+    "code": "HGSW6087",
+    "hex": "#b59f8f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 37
+  },
+  {
+    "name": "Nuthatch",
+    "code": "HGSW6088",
+    "hex": "#8e725f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 19
+  },
+  {
+    "name": "Grounded",
+    "code": "HGSW6089",
+    "hex": "#785b47",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 12
+  },
+  {
+    "name": "Java",
+    "code": "HGSW6090",
+    "hex": "#634533",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 7
+  },
+  {
+    "name": "Lightweight Beige",
+    "code": "HGSW6092",
+    "hex": "#dac8b8",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 59
+  },
+  {
+    "name": "Familiar Beige",
+    "code": "HGSW6093",
+    "hex": "#cab3a0",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 47
+  },
+  {
+    "name": "Sensational Sand",
+    "code": "HGSW6094",
+    "hex": "#bfa38d",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 39
+  },
+  {
+    "name": "Jute Brown",
+    "code": "HGSW6096",
+    "hex": "#815d40",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 13
+  },
+  {
+    "name": "Sturdy Brown",
+    "code": "HGSW6097",
+    "hex": "#69482c",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 8
+  },
+  {
+    "name": "Sand Dollar",
+    "code": "HGSW6099",
+    "hex": "#d7c5b3",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 58
+  },
+  {
+    "name": "Practical Beige",
+    "code": "HGSW6100",
+    "hex": "#c9b29c",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 46
+  },
+  {
+    "name": "Sands of Time",
+    "code": "HGSW6101",
+    "hex": "#bca38b",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 39
+  },
+  {
+    "name": "Portabello",
+    "code": "HGSW6102",
+    "hex": "#947a62",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 21
+  },
+  {
+    "name": "Kaffee",
+    "code": "HGSW6104",
+    "hex": "#65503d",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 9
+  },
+  {
+    "name": "Divine White",
+    "code": "HGSW6105",
+    "hex": "#e6dccd",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 72
+  },
+  {
+    "name": "Kilim Beige",
+    "code": "HGSW6106",
+    "hex": "#d7c5ae",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 57
+  },
+  {
+    "name": "Nomadic Desert",
+    "code": "HGSW6107",
+    "hex": "#c7b198",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 46
+  },
+  {
+    "name": "Latte",
+    "code": "HGSW6108",
+    "hex": "#baa185",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 38
+  },
+  {
+    "name": "Hopsack",
+    "code": "HGSW6109",
+    "hex": "#9e8163",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 24
+  },
+  {
+    "name": "Coconut Husk",
+    "code": "HGSW6111",
+    "hex": "#70573f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 11
+  },
+  {
+    "name": "Interactive Cream",
+    "code": "HGSW6113",
+    "hex": "#e4caad",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 62
+  },
+  {
+    "name": "Totally Tan",
+    "code": "HGSW6115",
+    "hex": "#cca683",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 42
+  },
+  {
+    "name": "Tatami Tan",
+    "code": "HGSW6116",
+    "hex": "#ba8c64",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 30
+  },
+  {
+    "name": "Smokey Topaz",
+    "code": "HGSW6117",
+    "hex": "#a57955",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 22
+  },
+  {
+    "name": "Antique White",
+    "code": "HGSW6119",
+    "hex": "#e8dcc6",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 72
+  },
+  {
+    "name": "Believable Buff",
+    "code": "HGSW6120",
+    "hex": "#dbc7a8",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 59
+  },
+  {
+    "name": "Whole Wheat",
+    "code": "HGSW6121",
+    "hex": "#cdb592",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 48
+  },
+  {
+    "name": "Camelback",
+    "code": "HGSW6122",
+    "hex": "#c5aa85",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 42
+  },
+  {
+    "name": "Baguette",
+    "code": "HGSW6123",
+    "hex": "#b39167",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 31
+  },
+  {
+    "name": "Cardboard",
+    "code": "HGSW6124",
+    "hex": "#9c7a56",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 22
+  },
+  {
+    "name": "Navajo White",
+    "code": "HGSW6126",
+    "hex": "#e9dcc6",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 72
+  },
+  {
+    "name": "Ivoire",
+    "code": "HGSW6127",
+    "hex": "#e4ceac",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 64
+  },
+  {
+    "name": "Blonde",
+    "code": "HGSW6128",
+    "hex": "#dcbd92",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 54
+  },
+  {
+    "name": "Restrained Gold",
+    "code": "HGSW6129",
+    "hex": "#d2b084",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 47
+  },
+  {
+    "name": "Mannered Gold",
+    "code": "HGSW6130",
+    "hex": "#c19763",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 34
+  },
+  {
+    "name": "Chamois",
+    "code": "HGSW6131",
+    "hex": "#ad8451",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 26
+  },
+  {
+    "name": "Relic Bronze",
+    "code": "HGSW6132",
+    "hex": "#906a3a",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 17
+  },
+  {
+    "name": "Muslin",
+    "code": "HGSW6133",
+    "hex": "#eadfc9",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 74
+  },
+  {
+    "name": "Netsuke",
+    "code": "HGSW6134",
+    "hex": "#e0cfb0",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 63
+  },
+  {
+    "name": "Ecru",
+    "code": "HGSW6135",
+    "hex": "#d0ba94",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 51
+  },
+  {
+    "name": "Harmonic Tan",
+    "code": "HGSW6136",
+    "hex": "#c6b08a",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 45
+  },
+  {
+    "name": "Burlap",
+    "code": "HGSW6137",
+    "hex": "#ac9571",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 32
+  },
+  {
+    "name": "Artifact",
+    "code": "HGSW6138",
+    "hex": "#9a815e",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 24
+  },
+  {
+    "name": "Moderate White",
+    "code": "HGSW6140",
+    "hex": "#e9decf",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 74
+  },
+  {
+    "name": "Softer Tan",
+    "code": "HGSW6141",
+    "hex": "#dacab2",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 60
+  },
+  {
+    "name": "Macadamia",
+    "code": "HGSW6142",
+    "hex": "#ccb79b",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 49
+  },
+  {
+    "name": "Dapper Tan",
+    "code": "HGSW6144",
+    "hex": "#947f65",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 22
+  },
+  {
+    "name": "Thatch Brown",
+    "code": "HGSW6145",
+    "hex": "#867057",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 17
+  },
+  {
+    "name": "Umber",
+    "code": "HGSW6146",
+    "hex": "#6e543c",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 10
+  },
+  {
+    "name": "Wool Skein",
+    "code": "HGSW6148",
+    "hex": "#d9cfba",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 63
+  },
+  {
+    "name": "Relaxed Khaki",
+    "code": "HGSW6149",
+    "hex": "#c8bba3",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 50
+  },
+  {
+    "name": "Universal Khaki",
+    "code": "HGSW6150",
+    "hex": "#b8a992",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 40
+  },
+  {
+    "name": "Quiver Tan",
+    "code": "HGSW6151",
+    "hex": "#8e7f6a",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 22
+  },
+  {
+    "name": "Superior Bronze",
+    "code": "HGSW6152",
+    "hex": "#786957",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 15
+  },
+  {
+    "name": "Nacre",
+    "code": "HGSW6154",
+    "hex": "#e8e2d4",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 76
+  },
+  {
+    "name": "Ramie",
+    "code": "HGSW6156",
+    "hex": "#cdbda2",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 52
+  },
+  {
+    "name": "Favorite Tan",
+    "code": "HGSW6157",
+    "hex": "#c1ae91",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 44
+  },
+  {
+    "name": "Sawdust",
+    "code": "HGSW6158",
+    "hex": "#998970",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 26
+  },
+  {
+    "name": "High Tea",
+    "code": "HGSW6159",
+    "hex": "#7e6f59",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 17
+  },
+  {
+    "name": "Best Bronze",
+    "code": "HGSW6160",
+    "hex": "#5d513e",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 9
+  },
+  {
+    "name": "Ancient Marble",
+    "code": "HGSW6162",
+    "hex": "#d1ccb9",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 60
+  },
+  {
+    "name": "Svelte Sage",
+    "code": "HGSW6164",
+    "hex": "#b2ac96",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 41
+  },
+  {
+    "name": "Connected Gray",
+    "code": "HGSW6165",
+    "hex": "#898473",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 23
+  },
+  {
+    "name": "Garden Gate",
+    "code": "HGSW6167",
+    "hex": "#5e5949",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 10
+  },
+  {
+    "name": "Sedate Gray",
+    "code": "HGSW6169",
+    "hex": "#d1cdbf",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 61
+  },
+  {
+    "name": "Techno Gray",
+    "code": "HGSW6170",
+    "hex": "#bfb9aa",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 49
+  },
+  {
+    "name": "Chatroom",
+    "code": "HGSW6171",
+    "hex": "#b0ab9c",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 41
+  },
+  {
+    "name": "Cocoon",
+    "code": "HGSW6173",
+    "hex": "#726b5b",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 15
+  },
+  {
+    "name": "Liveable Green",
+    "code": "HGSW6176",
+    "hex": "#cecebd",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 61
+  },
+  {
+    "name": "Softened Green",
+    "code": "HGSW6177",
+    "hex": "#bbbca7",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 49
+  },
+  {
+    "name": "Clary Sage",
+    "code": "HGSW6178",
+    "hex": "#acad97",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 41
+  },
+  {
+    "name": "Artichoke",
+    "code": "HGSW6179",
+    "hex": "#7f8266",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 21
+  },
+  {
+    "name": "Oakmoss",
+    "code": "HGSW6180",
+    "hex": "#65684c",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 13
+  },
+  {
+    "name": "Secret Garden",
+    "code": "HGSW6181",
+    "hex": "#4f523a",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 8
+  },
+  {
+    "name": "Ethereal White",
+    "code": "HGSW6182",
+    "hex": "#e3e2d9",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 76
+  },
+  {
+    "name": "Conservative Gray",
+    "code": "HGSW6183",
+    "hex": "#d1d0c6",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 63
+  },
+  {
+    "name": "Austere Gray",
+    "code": "HGSW6184",
+    "hex": "#bebfb2",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 50
+  },
+  {
+    "name": "Escape Gray",
+    "code": "HGSW6185",
+    "hex": "#abac9f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 40
+  },
+  {
+    "name": "Dried Thyme",
+    "code": "HGSW6186",
+    "hex": "#7b8070",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 21
+  },
+  {
+    "name": "Shade-Grown",
+    "code": "HGSW6188",
+    "hex": "#4e5147",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 8
+  },
+  {
+    "name": "Filmy Green",
+    "code": "HGSW6190",
+    "hex": "#d1d3c7",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 64
+  },
+  {
+    "name": "Contented",
+    "code": "HGSW6191",
+    "hex": "#bdc0b3",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 52
+  },
+  {
+    "name": "Coastal Plain",
+    "code": "HGSW6192",
+    "hex": "#9fa694",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 37
+  },
+  {
+    "name": "Privilege Green",
+    "code": "HGSW6193",
+    "hex": "#7a8775",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 23
+  },
+  {
+    "name": "Basil",
+    "code": "HGSW6194",
+    "hex": "#626e60",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 15
+  },
+  {
+    "name": "Rock Garden",
+    "code": "HGSW6195",
+    "hex": "#465448",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 8
+  },
+  {
+    "name": "Aloof Gray",
+    "code": "HGSW6197",
+    "hex": "#c9c9c0",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 58
+  },
+  {
+    "name": "Sensible Hue",
+    "code": "HGSW6198",
+    "hex": "#b6b5ab",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 46
+  },
+  {
+    "name": "Rare Gray",
+    "code": "HGSW6199",
+    "hex": "#a6a69b",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 38
+  },
+  {
+    "name": "Link Gray",
+    "code": "HGSW6200",
+    "hex": "#7f7e72",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 21
+  },
+  {
+    "name": "Cast Iron",
+    "code": "HGSW6202",
+    "hex": "#64645a",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 12
+  },
+  {
+    "name": "Sea Salt",
+    "code": "HGSW6204",
+    "hex": "#cdd2ca",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 63
+  },
+  {
+    "name": "Comfort Gray",
+    "code": "HGSW6205",
+    "hex": "#bec3bb",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 52
+  },
+  {
+    "name": "Retreat",
+    "code": "HGSW6207",
+    "hex": "#7a8076",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 21
+  },
+  {
+    "name": "Pewter Green",
+    "code": "HGSW6208",
+    "hex": "#5e6259",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 12
+  },
+  {
+    "name": "Quietude",
+    "code": "HGSW6212",
+    "hex": "#adbbb2",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 46
+  },
+  {
+    "name": "Halcyon Green",
+    "code": "HGSW6213",
+    "hex": "#9baaa2",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 38
+  },
+  {
+    "name": "Underseas",
+    "code": "HGSW6214",
+    "hex": "#7c8e87",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 25
+  },
+  {
+    "name": "Rocky River",
+    "code": "HGSW6215",
+    "hex": "#5e706a",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 15
+  },
+  {
+    "name": "Jasper",
+    "code": "HGSW6216",
+    "hex": "#343b36",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 4
+  },
+  {
+    "name": "Tradewind",
+    "code": "HGSW6218",
+    "hex": "#c2cfcf",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 61
+  },
+  {
+    "name": "Rain",
+    "code": "HGSW6219",
+    "hex": "#abbebf",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 49
+  },
+  {
+    "name": "Interesting Aqua",
+    "code": "HGSW6220",
+    "hex": "#9bafb2",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 41
+  },
+  {
+    "name": "Moody Blue",
+    "code": "HGSW6221",
+    "hex": "#7a9192",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 27
+  },
+  {
+    "name": "Riverway",
+    "code": "HGSW6222",
+    "hex": "#5d7274",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 16
+  },
+  {
+    "name": "Still Water",
+    "code": "HGSW6223",
+    "hex": "#4a5d5f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 10
+  },
+  {
+    "name": "Mountain Air",
+    "code": "HGSW6224",
+    "hex": "#d8e0df",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 73
+  },
+  {
+    "name": "Sleepy Blue",
+    "code": "HGSW6225",
+    "hex": "#bccbce",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 58
+  },
+  {
+    "name": "Languid Blue",
+    "code": "HGSW6226",
+    "hex": "#a4b7bd",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 46
+  },
+  {
+    "name": "Meditative",
+    "code": "HGSW6227",
+    "hex": "#96aab0",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 38
+  },
+  {
+    "name": "Refuge",
+    "code": "HGSW6228",
+    "hex": "#607d84",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 19
+  },
+  {
+    "name": "Rainstorm",
+    "code": "HGSW6230",
+    "hex": "#244653",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 5
+  },
+  {
+    "name": "Misty",
+    "code": "HGSW6232",
+    "hex": "#cdd2d2",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 62
+  },
+  {
+    "name": "Samovar Silver",
+    "code": "HGSW6233",
+    "hex": "#b8bebe",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 51
+  },
+  {
+    "name": "Uncertain Gray",
+    "code": "HGSW6234",
+    "hex": "#a9b0b1",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 42
+  },
+  {
+    "name": "Grays Harbor",
+    "code": "HGSW6236",
+    "hex": "#596368",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 12
+  },
+  {
+    "name": "Dark Night",
+    "code": "HGSW6237",
+    "hex": "#23383f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 4
+  },
+  {
+    "name": "Icicle",
+    "code": "HGSW6238",
+    "hex": "#dbdfe0",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 73
+  },
+  {
+    "name": "Upward",
+    "code": "HGSW6239",
+    "hex": "#bfc9d0",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 57
+  },
+  {
+    "name": "Windy Blue",
+    "code": "HGSW6240",
+    "hex": "#aabac6",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 48
+  },
+  {
+    "name": "Aleutian",
+    "code": "HGSW6241",
+    "hex": "#98a9b7",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 39
+  },
+  {
+    "name": "Bracing Blue",
+    "code": "HGSW6242",
+    "hex": "#768b9a",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 25
+  },
+  {
+    "name": "Distance",
+    "code": "HGSW6243",
+    "hex": "#5d6f7f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 15
+  },
+  {
+    "name": "Naval",
+    "code": "HGSW6244",
+    "hex": "#2f3d4c",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 4
+  },
+  {
+    "name": "North Star",
+    "code": "HGSW6246",
+    "hex": "#cad0d2",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 62
+  },
+  {
+    "name": "Krypton",
+    "code": "HGSW6247",
+    "hex": "#b8c0c3",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 52
+  },
+  {
+    "name": "Jubilee",
+    "code": "HGSW6248",
+    "hex": "#adb5b9",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 45
+  },
+  {
+    "name": "Storm Cloud",
+    "code": "HGSW6249",
+    "hex": "#7a848d",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 23
+  },
+  {
+    "name": "Granite Peak",
+    "code": "HGSW6250",
+    "hex": "#606b75",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 14
+  },
+  {
+    "name": "Ice Cube",
+    "code": "HGSW6252",
+    "hex": "#e3e4e1",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 77
+  },
+  {
+    "name": "Olympus White",
+    "code": "HGSW6253",
+    "hex": "#d4d8d7",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 68
+  },
+  {
+    "name": "Lazy Gray",
+    "code": "HGSW6254",
+    "hex": "#bec1c3",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 53
+  },
+  {
+    "name": "Morning Fog",
+    "code": "HGSW6255",
+    "hex": "#a8aeb1",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 42
+  },
+  {
+    "name": "Serious Gray",
+    "code": "HGSW6256",
+    "hex": "#7d848b",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 23
+  },
+  {
+    "name": "Tricorn Black",
+    "code": "HGSW6258",
+    "hex": "#2f2f30",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 3
+  },
+  {
+    "name": "Unique Gray",
+    "code": "HGSW6260",
+    "hex": "#cbc9c9",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 58
+  },
+  {
+    "name": "Swanky Gray",
+    "code": "HGSW6261",
+    "hex": "#b5b1b5",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 45
+  },
+  {
+    "name": "Mysterious Mauve",
+    "code": "HGSW6262",
+    "hex": "#a6a3a9",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 37
+  },
+  {
+    "name": "Exclusive Plum",
+    "code": "HGSW6263",
+    "hex": "#736f78",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 16
+  },
+  {
+    "name": "Midnight",
+    "code": "HGSW6264",
+    "hex": "#5d5962",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 10
+  },
+  {
+    "name": "Quixotic Plum",
+    "code": "HGSW6265",
+    "hex": "#4a4653",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 6
+  },
+  {
+    "name": "Sensitive Tint",
+    "code": "HGSW6267",
+    "hex": "#cec9cc",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 59
+  },
+  {
+    "name": "Veiled Violet",
+    "code": "HGSW6268",
+    "hex": "#bdb5b9",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 47
+  },
+  {
+    "name": "Beguiling Mauve",
+    "code": "HGSW6269",
+    "hex": "#afa7ac",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 40
+  },
+  {
+    "name": "Expressive Plum",
+    "code": "HGSW6271",
+    "hex": "#695c62",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 12
+  },
+  {
+    "name": "Plum Brown",
+    "code": "HGSW6272",
+    "hex": "#4e4247",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 6
+  },
+  {
+    "name": "Destiny",
+    "code": "HGSW6274",
+    "hex": "#cfc9c8",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 59
+  },
+  {
+    "name": "Fashionable Gray",
+    "code": "HGSW6275",
+    "hex": "#bdb8b8",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 48
+  },
+  {
+    "name": "Special Gray",
+    "code": "HGSW6277",
+    "hex": "#7b787d",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 19
+  },
+  {
+    "name": "Cloak Gray",
+    "code": "HGSW6278",
+    "hex": "#605e63",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 11
+  },
+  {
+    "name": "Wallflower",
+    "code": "HGSW6281",
+    "hex": "#dbcfd4",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 64
+  },
+  {
+    "name": "Mauve Finery",
+    "code": "HGSW6282",
+    "hex": "#cbb8c0",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 51
+  },
+  {
+    "name": "Thistle",
+    "code": "HGSW6283",
+    "hex": "#aa8e9a",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 30
+  },
+  {
+    "name": "Plum Dandy",
+    "code": "HGSW6284",
+    "hex": "#8b6878",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 17
+  },
+  {
+    "name": "Grape Harvest",
+    "code": "HGSW6285",
+    "hex": "#7e5a6d",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 13
+  },
+  {
+    "name": "Mature Grape",
+    "code": "HGSW6286",
+    "hex": "#5f3f54",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 7
+  },
+  {
+    "name": "Demure",
+    "code": "HGSW6295",
+    "hex": "#e8d4d5",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 69
+  },
+  {
+    "name": "Fading Rose",
+    "code": "HGSW6296",
+    "hex": "#dabdc1",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 55
+  },
+  {
+    "name": "Rose Embroidery",
+    "code": "HGSW6297",
+    "hex": "#c79ea2",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 39
+  },
+  {
+    "name": "Concerto",
+    "code": "HGSW6298",
+    "hex": "#9e6b75",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 19
+  },
+  {
+    "name": "Innocence",
+    "code": "HGSW6302",
+    "hex": "#ebd1cf",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 68
+  },
+  {
+    "name": "Rose Colored",
+    "code": "HGSW6303",
+    "hex": "#dcb6b5",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 52
+  },
+  {
+    "name": "Pressed Flower",
+    "code": "HGSW6304",
+    "hex": "#c39393",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 35
+  },
+  {
+    "name": "Rambling Rose",
+    "code": "HGSW6305",
+    "hex": "#995d62",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 16
+  },
+  {
+    "name": "Cordial",
+    "code": "HGSW6306",
+    "hex": "#864c52",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 11
+  },
+  {
+    "name": "Charming Pink",
+    "code": "HGSW6309",
+    "hex": "#edd3d2",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 69
+  },
+  {
+    "name": "Lotus Flower",
+    "code": "HGSW6310",
+    "hex": "#e6bdbd",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 57
+  },
+  {
+    "name": "Memorable Rose",
+    "code": "HGSW6311",
+    "hex": "#cf8a8d",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 33
+  },
+  {
+    "name": "Redbud",
+    "code": "HGSW6312",
+    "hex": "#ad5e65",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 18
+  },
+  {
+    "name": "Kirsch Red",
+    "code": "HGSW6313",
+    "hex": "#974953",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 12
+  },
+  {
+    "name": "Rosy Outlook",
+    "code": "HGSW6316",
+    "hex": "#ebcecb",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 66
+  },
+  {
+    "name": "Resounding Rose",
+    "code": "HGSW6318",
+    "hex": "#cd8e89",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 34
+  },
+  {
+    "name": "Reddish",
+    "code": "HGSW6319",
+    "hex": "#b56966",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 21
+  },
+  {
+    "name": "Red Bay",
+    "code": "HGSW6321",
+    "hex": "#8e3738",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 9
+  },
+  {
+    "name": "Romance",
+    "code": "HGSW6323",
+    "hex": "#ebcfc3",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 66
+  },
+  {
+    "name": "Mellow Coral",
+    "code": "HGSW6324",
+    "hex": "#e3b5a8",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 52
+  },
+  {
+    "name": "Constant Coral",
+    "code": "HGSW6325",
+    "hex": "#cd8e7f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 34
+  },
+  {
+    "name": "Bold Brick",
+    "code": "HGSW6327",
+    "hex": "#a0584f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 15
+  },
+  {
+    "name": "Fireweed",
+    "code": "HGSW6328",
+    "hex": "#7b3730",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 7
+  },
+  {
+    "name": "Quaint Peche",
+    "code": "HGSW6330",
+    "hex": "#eacdc1",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 65
+  },
+  {
+    "name": "Smoky Salmon",
+    "code": "HGSW6331",
+    "hex": "#e2b6a7",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 53
+  },
+  {
+    "name": "Coral Island",
+    "code": "HGSW6332",
+    "hex": "#ce9382",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 36
+  },
+  {
+    "name": "Foxy",
+    "code": "HGSW6333",
+    "hex": "#a85e53",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 17
+  },
+  {
+    "name": "Fired Brick",
+    "code": "HGSW6335",
+    "hex": "#83382a",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 8
+  },
+  {
+    "name": "Spun Sugar",
+    "code": "HGSW6337",
+    "hex": "#edd2c0",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 68
+  },
+  {
+    "name": "Warming Peach",
+    "code": "HGSW6338",
+    "hex": "#e4b9a2",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 54
+  },
+  {
+    "name": "Persimmon",
+    "code": "HGSW6339",
+    "hex": "#d9987c",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 39
+  },
+  {
+    "name": "Baked Clay",
+    "code": "HGSW6340",
+    "hex": "#c1785c",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 26
+  },
+  {
+    "name": "Spicy Hue",
+    "code": "HGSW6342",
+    "hex": "#994b35",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 12
+  },
+  {
+    "name": "Peach Fuzz",
+    "code": "HGSW6344",
+    "hex": "#eccfbb",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 66
+  },
+  {
+    "name": "Sumptuous Peach",
+    "code": "HGSW6345",
+    "hex": "#e5b99b",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 54
+  },
+  {
+    "name": "Fame Orange",
+    "code": "HGSW6346",
+    "hex": "#db9c7b",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 40
+  },
+  {
+    "name": "Chrysanthemum",
+    "code": "HGSW6347",
+    "hex": "#c47b5b",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 27
+  },
+  {
+    "name": "Reynard",
+    "code": "HGSW6348",
+    "hex": "#b46848",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 20
+  },
+  {
+    "name": "Pennywise",
+    "code": "HGSW6349",
+    "hex": "#a2583a",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 15
+  },
+  {
+    "name": "Intricate Ivory",
+    "code": "HGSW6350",
+    "hex": "#edddca",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 74
+  },
+  {
+    "name": "Sweet Orange",
+    "code": "HGSW6351",
+    "hex": "#ebccb3",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 64
+  },
+  {
+    "name": "Soft Apricot",
+    "code": "HGSW6352",
+    "hex": "#e0b392",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 50
+  },
+  {
+    "name": "Chivalry Copper",
+    "code": "HGSW6353",
+    "hex": "#d4966e",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 37
+  },
+  {
+    "name": "Armagnac",
+    "code": "HGSW6354",
+    "hex": "#c38058",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 28
+  },
+  {
+    "name": "Copper Mountain",
+    "code": "HGSW6356",
+    "hex": "#a6613c",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 17
+  },
+  {
+    "name": "Choice Cream",
+    "code": "HGSW6357",
+    "hex": "#f0e1d0",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 77
+  },
+  {
+    "name": "Creamery",
+    "code": "HGSW6358",
+    "hex": "#edd0b6",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 67
+  },
+  {
+    "name": "Sociable",
+    "code": "HGSW6359",
+    "hex": "#e8be9b",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 57
+  },
+  {
+    "name": "Folksy Gold",
+    "code": "HGSW6360",
+    "hex": "#d69969",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 38
+  },
+  {
+    "name": "Autumnal",
+    "code": "HGSW6361",
+    "hex": "#cd8c5d",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 33
+  },
+  {
+    "name": "Cachet Cream",
+    "code": "HGSW6365",
+    "hex": "#f3d9ba",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 72
+  },
+  {
+    "name": "Ambitious Amber",
+    "code": "HGSW6366",
+    "hex": "#f0cb97",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 64
+  },
+  {
+    "name": "Vanillin",
+    "code": "HGSW6371",
+    "hex": "#f2e3ca",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 78
+  },
+  {
+    "name": "Inviting Ivory",
+    "code": "HGSW6372",
+    "hex": "#f2d5b0",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 70
+  },
+  {
+    "name": "Harvester",
+    "code": "HGSW6373",
+    "hex": "#edc38e",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 59
+  },
+  {
+    "name": "Honeycomb",
+    "code": "HGSW6375",
+    "hex": "#d59858",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 37
+  },
+  {
+    "name": "Gold Coast",
+    "code": "HGSW6376",
+    "hex": "#c78538",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 29
+  },
+  {
+    "name": "Butterscotch",
+    "code": "HGSW6377",
+    "hex": "#b67d3c",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 25
+  },
+  {
+    "name": "Humble Gold",
+    "code": "HGSW6380",
+    "hex": "#edc796",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 61
+  },
+  {
+    "name": "Anjou Pear",
+    "code": "HGSW6381",
+    "hex": "#ddac6d",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 46
+  },
+  {
+    "name": "Ceremonial Gold",
+    "code": "HGSW6382",
+    "hex": "#d69e59",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 40
+  },
+  {
+    "name": "Golden Rule",
+    "code": "HGSW6383",
+    "hex": "#cc9249",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 34
+  },
+  {
+    "name": "Cut the Mustard",
+    "code": "HGSW6384",
+    "hex": "#ba7f38",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 26
+  },
+  {
+    "name": "Dover White",
+    "code": "HGSW6385",
+    "hex": "#f0eadc",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 83
+  },
+  {
+    "name": "Napery",
+    "code": "HGSW6386",
+    "hex": "#efddc1",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 74
+  },
+  {
+    "name": "Bosc Pear",
+    "code": "HGSW6390",
+    "hex": "#c09056",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 32
+  },
+  {
+    "name": "Gallant Gold",
+    "code": "HGSW6391",
+    "hex": "#a4763c",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 21
+  },
+  {
+    "name": "Convivial Yellow",
+    "code": "HGSW6393",
+    "hex": "#e9d6b0",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 69
+  },
+  {
+    "name": "Sequin",
+    "code": "HGSW6394",
+    "hex": "#e1c28d",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 57
+  },
+  {
+    "name": "Alchemy",
+    "code": "HGSW6395",
+    "hex": "#c99e53",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 38
+  },
+  {
+    "name": "Nankeen",
+    "code": "HGSW6397",
+    "hex": "#aa803a",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 24
+  },
+  {
+    "name": "Sconce Gold",
+    "code": "HGSW6398",
+    "hex": "#996f32",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 18
+  },
+  {
+    "name": "Lucent Yellow",
+    "code": "HGSW6400",
+    "hex": "#e4d0a5",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 64
+  },
+  {
+    "name": "Independent Gold",
+    "code": "HGSW6401",
+    "hex": "#d2ba83",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 51
+  },
+  {
+    "name": "Antiquity",
+    "code": "HGSW6402",
+    "hex": "#c2a462",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 39
+  },
+  {
+    "name": "Escapade Gold",
+    "code": "HGSW6403",
+    "hex": "#b89b59",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 34
+  },
+  {
+    "name": "Grandiose",
+    "code": "HGSW6404",
+    "hex": "#9c7f41",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 23
+  },
+  {
+    "name": "Ancestral Gold",
+    "code": "HGSW6407",
+    "hex": "#ddcda6",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 62
+  },
+  {
+    "name": "Wheat Grass",
+    "code": "HGSW6408",
+    "hex": "#cbb584",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 48
+  },
+  {
+    "name": "Edgy Gold",
+    "code": "HGSW6409",
+    "hex": "#b1975f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 32
+  },
+  {
+    "name": "Brassy",
+    "code": "HGSW6410",
+    "hex": "#9d8344",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 24
+  },
+  {
+    "name": "Eminent Bronze",
+    "code": "HGSW6412",
+    "hex": "#7a6841",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 14
+  },
+  {
+    "name": "Rice Paddy",
+    "code": "HGSW6414",
+    "hex": "#dfd4b0",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 66
+  },
+  {
+    "name": "Hearts of Palm",
+    "code": "HGSW6415",
+    "hex": "#cfc291",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 54
+  },
+  {
+    "name": "Tupelo Tree",
+    "code": "HGSW6417",
+    "hex": "#9c9152",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 28
+  },
+  {
+    "name": "Rural Green",
+    "code": "HGSW6418",
+    "hex": "#8d844d",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 23
+  },
+  {
+    "name": "Saguaro",
+    "code": "HGSW6419",
+    "hex": "#655f2d",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 11
+  },
+  {
+    "name": "Celery",
+    "code": "HGSW6421",
+    "hex": "#e0ddbd",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 71
+  },
+  {
+    "name": "Shagreen",
+    "code": "HGSW6422",
+    "hex": "#cbc99d",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 57
+  },
+  {
+    "name": "Ryegrass",
+    "code": "HGSW6423",
+    "hex": "#aeac7a",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 40
+  },
+  {
+    "name": "Tansy Green",
+    "code": "HGSW6424",
+    "hex": "#95945c",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 28
+  },
+  {
+    "name": "Relentless Olive",
+    "code": "HGSW6425",
+    "hex": "#71713e",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 16
+  },
+  {
+    "name": "Honeydew",
+    "code": "HGSW6428",
+    "hex": "#dbddbd",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 71
+  },
+  {
+    "name": "Leapfrog",
+    "code": "HGSW6431",
+    "hex": "#88915d",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 26
+  },
+  {
+    "name": "Garden Spot",
+    "code": "HGSW6432",
+    "hex": "#6d7645",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 17
+  },
+  {
+    "name": "Inverness",
+    "code": "HGSW6433",
+    "hex": "#576238",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 11
+  },
+  {
+    "name": "Gratifying Green",
+    "code": "HGSW6435",
+    "hex": "#dae2cd",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 73
+  },
+  {
+    "name": "Bonsai Tint",
+    "code": "HGSW6436",
+    "hex": "#c5d1b2",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 60
+  },
+  {
+    "name": "Haven",
+    "code": "HGSW6437",
+    "hex": "#a3b48c",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 42
+  },
+  {
+    "name": "Greenfield",
+    "code": "HGSW6439",
+    "hex": "#60724f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 15
+  },
+  {
+    "name": "Courtyard",
+    "code": "HGSW6440",
+    "hex": "#475842",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 9
+  },
+  {
+    "name": "Supreme Green",
+    "code": "HGSW6442",
+    "hex": "#cfddc7",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 68
+  },
+  {
+    "name": "Relish",
+    "code": "HGSW6443",
+    "hex": "#b3cbaa",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 55
+  },
+  {
+    "name": "Lounge Green",
+    "code": "HGSW6444",
+    "hex": "#8ba97f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 36
+  },
+  {
+    "name": "Garden Grove",
+    "code": "HGSW6445",
+    "hex": "#5e7f57",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 18
+  },
+  {
+    "name": "Arugula",
+    "code": "HGSW6446",
+    "hex": "#42603c",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 10
+  },
+  {
+    "name": "Topiary Tint",
+    "code": "HGSW6449",
+    "hex": "#c8d8c4",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 65
+  },
+  {
+    "name": "Easy Green",
+    "code": "HGSW6450",
+    "hex": "#acc2a8",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 50
+  },
+  {
+    "name": "Nurture Green",
+    "code": "HGSW6451",
+    "hex": "#98b092",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 40
+  },
+  {
+    "name": "Inland",
+    "code": "HGSW6452",
+    "hex": "#6c8867",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 22
+  },
+  {
+    "name": "Cilantro",
+    "code": "HGSW6453",
+    "hex": "#537150",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 14
+  },
+  {
+    "name": "Shamrock",
+    "code": "HGSW6454",
+    "hex": "#205134",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 6
+  },
+  {
+    "name": "Slow Green",
+    "code": "HGSW6456",
+    "hex": "#c6d5c9",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 64
+  },
+  {
+    "name": "Kind Green",
+    "code": "HGSW6457",
+    "hex": "#aac2b3",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 51
+  },
+  {
+    "name": "Restful",
+    "code": "HGSW6458",
+    "hex": "#91af9d",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 39
+  },
+  {
+    "name": "Jadite",
+    "code": "HGSW6459",
+    "hex": "#61826c",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 20
+  },
+  {
+    "name": "Isle of Pines",
+    "code": "HGSW6461",
+    "hex": "#3d5541",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 8
+  },
+  {
+    "name": "Breaktime",
+    "code": "HGSW6463",
+    "hex": "#c4d9ce",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 66
+  },
+  {
+    "name": "Aloe",
+    "code": "HGSW6464",
+    "hex": "#accabc",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 55
+  },
+  {
+    "name": "Spearmint",
+    "code": "HGSW6465",
+    "hex": "#94b5a6",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 42
+  },
+  {
+    "name": "Kendal Green",
+    "code": "HGSW6467",
+    "hex": "#547867",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 16
+  },
+  {
+    "name": "Hunt Club",
+    "code": "HGSW6468",
+    "hex": "#2a4f43",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 6
+  },
+  {
+    "name": "Waterscape",
+    "code": "HGSW6470",
+    "hex": "#bfd2c9",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 60
+  },
+  {
+    "name": "Hazel",
+    "code": "HGSW6471",
+    "hex": "#a8c1b7",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 48
+  },
+  {
+    "name": "Composed",
+    "code": "HGSW6472",
+    "hex": "#7ea298",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 33
+  },
+  {
+    "name": "Raging Sea",
+    "code": "HGSW6474",
+    "hex": "#476f65",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 14
+  },
+  {
+    "name": "Country Squire",
+    "code": "HGSW6475",
+    "hex": "#124a42",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 5
+  },
+  {
+    "name": "Tidewater",
+    "code": "HGSW6477",
+    "hex": "#c3d7d3",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 65
+  },
+  {
+    "name": "Watery",
+    "code": "HGSW6478",
+    "hex": "#b4ccc9",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 57
+  },
+  {
+    "name": "Drizzle",
+    "code": "HGSW6479",
+    "hex": "#8caeab",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 39
+  },
+  {
+    "name": "Lagoon",
+    "code": "HGSW6480",
+    "hex": "#518682",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 20
+  },
+  {
+    "name": "Green Bay",
+    "code": "HGSW6481",
+    "hex": "#2e6864",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 11
+  },
+  {
+    "name": "Cape Verde",
+    "code": "HGSW6482",
+    "hex": "#01554f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 7
+  },
+  {
+    "name": "Meander Blue",
+    "code": "HGSW6484",
+    "hex": "#bedbd8",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 66
+  },
+  {
+    "name": "Reflecting Pool",
+    "code": "HGSW6486",
+    "hex": "#7bb1b2",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 39
+  },
+  {
+    "name": "Cloudburst",
+    "code": "HGSW6487",
+    "hex": "#5c9598",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 26
+  },
+  {
+    "name": "Grand Canal",
+    "code": "HGSW6488",
+    "hex": "#3c797d",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 16
+  },
+  {
+    "name": "Really Teal",
+    "code": "HGSW6489",
+    "hex": "#016367",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 10
+  },
+  {
+    "name": "Open Air",
+    "code": "HGSW6491",
+    "hex": "#c7dfe0",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 70
+  },
+  {
+    "name": "Jetstream",
+    "code": "HGSW6492",
+    "hex": "#b0d2d6",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 60
+  },
+  {
+    "name": "Ebbtide",
+    "code": "HGSW6493",
+    "hex": "#84b4be",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 41
+  },
+  {
+    "name": "Lakeshore",
+    "code": "HGSW6494",
+    "hex": "#5b96a2",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 27
+  },
+  {
+    "name": "Great Falls",
+    "code": "HGSW6495",
+    "hex": "#217786",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 15
+  },
+  {
+    "name": "Oceanside",
+    "code": "HGSW6496",
+    "hex": "#015a6b",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 8
+  },
+  {
+    "name": "Byte Blue",
+    "code": "HGSW6498",
+    "hex": "#c5dce0",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 68
+  },
+  {
+    "name": "Open Seas",
+    "code": "HGSW6500",
+    "hex": "#83afbc",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 39
+  },
+  {
+    "name": "Manitou Blue",
+    "code": "HGSW6501",
+    "hex": "#5b92a2",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 25
+  },
+  {
+    "name": "Loch Blue",
+    "code": "HGSW6502",
+    "hex": "#2f778b",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 16
+  },
+  {
+    "name": "Bosporus",
+    "code": "HGSW6503",
+    "hex": "#015d75",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 9
+  },
+  {
+    "name": "Atmospheric",
+    "code": "HGSW6505",
+    "hex": "#c2dae0",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 67
+  },
+  {
+    "name": "Vast Sky",
+    "code": "HGSW6506",
+    "hex": "#a9c9d7",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 55
+  },
+  {
+    "name": "Resolute Blue",
+    "code": "HGSW6507",
+    "hex": "#85b0c4",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 40
+  },
+  {
+    "name": "Secure Blue",
+    "code": "HGSW6508",
+    "hex": "#5389a1",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 22
+  },
+  {
+    "name": "Georgian Bay",
+    "code": "HGSW6509",
+    "hex": "#22657f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 11
+  },
+  {
+    "name": "Loyal Blue",
+    "code": "HGSW6510",
+    "hex": "#01455e",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 5
+  },
+  {
+    "name": "Take Five",
+    "code": "HGSW6513",
+    "hex": "#b3c9d3",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 56
+  },
+  {
+    "name": "Respite",
+    "code": "HGSW6514",
+    "hex": "#97b4c3",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 43
+  },
+  {
+    "name": "Leisure Blue",
+    "code": "HGSW6515",
+    "hex": "#6a8ea1",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 25
+  },
+  {
+    "name": "Down Pour",
+    "code": "HGSW6516",
+    "hex": "#43718b",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 15
+  },
+  {
+    "name": "Regatta",
+    "code": "HGSW6517",
+    "hex": "#215772",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 8
+  },
+  {
+    "name": "Hinting Blue",
+    "code": "HGSW6519",
+    "hex": "#ced9dd",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 68
+  },
+  {
+    "name": "Honest Blue",
+    "code": "HGSW6520",
+    "hex": "#b2c7d3",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 55
+  },
+  {
+    "name": "Notable Hue",
+    "code": "HGSW6521",
+    "hex": "#8ba7bb",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 37
+  },
+  {
+    "name": "Sporty Blue",
+    "code": "HGSW6522",
+    "hex": "#6a8aa4",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 24
+  },
+  {
+    "name": "Denim",
+    "code": "HGSW6523",
+    "hex": "#506b84",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 14
+  },
+  {
+    "name": "Icelandic",
+    "code": "HGSW6526",
+    "hex": "#cbd8e1",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 67
+  },
+  {
+    "name": "Blissful Blue",
+    "code": "HGSW6527",
+    "hex": "#b2c8d8",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 56
+  },
+  {
+    "name": "Cosmos",
+    "code": "HGSW6528",
+    "hex": "#8ea9c2",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 38
+  },
+  {
+    "name": "Scanda",
+    "code": "HGSW6529",
+    "hex": "#6b8ca9",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 25
+  },
+  {
+    "name": "Revel Blue",
+    "code": "HGSW6530",
+    "hex": "#4c6b8a",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 14
+  },
+  {
+    "name": "Mild Blue",
+    "code": "HGSW6533",
+    "hex": "#cbd5db",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 65
+  },
+  {
+    "name": "Solitude",
+    "code": "HGSW6535",
+    "hex": "#99a7b8",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 38
+  },
+  {
+    "name": "Searching Blue",
+    "code": "HGSW6536",
+    "hex": "#6c7f9a",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 21
+  },
+  {
+    "name": "Dignified",
+    "code": "HGSW6538",
+    "hex": "#3b496d",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 7
+  },
+  {
+    "name": "Starry Night",
+    "code": "HGSW6540",
+    "hex": "#d6d9de",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 69
+  },
+  {
+    "name": "Daydream",
+    "code": "HGSW6541",
+    "hex": "#bdc3cd",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 54
+  },
+  {
+    "name": "Vesper Violet",
+    "code": "HGSW6542",
+    "hex": "#99a0b2",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 35
+  },
+  {
+    "name": "Soulful Blue",
+    "code": "HGSW6543",
+    "hex": "#757c91",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 20
+  },
+  {
+    "name": "Mesmerize",
+    "code": "HGSW6544",
+    "hex": "#5d657b",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 13
+  },
+  {
+    "name": "Majestic Purple",
+    "code": "HGSW6545",
+    "hex": "#3b3c5a",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 5
+  },
+  {
+    "name": "Silver Peony",
+    "code": "HGSW6547",
+    "hex": "#dad6db",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 68
+  },
+  {
+    "name": "Grape Mist",
+    "code": "HGSW6548",
+    "hex": "#c5c0c9",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 54
+  },
+  {
+    "name": "Ash Violet",
+    "code": "HGSW6549",
+    "hex": "#a29baa",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 34
+  },
+  {
+    "name": "Mythical",
+    "code": "HGSW6550",
+    "hex": "#7e778e",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 20
+  },
+  {
+    "name": "Purple Passage",
+    "code": "HGSW6551",
+    "hex": "#645e77",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 12
+  },
+  {
+    "name": "Dewberry",
+    "code": "HGSW6552",
+    "hex": "#3e385a",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 5
+  },
+  {
+    "name": "Lite Lavender",
+    "code": "HGSW6554",
+    "hex": "#e0dadf",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 71
+  },
+  {
+    "name": "Enchant",
+    "code": "HGSW6555",
+    "hex": "#d1c6d2",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 59
+  },
+  {
+    "name": "Obi Lilac",
+    "code": "HGSW6556",
+    "hex": "#b0a3b6",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 39
+  },
+  {
+    "name": "Wood Violet",
+    "code": "HGSW6557",
+    "hex": "#7a6b85",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 16
+  },
+  {
+    "name": "Teaberry",
+    "code": "HGSW6561",
+    "hex": "#ebd1db",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 69
+  },
+  {
+    "name": "Irresistible",
+    "code": "HGSW6562",
+    "hex": "#e3c0cf",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 59
+  },
+  {
+    "name": "Rosebay",
+    "code": "HGSW6563",
+    "hex": "#cb9aad",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 39
+  },
+  {
+    "name": "Red Clover",
+    "code": "HGSW6564",
+    "hex": "#b87e93",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 27
+  },
+  {
+    "name": "Grandeur Plum",
+    "code": "HGSW6565",
+    "hex": "#92576f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 14
+  },
+  {
+    "name": "Framboise",
+    "code": "HGSW6566",
+    "hex": "#7c3655",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 8
+  },
+  {
+    "name": "Haute Pink",
+    "code": "HGSW6570",
+    "hex": "#d899b1",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 41
+  },
+  {
+    "name": "Cyclamen",
+    "code": "HGSW6571",
+    "hex": "#c47b95",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 28
+  },
+  {
+    "name": "Ruby Shade",
+    "code": "HGSW6572",
+    "hex": "#a2566f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 15
+  },
+  {
+    "name": "Juneberry",
+    "code": "HGSW6573",
+    "hex": "#854158",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 9
+  },
+  {
+    "name": "Priscilla",
+    "code": "HGSW6575",
+    "hex": "#f1d3da",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 71
+  },
+  {
+    "name": "Azalea Flower",
+    "code": "HGSW6576",
+    "hex": "#efc0cb",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 61
+  },
+  {
+    "name": "Jaipur Pink",
+    "code": "HGSW6577",
+    "hex": "#e392a1",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 40
+  },
+  {
+    "name": "Tuberose",
+    "code": "HGSW6578",
+    "hex": "#d47c8c",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 30
+  },
+  {
+    "name": "Gala Pink",
+    "code": "HGSW6579",
+    "hex": "#b04b63",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 15
+  },
+  {
+    "name": "Cerise",
+    "code": "HGSW6580",
+    "hex": "#99324e",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 10
+  },
+  {
+    "name": "Impatiens Petal",
+    "code": "HGSW6582",
+    "hex": "#f1d2d7",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 70
+  },
+  {
+    "name": "In the Pink",
+    "code": "HGSW6583",
+    "hex": "#f0bcc9",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 59
+  },
+  {
+    "name": "Alyssum",
+    "code": "HGSW6589",
+    "hex": "#f2d5d7",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 71
+  },
+  {
+    "name": "Loveable",
+    "code": "HGSW6590",
+    "hex": "#f0c1c6",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 61
+  },
+  {
+    "name": "Amaryllis",
+    "code": "HGSW6591",
+    "hex": "#ed939d",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 41
+  },
+  {
+    "name": "Grenadine",
+    "code": "HGSW6592",
+    "hex": "#d66972",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 26
+  },
+  {
+    "name": "Coral Bells",
+    "code": "HGSW6593",
+    "hex": "#bb4b51",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 16
+  },
+  {
+    "name": "Bella Pink",
+    "code": "HGSW6596",
+    "hex": "#f1c6c4",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 63
+  },
+  {
+    "name": "Hopeful",
+    "code": "HGSW6597",
+    "hex": "#f0b3b2",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 54
+  },
+  {
+    "name": "Dishy Coral",
+    "code": "HGSW6598",
+    "hex": "#ed9190",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 40
+  },
+  {
+    "name": "Begonia",
+    "code": "HGSW6599",
+    "hex": "#d76c6e",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 26
+  },
+  {
+    "name": "Tanager",
+    "code": "HGSW6601",
+    "hex": "#a43834",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 11
+  },
+  {
+    "name": "Oleander",
+    "code": "HGSW6603",
+    "hex": "#f2ccc5",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 66
+  },
+  {
+    "name": "Youthful Coral",
+    "code": "HGSW6604",
+    "hex": "#f0afa8",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 52
+  },
+  {
+    "name": "Charisma",
+    "code": "HGSW6605",
+    "hex": "#ee9489",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 41
+  },
+  {
+    "name": "Coral Reef",
+    "code": "HGSW6606",
+    "hex": "#d9766c",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 29
+  },
+  {
+    "name": "Rave Red",
+    "code": "HGSW6608",
+    "hex": "#a13b34",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 11
+  },
+  {
+    "name": "Koral Kicks",
+    "code": "HGSW6610",
+    "hex": "#f2d1c3",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 68
+  },
+  {
+    "name": "Jovial",
+    "code": "HGSW6611",
+    "hex": "#f2b8a7",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 56
+  },
+  {
+    "name": "Ravishing Coral",
+    "code": "HGSW6612",
+    "hex": "#e79580",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 40
+  },
+  {
+    "name": "Lei Flower",
+    "code": "HGSW6613",
+    "hex": "#d87b6a",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 30
+  },
+  {
+    "name": "Peppery",
+    "code": "HGSW6615",
+    "hex": "#b85444",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 17
+  },
+  {
+    "name": "Blushing",
+    "code": "HGSW6617",
+    "hex": "#f0d1c3",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 68
+  },
+  {
+    "name": "Cosmetic Peach",
+    "code": "HGSW6618",
+    "hex": "#f3c1ab",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 60
+  },
+  {
+    "name": "Sockeye",
+    "code": "HGSW6619",
+    "hex": "#e49780",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 40
+  },
+  {
+    "name": "Rejuvenate",
+    "code": "HGSW6620",
+    "hex": "#dd7861",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 30
+  },
+  {
+    "name": "Emotional",
+    "code": "HGSW6621",
+    "hex": "#c65f47",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 21
+  },
+  {
+    "name": "Hearty Orange",
+    "code": "HGSW6622",
+    "hex": "#b44b34",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 15
+  },
+  {
+    "name": "Sunset",
+    "code": "HGSW6626",
+    "hex": "#e2946f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 39
+  },
+  {
+    "name": "Emberglow",
+    "code": "HGSW6627",
+    "hex": "#d67c56",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 29
+  },
+  {
+    "name": "Robust Orange",
+    "code": "HGSW6628",
+    "hex": "#c4633e",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 21
+  },
+  {
+    "name": "Naive Peach",
+    "code": "HGSW6631",
+    "hex": "#f3d3bf",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 69
+  },
+  {
+    "name": "Neighborly Peach",
+    "code": "HGSW6632",
+    "hex": "#f3c1a3",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 60
+  },
+  {
+    "name": "Flattering Peach",
+    "code": "HGSW6638",
+    "hex": "#f4d3b3",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 69
+  },
+  {
+    "name": "Avid Apricot",
+    "code": "HGSW6639",
+    "hex": "#f4c69f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 62
+  },
+  {
+    "name": "Outgoing Orange",
+    "code": "HGSW6641",
+    "hex": "#e6955f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 39
+  },
+  {
+    "name": "Rhumba Orange",
+    "code": "HGSW6642",
+    "hex": "#cb7841",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 27
+  },
+  {
+    "name": "Yam",
+    "code": "HGSW6643",
+    "hex": "#c36f3e",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 23
+  },
+  {
+    "name": "Flan",
+    "code": "HGSW6652",
+    "hex": "#f4d4af",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 69
+  },
+  {
+    "name": "Delicious Melon",
+    "code": "HGSW6653",
+    "hex": "#f5c894",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 63
+  },
+  {
+    "name": "Surprise Amber",
+    "code": "HGSW6654",
+    "hex": "#efb57a",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 53
+  },
+  {
+    "name": "Adventure Orange",
+    "code": "HGSW6655",
+    "hex": "#e69f5f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 42
+  },
+  {
+    "name": "Enjoyable Yellow",
+    "code": "HGSW6666",
+    "hex": "#f5d6a9",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 71
+  },
+  {
+    "name": "Sunrise",
+    "code": "HGSW6668",
+    "hex": "#f4bf77",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 58
+  },
+  {
+    "name": "Yarrow",
+    "code": "HGSW6669",
+    "hex": "#ebad5e",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 48
+  },
+  {
+    "name": "Gold Crest",
+    "code": "HGSW6670",
+    "hex": "#df9938",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 39
+  },
+  {
+    "name": "Banana Cream",
+    "code": "HGSW6673",
+    "hex": "#f5deaf",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 75
+  },
+  {
+    "name": "Afternoon",
+    "code": "HGSW6675",
+    "hex": "#fbcb78",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 65
+  },
+  {
+    "name": "Butterfield",
+    "code": "HGSW6676",
+    "hex": "#f7be5b",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 57
+  },
+  {
+    "name": "Goldenrod",
+    "code": "HGSW6677",
+    "hex": "#f2af46",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 50
+  },
+  {
+    "name": "Sunflower",
+    "code": "HGSW6678",
+    "hex": "#e39a33",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 40
+  },
+  {
+    "name": "Friendly Yellow",
+    "code": "HGSW6680",
+    "hex": "#f5e0b1",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 76
+  },
+  {
+    "name": "Butter Up",
+    "code": "HGSW6681",
+    "hex": "#f6dda3",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 74
+  },
+  {
+    "name": "Lemon Chiffon",
+    "code": "HGSW6686",
+    "hex": "#f5e5bc",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 79
+  },
+  {
+    "name": "Solaria",
+    "code": "HGSW6688",
+    "hex": "#f5d68f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 70
+  },
+  {
+    "name": "Overjoy",
+    "code": "HGSW6689",
+    "hex": "#eec25f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 58
+  },
+  {
+    "name": "Glitzy Gold",
+    "code": "HGSW6691",
+    "hex": "#d6a02b",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 39
+  },
+  {
+    "name": "Auric",
+    "code": "HGSW6692",
+    "hex": "#c48919",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 30
+  },
+  {
+    "name": "Lily",
+    "code": "HGSW6693",
+    "hex": "#f3e8c2",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 81
+  },
+  {
+    "name": "Glad Yellow",
+    "code": "HGSW6694",
+    "hex": "#f5e1ac",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 76
+  },
+  {
+    "name": "Midday",
+    "code": "HGSW6695",
+    "hex": "#f7d78a",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 70
+  },
+  {
+    "name": "Quilt Gold",
+    "code": "HGSW6696",
+    "hex": "#eac365",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 58
+  },
+  {
+    "name": "Nugget",
+    "code": "HGSW6697",
+    "hex": "#dbb04a",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 46
+  },
+  {
+    "name": "Kingdom Gold",
+    "code": "HGSW6698",
+    "hex": "#d1a436",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 41
+  },
+  {
+    "name": "Crispy Gold",
+    "code": "HGSW6699",
+    "hex": "#c49832",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 35
+  },
+  {
+    "name": "Moonraker",
+    "code": "HGSW6701",
+    "hex": "#eee3b2",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 76
+  },
+  {
+    "name": "Lively Yellow",
+    "code": "HGSW6702",
+    "hex": "#e6d88e",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 68
+  },
+  {
+    "name": "Frolic",
+    "code": "HGSW6703",
+    "hex": "#d9c661",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 56
+  },
+  {
+    "name": "Hep Green",
+    "code": "HGSW6704",
+    "hex": "#c4b146",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 44
+  },
+  {
+    "name": "High Strung",
+    "code": "HGSW6705",
+    "hex": "#ac9825",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 31
+  },
+  {
+    "name": "Offbeat Green",
+    "code": "HGSW6706",
+    "hex": "#9c8b1f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 26
+  },
+  {
+    "name": "Springtime",
+    "code": "HGSW6708",
+    "hex": "#e9e5b3",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 77
+  },
+  {
+    "name": "Gleeful",
+    "code": "HGSW6709",
+    "hex": "#dad790",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 66
+  },
+  {
+    "name": "Melange Green",
+    "code": "HGSW6710",
+    "hex": "#c4c476",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 53
+  },
+  {
+    "name": "Parakeet",
+    "code": "HGSW6711",
+    "hex": "#b4b05a",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 41
+  },
+  {
+    "name": "Verdant",
+    "code": "HGSW6713",
+    "hex": "#847e35",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 20
+  },
+  {
+    "name": "Romaine",
+    "code": "HGSW6730",
+    "hex": "#c0d2ad",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 60
+  },
+  {
+    "name": "Picnic",
+    "code": "HGSW6731",
+    "hex": "#99c285",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 47
+  },
+  {
+    "name": "Organic Green",
+    "code": "HGSW6732",
+    "hex": "#7fac6e",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 35
+  },
+  {
+    "name": "Grasshopper",
+    "code": "HGSW6733",
+    "hex": "#4f854a",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 19
+  },
+  {
+    "name": "Espalier",
+    "code": "HGSW6734",
+    "hex": "#2f5f3a",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 9
+  },
+  {
+    "name": "Jocular Green",
+    "code": "HGSW6736",
+    "hex": "#cce2ca",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 71
+  },
+  {
+    "name": "Kiwi",
+    "code": "HGSW6737",
+    "hex": "#aed2b0",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 58
+  },
+  {
+    "name": "Vegan",
+    "code": "HGSW6738",
+    "hex": "#8ec298",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 47
+  },
+  {
+    "name": "Eco Green",
+    "code": "HGSW6739",
+    "hex": "#68a678",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 32
+  },
+  {
+    "name": "Derbyshire",
+    "code": "HGSW6741",
+    "hex": "#245e36",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 9
+  },
+  {
+    "name": "Mint Condition",
+    "code": "HGSW6743",
+    "hex": "#d1e3d2",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 72
+  },
+  {
+    "name": "Reclining Green",
+    "code": "HGSW6744",
+    "hex": "#b7d7bf",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 63
+  },
+  {
+    "name": "Lark Green",
+    "code": "HGSW6745",
+    "hex": "#8ac1a1",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 45
+  },
+  {
+    "name": "Julep",
+    "code": "HGSW6746",
+    "hex": "#57aa80",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 32
+  },
+  {
+    "name": "Greens",
+    "code": "HGSW6748",
+    "hex": "#016844",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 10
+  },
+  {
+    "name": "Waterfall",
+    "code": "HGSW6750",
+    "hex": "#c0e3da",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 71
+  },
+  {
+    "name": "Refresh",
+    "code": "HGSW6751",
+    "hex": "#a1d4c8",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 59
+  },
+  {
+    "name": "Larchmere",
+    "code": "HGSW6752",
+    "hex": "#70baa7",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 41
+  },
+  {
+    "name": "Jargon Jade",
+    "code": "HGSW6753",
+    "hex": "#53a38f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 30
+  },
+  {
+    "name": "Ionian",
+    "code": "HGSW6754",
+    "hex": "#368976",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 20
+  },
+  {
+    "name": "Tame Teal",
+    "code": "HGSW6757",
+    "hex": "#c1e6df",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 73
+  },
+  {
+    "name": "Aqueduct",
+    "code": "HGSW6758",
+    "hex": "#a1d5cb",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 59
+  },
+  {
+    "name": "Cooled Blue",
+    "code": "HGSW6759",
+    "hex": "#75b9ae",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 41
+  },
+  {
+    "name": "Thermal Spring",
+    "code": "HGSW6761",
+    "hex": "#3b8c80",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 21
+  },
+  {
+    "name": "Swimming",
+    "code": "HGSW6764",
+    "hex": "#c2e5e5",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 73
+  },
+  {
+    "name": "Spa",
+    "code": "HGSW6765",
+    "hex": "#a7dcdc",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 64
+  },
+  {
+    "name": "Mariner",
+    "code": "HGSW6766",
+    "hex": "#6ec2c4",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 46
+  },
+  {
+    "name": "Aquarium",
+    "code": "HGSW6767",
+    "hex": "#3aa9ae",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 32
+  },
+  {
+    "name": "Gulfstream",
+    "code": "HGSW6768",
+    "hex": "#01858b",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 18
+  },
+  {
+    "name": "Maxi Teal",
+    "code": "HGSW6769",
+    "hex": "#017478",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 13
+  },
+  {
+    "name": "Cay",
+    "code": "HGSW6772",
+    "hex": "#a6d0d6",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 58
+  },
+  {
+    "name": "Rapture Blue",
+    "code": "HGSW6773",
+    "hex": "#7dc1cb",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 47
+  },
+  {
+    "name": "Freshwater",
+    "code": "HGSW6774",
+    "hex": "#4da6b2",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 32
+  },
+  {
+    "name": "Briny",
+    "code": "HGSW6775",
+    "hex": "#08808e",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 17
+  },
+  {
+    "name": "Blue Nile",
+    "code": "HGSW6776",
+    "hex": "#01717e",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 13
+  },
+  {
+    "name": "Aviary Blue",
+    "code": "HGSW6778",
+    "hex": "#c6e3e8",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 73
+  },
+  {
+    "name": "Liquid Blue",
+    "code": "HGSW6779",
+    "hex": "#a6d4de",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 60
+  },
+  {
+    "name": "Nautilus",
+    "code": "HGSW6780",
+    "hex": "#71b8c7",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 42
+  },
+  {
+    "name": "Jamaica Bay",
+    "code": "HGSW6781",
+    "hex": "#34a3b6",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 30
+  },
+  {
+    "name": "Amalfi",
+    "code": "HGSW6783",
+    "hex": "#016e85",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 12
+  },
+  {
+    "name": "Quench Blue",
+    "code": "HGSW6785",
+    "hex": "#b4e0e7",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 69
+  },
+  {
+    "name": "Cloudless",
+    "code": "HGSW6786",
+    "hex": "#8fd0dd",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 56
+  },
+  {
+    "name": "Fountain",
+    "code": "HGSW6787",
+    "hex": "#56b5ca",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 39
+  },
+  {
+    "name": "Capri",
+    "code": "HGSW6788",
+    "hex": "#01a0b8",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 28
+  },
+  {
+    "name": "Blue Mosque",
+    "code": "HGSW6789",
+    "hex": "#01819e",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 17
+  },
+  {
+    "name": "Adriatic Sea",
+    "code": "HGSW6790",
+    "hex": "#016081",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 9
+  },
+  {
+    "name": "Minor Blue",
+    "code": "HGSW6792",
+    "hex": "#b7dfe8",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 68
+  },
+  {
+    "name": "Bluebell",
+    "code": "HGSW6793",
+    "hex": "#a2d5e7",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 61
+  },
+  {
+    "name": "Flyway",
+    "code": "HGSW6794",
+    "hex": "#5db3d4",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 39
+  },
+  {
+    "name": "Major Blue",
+    "code": "HGSW6795",
+    "hex": "#289ec4",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 29
+  },
+  {
+    "name": "Blue Plate",
+    "code": "HGSW6796",
+    "hex": "#017ca7",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 17
+  },
+  {
+    "name": "Jay Blue",
+    "code": "HGSW6797",
+    "hex": "#015d87",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 9
+  },
+  {
+    "name": "Soar",
+    "code": "HGSW6799",
+    "hex": "#c3dfe8",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 70
+  },
+  {
+    "name": "Something Blue",
+    "code": "HGSW6800",
+    "hex": "#b0d6e6",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 63
+  },
+  {
+    "name": "Regale Blue",
+    "code": "HGSW6801",
+    "hex": "#7db5d3",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 42
+  },
+  {
+    "name": "Jacaranda",
+    "code": "HGSW6802",
+    "hex": "#5a9ec0",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 30
+  },
+  {
+    "name": "Danube",
+    "code": "HGSW6803",
+    "hex": "#2377a2",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 16
+  },
+  {
+    "name": "Rhythmic Blue",
+    "code": "HGSW6806",
+    "hex": "#ccdbe5",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 69
+  },
+  {
+    "name": "Wondrous Blue",
+    "code": "HGSW6807",
+    "hex": "#b8cddd",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 59
+  },
+  {
+    "name": "Celestial",
+    "code": "HGSW6808",
+    "hex": "#97b3d0",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 44
+  },
+  {
+    "name": "Lobelia",
+    "code": "HGSW6809",
+    "hex": "#7498be",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 30
+  },
+  {
+    "name": "Lupine",
+    "code": "HGSW6810",
+    "hex": "#4e739f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 16
+  },
+  {
+    "name": "Honorable Blue",
+    "code": "HGSW6811",
+    "hex": "#164576",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 6
+  },
+  {
+    "name": "Wishful Blue",
+    "code": "HGSW6813",
+    "hex": "#d8dde6",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 72
+  },
+  {
+    "name": "Awesome Violet",
+    "code": "HGSW6815",
+    "hex": "#a7b2d4",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 45
+  },
+  {
+    "name": "Dahlia",
+    "code": "HGSW6816",
+    "hex": "#8b98c4",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 32
+  },
+  {
+    "name": "Gentian",
+    "code": "HGSW6817",
+    "hex": "#6572a5",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 18
+  },
+  {
+    "name": "Valiant Violet",
+    "code": "HGSW6818",
+    "hex": "#3e4371",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 6
+  },
+  {
+    "name": "Inspired Lilac",
+    "code": "HGSW6820",
+    "hex": "#dfd9e4",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 71
+  },
+  {
+    "name": "Potentially Purple",
+    "code": "HGSW6821",
+    "hex": "#d1cbdf",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 62
+  },
+  {
+    "name": "Wisteria",
+    "code": "HGSW6822",
+    "hex": "#bdb4d4",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 48
+  },
+  {
+    "name": "Brave Purple",
+    "code": "HGSW6823",
+    "hex": "#968db8",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 29
+  },
+  {
+    "name": "Forget-Me-Not",
+    "code": "HGSW6824",
+    "hex": "#716998",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 16
+  },
+  {
+    "name": "Izmir Purple",
+    "code": "HGSW6825",
+    "hex": "#4d426e",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 7
+  },
+  {
+    "name": "Elation",
+    "code": "HGSW6827",
+    "hex": "#dfdce5",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 72
+  },
+  {
+    "name": "Rhapsody Lilac",
+    "code": "HGSW6828",
+    "hex": "#d2c8dd",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 60
+  },
+  {
+    "name": "Magical",
+    "code": "HGSW6829",
+    "hex": "#c0afd0",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 46
+  },
+  {
+    "name": "Kismet",
+    "code": "HGSW6830",
+    "hex": "#a18ab7",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 29
+  },
+  {
+    "name": "Clematis",
+    "code": "HGSW6831",
+    "hex": "#7e6596",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 16
+  },
+  {
+    "name": "Impulsive Purple",
+    "code": "HGSW6832",
+    "hex": "#624977",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 9
+  },
+  {
+    "name": "Spangle",
+    "code": "HGSW6834",
+    "hex": "#e5dbe5",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 73
+  },
+  {
+    "name": "Euphoric Lilac",
+    "code": "HGSW6835",
+    "hex": "#dac7da",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 61
+  },
+  {
+    "name": "Novel Lilac",
+    "code": "HGSW6836",
+    "hex": "#c2a4c2",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 42
+  },
+  {
+    "name": "Baroness",
+    "code": "HGSW6837",
+    "hex": "#a785a7",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 28
+  },
+  {
+    "name": "Vigorous Violet",
+    "code": "HGSW6838",
+    "hex": "#7c5a7e",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 13
+  },
+  {
+    "name": "Kimono Violet",
+    "code": "HGSW6839",
+    "hex": "#5d395f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 6
+  },
+  {
+    "name": "Raucous Orange",
+    "code": "HGSW6883",
+    "hex": "#c35530",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 18
+  },
+  {
+    "name": "Optimistic Yellow",
+    "code": "HGSW6900",
+    "hex": "#f5e1a6",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 76
+  },
+  {
+    "name": "Daffodil",
+    "code": "HGSW6901",
+    "hex": "#fad97a",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 71
+  },
+  {
+    "name": "Cheerful",
+    "code": "HGSW6903",
+    "hex": "#ffc723",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 63
+  },
+  {
+    "name": "Fun Yellow",
+    "code": "HGSW6908",
+    "hex": "#f7e594",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 78
+  },
+  {
+    "name": "Daisy",
+    "code": "HGSW6910",
+    "hex": "#fed340",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 68
+  },
+  {
+    "name": "Confident Yellow",
+    "code": "HGSW6911",
+    "hex": "#fecb01",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 64
+  },
+  {
+    "name": "Funky Yellow",
+    "code": "HGSW6913",
+    "hex": "#edd26f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 65
+  },
+  {
+    "name": "Eye Catching",
+    "code": "HGSW6914",
+    "hex": "#ddb835",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 50
+  },
+  {
+    "name": "Citronella",
+    "code": "HGSW6915",
+    "hex": "#cba901",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 41
+  },
+  {
+    "name": "Bohemian Black",
+    "code": "HGSW6988",
+    "hex": "#3b373c",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 4
+  },
+  {
+    "name": "Caviar",
+    "code": "HGSW6990",
+    "hex": "#313031",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 3
+  },
+  {
+    "name": "Ibis White",
+    "code": "HGSW7000",
+    "hex": "#f2ece6",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 84
+  },
+  {
+    "name": "Marshmallow",
+    "code": "HGSW7001",
+    "hex": "#eee9e0",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 82
+  },
+  {
+    "name": "Downy",
+    "code": "HGSW7002",
+    "hex": "#efe8dd",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 81
+  },
+  {
+    "name": "Toque White",
+    "code": "HGSW7003",
+    "hex": "#e7e2da",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 76
+  },
+  {
+    "name": "Snowbound",
+    "code": "HGSW7004",
+    "hex": "#edeae5",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 83
+  },
+  {
+    "name": "Pure White",
+    "code": "HGSW7005",
+    "hex": "#edece6",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 84
+  },
+  {
+    "name": "Extra White",
+    "code": "HGSW7006",
+    "hex": "#eeefea",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 86
+  },
+  {
+    "name": "Ceiling Bright White",
+    "code": "HGSW7007",
+    "hex": "#e9ebe7",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 83
+  },
+  {
+    "name": "Alabaster",
+    "code": "HGSW7008",
+    "hex": "#edeae0",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 82
+  },
+  {
+    "name": "Pearly White",
+    "code": "HGSW7009",
+    "hex": "#e8e3d9",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 77
+  },
+  {
+    "name": "White Duck",
+    "code": "HGSW7010",
+    "hex": "#e5dfd2",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 74
+  },
+  {
+    "name": "Natural Choice",
+    "code": "HGSW7011",
+    "hex": "#e3ded0",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 73
+  },
+  {
+    "name": "Creamy",
+    "code": "HGSW7012",
+    "hex": "#efe8db",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 81
+  },
+  {
+    "name": "Eider White",
+    "code": "HGSW7014",
+    "hex": "#e2ded8",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 73
+  },
+  {
+    "name": "Repose Gray",
+    "code": "HGSW7015",
+    "hex": "#ccc9c0",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 58
+  },
+  {
+    "name": "Mindful Gray",
+    "code": "HGSW7016",
+    "hex": "#bcb7ad",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 48
+  },
+  {
+    "name": "Dorian Gray",
+    "code": "HGSW7017",
+    "hex": "#aca79e",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 39
+  },
+  {
+    "name": "Dovetail",
+    "code": "HGSW7018",
+    "hex": "#908a83",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 26
+  },
+  {
+    "name": "Gauntlet Gray",
+    "code": "HGSW7019",
+    "hex": "#78736e",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 17
+  },
+  {
+    "name": "Black Fox",
+    "code": "HGSW7020",
+    "hex": "#4f4842",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 7
+  },
+  {
+    "name": "Alpaca",
+    "code": "HGSW7022",
+    "hex": "#ccc5bd",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 57
+  },
+  {
+    "name": "Requisite Gray",
+    "code": "HGSW7023",
+    "hex": "#b9b2a9",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 45
+  },
+  {
+    "name": "Functional Gray",
+    "code": "HGSW7024",
+    "hex": "#aba39a",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 37
+  },
+  {
+    "name": "Backdrop",
+    "code": "HGSW7025",
+    "hex": "#867a6f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 20
+  },
+  {
+    "name": "Griffin",
+    "code": "HGSW7026",
+    "hex": "#6f6459",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 13
+  },
+  {
+    "name": "Hickory Smoke",
+    "code": "HGSW7027",
+    "hex": "#564537",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 7
+  },
+  {
+    "name": "Incredible White",
+    "code": "HGSW7028",
+    "hex": "#e3ded7",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 74
+  },
+  {
+    "name": "Agreeable Gray",
+    "code": "HGSW7029",
+    "hex": "#d1cbc1",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 60
+  },
+  {
+    "name": "Anew Gray",
+    "code": "HGSW7030",
+    "hex": "#bfb6aa",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 47
+  },
+  {
+    "name": "Mega Greige",
+    "code": "HGSW7031",
+    "hex": "#ada295",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 37
+  },
+  {
+    "name": "Brainstorm Bronze",
+    "code": "HGSW7033",
+    "hex": "#74685a",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 14
+  },
+  {
+    "name": "Aesthetic White",
+    "code": "HGSW7035",
+    "hex": "#e3ddd3",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 73
+  },
+  {
+    "name": "Accessible Beige",
+    "code": "HGSW7036",
+    "hex": "#d1c7b8",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 58
+  },
+  {
+    "name": "Balanced Beige",
+    "code": "HGSW7037",
+    "hex": "#c0b2a2",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 45
+  },
+  {
+    "name": "Tony Taupe",
+    "code": "HGSW7038",
+    "hex": "#b1a290",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 37
+  },
+  {
+    "name": "Virtual Taupe",
+    "code": "HGSW7039",
+    "hex": "#8a7a6a",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 20
+  },
+  {
+    "name": "Smokehouse",
+    "code": "HGSW7040",
+    "hex": "#716354",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 13
+  },
+  {
+    "name": "Van Dyke Brown",
+    "code": "HGSW7041",
+    "hex": "#564536",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 7
+  },
+  {
+    "name": "Shoji White",
+    "code": "HGSW7042",
+    "hex": "#e6dfd3",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 74
+  },
+  {
+    "name": "Worldly Gray",
+    "code": "HGSW7043",
+    "hex": "#cec6bb",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 57
+  },
+  {
+    "name": "Intellectual Gray",
+    "code": "HGSW7045",
+    "hex": "#a8a093",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 36
+  },
+  {
+    "name": "Anonymous",
+    "code": "HGSW7046",
+    "hex": "#817a6e",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 20
+  },
+  {
+    "name": "Porpoise",
+    "code": "HGSW7047",
+    "hex": "#6b645b",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 13
+  },
+  {
+    "name": "Urbane Bronze",
+    "code": "HGSW7048",
+    "hex": "#54504a",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 8
+  },
+  {
+    "name": "Nuance",
+    "code": "HGSW7049",
+    "hex": "#e2e0d6",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 74
+  },
+  {
+    "name": "Useful Gray",
+    "code": "HGSW7050",
+    "hex": "#cfcabd",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 59
+  },
+  {
+    "name": "Adaptive Shade",
+    "code": "HGSW7053",
+    "hex": "#867e70",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 21
+  },
+  {
+    "name": "Oak Leaf Brown",
+    "code": "HGSW7054",
+    "hex": "#645a4b",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 10
+  },
+  {
+    "name": "Silver Strand",
+    "code": "HGSW7057",
+    "hex": "#c8cbc4",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 59
+  },
+  {
+    "name": "Magnetic Gray",
+    "code": "HGSW7058",
+    "hex": "#b2b5af",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 46
+  },
+  {
+    "name": "Unusual Gray",
+    "code": "HGSW7059",
+    "hex": "#a3a7a0",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 38
+  },
+  {
+    "name": "Attitude Gray",
+    "code": "HGSW7060",
+    "hex": "#7c7d75",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 20
+  },
+  {
+    "name": "Night Owl",
+    "code": "HGSW7061",
+    "hex": "#63655f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 13
+  },
+  {
+    "name": "Rock Bottom",
+    "code": "HGSW7062",
+    "hex": "#484c49",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 7
+  },
+  {
+    "name": "Nebulous White",
+    "code": "HGSW7063",
+    "hex": "#dedfdc",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 74
+  },
+  {
+    "name": "Passive",
+    "code": "HGSW7064",
+    "hex": "#cbccc9",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 60
+  },
+  {
+    "name": "Argos",
+    "code": "HGSW7065",
+    "hex": "#bdbdb7",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 51
+  },
+  {
+    "name": "Gray Matters",
+    "code": "HGSW7066",
+    "hex": "#a7a8a2",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 38
+  },
+  {
+    "name": "Cityscape",
+    "code": "HGSW7067",
+    "hex": "#7f817e",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 22
+  },
+  {
+    "name": "Grizzle Gray",
+    "code": "HGSW7068",
+    "hex": "#636562",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 13
+  },
+  {
+    "name": "Iron Ore",
+    "code": "HGSW7069",
+    "hex": "#434341",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 6
+  },
+  {
+    "name": "Gray Screen",
+    "code": "HGSW7071",
+    "hex": "#c6caca",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 59
+  },
+  {
+    "name": "Online",
+    "code": "HGSW7072",
+    "hex": "#b0b5b5",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 45
+  },
+  {
+    "name": "Network Gray",
+    "code": "HGSW7073",
+    "hex": "#a0a5a7",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 37
+  },
+  {
+    "name": "Software",
+    "code": "HGSW7074",
+    "hex": "#7f8486",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 23
+  },
+  {
+    "name": "Web Gray",
+    "code": "HGSW7075",
+    "hex": "#616669",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 13
+  },
+  {
+    "name": "Cyberspace",
+    "code": "HGSW7076",
+    "hex": "#44484d",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 6
+  },
+  {
+    "name": "Quest Gray",
+    "code": "HGSW7080",
+    "hex": "#ada5a5",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 39
+  },
+  {
+    "name": "Sensuous Gray",
+    "code": "HGSW7081",
+    "hex": "#837d7f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 21
+  },
+  {
+    "name": "Stunning Shade",
+    "code": "HGSW7082",
+    "hex": "#676064",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 12
+  },
+  {
+    "name": "Darkroom",
+    "code": "HGSW7083",
+    "hex": "#443e40",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 5
+  },
+  {
+    "name": "White Flour",
+    "code": "HGSW7102",
+    "hex": "#f4efe5",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 87
+  },
+  {
+    "name": "Cotton White",
+    "code": "HGSW7104",
+    "hex": "#f7efe3",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 87
+  },
+  {
+    "name": "Keystone Gray",
+    "code": "HGSW7504",
+    "hex": "#9e9284",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 29
+  },
+  {
+    "name": "Manor House",
+    "code": "HGSW7505",
+    "hex": "#665d57",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 11
+  },
+  {
+    "name": "Loggia",
+    "code": "HGSW7506",
+    "hex": "#c4b7a5",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 48
+  },
+  {
+    "name": "Stone Lion",
+    "code": "HGSW7507",
+    "hex": "#b3a491",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 38
+  },
+  {
+    "name": "Tavern Taupe",
+    "code": "HGSW7508",
+    "hex": "#9c8a79",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 27
+  },
+  {
+    "name": "Tiki Hut",
+    "code": "HGSW7509",
+    "hex": "#826f5e",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 17
+  },
+  {
+    "name": "Bungalow Beige",
+    "code": "HGSW7511",
+    "hex": "#cdbfb0",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 53
+  },
+  {
+    "name": "Pavilion Beige",
+    "code": "HGSW7512",
+    "hex": "#c5b6a4",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 48
+  },
+  {
+    "name": "Sanderling",
+    "code": "HGSW7513",
+    "hex": "#a79582",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 31
+  },
+  {
+    "name": "Foothills",
+    "code": "HGSW7514",
+    "hex": "#827466",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 18
+  },
+  {
+    "name": "Homestead Brown",
+    "code": "HGSW7515",
+    "hex": "#6e5f53",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 12
+  },
+  {
+    "name": "Rivers Edge",
+    "code": "HGSW7517",
+    "hex": "#dbcebd",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 63
+  },
+  {
+    "name": "Maison Blanche",
+    "code": "HGSW7526",
+    "hex": "#dfd2bf",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 66
+  },
+  {
+    "name": "Sand Beach",
+    "code": "HGSW7529",
+    "hex": "#d4c5ad",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 57
+  },
+  {
+    "name": "Canvas Tan",
+    "code": "HGSW7531",
+    "hex": "#dcd1bf",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 64
+  },
+  {
+    "name": "Khaki Shade",
+    "code": "HGSW7533",
+    "hex": "#c0af97",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 44
+  },
+  {
+    "name": "Outerbanks",
+    "code": "HGSW7534",
+    "hex": "#b7a48b",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 44
+  },
+  {
+    "name": "Naturel",
+    "code": "HGSW7542",
+    "hex": "#cbc0ad",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 54
+  },
+  {
+    "name": "Avenue Tan",
+    "code": "HGSW7543",
+    "hex": "#bcb099",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 44
+  },
+  {
+    "name": "Fenland",
+    "code": "HGSW7544",
+    "hex": "#ac9d83",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 35
+  },
+  {
+    "name": "Pier",
+    "code": "HGSW7545",
+    "hex": "#63523d",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 9
+  },
+  {
+    "name": "Resort Tan",
+    "code": "HGSW7550",
+    "hex": "#907d66",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 23
+  },
+  {
+    "name": "Greek Villa",
+    "code": "HGSW7551",
+    "hex": "#f0ece2",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 84
+  },
+  {
+    "name": "Patience",
+    "code": "HGSW7555",
+    "hex": "#e2d3bf",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 67
+  },
+  {
+    "name": "Crème",
+    "code": "HGSW7556",
+    "hex": "#f4e8d2",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 82
+  },
+  {
+    "name": "Medici Ivory",
+    "code": "HGSW7558",
+    "hex": "#f3e9d7",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 81
+  },
+  {
+    "name": "Décor White",
+    "code": "HGSW7559",
+    "hex": "#f2e5cf",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 80
+  },
+  {
+    "name": "Roman Column",
+    "code": "HGSW7562",
+    "hex": "#f6f0e2",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 88
+  },
+  {
+    "name": "Polar Bear",
+    "code": "HGSW7564",
+    "hex": "#e8dfca",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 74
+  },
+  {
+    "name": "Oyster Bar",
+    "code": "HGSW7565",
+    "hex": "#dbd0bb",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 64
+  },
+  {
+    "name": "Westhighland White",
+    "code": "HGSW7566",
+    "hex": "#f3eee3",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 86
+  },
+  {
+    "name": "Natural Tan",
+    "code": "HGSW7567",
+    "hex": "#dcd2c3",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 65
+  },
+  {
+    "name": "Neutral Ground",
+    "code": "HGSW7568",
+    "hex": "#e2daca",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 70
+  },
+  {
+    "name": "Stucco",
+    "code": "HGSW7569",
+    "hex": "#dccfba",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 63
+  },
+  {
+    "name": "Egret White",
+    "code": "HGSW7570",
+    "hex": "#dfd9cf",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 70
+  },
+  {
+    "name": "Casa Blanca",
+    "code": "HGSW7571",
+    "hex": "#ede1ce",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 76
+  },
+  {
+    "name": "Lotus Pod",
+    "code": "HGSW7572",
+    "hex": "#e7d7c2",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 69
+  },
+  {
+    "name": "Borscht",
+    "code": "HGSW7578",
+    "hex": "#72353d",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 6
+  },
+  {
+    "name": "Stolen Kiss",
+    "code": "HGSW7586",
+    "hex": "#813235",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 7
+  },
+  {
+    "name": "Show Stopper",
+    "code": "HGSW7588",
+    "hex": "#a42e37",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 10
+  },
+  {
+    "name": "Habanero Chile",
+    "code": "HGSW7589",
+    "hex": "#b8473d",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 15
+  },
+  {
+    "name": "Red Barn",
+    "code": "HGSW7591",
+    "hex": "#7c453d",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 9
+  },
+  {
+    "name": "Bolero",
+    "code": "HGSW7600",
+    "hex": "#903934",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 9
+  },
+  {
+    "name": "Indigo Batik",
+    "code": "HGSW7602",
+    "hex": "#3e5063",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 8
+  },
+  {
+    "name": "Silvermist",
+    "code": "HGSW7621",
+    "hex": "#b0b8b2",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 47
+  },
+  {
+    "name": "Slate Tile",
+    "code": "HGSW7624",
+    "hex": "#606e74",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 15
+  },
+  {
+    "name": "Origami White",
+    "code": "HGSW7636",
+    "hex": "#e5e2da",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 76
+  },
+  {
+    "name": "Jogging Path",
+    "code": "HGSW7638",
+    "hex": "#c0b9a9",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 49
+  },
+  {
+    "name": "Ethereal Mood",
+    "code": "HGSW7639",
+    "hex": "#aea594",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 38
+  },
+  {
+    "name": "Collonade Gray",
+    "code": "HGSW7641",
+    "hex": "#c6c0b6",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 53
+  },
+  {
+    "name": "Pussywillow",
+    "code": "HGSW7643",
+    "hex": "#b2ada4",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 42
+  },
+  {
+    "name": "First Star",
+    "code": "HGSW7646",
+    "hex": "#dad9d4",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 69
+  },
+  {
+    "name": "Mineral Deposit",
+    "code": "HGSW7652",
+    "hex": "#abb0ac",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 43
+  },
+  {
+    "name": "Tinsmith",
+    "code": "HGSW7657",
+    "hex": "#c5c8c4",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 57
+  },
+  {
+    "name": "Gris",
+    "code": "HGSW7659",
+    "hex": "#a5a9a8",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 39
+  },
+  {
+    "name": "Earl Grey",
+    "code": "HGSW7660",
+    "hex": "#969a96",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 32
+  },
+  {
+    "name": "Reflection",
+    "code": "HGSW7661",
+    "hex": "#d3d5d3",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 66
+  },
+  {
+    "name": "Monorail Silver",
+    "code": "HGSW7663",
+    "hex": "#b8bcbb",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 48
+  },
+  {
+    "name": "Steely Gray",
+    "code": "HGSW7664",
+    "hex": "#90979b",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 30
+  },
+  {
+    "name": "Wall Street",
+    "code": "HGSW7665",
+    "hex": "#656d73",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 15
+  },
+  {
+    "name": "Peppercorn",
+    "code": "HGSW7674",
+    "hex": "#585858",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 10
+  },
+  {
+    "name": "Sealskin",
+    "code": "HGSW7675",
+    "hex": "#48423c",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 6
+  },
+  {
+    "name": "Sundew",
+    "code": "HGSW7688",
+    "hex": "#e1cdae",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 63
+  },
+  {
+    "name": "Stonebriar",
+    "code": "HGSW7693",
+    "hex": "#cba97e",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 43
+  },
+  {
+    "name": "Dromedary Camel",
+    "code": "HGSW7694",
+    "hex": "#caad87",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 44
+  },
+  {
+    "name": "Cavern Clay",
+    "code": "HGSW7701",
+    "hex": "#ac6b53",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 20
+  },
+  {
+    "name": "Spiced Cider",
+    "code": "HGSW7702",
+    "hex": "#b0785c",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 23
+  },
+  {
+    "name": "Copper Pot",
+    "code": "HGSW7709",
+    "hex": "#b16a37",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 20
+  },
+  {
+    "name": "Fresco Cream",
+    "code": "HGSW7719",
+    "hex": "#d8c4ae",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 57
+  },
+  {
+    "name": "Koi Pond",
+    "code": "HGSW7727",
+    "hex": "#b9b292",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 45
+  },
+  {
+    "name": "Olive Grove",
+    "code": "HGSW7734",
+    "hex": "#857c5d",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 20
+  },
+  {
+    "name": "Messenger Bag",
+    "code": "HGSW7740",
+    "hex": "#7d745e",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 18
+  },
+  {
+    "name": "Muddled Basil",
+    "code": "HGSW7745",
+    "hex": "#5a5243",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 9
+  },
+  {
+    "name": "Recycled Glass",
+    "code": "HGSW7747",
+    "hex": "#bdc0a0",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 51
+  },
+  {
+    "name": "High Reflective White",
+    "code": "HGSW7757",
+    "hex": "#f7f7f1",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 93
+  },
+  {
+    "name": "Audrey's Blush",
+    "code": "HGSW9001",
+    "hex": "#ae8087",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 26
+  },
+  {
+    "name": "Carley's Rose",
+    "code": "HGSW9002",
+    "hex": "#a87376",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 22
+  },
+  {
+    "name": "Rita's Rouge",
+    "code": "HGSW9003",
+    "hex": "#ba7176",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 23
+  },
+  {
+    "name": "Coral Rose",
+    "code": "HGSW9004",
+    "hex": "#c37f7a",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 29
+  },
+  {
+    "name": "Coral Clay",
+    "code": "HGSW9005",
+    "hex": "#bf796e",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 26
+  },
+  {
+    "name": "Rojo Dust",
+    "code": "HGSW9006",
+    "hex": "#b57466",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 24
+  },
+  {
+    "name": "Meloso Melón",
+    "code": "HGSW9007",
+    "hex": "#f2b88c",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 55
+  },
+  {
+    "name": "Windswept Canyon",
+    "code": "HGSW9010",
+    "hex": "#dba480",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 43
+  },
+  {
+    "name": "Sun Bleached Ochre",
+    "code": "HGSW9011",
+    "hex": "#e3ab7b",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 47
+  },
+  {
+    "name": "Polvo De Oro",
+    "code": "HGSW9012",
+    "hex": "#e8b87f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 54
+  },
+  {
+    "name": "Olden Amber",
+    "code": "HGSW9013",
+    "hex": "#eeb76b",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 53
+  },
+  {
+    "name": "Pollen Powder",
+    "code": "HGSW9014",
+    "hex": "#fbd187",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 68
+  },
+  {
+    "name": "Sunny Veranda",
+    "code": "HGSW9017",
+    "hex": "#fedf94",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 76
+  },
+  {
+    "name": "Honey Bees",
+    "code": "HGSW9018",
+    "hex": "#fbd682",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 70
+  },
+  {
+    "name": "Golden Plumeria",
+    "code": "HGSW9019",
+    "hex": "#fbd073",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 67
+  },
+  {
+    "name": "Rayo De Sol",
+    "code": "HGSW9020",
+    "hex": "#f4c454",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 59
+  },
+  {
+    "name": "Vintage Gold",
+    "code": "HGSW9024",
+    "hex": "#cba576",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 42
+  },
+  {
+    "name": "Coriander Powder",
+    "code": "HGSW9025",
+    "hex": "#ba9c75",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 36
+  },
+  {
+    "name": "Tarnished Trumpet",
+    "code": "HGSW9026",
+    "hex": "#d5b176",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 48
+  },
+  {
+    "name": "Pale Moss",
+    "code": "HGSW9027",
+    "hex": "#dcc797",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 59
+  },
+  {
+    "name": "Dusted Olive",
+    "code": "HGSW9028",
+    "hex": "#bea775",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 40
+  },
+  {
+    "name": "Cool Avocado",
+    "code": "HGSW9029",
+    "hex": "#c4b47d",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 46
+  },
+  {
+    "name": "Primavera",
+    "code": "HGSW9031",
+    "hex": "#d2d083",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 61
+  },
+  {
+    "name": "Oh Pistachio",
+    "code": "HGSW9033",
+    "hex": "#abca99",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 53
+  },
+  {
+    "name": "Frosted Emerald",
+    "code": "HGSW9035",
+    "hex": "#78b185",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 37
+  },
+  {
+    "name": "Retro Mint",
+    "code": "HGSW9036",
+    "hex": "#9fcdb1",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 54
+  },
+  {
+    "name": "Baby Bok Choy",
+    "code": "HGSW9037",
+    "hex": "#bbb98a",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 47
+  },
+  {
+    "name": "Cucuzza Verde",
+    "code": "HGSW9038",
+    "hex": "#9ba373",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 35
+  },
+  {
+    "name": "Broccoflower",
+    "code": "HGSW9039",
+    "hex": "#8fa277",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 33
+  },
+  {
+    "name": "Reseda Green",
+    "code": "HGSW9040",
+    "hex": "#75946b",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 26
+  },
+  {
+    "name": "Parisian Patina",
+    "code": "HGSW9041",
+    "hex": "#7d9b89",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 30
+  },
+  {
+    "name": "Aquastone",
+    "code": "HGSW9043",
+    "hex": "#89c6b7",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 49
+  },
+  {
+    "name": "Little Blue Box",
+    "code": "HGSW9044",
+    "hex": "#8ac5ba",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 49
+  },
+  {
+    "name": "Bora Bora Shore",
+    "code": "HGSW9045",
+    "hex": "#92d0d0",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 56
+  },
+  {
+    "name": "Gentle Aquamarine",
+    "code": "HGSW9046",
+    "hex": "#97cbd2",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 54
+  },
+  {
+    "name": "After the Rain",
+    "code": "HGSW9047",
+    "hex": "#8bc4d1",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 50
+  },
+  {
+    "name": "Sky Fall",
+    "code": "HGSW9049",
+    "hex": "#89c6df",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 51
+  },
+  {
+    "name": "Vintage Vessel",
+    "code": "HGSW9050",
+    "hex": "#94b2a6",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 41
+  },
+  {
+    "name": "Aquaverde",
+    "code": "HGSW9051",
+    "hex": "#a3c0bd",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 49
+  },
+  {
+    "name": "Little Boy Blu",
+    "code": "HGSW9054",
+    "hex": "#c7d8db",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 67
+  },
+  {
+    "name": "French Moire",
+    "code": "HGSW9056",
+    "hex": "#9fbbc3",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 48
+  },
+  {
+    "name": "Aquitaine",
+    "code": "HGSW9057",
+    "hex": "#88abb4",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 38
+  },
+  {
+    "name": "Secret Cove",
+    "code": "HGSW9058",
+    "hex": "#68909d",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 25
+  },
+  {
+    "name": "Silken Peacock",
+    "code": "HGSW9059",
+    "hex": "#427584",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 15
+  },
+  {
+    "name": "Connor's Lakefront",
+    "code": "HGSW9060",
+    "hex": "#175a6c",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 8
+  },
+  {
+    "name": "Rest Assured",
+    "code": "HGSW9061",
+    "hex": "#9bbfc9",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 49
+  },
+  {
+    "name": "Agapanthus",
+    "code": "HGSW9066",
+    "hex": "#bbc5de",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 56
+  },
+  {
+    "name": "Dried Lavender",
+    "code": "HGSW9072",
+    "hex": "#8595aa",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 29
+  },
+  {
+    "name": "Berry Cream",
+    "code": "HGSW9075",
+    "hex": "#9a8ca2",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 28
+  },
+  {
+    "name": "Cocoa Berry",
+    "code": "HGSW9078",
+    "hex": "#a08882",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 27
+  },
+  {
+    "name": "Velvety Chestnut",
+    "code": "HGSW9079",
+    "hex": "#a2877d",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 26
+  },
+  {
+    "name": "Hushed Auburn",
+    "code": "HGSW9080",
+    "hex": "#a8857a",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 27
+  },
+  {
+    "name": "Redend Point",
+    "code": "HGSW9081",
+    "hex": "#ae8e7e",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 30
+  },
+  {
+    "name": "Chocolate Powder",
+    "code": "HGSW9082",
+    "hex": "#a58c7b",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 28
+  },
+  {
+    "name": "Dusted Truffle",
+    "code": "HGSW9083",
+    "hex": "#9c8373",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 25
+  },
+  {
+    "name": "Cocoa Whip",
+    "code": "HGSW9084",
+    "hex": "#a08e7e",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 28
+  },
+  {
+    "name": "Touch of Sand",
+    "code": "HGSW9085",
+    "hex": "#d5c7ba",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 58
+  },
+  {
+    "name": "Cool Beige",
+    "code": "HGSW9086",
+    "hex": "#c6b5a7",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 48
+  },
+  {
+    "name": "Smoky Beige",
+    "code": "HGSW9087",
+    "hex": "#b9a796",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 40
+  },
+  {
+    "name": "Utaupeia",
+    "code": "HGSW9088",
+    "hex": "#a58f7b",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 30
+  },
+  {
+    "name": "Llama Wool",
+    "code": "HGSW9089",
+    "hex": "#917864",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 21
+  },
+  {
+    "name": "Caraïbe",
+    "code": "HGSW9090",
+    "hex": "#785f4c",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 12
+  },
+  {
+    "name": "Half-Caff",
+    "code": "HGSW9091",
+    "hex": "#604c3d",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 8
+  },
+  {
+    "name": "Iced Mocha",
+    "code": "HGSW9092",
+    "hex": "#a3846c",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 25
+  },
+  {
+    "name": "Playa Arenoso",
+    "code": "HGSW9094",
+    "hex": "#dcc7b3",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 60
+  },
+  {
+    "name": "Beige Intenso",
+    "code": "HGSW9096",
+    "hex": "#c5a88d",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 43
+  },
+  {
+    "name": "Umber Rust",
+    "code": "HGSW9100",
+    "hex": "#765138",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 10
+  },
+  {
+    "name": "Au Naturale",
+    "code": "HGSW9101",
+    "hex": "#dcc7ad",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 61
+  },
+  {
+    "name": "Quinoa",
+    "code": "HGSW9102",
+    "hex": "#cfb597",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 50
+  },
+  {
+    "name": "Woven Wicker",
+    "code": "HGSW9104",
+    "hex": "#b99974",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 35
+  },
+  {
+    "name": "Double Latte",
+    "code": "HGSW9108",
+    "hex": "#a78c71",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 28
+  },
+  {
+    "name": "Natural Linen",
+    "code": "HGSW9109",
+    "hex": "#dfd3c3",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 67
+  },
+  {
+    "name": "Malabar",
+    "code": "HGSW9110",
+    "hex": "#cfbea9",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 53
+  },
+  {
+    "name": "Antler Velvet",
+    "code": "HGSW9111",
+    "hex": "#c0ad96",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 44
+  },
+  {
+    "name": "Mudslide",
+    "code": "HGSW9113",
+    "hex": "#a08568",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 26
+  },
+  {
+    "name": "Fallen Leaves",
+    "code": "HGSW9114",
+    "hex": "#8f7659",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 19
+  },
+  {
+    "name": "Cowboy Boots",
+    "code": "HGSW9115",
+    "hex": "#695239",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 9
+  },
+  {
+    "name": "Urban Jungle",
+    "code": "HGSW9117",
+    "hex": "#a4947e",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 31
+  },
+  {
+    "name": "Tarnished Treasure",
+    "code": "HGSW9118",
+    "hex": "#b9a47e",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 39
+  },
+  {
+    "name": "Dirty Martini",
+    "code": "HGSW9119",
+    "hex": "#ddd0b6",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 65
+  },
+  {
+    "name": "Tumblin' Tumbleweed",
+    "code": "HGSW9120",
+    "hex": "#cdbb9c",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 53
+  },
+  {
+    "name": "Dried Edamame",
+    "code": "HGSW9122",
+    "hex": "#b19f80",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 36
+  },
+  {
+    "name": "Barro Verde",
+    "code": "HGSW9123",
+    "hex": "#9f8e71",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 29
+  },
+  {
+    "name": "Verde Marrón",
+    "code": "HGSW9124",
+    "hex": "#877459",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 19
+  },
+  {
+    "name": "Oliva Oscuro",
+    "code": "HGSW9125",
+    "hex": "#665439",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 9
+  },
+  {
+    "name": "Evergreen Fog",
+    "code": "HGSW9130",
+    "hex": "#95978a",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 30
+  },
+  {
+    "name": "Cornwall Slate",
+    "code": "HGSW9131",
+    "hex": "#949488",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 29
+  },
+  {
+    "name": "Acacia Haze",
+    "code": "HGSW9132",
+    "hex": "#969c92",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 32
+  },
+  {
+    "name": "Jasper Stone",
+    "code": "HGSW9133",
+    "hex": "#8d9e97",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 32
+  },
+  {
+    "name": "Delft",
+    "code": "HGSW9134",
+    "hex": "#8b9fa0",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 33
+  },
+  {
+    "name": "Whirlpool",
+    "code": "HGSW9135",
+    "hex": "#80969d",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 29
+  },
+  {
+    "name": "Lullaby",
+    "code": "HGSW9136",
+    "hex": "#cbd4d4",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 66
+  },
+  {
+    "name": "Niebla Azul",
+    "code": "HGSW9137",
+    "hex": "#b6c3c4",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 54
+  },
+  {
+    "name": "Stardew",
+    "code": "HGSW9138",
+    "hex": "#a6b2b5",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 44
+  },
+  {
+    "name": "Debonair",
+    "code": "HGSW9139",
+    "hex": "#90a0a6",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 35
+  },
+  {
+    "name": "Blustery Sky",
+    "code": "HGSW9140",
+    "hex": "#6f848c",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 22
+  },
+  {
+    "name": "Waterloo",
+    "code": "HGSW9141",
+    "hex": "#536872",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 14
+  },
+  {
+    "name": "Moscow Midnight",
+    "code": "HGSW9142",
+    "hex": "#204652",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 5
+  },
+  {
+    "name": "Cadet",
+    "code": "HGSW9143",
+    "hex": "#91999c",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 31
+  },
+  {
+    "name": "Moonmist",
+    "code": "HGSW9144",
+    "hex": "#c9d9e0",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 67
+  },
+  {
+    "name": "Sleepy Hollow",
+    "code": "HGSW9145",
+    "hex": "#b7c9d1",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 57
+  },
+  {
+    "name": "Faded Flaxflower",
+    "code": "HGSW9146",
+    "hex": "#9eb4c0",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 44
+  },
+  {
+    "name": "Favorite Jeans",
+    "code": "HGSW9147",
+    "hex": "#8aa3b1",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 34
+  },
+  {
+    "name": "Smoky Azurite",
+    "code": "HGSW9148",
+    "hex": "#708d9e",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 25
+  },
+  {
+    "name": "Inky Blue",
+    "code": "HGSW9149",
+    "hex": "#4e7287",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 15
+  },
+  {
+    "name": "Endless Sea",
+    "code": "HGSW9150",
+    "hex": "#32586e",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 8
+  },
+  {
+    "name": "Let It Rain",
+    "code": "HGSW9152",
+    "hex": "#979fa5",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 34
+  },
+  {
+    "name": "Moonlit Orchid",
+    "code": "HGSW9153",
+    "hex": "#949194",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 29
+  },
+  {
+    "name": "Slate Violet",
+    "code": "HGSW9155",
+    "hex": "#989192",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 29
+  },
+  {
+    "name": "Gris Morado",
+    "code": "HGSW9156",
+    "hex": "#8f8a91",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 26
+  },
+  {
+    "name": "Autumn Orchid",
+    "code": "HGSW9157",
+    "hex": "#9d9093",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 29
+  },
+  {
+    "name": "Auger Shell",
+    "code": "HGSW9159",
+    "hex": "#9f9291",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 30
+  },
+  {
+    "name": "African Gray",
+    "code": "HGSW9162",
+    "hex": "#939899",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 31
+  },
+  {
+    "name": "Tin Lizzie",
+    "code": "HGSW9163",
+    "hex": "#939591",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 30
+  },
+  {
+    "name": "Illusive Green",
+    "code": "HGSW9164",
+    "hex": "#92948d",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 29
+  },
+  {
+    "name": "Drift of Mist",
+    "code": "HGSW9166",
+    "hex": "#dcd8d0",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 62
+  },
+  {
+    "name": "Polished Concrete",
+    "code": "HGSW9167",
+    "hex": "#9e9793",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 32
+  },
+  {
+    "name": "Chatura Gray",
+    "code": "HGSW9169",
+    "hex": "#a09287",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 30
+  },
+  {
+    "name": "Felted Wool",
+    "code": "HGSW9171",
+    "hex": "#979083",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 28
+  },
+  {
+    "name": "Studio Clay",
+    "code": "HGSW9172",
+    "hex": "#958d7f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 27
+  },
+  {
+    "name": "Moth Wing",
+    "code": "HGSW9174",
+    "hex": "#a0907f",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 29
+  },
+  {
+    "name": "Dress Blues",
+    "code": "HGSW9176",
+    "hex": "#2b4360",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 5
+  },
+  {
+    "name": "Salty Dog",
+    "code": "HGSW9177",
+    "hex": "#234058",
+    "brand": "HGTV Home by Sherwin-Williams",
+    "retailer": "Lowe's",
+    "available": true,
+    "lrv": 4
+  }
+]

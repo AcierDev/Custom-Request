@@ -1,0 +1,1810 @@
+[
+  {
+    "name": "True Sage",
+    "code": "2003-4",
+    "hex": "#9fa682",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Cozy Chair",
+    "code": "2007-8A",
+    "hex": "#d4a885",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Hypnotic Sea",
+    "code": "3005-1",
+    "hex": "#9adbdb",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Corporate Casual",
+    "code": "4001-1",
+    "hex": "#b89b74",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Blue Balance",
+    "code": "4002-1",
+    "hex": "#809ca1",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Halcyon Blue",
+    "code": "5001-3A",
+    "hex": "#e1e6e4",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Mint Glaze",
+    "code": "5004-1B",
+    "hex": "#cacdbf",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Wave's Crest",
+    "code": "5005-1A",
+    "hex": "#dddfd6",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Ballroom Dancing",
+    "code": "5005-4A",
+    "hex": "#a9b4a5",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Pillow Mint",
+    "code": "5005-5A",
+    "hex": "#c9dcd1",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Well Water",
+    "code": "5005-8A",
+    "hex": "#6eb7be",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Stained Glass Blue",
+    "code": "CI1",
+    "hex": "#23385c",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Blue Hyacinth",
+    "code": "CI2",
+    "hex": "#566f8d",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Faded Denim",
+    "code": "CI3",
+    "hex": "#6c83a4",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Harbor View",
+    "code": "CI4",
+    "hex": "#98a5b6",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Sleek Gray",
+    "code": "CI5",
+    "hex": "#c6cbc6",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Inhale",
+    "code": "CI6",
+    "hex": "#bad0d4",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Breezy Blue",
+    "code": "CI7",
+    "hex": "#d5dfdf",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Fine China Blue",
+    "code": "CI8",
+    "hex": "#004e6b",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Bubbling Fountain",
+    "code": "CI9",
+    "hex": "#6295b3",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Country Heather",
+    "code": "CI10",
+    "hex": "#7fb5c8",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Exhale",
+    "code": "CI11",
+    "hex": "#a0b8c0",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Carolina Skies",
+    "code": "CI12",
+    "hex": "#b1cbd5",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Feeling Blue",
+    "code": "CI13",
+    "hex": "#c6d2cf",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Clothesline Fresh",
+    "code": "CI14",
+    "hex": "#c6cfc7",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Midnight Bayou",
+    "code": "CI15",
+    "hex": "#194a51",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Jackson Glen",
+    "code": "CI16",
+    "hex": "#006a74",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Patina Blue",
+    "code": "CI17",
+    "hex": "#799590",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Backstroke",
+    "code": "CI18",
+    "hex": "#3e979a",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Reflection Pool",
+    "code": "CI19",
+    "hex": "#68b1ab",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Peaceful",
+    "code": "CI20",
+    "hex": "#abbeba",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Niagara Blue",
+    "code": "CI21",
+    "hex": "#afc6bd",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Frasier Fir",
+    "code": "CI22",
+    "hex": "#507166",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Good Luck Charm",
+    "code": "CI23",
+    "hex": "#3fa677",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Green With Envy",
+    "code": "CI24",
+    "hex": "#8ca794",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Enchanted Green",
+    "code": "CI25",
+    "hex": "#88b49b",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Veranda",
+    "code": "CI26",
+    "hex": "#b0bea9",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Paradise Green",
+    "code": "CI27",
+    "hex": "#a4c1b2",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Retro Green",
+    "code": "CI28",
+    "hex": "#b6cdb1",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Chopped Chives",
+    "code": "CI29",
+    "hex": "#4e6d56",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Prickly Pear",
+    "code": "CI30",
+    "hex": "#7c8d77",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Rosemary Sprig",
+    "code": "CI31",
+    "hex": "#97a889",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Jade",
+    "code": "CI32",
+    "hex": "#adb295",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "California Roll",
+    "code": "CI33",
+    "hex": "#b3ae86",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Pistachio Ice",
+    "code": "CI34",
+    "hex": "#c2c7a9",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Metro Mist",
+    "code": "CI35",
+    "hex": "#c8c7b5",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Cypress Point",
+    "code": "CI36",
+    "hex": "#747854",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Fresh Parsley",
+    "code": "CI37",
+    "hex": "#828550",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "3-Olive Martini",
+    "code": "CI39",
+    "hex": "#b2a56f",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Shade Green",
+    "code": "CI40",
+    "hex": "#c1b897",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Limeade",
+    "code": "CI41",
+    "hex": "#c2c892",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Green Tea Latte",
+    "code": "CI42",
+    "hex": "#d8f8c0",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Wild Basil",
+    "code": "CI43",
+    "hex": "#5d664f",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Camo Green",
+    "code": "CI44",
+    "hex": "#866e41",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Garden Gate",
+    "code": "CI45",
+    "hex": "#998e6a",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Light Avocado",
+    "code": "CI47",
+    "hex": "#c8b26d",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Appletini",
+    "code": "CI48",
+    "hex": "#deca88",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Clamshell",
+    "code": "CI49",
+    "hex": "#d2c9a2",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Weather Vane",
+    "code": "CI50",
+    "hex": "#615b5a",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "City Chic",
+    "code": "CI51",
+    "hex": "#897d73",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Chimney Stone",
+    "code": "CI52",
+    "hex": "#9a917c",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Shiitake",
+    "code": "CI53",
+    "hex": "#b0a68d",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Thunderstorm",
+    "code": "CI54",
+    "hex": "#c1bba9",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Celery Root",
+    "code": "CI55",
+    "hex": "#cdc5ae",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Roasted Garlic",
+    "code": "CI56",
+    "hex": "#dcd3bb",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Cracked Pepper",
+    "code": "CI57",
+    "hex": "#2b2c2e",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Rolling Stone",
+    "code": "CI58",
+    "hex": "#8d7c69",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Mink Stole",
+    "code": "CI59",
+    "hex": "#a48f79",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Iced Chocolate",
+    "code": "CI60",
+    "hex": "#ae9781",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Skinny Latte",
+    "code": "CI61",
+    "hex": "#bda68d",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Faded Burlap",
+    "code": "CI62",
+    "hex": "#d2c2ab",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Dove's Cry",
+    "code": "CI63",
+    "hex": "#cfc4b5",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Leather Chair",
+    "code": "CI64",
+    "hex": "#5c4940",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Pine Bark",
+    "code": "CI65",
+    "hex": "#7d6550",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Cinnamon Sugar",
+    "code": "CI66",
+    "hex": "#aa8b6e",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Almond Biscotti",
+    "code": "CI67",
+    "hex": "#c8a57b",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Weathered Canvas",
+    "code": "CI68",
+    "hex": "#c0ab8b",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Parchment Gold",
+    "code": "CI69",
+    "hex": "#d6b98f",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Riesling",
+    "code": "CI70",
+    "hex": "#ecd7b5",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Rich Mahogany",
+    "code": "CI71",
+    "hex": "#6d4733",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Butcher Block",
+    "code": "CI73",
+    "hex": "#b0875e",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Cinnamon Roll",
+    "code": "CI74",
+    "hex": "#c59c70",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Bannister",
+    "code": "CI75",
+    "hex": "#d3ae82",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Fresh Bread",
+    "code": "CI76",
+    "hex": "#e5bf8d",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Creme Brulee",
+    "code": "CI77",
+    "hex": "#f3dcb8",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Harvest",
+    "code": "CI78",
+    "hex": "#a3712e",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Brass Patina",
+    "code": "CI79",
+    "hex": "#a07c47",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Gold Seal",
+    "code": "CI80",
+    "hex": "#c48633",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Cornucopia",
+    "code": "CI81",
+    "hex": "#ddb871",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Gala Gold",
+    "code": "CI82",
+    "hex": "#f3bc5c",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Beehive",
+    "code": "CI83",
+    "hex": "#f9cd80",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Buttered Popcorn",
+    "code": "CI84",
+    "hex": "#f5dba5",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Pretzel Twist",
+    "code": "CI85",
+    "hex": "#836049",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Graham Cracker Crust",
+    "code": "CI86",
+    "hex": "#a27a5a",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Caramel Sundae",
+    "code": "CI87",
+    "hex": "#b47c42",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Fall Leaves",
+    "code": "CI88",
+    "hex": "#d59f5c",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Autumn Moon",
+    "code": "CI89",
+    "hex": "#e2aa61",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Butter Cookie",
+    "code": "CI90",
+    "hex": "#eec690",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Down Comforter",
+    "code": "CI91",
+    "hex": "#f6e3c3",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Crushed Red Pepper",
+    "code": "CI92",
+    "hex": "#7a4034",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Jasper Stone",
+    "code": "CI93",
+    "hex": "#94593c",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Copper Glow",
+    "code": "CI94",
+    "hex": "#b26035",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Toasty Fireplace",
+    "code": "CI95",
+    "hex": "#b0744a",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Golden Sunset",
+    "code": "CI96",
+    "hex": "#cc834e",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Pumpkin Bread",
+    "code": "CI97",
+    "hex": "#eaa362",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Mandarin Glow",
+    "code": "CI98",
+    "hex": "#f5d3aa",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Brick House",
+    "code": "CI99",
+    "hex": "#93473a",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Fireside",
+    "code": "CI100",
+    "hex": "#aa4932",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Apple Peel",
+    "code": "CI101",
+    "hex": "#ad4c45",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Hearth",
+    "code": "CI102",
+    "hex": "#9a6b56",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Earthen Rose",
+    "code": "CI103",
+    "hex": "#ad6c55",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Peach Preserves",
+    "code": "CI104",
+    "hex": "#d59773",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Baking Stone",
+    "code": "CI105",
+    "hex": "#d9c0a6",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Grandma's Cherry Pie",
+    "code": "CI106",
+    "hex": "#a2393a",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Lipstick Jungle",
+    "code": "CI107",
+    "hex": "#ae3b41",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Pueblo Dust",
+    "code": "CI108",
+    "hex": "#ac5b51",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Terra Stone",
+    "code": "CI109",
+    "hex": "#be746a",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Poached Salmon",
+    "code": "CI110",
+    "hex": "#db8c7a",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Chiminea",
+    "code": "CI111",
+    "hex": "#ce907c",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Soft Coral",
+    "code": "CI112",
+    "hex": "#e8a48a",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Sangria Red",
+    "code": "CI113",
+    "hex": "#81383b",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Pomegranate Red",
+    "code": "CI114",
+    "hex": "#89313a",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Hibiscus Tea",
+    "code": "CI115",
+    "hex": "#a84551",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Home Sweet Home",
+    "code": "CI116",
+    "hex": "#b8736e",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Pinking Shears",
+    "code": "CI117",
+    "hex": "#ce7877",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Cashmere Pink",
+    "code": "CI119",
+    "hex": "#dec0b2",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Dark Truffle",
+    "code": "CI120",
+    "hex": "#624946",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Wine Glass",
+    "code": "CI121",
+    "hex": "#673840",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Cedar Chest",
+    "code": "CI123",
+    "hex": "#b08c80",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "English Elegance",
+    "code": "CI124",
+    "hex": "#bfa199",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Rose Petal Pink",
+    "code": "CI125",
+    "hex": "#dabbb1",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Foggy Mirror",
+    "code": "CI126",
+    "hex": "#cfc7bd",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Purple Rain",
+    "code": "CI127",
+    "hex": "#48435a",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Mountain Top",
+    "code": "CI128",
+    "hex": "#5e5475",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Boysenberry",
+    "code": "CI129",
+    "hex": "#7f6075",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Freesia Bloom",
+    "code": "CI130",
+    "hex": "#a99faa",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "New England Aster",
+    "code": "CI131",
+    "hex": "#bda8b9",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Sweet Orchard",
+    "code": "CI132",
+    "hex": "#c5c0c8",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Careless Whisper",
+    "code": "CI133",
+    "hex": "#d3cbc5",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Crisp Morning",
+    "code": "CI134",
+    "hex": "#e6dedc",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Sachet",
+    "code": "CI135",
+    "hex": "#d6d2d6",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Lavender Calm",
+    "code": "CI136",
+    "hex": "#c2b4b8",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Soothing Slippers",
+    "code": "CI137",
+    "hex": "#ccb2b5",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Summer Night",
+    "code": "CI138",
+    "hex": "#c8aeac",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Autumn Rose",
+    "code": "CI139",
+    "hex": "#c59693",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Night Shade",
+    "code": "CI140",
+    "hex": "#90717c",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Evening Twilight",
+    "code": "CI141",
+    "hex": "#9b9ba5",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Lip Balm",
+    "code": "CI142",
+    "hex": "#e9ded4",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Goodnight Kiss",
+    "code": "CI143",
+    "hex": "#ddcec7",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Healthy Glow",
+    "code": "CI144",
+    "hex": "#dabfac",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Lamb's Ear",
+    "code": "CI145",
+    "hex": "#ccbdaa",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Pink Chocolate",
+    "code": "CI146",
+    "hex": "#c2a593",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Sheer Pout",
+    "code": "CI147",
+    "hex": "#d4aa90",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Ginger Wrap",
+    "code": "CI148",
+    "hex": "#bb7665",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Sundown",
+    "code": "CI149",
+    "hex": "#965f50",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Heavenly",
+    "code": "CI150",
+    "hex": "#f3dfcb",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Luxury Linen",
+    "code": "CI151",
+    "hex": "#e6dccb",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Sunbaked",
+    "code": "CI152",
+    "hex": "#f0ceab",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Flax Seed",
+    "code": "CI153",
+    "hex": "#dbc6a8",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Summer Tan",
+    "code": "CI154",
+    "hex": "#d7b38c",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Sun Valley",
+    "code": "CI155",
+    "hex": "#d3a075",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Bamboo Reed",
+    "code": "CI156",
+    "hex": "#b99b77",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Cup Of Cocoa",
+    "code": "CI157",
+    "hex": "#8a6b5a",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Pillow Talk",
+    "code": "CI158",
+    "hex": "#f5eccf",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Sugar & Cream",
+    "code": "CI159",
+    "hex": "#f0dfc1",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Soft Sunlight",
+    "code": "CI160",
+    "hex": "#f5e6be",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Solana Rain",
+    "code": "CI161",
+    "hex": "#f9dfa5",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Loofah",
+    "code": "CI162",
+    "hex": "#dec399",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Tea Light",
+    "code": "CI163",
+    "hex": "#f2d6ae",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Macadamia Nut",
+    "code": "CI164",
+    "hex": "#d9bc9b",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Hot Stone",
+    "code": "CI165",
+    "hex": "#9e8f83",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Botanical Bath",
+    "code": "CI166",
+    "hex": "#e6e4cf",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Soothing Aloe",
+    "code": "CI167",
+    "hex": "#ddd4ac",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Lemongrass",
+    "code": "CI168",
+    "hex": "#e0d4a8",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Sea Marsh",
+    "code": "CI169",
+    "hex": "#cbc4a1",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Morning Zen",
+    "code": "CI170",
+    "hex": "#cdcab5",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Bamboo Shoot",
+    "code": "CI171",
+    "hex": "#c1b687",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Gentle Moss",
+    "code": "CI172",
+    "hex": "#a79d69",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Cucumber Peel",
+    "code": "CI174",
+    "hex": "#d8d9c3",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Sweet Serenity",
+    "code": "CI175",
+    "hex": "#d0daca",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Spring Botanical",
+    "code": "CI176",
+    "hex": "#bec2a0",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Dried Mint",
+    "code": "CI177",
+    "hex": "#aab6a0",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Juniper Breeze",
+    "code": "CI178",
+    "hex": "#b1b7a7",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Seaweed Wrap",
+    "code": "CI179",
+    "hex": "#9ba483",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Eucalyptus Leaf",
+    "code": "CI180",
+    "hex": "#a3a89b",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Sea Sage",
+    "code": "CI181",
+    "hex": "#889d94",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Daydream Haze",
+    "code": "CI182",
+    "hex": "#d9ddd4",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Tranquility",
+    "code": "CI183",
+    "hex": "#c8dcd4",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Glass Tile",
+    "code": "CI184",
+    "hex": "#b0c6c0",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Bird Song Blue",
+    "code": "CI185",
+    "hex": "#a2c6c8",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Hot Springs",
+    "code": "CI186",
+    "hex": "#aab1aa",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Seascape",
+    "code": "CI187",
+    "hex": "#99b0ad",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Stormy Cove",
+    "code": "CI188",
+    "hex": "#80959a",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Blue Lagoon",
+    "code": "CI189",
+    "hex": "#749ca3",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Cool Sheets",
+    "code": "CI190",
+    "hex": "#d9e4e3",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Sea Salt Blue",
+    "code": "CI191",
+    "hex": "#c9d0cc",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Ebb Tide",
+    "code": "CI192",
+    "hex": "#a8bec9",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Paradise Blue",
+    "code": "CI193",
+    "hex": "#bed3de",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Cool Springs",
+    "code": "CI194",
+    "hex": "#91abbd",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Sea Spray",
+    "code": "CI195",
+    "hex": "#9eb7bd",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Peaceful Slumber",
+    "code": "CI196",
+    "hex": "#7c9dac",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Midnight Fog",
+    "code": "CI197",
+    "hex": "#6b818d",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "String Of Pearls",
+    "code": "CI198",
+    "hex": "#efeae0",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Fresh Cotton",
+    "code": "CI199",
+    "hex": "#f6f5e8",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Creme Fraiche",
+    "code": "CI200",
+    "hex": "#edeae1",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Snowcap White",
+    "code": "CI202",
+    "hex": "#f5f4ee",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Dogwood Petal",
+    "code": "CI203",
+    "hex": "#f5eee1",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Cottontail",
+    "code": "CI204",
+    "hex": "#eef3ed",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Crisp Linen",
+    "code": "CI205",
+    "hex": "#efebdd",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Hush Hush",
+    "code": "CI206",
+    "hex": "#ede8e9",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Lilac Mist",
+    "code": "CI207",
+    "hex": "#e0e0eb",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Sweet Dreamer",
+    "code": "CI208",
+    "hex": "#dcd0e2",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Easter Basket",
+    "code": "CI209",
+    "hex": "#dacffa",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Party Pink",
+    "code": "CI210",
+    "hex": "#d3a1ca",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Raspberry Tart",
+    "code": "CI211",
+    "hex": "#a06890",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Wild Grape",
+    "code": "CI212",
+    "hex": "#9175ab",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Grape Juice",
+    "code": "CI213",
+    "hex": "#6e447a",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Ballet Slippers",
+    "code": "CI214",
+    "hex": "#eee0dc",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Fairytale Pink",
+    "code": "CI215",
+    "hex": "#f2cbd5",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Candy Hearts",
+    "code": "CI216",
+    "hex": "#fbbcc0",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Princess Pink",
+    "code": "CI218",
+    "hex": "#e4a1c1",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "First Kiss",
+    "code": "CI220",
+    "hex": "#d36284",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Beanstalk",
+    "code": "CI242",
+    "hex": "#74a179",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Blanket",
+    "code": "CI246",
+    "hex": "#e3f4ea",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Sigh",
+    "code": "CI254",
+    "hex": "#daecf1",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  },
+  {
+    "name": "Overalls",
+    "code": "CI258",
+    "hex": "#81b2db",
+    "brand": "Valspar",
+    "retailer": "Lowe's",
+    "available": true
+  }
+]

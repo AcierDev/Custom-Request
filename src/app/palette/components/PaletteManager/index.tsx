@@ -64,6 +64,7 @@ import { ColorSwatch } from "./ColorSwatch";
 import { SortableColorSwatch } from "./SortableColorSwatch";
 import { AddColorButton } from "./AddColorButton";
 import { BlendingGuide } from "./BlendingGuide";
+import { MixShoppingList } from "./MixShoppingList";
 import { ColorHarmonyGenerator } from "./ColorHarmonyGenerator";
 import { VersionHistoryDialog } from "../PaletteList/VersionHistoryDialog";
 
@@ -716,13 +717,14 @@ export function PaletteManager() {
             items={customPalette.map((c) => c.id)}
             strategy={rectSortingStrategy}
           >
-            {/* Mobile: wrapping grid of tappable tiles (a single row would
-                squeeze swatches into un-tappable slivers). Desktop (sm+):
-                the original side-by-side paint-strip row. */}
+            {/* Mobile: full-width color bands stacked vertically (one per
+                row) so each is a comfortable tap target and its label reads
+                left-to-right. Desktop (sm+): the original side-by-side
+                paint-strip row. */}
             <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-stretch list-none p-0 m-0">
               {customPalette.length > 0 && (
                 <div
-                  className="grid grid-cols-3 gap-1.5 sm:flex sm:min-w-0 sm:basis-0 sm:gap-1"
+                  className="flex flex-col gap-1.5 sm:flex sm:flex-row sm:min-w-0 sm:basis-0 sm:gap-1"
                   style={{ flexGrow: customPalette.length }}
                 >
                   <AnimatePresence>
@@ -812,6 +814,10 @@ export function PaletteManager() {
             </div>
           </SortableContext>
         </DndContext>
+
+        {/* Aggregate parts-per-paint across all mix recipes so heavy-use
+            paints are obvious to stock up on (white/black excluded). */}
+        <MixShoppingList palette={customPalette} />
       </div>
 
       {/* Blend Controls - Only show when 2 colors are selected */}

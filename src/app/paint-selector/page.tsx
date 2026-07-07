@@ -54,6 +54,8 @@ interface PaintColor {
   hex: string;
   brand: string;
   distance?: number;
+  /** false = discontinued / fan-deck-only — never shown as buyable. */
+  available?: boolean;
 }
 
 type Brand = "Behr" | "Sherwin-Williams" | "Valspar" | "PPG" | "Benjamin Moore";
@@ -115,13 +117,20 @@ export default function PaintSelectorPage() {
           benjaminMooreResponse.json(),
         ]);
 
-        const combinedColors = [
-          ...behrColors,
-          ...sherwinColors,
-          ...valsparColors,
-          ...ppgColors,
-          ...benjaminMooreColors,
-        ] as PaintColor[];
+        const combinedColors = (
+          [
+            ...behrColors,
+            ...sherwinColors,
+            ...valsparColors,
+            ...ppgColors,
+            ...benjaminMooreColors,
+          ] as PaintColor[]
+        )
+          // Drop discontinued / fan-deck-only colors so browse, similar-
+          // color search, and the comparison dialog never present an
+          // unbuyable color as purchasable (mirrors the palette grounding
+          // filter). 220 SW + 1 Valspar are available:false.
+          .filter((c) => c.available !== false);
 
         setAllColors(combinedColors);
         setLoading(false);

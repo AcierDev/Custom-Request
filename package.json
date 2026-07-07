@@ -12,7 +12,8 @@
     "paints:behr": "node scripts/paints/import-behr.mjs",
     "paints:valspar": "node scripts/paints/import-valspar.mjs",
     "paints:ppg": "node scripts/paints/import-ppg.mjs",
-    "paints:benjamin-moore": "node scripts/paints/import-benjamin-moore.mjs"
+    "paints:benjamin-moore": "node scripts/paints/import-benjamin-moore.mjs",
+    "paints:hgtv-home": "node scripts/paints/import-hgtv-home.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

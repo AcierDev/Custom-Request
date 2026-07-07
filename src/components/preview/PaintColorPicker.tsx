@@ -3,7 +3,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, Check, Loader2, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { BRAND_OPTIONS, type PaintColor } from "@/lib/paint";
+import {
+  BRAND_OPTIONS,
+  LOWES_MATCHES,
+  isLowesColor,
+  type PaintColor,
+} from "@/lib/paint";
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ 🪣 PAINT COLOR PICKER — pick a real, orderable wall paint             ║
@@ -23,6 +28,9 @@ const PAINT_SOURCES = [
   "/paints/benjamin_moore/colors.json",
   "/paints/behr/colors.json",
   "/paints/ppg/colors.json",
+  // HGTV Home by Sherwin-Williams — the second Lowe's line, so the
+  // "Lowe's matches" filter here draws from the whole Lowe's wall.
+  "/paints/hgtv_home/colors.json",
 ];
 
 // Cap the rendered rows so typing stays smooth against the full ~15k array.
@@ -42,7 +50,11 @@ function loadAllPaints(): Promise<PaintColor[]> {
         })
       )
     )
-      .then((sets) => sets.flat())
+      // Drop discontinued / fan-deck-only colors: this picker frames every
+      // result as "a real, orderable wall paint" to the recipient, so an
+      // available:false color here is a cook-risk (mirrors the palette
+      // grounding filter). 220 SW + 1 Valspar are available:false.
+      .then((sets) => sets.flat().filter((c) => c.available !== false))
       .catch((err) => {
         // Don't cache a failed load — let the next open retry.
         paintsPromise = null;
@@ -103,7 +115,8 @@ export function PaintColorPicker({
     // the first 48 of one brand, which reads as noise.
     if (!q && brand === "Any") return [];
     let list = colors;
-    if (brand !== "Any") list = list.filter((c) => c.brand === brand);
+    if (brand === LOWES_MATCHES) list = list.filter(isLowesColor);
+    else if (brand !== "Any") list = list.filter((c) => c.brand === brand);
     if (q) {
       list = list.filter(
         (c) =>
