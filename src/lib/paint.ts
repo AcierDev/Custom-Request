@@ -101,6 +101,19 @@ export function isLowesColor(
   return retailerFor(c) === LOWES_RETAILER;
 }
 
+// Shorter, friendlier brand text for display. HGTV Home is a Sherwin-
+// Williams line, and its full name ("HGTV Home by Sherwin-Williams") is
+// long and adds little on a swatch, so we show just the maker. The full
+// string stays the internal brand KEY (retailer/pool logic depends on it).
+const BRAND_DISPLAY_OVERRIDES: Record<string, string> = {
+  "HGTV Home by Sherwin-Williams": "Sherwin-Williams",
+};
+
+/** How a brand should read to the user (see BRAND_DISPLAY_OVERRIDES). */
+export function brandDisplayName(brand: string): string {
+  return BRAND_DISPLAY_OVERRIDES[brand] ?? brand;
+}
+
 /**
  * What to tell / search for at the counter. Always leads with the
  * brand (so the line is unambiguous even when the code alone doesn't
@@ -109,7 +122,7 @@ export function isLowesColor(
  * swatch can stack the brand/code above the name.
  */
 export function purchaseLabel(c: PaintColor): string {
-  const brand = c.brand as string;
+  const brand = brandDisplayName(c.brand as string);
   return c.code
     ? `${brand} — ${c.code} — ${c.name}`
     : `${brand} — ${c.name}`;

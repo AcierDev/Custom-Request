@@ -2,6 +2,7 @@ import type { MouseEvent } from "react";
 import { CustomColor } from "@/store/customStore";
 import type { HandMixSimulation } from "@/lib/paintMixSimulator";
 import type { PaintMixRecipe } from "@/lib/paintMixOptimizer";
+import type { PaintAmount } from "./paintEstimate";
 
 // Types for PaletteManager components
 
@@ -24,6 +25,9 @@ export interface ColorSwatchProps {
   mixed?: boolean;
   /** "Convert to paint" closeness (0–100%). Shown under the name. */
   paintMatch?: number;
+  /** "Convert to paint" original swatch hex (pre-grounding). Rendered as a
+   *  small chip next to the paint so the match can be eyeballed. */
+  paintSourceHex?: string;
   /** "Convert to paint" mix recipe (parts of 2–3 paints) that lands
    *  closer than the single nearest can. Shown as a "Mix" pill. */
   paintMixRecipe?: PaintMixRecipe;
@@ -31,6 +35,11 @@ export interface ColorSwatchProps {
    *  can flag ingredients used heavily across other colors. White/black
    *  excluded. */
   paintTotals?: Map<string, number>;
+  /** Paint to buy for this color's even share of the piece. Set once a
+   *  square count is entered; when present it replaces the "parts" badge
+   *  with a purchasable-volume badge and expresses mix ingredients in
+   *  pints/quarts too. */
+  paintAmount?: PaintAmount;
   /** Paint-like prediction for whether this generated blend is hand-mixable. */
   handMix?: HandMixSimulation;
   /** Extra proportion of squares for this color (e.g. 50 = +50%). 0–500. */

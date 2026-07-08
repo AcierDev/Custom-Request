@@ -7,6 +7,7 @@ import {
   BRAND_OPTIONS,
   LOWES_MATCHES,
   isLowesColor,
+  brandDisplayName,
   type PaintColor,
 } from "@/lib/paint";
 
@@ -219,7 +220,7 @@ export function PaintColorPicker({
                     <button
                       type="button"
                       onClick={() => onChange(c.hex)}
-                      title={`${c.brand}${c.code ? ` · ${c.code}` : ""} · ${c.hex.toUpperCase()}`}
+                      title={`${brandDisplayName(c.brand)}${c.code ? ` · ${c.code}` : ""} · ${c.hex.toUpperCase()}`}
                       className={cn(
                         "flex w-full items-center gap-2 rounded-md border px-2 py-1.5 text-left transition-colors",
                         selected
@@ -236,7 +237,7 @@ export function PaintColorPicker({
                           {c.name}
                         </span>
                         <span className="block truncate text-[10px] text-slate-400">
-                          {c.brand}
+                          {brandDisplayName(c.brand)}
                           {c.code ? ` · ${c.code}` : ""}
                         </span>
                       </span>

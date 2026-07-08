@@ -11,6 +11,7 @@ import {
   FlaskConical,
   ShoppingCart,
   Beaker,
+  PaintBucket,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +25,7 @@ import { toast } from "sonner";
 import { handMixMatchPercent } from "@/lib/paintMixSimulator";
 import { ColorSwatchProps } from "./types";
 import { swatchParts } from "./mixTotals";
+import { formatInUnit } from "./paintEstimate";
 
 // Mobile: short grid tiles so many colors stay tappable; sm+: tall
 // side-by-side paint-strip bars.
@@ -79,8 +81,10 @@ export function ColorSwatch({
   name,
   mixed,
   paintMatch,
+  paintSourceHex,
   paintMixRecipe,
   paintTotals,
+  paintAmount,
   handMix,
   isSelected,
   onSelect,
@@ -102,6 +106,24 @@ export function ColorSwatch({
 
   const textColor = getContrastTextColor(color);
   const textColorStyle = { color: textColor };
+
+  // With a piece size set, a mixed color's total paint splits across its
+  // recipe by the integer part ratio, so each ingredient reads as the
+  // pints/quarts to buy instead of an abstract "N parts". Formatted in the
+  // color total's own unit so the ingredients read as a ratio and sum back
+  // to the swatch's buy badge.
+  const mixComponentAmount = (parts: number) => {
+    if (!paintAmount || !paintMixRecipe) return null;
+    const totalParts = paintMixRecipe.components.reduce(
+      (sum, c) => sum + c.parts,
+      0
+    );
+    if (totalParts <= 0) return null;
+    return formatInUnit(
+      (paintAmount.value * parts) / totalParts,
+      paintAmount.unit
+    );
+  };
 
   const copyHex = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -201,23 +223,29 @@ export function ColorSwatch({
         <Trash2 className="h-3.5 w-3.5" />
       </Button>
 
-      {/* Parts of THIS color's paint the whole palette actually consumes:
-          base 1, minus the share other colors donate into its mix, plus the
-          share it donates to other colors' mixes. Pinned to the bottom edge
-          so it's always visible (no hover; works on mobile). Bottom-left
-          keeps clear of the mobile remove button at bottom-right. ∞ =
-          white/black (assumed infinite supply). */}
-      {paintTotals && paintTotals.size > 0 && (() => {
+      {/* Bottom-left buy badge. With a square count entered it shows how
+          much of THIS color's paint to purchase for the piece (its even
+          share of the squares → volume); otherwise it falls back to the
+          "parts" count — how much of this color's paint the palette
+          consumes once mixing shares it (∞ = white/black, infinite supply).
+          Pinned to the bottom edge so it's always visible on mobile;
+          bottom-left keeps clear of the mobile remove button. */}
+      {paintAmount ? (
+        <div className="pointer-events-none absolute bottom-1.5 left-1.5 z-40 inline-flex items-center gap-1 rounded-[10px] bg-black/40 px-1.5 py-1 text-[10px] font-semibold text-white ring-1 ring-white/25 backdrop-blur-sm transition-opacity sm:group-hover:opacity-0">
+          <PaintBucket className="h-3 w-3 shrink-0" />
+          <span className="tabular-nums">{paintAmount.shortLabel}</span>
+        </div>
+      ) : paintTotals && paintTotals.size > 0 ? (() => {
         const parts = swatchParts(color, paintTotals);
         return (
-          <div className="pointer-events-none absolute bottom-1.5 left-1.5 z-40 inline-flex items-center gap-1 rounded-[10px] bg-black/40 px-1.5 py-1 text-[10px] font-semibold text-white ring-1 ring-white/25 backdrop-blur-sm">
+          <div className="pointer-events-none absolute bottom-1.5 left-1.5 z-40 inline-flex items-center gap-1 rounded-[10px] bg-black/40 px-1.5 py-1 text-[10px] font-semibold text-white ring-1 ring-white/25 backdrop-blur-sm transition-opacity sm:group-hover:opacity-0">
             <ShoppingCart className="h-3 w-3 shrink-0" />
             <span className="tabular-nums">
               {parts} part{parts === "1" ? "" : "s"}
             </span>
           </div>
         );
-      })()}
+      })() : null}
 
       <div className="h-full p-2 flex flex-col justify-between overflow-hidden">
         {/* Top: name + hex — click to copy the hex */}
@@ -275,10 +303,54 @@ export function ColorSwatch({
           )}
           {typeof paintMatch === "number" && (
             <div
-              className="text-[10px] font-medium opacity-90 truncate"
+              className="mt-0.5 flex w-full items-center gap-2"
               style={textColorStyle}
             >
-              {paintMatch}% match
+              <span className="text-[10px] font-medium opacity-90">
+                {paintMatch}% match
+              </span>
+              {/* Before/after swatches so the match can be eyeballed: the
+                  original picked color butted right up against the paint it
+                  grounded to. Hugs the right edge; the two colors touch so
+                  any difference reads at the seam. */}
+              {paintSourceHex && (
+                <TooltipProvider delayDuration={225}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="ml-auto inline-flex overflow-hidden rounded-md ring-1 ring-white/50">
+                        <span
+                          className="h-12 w-12"
+                          style={{ backgroundColor: paintSourceHex }}
+                        />
+                        <span
+                          className="h-12 w-12"
+                          style={{ backgroundColor: color }}
+                        />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      <div className="space-y-1 text-xs">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="h-3 w-8 rounded-sm ring-1 ring-white/30"
+                            style={{ backgroundColor: paintSourceHex }}
+                          />
+                          <span className="font-medium">Original</span>
+                          <span className="font-mono">{paintSourceHex}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="h-3 w-8 rounded-sm ring-1 ring-white/30"
+                            style={{ backgroundColor: color }}
+                          />
+                          <span className="font-medium">Paint</span>
+                          <span className="font-mono">{color}</span>
+                        </div>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </div>
           )}
           {paintMixRecipe && (
@@ -297,9 +369,17 @@ export function ColorSwatch({
                     <Beaker className="h-3 w-3 shrink-0" />
                     <span className="truncate">
                       Mix{" "}
-                      {paintMixRecipe.components
-                        .map((c) => c.parts)
-                        .join(" : ")}
+                      {paintAmount
+                        ? paintMixRecipe.components
+                            .map(
+                              (c) =>
+                                mixComponentAmount(c.parts)?.shortLabel ??
+                                `${c.parts}`
+                            )
+                            .join(" + ")
+                        : paintMixRecipe.components
+                            .map((c) => c.parts)
+                            .join(" : ")}
                     </span>
                     <span className="shrink-0 tabular-nums opacity-80">
                       · {paintMixRecipe.matchPercent}%
@@ -321,9 +401,15 @@ export function ColorSwatch({
                           }-${component.paintColor.hex}`}
                           className="flex items-center gap-2"
                         >
-                          <span className="w-10 shrink-0 tabular-nums font-semibold">
-                            {component.parts} part
-                            {component.parts === 1 ? "" : "s"}
+                          <span className="w-16 shrink-0 tabular-nums font-semibold">
+                            {paintAmount
+                              ? mixComponentAmount(component.parts)?.label ??
+                                `${component.parts} part${
+                                  component.parts === 1 ? "" : "s"
+                                }`
+                              : `${component.parts} part${
+                                  component.parts === 1 ? "" : "s"
+                                }`}
                           </span>
                           <span
                             className="h-3 w-6 shrink-0 rounded-sm ring-1 ring-white/30"

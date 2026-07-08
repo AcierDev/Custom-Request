@@ -7,6 +7,7 @@ import {
   type HandMixSimulation,
 } from "@/lib/paintMixSimulator";
 import { type PaintMixRecipe } from "@/lib/paintMixOptimizer";
+import { GRAMS_PER_SQUARE } from "@/app/palette/components/PaletteManager/paintEstimate";
 import { DESIGN_COLORS } from "@/typings/color-maps";
 import { createStore } from "zustand/vanilla";
 import { createWithEqualityFn } from "zustand/traditional";
@@ -114,6 +115,22 @@ export interface PaletteVersion {
   branchedFrom?: string;
 }
 
+// The finished piece's paint-estimate inputs, stored as the raw entered
+// text (empty = unset) so loading a palette restores exactly what was
+// typed and decimals survive editing. Parsed to numbers only for the
+// estimate math. Lives on the palette so you don't re-enter it each time.
+export interface PieceSize {
+  /** Total squares in the finished piece. */
+  squares: string;
+  /** Grams of paint per square. */
+  gramsPerSquare: string;
+}
+
+export const DEFAULT_PIECE_SIZE: PieceSize = {
+  squares: "",
+  gramsPerSquare: String(GRAMS_PER_SQUARE),
+};
+
 export interface SavedPalette {
   id: string;
   name: string;
@@ -128,6 +145,9 @@ export interface SavedPalette {
   // The version the palette's current colors reflect — i.e. the tip of
   // the active branch. The next save descends from this version.
   currentVersionId?: string;
+  // Piece-size / paint-per-square inputs for this palette's paint
+  // estimate. Optional: palettes saved before this feature have none.
+  pieceSize?: PieceSize;
 }
 
 export type Folder = {
@@ -185,6 +205,9 @@ interface CustomState {
   orientation: Orientation;
   currentColors: ColorMap | null;
   customPalette: CustomColor[];
+  // Piece-size / paint-per-square inputs for the palette open in the
+  // editor. Saved onto the palette so it persists across sessions.
+  pieceSize: PieceSize;
   selectedColors: string[];
   isRotated: boolean;
   style: StyleType;
@@ -307,6 +330,7 @@ interface CustomStore extends CustomState {
     changes: { hex?: string; name?: string }
   ) => void;
   updateColorExtraPercent: (index: number, extraPercent: number) => void;
+  setPieceSize: (updates: Partial<PieceSize>) => void;
   resetPaletteEditor: () => void;
   loadOfficialPalette: (design: ItemDesigns) => void;
   setCustomPalette: (palette: CustomColor[]) => void;
@@ -589,6 +613,9 @@ export type DraftSetItem = {
 interface PersistentState extends ShareableState {
   savedPalettes: SavedPalette[];
   paletteFolders: Folder[];
+  // The open editor's piece size, so an in-progress (unsaved) estimate
+  // survives a refresh the same way the in-progress palette does.
+  pieceSize?: PieceSize;
   useMini: boolean;
   viewSettings: {
     showRuler: boolean;
@@ -690,6 +717,7 @@ const AUTO_SAVE_TRACKED_PROPERTIES: (keyof CustomState)[] = [
   "orientation",
   "isReversed",
   "customPalette",
+  "pieceSize",
   "isRotated",
   "style",
   "savedPalettes",
@@ -725,6 +753,7 @@ export const useCustomStore = create<CustomStore>()(
     orientation: "horizontal",
     currentColors: null,
     customPalette: [],
+    pieceSize: DEFAULT_PIECE_SIZE,
     selectedColors: [],
     isRotated: false,
     style: "geometric",
@@ -1181,6 +1210,7 @@ export const useCustomStore = create<CustomStore>()(
 
       const now = new Date().toISOString();
       const colorsSnapshot = customPalette.map((c) => ({ ...c }));
+      const pieceSizeSnapshot = { ...get().pieceSize };
       const editingId = get().editingPaletteId;
 
       if (editingId) {
@@ -1225,6 +1255,7 @@ export const useCustomStore = create<CustomStore>()(
               ...palette,
               name,
               colors: colorsSnapshot,
+              pieceSize: pieceSizeSnapshot,
               updatedAt: now,
               // Don't wipe an existing folder when saving without one.
               folderId: folderId ?? palette.folderId,
@@ -1243,6 +1274,7 @@ export const useCustomStore = create<CustomStore>()(
           id: Date.now().toString(),
           name,
           colors: colorsSnapshot,
+          pieceSize: pieceSizeSnapshot,
           createdAt: now,
           folderId,
           currentVersionId: firstVersionId,
@@ -1392,6 +1424,7 @@ export const useCustomStore = create<CustomStore>()(
 
         return {
           customPalette: [...colorsWithIds],
+          pieceSize: palette.pieceSize ?? DEFAULT_PIECE_SIZE,
           selectedDesign: ItemDesigns.Custom,
           currentColors: createColorMap(colorsWithIds),
           selectedColors: [],
@@ -1559,9 +1592,14 @@ export const useCustomStore = create<CustomStore>()(
       })),
     setHistoryPaletteId: (id: string | null) =>
       set({ historyPaletteId: id }),
+    setPieceSize: (updates) =>
+      set((state) => ({
+        pieceSize: { ...state.pieceSize, ...updates },
+      })),
     resetPaletteEditor: () =>
       set({
         customPalette: [],
+        pieceSize: DEFAULT_PIECE_SIZE,
         selectedColors: [],
         editingPaletteId: null,
         paletteHistory: [],
@@ -1961,6 +1999,7 @@ export const useCustomStore = create<CustomStore>()(
           orientation: get().orientation,
           isReversed: get().isReversed,
           customPalette: get().customPalette,
+          pieceSize: get().pieceSize,
           isRotated: get().isRotated,
           style: get().style,
           savedPalettes: get().savedPalettes,
@@ -2015,6 +2054,7 @@ export const useCustomStore = create<CustomStore>()(
               orientation: get().orientation,
               isReversed: get().isReversed,
               customPalette: get().customPalette,
+              pieceSize: get().pieceSize,
               isRotated: get().isRotated,
               style: get().style,
               savedPalettes: get().savedPalettes,
@@ -2172,6 +2212,7 @@ export const useCustomStore = create<CustomStore>()(
           orientation: mergedState.orientation || get().orientation,
           isReversed: mergedState.isReversed ?? get().isReversed,
           customPalette: mergedState.customPalette || get().customPalette,
+          pieceSize: mergedState.pieceSize ?? get().pieceSize,
           isRotated: mergedState.isRotated ?? get().isRotated,
           style: mergedState.style || get().style,
           activeCustomMode:

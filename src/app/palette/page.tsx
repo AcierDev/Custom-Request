@@ -87,6 +87,11 @@ const BTN_SECONDARY =
 const PALETTE_PAGE_BACKGROUND =
   "min-h-[calc(100%+4rem)] -mb-16 w-full bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950 p-3 sm:p-4 md:p-8";
 
+// The palette studio stretches close to the viewport edges on desktop so
+// the vertical color strips have room for their labels; only ultrawide
+// monitors reach this cap.
+const STUDIO_MAX_WIDTH_PX = 2400;
+
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ 🎯 PAINT MATCH                                                        ║
 //╚═══╝ ════════════════════════════════════════════════════════════════ ╚═══╝
@@ -100,6 +105,14 @@ const PRIMARY_PAINT_MATCH_INDEX = 0;
 const BACKUP_PAINT_MATCH_INDEX = 1;
 const PAINT_MATCH_COUNT_WITH_BACKUP = 2;
 const PAINT_MATCH_CANDIDATE_COUNT = 12;
+
+// Remember which studio tab the user was on so a refresh returns to it
+// instead of snapping back to the "official" default.
+const ACTIVE_TAB_STORAGE_KEY = "palette-active-tab";
+const PALETTE_TABS = ["create", "saved", "official", "extract"] as const;
+type PaletteTab = (typeof PALETTE_TABS)[number];
+const isPaletteTab = (v: unknown): v is PaletteTab =>
+  typeof v === "string" && (PALETTE_TABS as readonly string[]).includes(v);
 // L* is the first element of a [L, a, b] triple.
 const LAB_LIGHTNESS_INDEX = 0;
 // A recipe of one paint is just "buy the can" — no mixing to show.
@@ -198,15 +211,30 @@ export default function PalettePage() {
   const [saveMode, setSaveMode] = useState<"new" | "existing">("new");
   const [connectTargetId, setConnectTargetId] = useState("");
 
-  // Default to the "official" tab only on a fresh start. If the user
-  // already has work in progress, keep them where they left off so
-  // navigating away and back doesn't discard their palette.
+  // On load, return to whichever tab the user last had open (persisted
+  // per-browser). Only a genuinely fresh start — no remembered tab and no
+  // work in progress — falls back to the "official" inspiration tab.
+  const activeTabPersistArmed = useRef(false);
   useEffect(() => {
-    if (customPalette.length === 0 && !editingPaletteId) {
+    const stored =
+      typeof window !== "undefined"
+        ? localStorage.getItem(ACTIVE_TAB_STORAGE_KEY)
+        : null;
+    if (isPaletteTab(stored)) {
+      setActiveTab(stored);
+    } else if (customPalette.length === 0 && !editingPaletteId) {
       setActiveTab("official");
     }
+    activeTabPersistArmed.current = true;
   }, []);
-  
+
+  // Remember the current tab (after the initial restore) so the next
+  // refresh reopens it. Captures programmatic tab changes too.
+  useEffect(() => {
+    if (!activeTabPersistArmed.current) return;
+    localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, activeTab);
+  }, [activeTab]);
+
   // Paint color grounding
   const [allPaintColors, setAllPaintColors] = useState<PaintColor[]>([]);
   const [paintColorsLoaded, setPaintColorsLoaded] = useState(false);
@@ -817,8 +845,11 @@ export default function PalettePage() {
                   }
                 : null;
             })();
-        const backup = printBackupMatch
-          ? `Backup: ${compactPaintLabel(printBackupMatch.label)}${
+        // Only the "Backup:" tag is struck through (marks it as the
+        // fallback); the code + name + match stay clean so they're still
+        // readable at the counter.
+        const backupDetails = printBackupMatch
+          ? `${compactPaintLabel(printBackupMatch.label)}${
               typeof printBackupMatch.match === "number"
                 ? ` (${printBackupMatch.match}% match)`
                 : ""
@@ -828,7 +859,13 @@ export default function PalettePage() {
           <span class="num">${i + 1}.</span>
           <span class="meta">
             <span class="name">${esc(primaryLabel)}</span>
-            ${backup ? `<span class="backup">${esc(backup)}</span>` : ""}
+            ${
+              backupDetails
+                ? `<span class="backup"><span class="backup-tag">Backup:</span> ${esc(
+                    backupDetails
+                  )}</span>`
+                : ""
+            }
           </span>
         </li>`;
       })
@@ -854,6 +891,8 @@ export default function PalettePage() {
         .name { font-size: 10pt; font-weight: 700; line-height: 1.25;
           word-break: break-word; }
         .backup { font-size: 7pt; color: #000; line-height: 1.2; }
+        .backup-tag { text-decoration: line-through;
+          text-decoration-thickness: 0.15pt; }
         .order { font-size: 9.5pt; font-weight: 700; margin: 0 0 8pt;
           padding: 4pt 6pt; border: 1pt solid #000; border-radius: 3pt; }
       </style></head>
@@ -1602,30 +1641,10 @@ export default function PalettePage() {
         </div>
       )}
 
-      <div className="mx-auto flex h-full max-w-[1800px] min-h-0 flex-col gap-6">
-        {/* Header */}
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between lg:space-x-4">
-          <div className="space-y-2">
-            <motion.h1
-              className="text-3xl font-bold tracking-tight text-white sm:text-5xl"
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-            >
-              Color Palette Studio
-            </motion.h1>
-            <motion.p
-              className="max-w-3xl text-sm text-slate-400 sm:text-base"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-            >
-              Create your own custom color palettes or browse our curated
-              collection for inspiration. Design harmonious color schemes for your
-              projects with our intuitive tools.
-            </motion.p>
-          </div>
-        </div>
+      <div
+        style={{ maxWidth: STUDIO_MAX_WIDTH_PX }}
+        className="mx-auto flex h-full w-full min-h-0 flex-col gap-6"
+      >
 
         {/* Main Content */}
         <Tabs
