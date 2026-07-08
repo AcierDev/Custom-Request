@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import html2canvas from "html2canvas";
 import {
   Edit,
   Trash2,
@@ -137,6 +136,9 @@ export const PaletteCard = ({
     if (!exportRef.current) return;
 
     try {
+      // Loaded on demand so the heavy html2canvas bundle isn't pulled into
+      // (and parsed for) the palette route just to show the saved list.
+      const html2canvas = (await import("html2canvas")).default;
       const canvas = await html2canvas(exportRef.current, {
         scale: 2, // Higher resolution
         backgroundColor: null,
@@ -866,35 +868,38 @@ export const PaletteCard = ({
           </motion.div>
         </div>
       )}
-      {/* Hidden Export Template */}
-      <div
-        style={{
-          position: "fixed",
-          top: "-9999px",
-          left: "-9999px",
-          width: "1200px",
-          height: "auto",
-        }}
-      >
+      {/* Hidden Export Template — only mounted while the export dialog is
+          open (html2canvas reads it on "Download Image"). Rendering a hidden
+          1200px position:fixed layer for EVERY saved-palette card at once
+          piled up enough compositing memory to OOM-crash the tab on iOS. */}
+      {showExportDialog && (
         <div
-          ref={exportRef}
-          className="bg-white p-8 flex flex-col gap-4"
-          style={{ width: "1200px" }}
+          style={{
+            position: "fixed",
+            top: "-9999px",
+            left: "-9999px",
+            width: "1200px",
+            height: "auto",
+          }}
         >
-
-          {/* Colors Strip */}
-          <div className="w-full h-64 rounded-xl overflow-hidden flex shadow-sm">
-            {palette.colors.map((color) => (
-              <div
-                key={color.hex}
-                className="h-full flex-1"
-                style={{ backgroundColor: color.hex }}
-              />
-            ))}
+          <div
+            ref={exportRef}
+            className="bg-white p-8 flex flex-col gap-4"
+            style={{ width: "1200px" }}
+          >
+            {/* Colors Strip */}
+            <div className="w-full h-64 rounded-xl overflow-hidden flex shadow-sm">
+              {palette.colors.map((color) => (
+                <div
+                  key={color.hex}
+                  className="h-full flex-1"
+                  style={{ backgroundColor: color.hex }}
+                />
+              ))}
+            </div>
           </div>
-
         </div>
-      </div>
+      )}
     </motion.div>
   );
 };
