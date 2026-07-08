@@ -72,6 +72,16 @@ export function computePaintTotals(palette: CustomColor[]): Map<string, number> 
   return totals;
 }
 
+/** Whether any color's total moved off the baseline — i.e. some mixing
+ *  actually shares paint between colors. When false every color is just
+ *  1 part and the badges add nothing, so callers can hide them. */
+export function hasSharedParts(totals: Map<string, number>): boolean {
+  for (const value of totals.values()) {
+    if (Number(value.toFixed(PARTS_DECIMALS)) !== BASELINE_PARTS) return true;
+  }
+  return false;
+}
+
 /** How the swatch labels itself: "∞" for white/black, otherwise the parts
  *  of this paint the palette consumes (1 decimal, trailing .0 trimmed). */
 export function swatchParts(

@@ -2,6 +2,11 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 
 const STORAGE_KEY = "palette-folder-collapse-states";
 
+// Folders start collapsed so the saved-palettes list stays scannable; a
+// folder is only expanded once the user explicitly opens it (which is then
+// remembered per folder).
+const FOLDER_DEFAULT_COLLAPSED = true;
+
 interface FolderCollapseState {
   [folderId: string]: boolean;
 }
@@ -61,9 +66,10 @@ export const useFolderCollapse = () => {
   }, []);
 
   const toggleFolder = useCallback((folderId: string) => {
+    const current = globalCollapsedFolders[folderId] ?? FOLDER_DEFAULT_COLLAPSED;
     globalCollapsedFolders = {
       ...globalCollapsedFolders,
-      [folderId]: !globalCollapsedFolders[folderId],
+      [folderId]: !current,
     };
     saveToStorage();
     notifyListeners();
@@ -76,7 +82,7 @@ export const useFolderCollapse = () => {
   }, []);
 
   const isFolderCollapsed = useCallback((folderId: string) => {
-    return globalCollapsedFolders[folderId] || false;
+    return globalCollapsedFolders[folderId] ?? FOLDER_DEFAULT_COLLAPSED;
   }, []);
 
   const clearCollapseStates = useCallback(() => {

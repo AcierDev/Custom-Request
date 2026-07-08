@@ -64,7 +64,7 @@ import { ColorSwatch } from "./ColorSwatch";
 import { SortableColorSwatch } from "./SortableColorSwatch";
 import { AddColorButton } from "./AddColorButton";
 import { BlendingGuide } from "./BlendingGuide";
-import { computePaintTotals } from "./mixTotals";
+import { computePaintTotals, hasSharedParts } from "./mixTotals";
 import { ColorHarmonyGenerator } from "./ColorHarmonyGenerator";
 import { VersionHistoryDialog } from "../PaletteList/VersionHistoryDialog";
 
@@ -169,10 +169,12 @@ export function PaletteManager() {
 
   // Palette-wide parts-per-paint so each color's recipe can flag paints
   // that are used heavily across other colors (white/black excluded).
-  const paintTotals = useMemo(
-    () => computePaintTotals(customPalette),
-    [customPalette]
-  );
+  // Only expose it when mixing actually shares paint between colors — if
+  // every color is just 1 part the badges add nothing.
+  const paintTotals = useMemo(() => {
+    const totals = computePaintTotals(customPalette);
+    return hasSharedParts(totals) ? totals : undefined;
+  }, [customPalette]);
 
   const handMixPreview = useMemo(() => {
     if (selectedColors.length !== SELECTED_BLEND_COLOR_COUNT) return [];

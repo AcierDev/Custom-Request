@@ -28,6 +28,15 @@ import { swatchParts } from "./mixTotals";
 // Mobile: short grid tiles so many colors stay tappable; sm+: tall
 // side-by-side paint-strip bars.
 const BAR_HEIGHT_CLASS = "h-28 sm:h-80";
+// At/above this single-can match %, the nearest paint is already a great
+// buy, so the "mix to get closer" pill drops to a hollow (outline) style —
+// still there if you want it, just not competing for attention.
+const MIX_OPTIONAL_MATCH_PERCENT = 99;
+// Solid vs. hollow "Mix" pill.
+const MIX_PILL_SOLID =
+  "bg-violet-600/85 text-white ring-violet-300/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_1px_2px_rgba(0,0,0,0.20)]";
+const MIX_PILL_HOLLOW =
+  "bg-black/20 text-violet-100 ring-violet-300/40 backdrop-blur-sm";
 const HAND_MIX_DECISION_THEME = {
   mix: {
     className: "bg-emerald-600/85 ring-emerald-300/45",
@@ -192,6 +201,24 @@ export function ColorSwatch({
         <Trash2 className="h-3.5 w-3.5" />
       </Button>
 
+      {/* Parts of THIS color's paint the whole palette actually consumes:
+          base 1, minus the share other colors donate into its mix, plus the
+          share it donates to other colors' mixes. Pinned to the bottom edge
+          so it's always visible (no hover; works on mobile). Bottom-left
+          keeps clear of the mobile remove button at bottom-right. ∞ =
+          white/black (assumed infinite supply). */}
+      {paintTotals && paintTotals.size > 0 && (() => {
+        const parts = swatchParts(color, paintTotals);
+        return (
+          <div className="pointer-events-none absolute bottom-1.5 left-1.5 z-40 inline-flex items-center gap-1 rounded-[10px] bg-black/40 px-1.5 py-1 text-[10px] font-semibold text-white ring-1 ring-white/25 backdrop-blur-sm">
+            <ShoppingCart className="h-3 w-3 shrink-0" />
+            <span className="tabular-nums">
+              {parts} part{parts === "1" ? "" : "s"}
+            </span>
+          </div>
+        );
+      })()}
+
       <div className="h-full p-2 flex flex-col justify-between overflow-hidden">
         {/* Top: name + hex — click to copy the hex */}
         {/* pointer-events-none on mobile: taps anywhere on the tile go to
@@ -258,7 +285,15 @@ export function ColorSwatch({
             <TooltipProvider delayDuration={225}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="mt-1 inline-flex max-w-full items-center gap-1.5 rounded-[10px] bg-violet-600/85 px-1.5 py-1 text-[10px] font-semibold text-white ring-1 ring-violet-300/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_1px_2px_rgba(0,0,0,0.20)]">
+                  <div
+                    className={cn(
+                      "mt-1 inline-flex max-w-full items-center gap-1.5 rounded-[10px] px-1.5 py-1 text-[10px] font-semibold ring-1",
+                      typeof paintMatch === "number" &&
+                        paintMatch >= MIX_OPTIONAL_MATCH_PERCENT
+                        ? MIX_PILL_HOLLOW
+                        : MIX_PILL_SOLID
+                    )}
+                  >
                     <Beaker className="h-3 w-3 shrink-0" />
                     <span className="truncate">
                       Mix{" "}
@@ -320,23 +355,6 @@ export function ColorSwatch({
               </Tooltip>
             </TooltipProvider>
           )}
-          {/* Parts of THIS color's paint the whole palette actually
-              consumes: base 1, minus the share other colors donate into its
-              mix, plus the share it donates to other colors' mixes. Shown
-              on the swatch face (no hover; works on mobile) so a
-              heavily-shared color is obvious to stock up on. ∞ = white/black
-              (assumed infinite supply). */}
-          {paintTotals && paintTotals.size > 0 && (() => {
-            const parts = swatchParts(color, paintTotals);
-            return (
-              <div className="mt-1 inline-flex max-w-full items-center gap-1 rounded-[10px] bg-black/40 px-1.5 py-1 text-[10px] font-semibold text-white ring-1 ring-white/25 backdrop-blur-sm">
-                <ShoppingCart className="h-3 w-3 shrink-0" />
-                <span className="tabular-nums">
-                  {parts} part{parts === "1" ? "" : "s"}
-                </span>
-              </div>
-            );
-          })()}
           {handMix && (
             <TooltipProvider delayDuration={225}>
               <Tooltip>
