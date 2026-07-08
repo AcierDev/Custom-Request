@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { handMixMatchPercent } from "@/lib/paintMixSimulator";
 import { ColorSwatchProps } from "./types";
+import { swatchParts } from "./mixTotals";
 
 // Mobile: short grid tiles so many colors stay tappable; sm+: tall
 // side-by-side paint-strip bars.
@@ -70,6 +71,7 @@ export function ColorSwatch({
   mixed,
   paintMatch,
   paintMixRecipe,
+  paintTotals,
   handMix,
   isSelected,
   onSelect,
@@ -318,6 +320,23 @@ export function ColorSwatch({
               </Tooltip>
             </TooltipProvider>
           )}
+          {/* Parts of THIS color's paint the whole palette actually
+              consumes: base 1, minus the share other colors donate into its
+              mix, plus the share it donates to other colors' mixes. Shown
+              on the swatch face (no hover; works on mobile) so a
+              heavily-shared color is obvious to stock up on. ∞ = white/black
+              (assumed infinite supply). */}
+          {paintTotals && paintTotals.size > 0 && (() => {
+            const parts = swatchParts(color, paintTotals);
+            return (
+              <div className="mt-1 inline-flex max-w-full items-center gap-1 rounded-[10px] bg-black/40 px-1.5 py-1 text-[10px] font-semibold text-white ring-1 ring-white/25 backdrop-blur-sm">
+                <ShoppingCart className="h-3 w-3 shrink-0" />
+                <span className="tabular-nums">
+                  {parts} part{parts === "1" ? "" : "s"}
+                </span>
+              </div>
+            );
+          })()}
           {handMix && (
             <TooltipProvider delayDuration={225}>
               <Tooltip>

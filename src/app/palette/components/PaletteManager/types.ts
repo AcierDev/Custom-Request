@@ -27,6 +27,10 @@ export interface ColorSwatchProps {
   /** "Convert to paint" mix recipe (parts of 2–3 paints) that lands
    *  closer than the single nearest can. Shown as a "Mix" pill. */
   paintMixRecipe?: PaintMixRecipe;
+  /** Palette-wide total parts per paint (keyed by paintKey), so the recipe
+   *  can flag ingredients used heavily across other colors. White/black
+   *  excluded. */
+  paintTotals?: Map<string, number>;
   /** Paint-like prediction for whether this generated blend is hand-mixable. */
   handMix?: HandMixSimulation;
   /** Extra proportion of squares for this color (e.g. 50 = +50%). 0–500. */

@@ -111,13 +111,19 @@ const SINGLE_COMPONENT_COUNT = 1;
 //    palette — buys the closest possible match at the cost of extra cans.
 type MixSource = "palette" | "purchase";
 const DEFAULT_MIX_SOURCE: MixSource = "palette";
+// Digitally-mixed palette colors (a `mix` blend of two swatches) aren't a
+// can the user buys, so by default their nearest-can approximation is NOT
+// offered as a "palette" mix ingredient. Opt in to let blends contribute.
+const DEFAULT_USE_MIXED_COLORS = false;
 // One grounding request: which brand pool, whether to restrict to verified
-// codes, whether to also compute mix recipes, and (if so) their source.
+// codes, whether to also compute mix recipes, their source, and whether
+// blended swatches may be ingredients.
 type GroundSelection = {
   brand: BrandOption;
   verified: boolean;
   mix: boolean;
   mixSource: MixSource;
+  useMixedColors: boolean;
 };
 // Let React paint the grounding spinner between colors (the spectral mix
 // search is heavy enough to drop a frame per color otherwise).
@@ -222,6 +228,13 @@ export default function PalettePage() {
   // Only meaningful when mixToMatch is on: restrict mix ingredients to the
   // palette's own paints (+ white/black) or let it buy any nearby paint.
   const [mixSource, setMixSource] = useState<MixSource>(DEFAULT_MIX_SOURCE);
+  // Only meaningful in "palette" mix mode: whether digitally-mixed swatches
+  // may contribute their nearest can as an ingredient. Off by default so a
+  // blend (already made from its two parents) never becomes a paint to mix
+  // from.
+  const [useMixedColors, setUseMixedColors] = useState(
+    DEFAULT_USE_MIXED_COLORS
+  );
   // True while a (re-)grounding pass runs — the mix optimizer is heavy,
   // so the convert button shows a spinner and controls lock.
   const [isGrounding, setIsGrounding] = useState(false);
@@ -495,7 +508,13 @@ export default function PalettePage() {
   // the brand / "verified only" filter changes. Reads the live palette
   // from the store so the brand-change effect never grounds a stale copy.
   const runGrounding = async (selection: GroundSelection) => {
-    const { brand, verified, mix, mixSource: mixSrc } = selection;
+    const {
+      brand,
+      verified,
+      mix,
+      mixSource: mixSrc,
+      useMixedColors: useMixed,
+    } = selection;
     // A pass is already running — park this request and let the running
     // pass replay it when it finishes, so the last selection wins.
     if (groundingInFlightRef.current) {
@@ -565,10 +584,16 @@ export default function PalettePage() {
       // ingredients a recipe may draw from — so mixing never asks the user
       // to buy a can they aren't already buying — plus the white/black
       // anchors above, which stay available no matter what.
+      //
+      // Skip digitally-mixed colors (a `mix` blend of two other swatches)
+      // unless the user opts in: a blend isn't a can they buy — its two
+      // parents already supply the real paints — so by default its nearest-
+      // can approximation isn't offered as an ingredient for mixing others.
       const palettePaintPool: PaintColor[] = [];
       if (mix && mixSrc === "palette") {
         const seenPalettePaint = new Set<string>();
         for (const customColor of palette) {
+          if (customColor.mix && !useMixed) continue;
           const nearest = findClosestPaintMatches(
             sourceHexOf(customColor),
             paintLabs,
@@ -679,6 +704,7 @@ export default function PalettePage() {
     verified: verifiedOnly,
     mix: mixToMatch,
     mixSource,
+    useMixedColors,
   });
 
   const groundPalette = () => {
@@ -705,7 +731,7 @@ export default function PalettePage() {
     // runGrounding reads the live palette from the store and is stable
     // enough for this filter-change trigger; depending on it would loop.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groundBrand, verifiedOnly, mixToMatch, mixSource]);
+  }, [groundBrand, verifiedOnly, mixToMatch, mixSource, useMixedColors]);
 
   const convertPaintPaletteToHex = () => {
     const restoredColors = customPalette.map((color) => {
@@ -1923,6 +1949,26 @@ export default function PalettePage() {
                             </SelectItem>
                           </SelectContent>
                         </Select>
+                      )}
+                      {/* Only "palette" mode draws ingredients from the
+                          palette itself, so the blend opt-in only appears
+                          there — in "buy any" mode blends can't leak in. */}
+                      {mixToMatch && mixSource === "palette" && (
+                        <label
+                          className="flex h-9 cursor-pointer select-none items-center gap-1.5 rounded-[10px] border border-white/10 bg-gray-900/80 px-3 text-sm text-slate-300"
+                          title="Let digitally-mixed swatches contribute their nearest can as a mix ingredient. Off = only directly-picked colors' cans are used."
+                        >
+                          <input
+                            type="checkbox"
+                            checked={useMixedColors}
+                            onChange={(e) =>
+                              setUseMixedColors(e.target.checked)
+                            }
+                            disabled={!paintColorsLoaded || isGrounding}
+                            className="accent-violet-500"
+                          />
+                          Use mixed colors
+                        </label>
                       )}
                     </div>
                     {isGrounding ? (

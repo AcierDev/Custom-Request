@@ -64,7 +64,7 @@ import { ColorSwatch } from "./ColorSwatch";
 import { SortableColorSwatch } from "./SortableColorSwatch";
 import { AddColorButton } from "./AddColorButton";
 import { BlendingGuide } from "./BlendingGuide";
-import { MixShoppingList } from "./MixShoppingList";
+import { computePaintTotals } from "./mixTotals";
 import { ColorHarmonyGenerator } from "./ColorHarmonyGenerator";
 import { VersionHistoryDialog } from "../PaletteList/VersionHistoryDialog";
 
@@ -166,6 +166,13 @@ export function PaletteManager() {
     harmony: true,
     selection: true,
   });
+
+  // Palette-wide parts-per-paint so each color's recipe can flag paints
+  // that are used heavily across other colors (white/black excluded).
+  const paintTotals = useMemo(
+    () => computePaintTotals(customPalette),
+    [customPalette]
+  );
 
   const handMixPreview = useMemo(() => {
     if (selectedColors.length !== SELECTED_BLEND_COLOR_COUNT) return [];
@@ -737,6 +744,7 @@ export function PaletteManager() {
                         mixed={!!color.mix}
                         paintMatch={color.paintMatch}
                         paintMixRecipe={color.paintMixRecipe}
+                        paintTotals={paintTotals}
                         handMix={color.handMix}
                         index={index}
                         isSelected={
@@ -814,10 +822,6 @@ export function PaletteManager() {
             </div>
           </SortableContext>
         </DndContext>
-
-        {/* Aggregate parts-per-paint across all mix recipes so heavy-use
-            paints are obvious to stock up on (white/black excluded). */}
-        <MixShoppingList palette={customPalette} />
       </div>
 
       {/* Blend Controls - Only show when 2 colors are selected */}
