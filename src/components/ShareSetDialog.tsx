@@ -64,6 +64,10 @@ export function ShareSetDialog({
       designData: {
         ...base,
         customPalette: paletteToCustomPalette(palette),
+        patternOverride: { ...(palette.patternOverride ?? {}) },
+        patternDirectionOverride: {
+          ...(palette.patternDirectionOverride ?? {}),
+        },
       },
     }));
   }, [open, palettes, getShareableStateSnapshot]);

@@ -28,6 +28,7 @@ export function PatternEditor({ className }: PatternEditorProps) {
     clearPatternOverride,
     patternEditingMode,
     setPatternEditingMode,
+    setPatternBrushShape,
     viewSettings,
     isPatternEditorActive,
     setIsPatternEditorActive,
@@ -46,22 +47,30 @@ export function PatternEditor({ className }: PatternEditorProps) {
     (index: number) => {
       // Enable pattern editor when a color is selected
       setIsPatternEditorActive(true);
+      setPatternBrushShape("single");
       setPatternEditingMode({
+        tool: "color",
         selectedColorIndex: index,
-        isErasing: false,
       });
     },
-    [setPatternEditingMode, setIsPatternEditorActive]
+    [setPatternBrushShape, setPatternEditingMode, setIsPatternEditorActive]
   );
 
   const handleEraserToggle = useCallback(() => {
     // Enable pattern editor when eraser is toggled
     setIsPatternEditorActive(true);
-    setPatternEditingMode({
-      selectedColorIndex: patternEditingMode.selectedColorIndex,
-      isErasing: !patternEditingMode.isErasing,
-    });
-  }, [patternEditingMode, setPatternEditingMode, setIsPatternEditorActive]);
+    setPatternBrushShape("single");
+    setPatternEditingMode(
+      patternEditingMode.tool === "eraser"
+        ? { tool: "none" }
+        : { tool: "eraser" }
+    );
+  }, [
+    patternEditingMode,
+    setPatternBrushShape,
+    setPatternEditingMode,
+    setIsPatternEditorActive,
+  ]);
 
   if (colorEntries.length === 0) {
     return (
@@ -146,10 +155,7 @@ export function PatternEditor({ className }: PatternEditorProps) {
                   if (isPatternEditorActive) {
                     // Disable editor and reset editing mode
                     setIsPatternEditorActive(false);
-                    setPatternEditingMode({
-                      selectedColorIndex: -1,
-                      isErasing: false,
-                    });
+                    setPatternEditingMode({ tool: "none" });
                   } else {
                     // Enable editor
                     setIsPatternEditorActive(true);
@@ -188,8 +194,8 @@ export function PatternEditor({ className }: PatternEditorProps) {
                     key={key}
                     className={cn(
                       "w-7 h-7 rounded-lg border-2 transition-all duration-200 hover:scale-105 hover:shadow-md",
-                      patternEditingMode.selectedColorIndex === index &&
-                        !patternEditingMode.isErasing
+                      patternEditingMode.tool === "color" &&
+                        patternEditingMode.selectedColorIndex === index
                         ? "border-blue-500 ring-2 ring-blue-200/50 dark:ring-blue-400/30 shadow-md"
                         : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500"
                     )}
@@ -201,7 +207,7 @@ export function PatternEditor({ className }: PatternEditorProps) {
                 <button
                   className={cn(
                     "w-7 h-7 rounded-lg border-2 flex items-center justify-center transition-all duration-200 hover:scale-105",
-                    patternEditingMode.isErasing
+                    patternEditingMode.tool === "eraser"
                       ? "border-red-400 bg-red-50 dark:bg-red-900/20 ring-2 ring-red-200/50 dark:ring-red-400/30 shadow-md"
                       : "border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-500"
                   )}

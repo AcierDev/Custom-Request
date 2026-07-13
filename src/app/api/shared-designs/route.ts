@@ -131,6 +131,9 @@ export async function GET(request: NextRequest) {
       ? {
           ...sharedDesign.designData,
           customPalette: latestPalette.colors,
+          patternOverride: latestPalette.patternOverride ?? {},
+          patternDirectionOverride:
+            latestPalette.patternDirectionOverride ?? {},
         }
       : sharedDesign.designData;
 
@@ -153,6 +156,8 @@ export async function GET(request: NextRequest) {
 interface StoredSavedPalette {
   name?: string;
   colors?: unknown[];
+  patternOverride?: Record<string, number>;
+  patternDirectionOverride?: Record<string, string>;
   createdAt?: string;
   updatedAt?: string;
 }

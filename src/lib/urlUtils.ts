@@ -3,6 +3,9 @@ import {
   decompressFromEncodedURIComponent,
 } from "lz-string";
 
+const SHORT_PATTERN_COLOR_OVERRIDES_KEY = "po";
+const SHORT_PATTERN_DIRECTION_OVERRIDES_KEY = "pdo";
+
 /**
  * Compresses a JSON string to make it more URL-friendly
  * @param jsonString The JSON string to compress
@@ -151,6 +154,15 @@ export const generateShortShareableUrl = (stateData: any): string => {
     });
   }
 
+  if (Object.keys(stateData.patternOverride ?? {}).length) {
+    minimalState[SHORT_PATTERN_COLOR_OVERRIDES_KEY] =
+      stateData.patternOverride;
+  }
+  if (Object.keys(stateData.patternDirectionOverride ?? {}).length) {
+    minimalState[SHORT_PATTERN_DIRECTION_OVERRIDES_KEY] =
+      stateData.patternDirectionOverride;
+  }
+
   const jsonString = JSON.stringify(minimalState);
   const compressed = compressJsonForUrl(jsonString);
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
@@ -238,6 +250,15 @@ export const extractStateFromShortUrl = <T>(compressedData: string): T => {
           };
         }
       });
+    }
+
+    if (minimalState[SHORT_PATTERN_COLOR_OVERRIDES_KEY]) {
+      fullState.patternOverride =
+        minimalState[SHORT_PATTERN_COLOR_OVERRIDES_KEY];
+    }
+    if (minimalState[SHORT_PATTERN_DIRECTION_OVERRIDES_KEY]) {
+      fullState.patternDirectionOverride =
+        minimalState[SHORT_PATTERN_DIRECTION_OVERRIDES_KEY];
     }
 
     return fullState as T;

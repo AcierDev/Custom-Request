@@ -4,7 +4,7 @@ import { useTexture } from "@react-three/drei";
 import { ThreeEvent, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
-import { memo, useEffect, useMemo, useRef } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef } from "react";
 import { useCustomStore } from "@/store/customStore";
 import { GRAIN_ATLAS, METALLIC_PAINT, WOOD_STYLE } from "./woodStyles";
 
@@ -40,6 +40,20 @@ export interface SquareInstance {
   grainIndex: number;
 }
 
+type SquareInteractionHandler = (
+  x: number,
+  y: number,
+  color: string,
+  name: string | undefined,
+  worldX: number,
+  worldY: number,
+  worldZ: number
+) => void;
+
+type ToggleableControls = {
+  enabled: boolean;
+};
+
 interface InstancedSquaresProps {
   instances: SquareInstance[];
   showWoodGrain: boolean;
@@ -47,25 +61,9 @@ interface InstancedSquaresProps {
   driftAmount: number;
   /** Live split-panel drift factor (0 → 1) from the react-spring value. */
   getDriftFactor: () => number;
-  onHover: (
-    x: number,
-    y: number,
-    color: string,
-    name: string | undefined,
-    worldX: number,
-    worldY: number,
-    worldZ: number
-  ) => void;
+  onHover: SquareInteractionHandler;
   onUnhover: () => void;
-  onClick: (
-    x: number,
-    y: number,
-    color: string,
-    name: string | undefined,
-    worldX: number,
-    worldY: number,
-    worldZ: number
-  ) => void;
+  onClick: SquareInteractionHandler;
   /** Fired when a size-change bloom begins / lands — lets the parent
    *  hide the plywood + hanger until the squares have finished revealing. */
   onBloomStart?: () => void;
@@ -80,6 +78,10 @@ interface InstancedSquaresProps {
   bloomOnResize?: boolean;
   /** Keep square picking enabled while editing even if color hints are hidden. */
   enablePatternEditing?: boolean;
+  /** Instance indexes covered by the current row/column/shape brush. */
+  highlightedInstanceIds?: readonly number[];
+  onPatternHover?: (x: number, y: number) => void;
+  onPatternUnhover?: () => void;
 }
 
 // ── Wedge tile geometry config ───────────────────────────────────────────
@@ -168,6 +170,10 @@ const tmpColor = new THREE.Color();
 const METALLIC_ENV_BLUR = 0.04;
 const WOOD_TEXTURE_ANISOTROPY = 8;
 const HIGHLIGHT_SCALE = 1.06;
+const EMPTY_HIGHLIGHT_COUNT = 0;
+const NO_AXIS_ROTATION_RADIANS = 0;
+const NO_DRIFT_DIRECTION = 0;
+const EMPTY_HIGHLIGHTED_INSTANCE_IDS: readonly number[] = [];
 // The hover glow draws after the squares (high render order) so it layers over
 // them, not z-fights with the coincident wedge.
 const HIGHLIGHT_RENDER_ORDER = 3;
@@ -181,6 +187,7 @@ const HIGHLIGHT_RENDER_ORDER = 3;
 // centred on the instance z, so a small forward offset best matches where
 // the eye reads the square's centre and keeps parallax minimal.
 const PICK_PLANE_Z_OFFSET = 0.1;
+const PRIMARY_POINTER_BUTTON = 0;
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ ✨ SIZE-CHANGE BLOOM                                                   ║
@@ -333,13 +340,30 @@ function InstancedSquaresComponent({
   revealNonce = 0,
   bloomOnResize = true,
   enablePatternEditing = false,
+  highlightedInstanceIds = EMPTY_HIGHLIGHTED_INSTANCE_IDS,
+  onPatternHover,
+  onPatternUnhover,
 }: InstancedSquaresProps) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   // Flat picking proxy — see PICK_PLANE_Z_OFFSET. Pointer events are bound to
   // this, not the protruding wedges.
   const pickMeshRef = useRef<THREE.InstancedMesh>(null);
   const highlightRef = useRef<THREE.Mesh>(null);
+  const selectionHighlightRef = useRef<THREE.InstancedMesh>(null);
   const hoveredInstanceRef = useRef<number | undefined>(undefined);
+  const hoveredPatternInstanceRef = useRef<number | undefined>(undefined);
+  const dragActiveRef = useRef(false);
+  const lastEditedInstanceRef = useRef<number | undefined>(undefined);
+  const controlsDuringDragRef = useRef<{
+    controls: ToggleableControls;
+    wasEnabled: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!enablePatternEditing) {
+      hoveredPatternInstanceRef.current = undefined;
+    }
+  }, [enablePatternEditing]);
 
   // Read the live style without re-running the matrix-fill effect just
   // because the style prop changed (the replay nonce drives re-blooms).
@@ -370,6 +394,37 @@ function InstancedSquaresComponent({
   // per renderer and reflect only that (it isn't shown as the background).
   const gl = useThree((s) => s.gl);
   const invalidate = useThree((s) => s.invalidate);
+  const controls = useThree((s) => s.controls) as unknown as
+    | ToggleableControls
+    | null;
+
+  const endPatternDrag = useCallback(() => {
+    dragActiveRef.current = false;
+    lastEditedInstanceRef.current = undefined;
+
+    const controlsDuringDrag = controlsDuringDragRef.current;
+    if (controlsDuringDrag) {
+      controlsDuringDrag.controls.enabled = controlsDuringDrag.wasEnabled;
+      controlsDuringDragRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener("pointerup", endPatternDrag);
+    window.addEventListener("pointercancel", endPatternDrag);
+    window.addEventListener("blur", endPatternDrag);
+
+    return () => {
+      window.removeEventListener("pointerup", endPatternDrag);
+      window.removeEventListener("pointercancel", endPatternDrag);
+      window.removeEventListener("blur", endPatternDrag);
+      endPatternDrag();
+    };
+  }, [endPatternDrag]);
+
+  useEffect(() => {
+    if (!enablePatternEditing) endPatternDrag();
+  }, [enablePatternEditing, endPatternDrag]);
   const envMap = useMemo(() => {
     if (!metallic) return null;
     const pmrem = new THREE.PMREMGenerator(gl);
@@ -526,6 +581,55 @@ function InstancedSquaresComponent({
   // rebuilt on every resize). Keeps the hover glow stable and decoupled.
   const highlightGeometry = useMemo(() => createWedgeGeometry(), []);
   useEffect(() => () => highlightGeometry.dispose(), [highlightGeometry]);
+
+  const selectionHighlightTransform = useMemo(() => new THREE.Object3D(), []);
+  const updateSelectionHighlights = useCallback((driftFactor: number) => {
+    const selectionHighlight = selectionHighlightRef.current;
+    if (!selectionHighlight) return;
+
+    let writeIndex = EMPTY_HIGHLIGHT_COUNT;
+    highlightedInstanceIds.forEach((instanceId) => {
+      const square = instances[instanceId];
+      if (!square) return;
+
+      selectionHighlightTransform.position.set(
+        square.driftDir !== NO_DRIFT_DIRECTION
+          ? square.baseX + square.driftDir * driftAmount * driftFactor
+          : square.px,
+        square.py,
+        square.pz
+      );
+      selectionHighlightTransform.rotation.set(
+        NO_AXIS_ROTATION_RADIANS,
+        NO_AXIS_ROTATION_RADIANS,
+        square.rotationZ
+      );
+      selectionHighlightTransform.scale.set(
+        square.scaleXY * HIGHLIGHT_SCALE,
+        square.scaleXY * HIGHLIGHT_SCALE,
+        square.scaleZ * HIGHLIGHT_SCALE
+      );
+      selectionHighlightTransform.updateMatrix();
+      selectionHighlight.setMatrixAt(
+        writeIndex,
+        selectionHighlightTransform.matrix
+      );
+      writeIndex += 1;
+    });
+
+    selectionHighlight.count = writeIndex;
+    selectionHighlight.instanceMatrix.needsUpdate = true;
+  }, [
+    driftAmount,
+    highlightedInstanceIds,
+    instances,
+    selectionHighlightTransform,
+  ]);
+
+  useEffect(() => {
+    updateSelectionHighlights(getDriftFactor());
+    invalidate();
+  }, [getDriftFactor, invalidate, updateSelectionHighlights]);
 
   // Flat picking proxy: an invisible 1×1 quad instanced once per square. It
   // renders nothing (opacity 0, no depth write) but is the only pickable
@@ -689,6 +793,7 @@ function InstancedSquaresComponent({
     }
     mesh.instanceMatrix.needsUpdate = true;
     if (pickMesh) pickMesh.instanceMatrix.needsUpdate = true;
+    if (driftMoving) updateSelectionHighlights(f);
 
     if (blooming && allDone) {
       bloomActiveRef.current = false;
@@ -723,15 +828,69 @@ function InstancedSquaresComponent({
     invalidate();
   };
 
+  const interactWithInstance = (instanceId: number | undefined) => {
+    if (instanceId === undefined || !instances[instanceId]) return;
+    const square = instances[instanceId];
+    onClick(
+      square.x,
+      square.y,
+      square.color,
+      square.colorName,
+      square.baseX,
+      square.py,
+      square.pz + PICK_PLANE_Z_OFFSET
+    );
+  };
+
+  const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
+    if (!enablePatternEditing || e.button !== PRIMARY_POINTER_BUTTON) return;
+    e.stopPropagation();
+    e.nativeEvent.stopImmediatePropagation();
+
+    const id = e.instanceId;
+    if (id === undefined || !instances[id]) return;
+
+    dragActiveRef.current = true;
+    lastEditedInstanceRef.current = id;
+    if (controls && !controlsDuringDragRef.current) {
+      controlsDuringDragRef.current = {
+        controls,
+        wasEnabled: controls.enabled,
+      };
+      controls.enabled = false;
+    }
+    interactWithInstance(id);
+  };
+
   const handleMove = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
-    if (!showColorInfo) return;
     const id = e.instanceId;
+
+    if (enablePatternEditing && dragActiveRef.current) {
+      e.nativeEvent.stopImmediatePropagation();
+      if (id !== lastEditedInstanceRef.current) {
+        lastEditedInstanceRef.current = id;
+        interactWithInstance(id);
+      }
+    }
+
+    if (
+      enablePatternEditing &&
+      id !== undefined &&
+      instances[id] &&
+      hoveredPatternInstanceRef.current !== id
+    ) {
+      hoveredPatternInstanceRef.current = id;
+      const square = instances[id];
+      onPatternHover?.(square.x, square.y);
+    }
+
+    if (!showColorInfo) return;
     if (id === undefined || !instances[id]) return;
     if (hoveredInstanceRef.current === id) return;
     hoveredInstanceRef.current = id;
     const s = instances[id];
-    moveHighlight(id);
+    moveHighlight(enablePatternEditing ? undefined : id);
     // Anchor overlays on the square's actual position, not its grid index.
     // Z is the pick-plane (the square's picked face), so the label pins to the
     // surface instead of floating in front of it and parallax-drifting away.
@@ -739,17 +898,31 @@ function InstancedSquaresComponent({
   };
 
   const handleOut = () => {
-    hoveredInstanceRef.current = undefined;
-    moveHighlight(undefined);
-    onUnhover();
+    if (hoveredPatternInstanceRef.current !== undefined) {
+      hoveredPatternInstanceRef.current = undefined;
+      onPatternUnhover?.();
+    }
+    if (showColorInfo) {
+      hoveredInstanceRef.current = undefined;
+      moveHighlight(undefined);
+      onUnhover();
+    }
   };
 
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
-    const id = e.instanceId;
-    if (id === undefined || !instances[id]) return;
-    const s = instances[id];
-    onClick(s.x, s.y, s.color, s.colorName, s.baseX, s.py, s.pz + PICK_PLANE_Z_OFFSET);
+    if (enablePatternEditing) {
+      e.nativeEvent.stopImmediatePropagation();
+      return;
+    }
+    interactWithInstance(e.instanceId);
+  };
+
+  const handlePointerEnd = (e: ThreeEvent<PointerEvent>) => {
+    if (!dragActiveRef.current) return;
+    e.stopPropagation();
+    e.nativeEvent.stopImmediatePropagation();
+    endPatternDrag();
   };
 
   return (
@@ -769,8 +942,19 @@ function InstancedSquaresComponent({
         ref={pickMeshRef}
         args={[pickGeometry, pickMaterial, instances.length]}
         frustumCulled={false}
-        onPointerMove={showColorInfo ? handleMove : undefined}
-        onPointerOut={showColorInfo ? handleOut : undefined}
+        onPointerMove={
+          showColorInfo || enablePatternEditing ? handleMove : undefined
+        }
+        onPointerOut={
+          showColorInfo || enablePatternEditing ? handleOut : undefined
+        }
+        onPointerDown={
+          enablePatternEditing ? handlePointerDown : undefined
+        }
+        onPointerUp={enablePatternEditing ? handlePointerEnd : undefined}
+        onPointerCancel={
+          enablePatternEditing ? handlePointerEnd : undefined
+        }
         onClick={
           showColorInfo || enablePatternEditing ? handleClick : undefined
         }
@@ -781,6 +965,14 @@ function InstancedSquaresComponent({
         material={highlightMaterial}
         renderOrder={HIGHLIGHT_RENDER_ORDER}
         visible={false}
+        raycast={() => undefined}
+      />
+      <instancedMesh
+        ref={selectionHighlightRef}
+        args={[highlightGeometry, highlightMaterial, instances.length]}
+        count={EMPTY_HIGHLIGHT_COUNT}
+        renderOrder={HIGHLIGHT_RENDER_ORDER}
+        frustumCulled={false}
         raycast={() => undefined}
       />
     </>

@@ -24,6 +24,10 @@ import {
   generateColorMap,
   calculateSquareLayout,
   isExactMiniSize,
+  getPatternSquareKey,
+  getPatternBrushKeys,
+  getPatternOrientationRotation,
+  getSquareDirectionRotation,
 } from "./patternUtils";
 import { useSpring } from "@react-spring/three";
 
@@ -33,6 +37,7 @@ const EMPTY_FALLBACK_BLUE = "#1e3a5f";
 const EMPTY_FALLBACK_PALETTE = [
   { hex: EMPTY_FALLBACK_BLUE, name: "Dark Blue" },
 ];
+const NO_AXIS_ROTATION = 0;
 
 // Place the color label to the RIGHT of the square it points at — beside it,
 // out of the way but still attached. The horizontal offset (group-local world
@@ -210,7 +215,13 @@ function GeometricPatternComponent({
   const drawnPatternGridSize = useCustomStore((s) => s.drawnPatternGridSize);
   const activeCustomMode = useCustomStore((s) => s.activeCustomMode);
   const patternOverride = useCustomStore((s) => s.patternOverride);
-  const setPatternOverride = useCustomStore((s) => s.setPatternOverride);
+  const patternDirectionOverride = useCustomStore(
+    (s) => s.patternDirectionOverride
+  );
+  const patternBrush = useCustomStore((s) => s.patternBrush);
+  const applyPatternSquareEdit = useCustomStore(
+    (s) => s.applyPatternSquareEdit
+  );
   const isPatternEditorActive = useCustomStore((s) => s.isPatternEditorActive);
   const patternEditingMode = useCustomStore((s) => s.patternEditingMode);
   const scatterEase = useCustomStore((s) => s.scatterEase);
@@ -232,6 +243,7 @@ function GeometricPatternComponent({
     (!drawnPatternGrid || !drawnPatternGridSize);
   const colorPattern = customDesign?.colorPattern || storeColorPattern;
   const orientation = customDesign?.orientation || storeOrientation;
+  const patternRotationZ = getPatternOrientationRotation(orientation);
   const isReversed = customDesign?.isReversed || storeIsReversed;
   const isRotated = customDesign?.isRotated || storeIsRotated;
   const useMini = customDesign?.useMini || storeUseMini;
@@ -332,6 +344,15 @@ function GeometricPatternComponent({
     offsetX,
     offsetY,
   } = layoutDetails;
+
+  const currentGridWidth =
+    hasDrawnPattern && drawnPatternGridSize
+      ? drawnPatternGridSize.width
+      : adjustedModelWidth;
+  const currentGridHeight =
+    hasDrawnPattern && drawnPatternGridSize
+      ? drawnPatternGridSize.height
+      : adjustedModelHeight;
 
   // Initialize rotation seeds and texture variations if not already done
   if (
@@ -498,59 +519,6 @@ function GeometricPatternComponent({
     setHoverInfo(null);
   }, [setHoverInfo]);
 
-  const handleSquareClick = useCallback(
-    (
-      x: number,
-      y: number,
-      color: string,
-      name: string | undefined,
-      worldX: number,
-      worldY: number,
-      worldZ: number
-    ) => {
-      // Check if we're in pattern editing mode
-      if (
-        isPatternEditorActive &&
-        patternEditingMode &&
-        (patternEditingMode.selectedColorIndex >= 0 ||
-          patternEditingMode.isErasing)
-      ) {
-        // Handle pattern editing
-        const overrideKey = `${x}-${y}`;
-
-        if (patternEditingMode.isErasing) {
-          // Remove override to revert to base pattern
-          const newOverrides = { ...patternOverride };
-          delete newOverrides[overrideKey];
-          setPatternOverride(newOverrides);
-        } else {
-          // Set new color
-          setPatternOverride({
-            ...patternOverride,
-            [overrideKey]: patternEditingMode.selectedColorIndex,
-          });
-        }
-      } else if (allowPin) {
-        // Handle normal pinning behavior — read-only hosts (shared gallery)
-        // disable this so a click can't leave the color label stuck on screen.
-        setPinnedInfo({
-          position: [x, y],
-          worldPosition: [worldX, worldY, worldZ],
-          color,
-          colorName: name,
-        });
-      }
-    },
-    [
-      allowPin,
-      isPatternEditorActive,
-      patternEditingMode,
-      patternOverride,
-      setPatternOverride,
-      setPinnedInfo,
-    ]
-  );
-
   // Build a flat list of per-square instance descriptors. One pass; the
   // GPU work (transform/colour/grain) is carried as instance attributes
   // by <InstancedSquares /> rather than as ~2500 React meshes.
@@ -560,16 +528,6 @@ function GeometricPatternComponent({
 
     // Limit the maximum number of squares to render based on device capability
     const maxSquares = 2500; // Adjust this threshold based on testing
-    // Ensure modelWidth and modelHeight (derived from drawnPatternGridSize if hasDrawnPattern) are used for totalSquares
-    const currentGridWidth =
-      hasDrawnPattern && drawnPatternGridSize
-        ? drawnPatternGridSize.width
-        : adjustedModelWidth;
-    const currentGridHeight =
-      hasDrawnPattern && drawnPatternGridSize
-        ? drawnPatternGridSize.height
-        : adjustedModelHeight;
-
     const totalSquares = currentGridWidth * currentGridHeight;
     const shouldLimitSquares = totalSquares > maxSquares;
 
@@ -616,16 +574,17 @@ function GeometricPatternComponent({
           if (color === "#FFFFFF00") continue;
         } else {
           // Use the procedurally generated color (existing logic)
-          let colorIndex = getColorIndexDebug(x, y);
-
-          // Check for pattern override
-          const overrideKey = `${x}-${y}`;
-          if (patternOverride[overrideKey] !== undefined) {
-            colorIndex = patternOverride[overrideKey];
-          }
-
+          const colorIndex = getColorIndexDebug(x, y);
           const colorEntry = colorEntries[colorIndex];
           color = colorEntry?.[1].hex || "#8B5E3B"; // Default procedural color
+          colorName = colorEntry?.[1].name;
+        }
+
+        const colorOverrideIndex =
+          patternOverride[getPatternSquareKey(x, y)];
+        if (colorOverrideIndex !== undefined) {
+          const colorEntry = colorEntries[colorOverrideIndex];
+          color = colorEntry?.[1].hex || "#8B5E3B";
           colorName = colorEntry?.[1].name;
         }
 
@@ -635,12 +594,20 @@ function GeometricPatternComponent({
         const zPos = squareSize / 2 - (useMini ? 0.41 : 0.401);
 
         const isHorizontal = shouldBeHorizontal(x, y);
-        const rotation = getRotation(
+        let rotation = getRotation(
           x,
           y,
           isHorizontal,
           rotationSeedsRef.current!
         );
+        const directionOverride =
+          patternDirectionOverride[getPatternSquareKey(x, y)];
+        if (directionOverride !== undefined) {
+          rotation = getSquareDirectionRotation(
+            directionOverride,
+            patternRotationZ
+          );
+        }
         const textureVariation = textureVariationsRef.current![x][y];
 
         // Only render if color is not null
@@ -690,7 +657,144 @@ function GeometricPatternComponent({
     scatterWidth,
     scatterAmount,
     patternOverride,
+    patternDirectionOverride,
+    patternRotationZ,
+    currentGridWidth,
+    currentGridHeight,
   ]);
+
+  const renderedPatternKeys = useMemo(
+    () =>
+      new Set(
+        instances.map(({ x, y }) => getPatternSquareKey(x, y))
+      ),
+    [instances]
+  );
+
+  const [patternBrushPreviewOrigin, setPatternBrushPreviewOrigin] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+
+  const handlePatternBrushHover = useCallback((x: number, y: number) => {
+    setPatternBrushPreviewOrigin((currentOrigin) =>
+      currentOrigin?.x === x && currentOrigin.y === y
+        ? currentOrigin
+        : { x, y }
+    );
+  }, []);
+
+  const handlePatternBrushUnhover = useCallback(() => {
+    setPatternBrushPreviewOrigin(null);
+  }, []);
+
+  useEffect(() => {
+    if (!isPatternEditorActive || patternEditingMode.tool === "none") {
+      setPatternBrushPreviewOrigin(null);
+    }
+  }, [isPatternEditorActive, patternEditingMode.tool]);
+
+  useEffect(() => {
+    setPatternBrushPreviewOrigin(null);
+  }, [currentGridHeight, currentGridWidth, orientation, selectedDesign]);
+
+  const highlightedInstanceIds = useMemo(() => {
+    if (
+      !patternBrushPreviewOrigin ||
+      !isPatternEditorActive ||
+      patternEditingMode.tool === "none"
+    ) {
+      return [];
+    }
+
+    const brushSize =
+      patternBrush.shape === "circle"
+        ? patternBrush.sizes.circle
+        : patternBrush.sizes.square;
+    const highlightedKeys = new Set(
+      getPatternBrushKeys(
+        patternBrushPreviewOrigin.x,
+        patternBrushPreviewOrigin.y,
+        patternBrush.shape,
+        brushSize,
+        currentGridWidth,
+        currentGridHeight,
+        orientation
+      )
+    );
+
+    return instances.reduce<number[]>((instanceIds, square, instanceId) => {
+      if (highlightedKeys.has(getPatternSquareKey(square.x, square.y))) {
+        instanceIds.push(instanceId);
+      }
+      return instanceIds;
+    }, []);
+  }, [
+    currentGridHeight,
+    currentGridWidth,
+    instances,
+    isPatternEditorActive,
+    orientation,
+    patternBrush,
+    patternBrushPreviewOrigin,
+    patternEditingMode.tool,
+  ]);
+
+  const handleSquareClick = useCallback(
+    (
+      x: number,
+      y: number,
+      color: string,
+      name: string | undefined,
+      worldX: number,
+      worldY: number,
+      worldZ: number
+    ) => {
+      if (isPatternEditorActive && patternEditingMode.tool !== "none") {
+        const brushSize =
+          patternBrush.shape === "circle"
+            ? patternBrush.sizes.circle
+            : patternBrush.sizes.square;
+        const brushKeys = getPatternBrushKeys(
+          x,
+          y,
+          patternBrush.shape,
+          brushSize,
+          currentGridWidth,
+          currentGridHeight,
+          orientation
+        ).filter((key) => renderedPatternKeys.has(key));
+
+        if (brushKeys.length) {
+          applyPatternSquareEdit(brushKeys, patternEditingMode);
+          return;
+        }
+      }
+
+      if (allowPin) {
+        // Handle normal pinning behavior — read-only hosts (shared gallery)
+        // disable this so a click can't leave the color label stuck on screen.
+        setPinnedInfo({
+          position: [x, y],
+          worldPosition: [worldX, worldY, worldZ],
+          color,
+          colorName: name,
+        });
+      }
+    },
+    [
+      allowPin,
+      applyPatternSquareEdit,
+      currentGridHeight,
+      currentGridWidth,
+      isPatternEditorActive,
+      orientation,
+      patternBrush,
+      patternEditingMode,
+      renderedPatternKeys,
+      setPinnedInfo,
+    ]
+  );
 
   // Publish the EXACT computed art to the AR snapshot so "View in your room"
   // (USDZ export) is pixel-faithful to what's on screen — on the viewer AND the
@@ -738,9 +842,7 @@ function GeometricPatternComponent({
         }-${useMini ? 1 : 0}-${scatterEase ?? 50}-${scatterWidth ?? 10}-${
           scatterAmount ?? 50
         }`}
-        rotation={
-          orientation === "vertical" ? [0, 0, Math.PI / 2] : [0, 0, 0]
-        }
+        rotation={[NO_AXIS_ROTATION, NO_AXIS_ROTATION, patternRotationZ]}
         position={[0, 0, 0]}
         onClick={showColorInfo ? handleGroupClick : undefined}
       >
@@ -772,7 +874,12 @@ function GeometricPatternComponent({
           onBloomComplete={handleBloomComplete}
           revealStyle="rows"
           bloomOnResize={false}
-          enablePatternEditing={isPatternEditorActive}
+          highlightedInstanceIds={highlightedInstanceIds}
+          onPatternHover={handlePatternBrushHover}
+          onPatternUnhover={handlePatternBrushUnhover}
+          enablePatternEditing={
+            isPatternEditorActive && patternEditingMode.tool !== "none"
+          }
         />
 
         {/* Overlays live INSIDE the transformed group so their anchor

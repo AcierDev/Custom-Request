@@ -1,6 +1,10 @@
 "use client";
 
-import { ColorPattern } from "@/store/customStore";
+import type {
+  ColorPattern,
+  PatternBrushShape,
+  SquareDirection,
+} from "@/store/customStore";
 import { DESIGN_COLORS } from "@/typings/color-maps";
 import { ItemDesigns } from "@/typings/types";
 import { GRAIN_ATLAS } from "./woodStyles";
@@ -224,6 +228,142 @@ export function getColorEntries(selectedDesign: string, customPalette: any[]) {
  */
 export function shouldBeHorizontal(x: number, y: number): boolean {
   return (x + y) % 2 === 0;
+}
+
+//╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
+//║ 🧭 MANUAL SQUARE DIRECTION                                           ║
+//╚═══╝ ════════════════════════════════════════════════════════════════ ╚═══╝
+
+type PatternOrientation = "horizontal" | "vertical";
+
+const NO_ROTATION_RADIANS = 0;
+const QUARTER_TURN_RADIANS = Math.PI / 2;
+const HALF_TURN_RADIANS = Math.PI;
+const GRID_INDEX_START = 0;
+const GRID_INDEX_INCREMENT = 1;
+const BRUSH_DIAMETER_DIVISOR = 2;
+
+const SQUARE_DIRECTION_ROTATION_Z: Record<SquareDirection, number> = {
+  north: NO_ROTATION_RADIANS,
+  east: QUARTER_TURN_RADIANS,
+  south: HALF_TURN_RADIANS,
+  west: -QUARTER_TURN_RADIANS,
+};
+
+export function getPatternSquareKey(x: number, y: number): string {
+  return `${x}-${y}`;
+}
+
+export function getPatternOrientationRotation(
+  orientation: PatternOrientation
+): number {
+  return orientation === "vertical"
+    ? QUARTER_TURN_RADIANS
+    : NO_ROTATION_RADIANS;
+}
+
+/**
+ * Resolve a manual direction to the square's local rotation. Directions name
+ * the raised edge as seen front-on, so compensate for the parent pattern's
+ * orientation rotation to keep the selected arrow visually accurate.
+ */
+export function getSquareDirectionRotation(
+  direction: SquareDirection,
+  patternRotationZ: number
+): number {
+  return SQUARE_DIRECTION_ROTATION_Z[direction] - patternRotationZ;
+}
+
+//╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
+//║ 🖌️ PATTERN AREA BRUSHES                                              ║
+//╚═══╝ ════════════════════════════════════════════════════════════════ ╚═══╝
+
+export function getPatternBrushKeys(
+  originX: number,
+  originY: number,
+  shape: PatternBrushShape,
+  size: number,
+  gridWidth: number,
+  gridHeight: number,
+  orientation: PatternOrientation
+): string[] {
+  const keys: string[] = [];
+  const addKey = (x: number, y: number) => {
+    if (
+      x >= GRID_INDEX_START &&
+      x < gridWidth &&
+      y >= GRID_INDEX_START &&
+      y < gridHeight
+    ) {
+      keys.push(getPatternSquareKey(x, y));
+    }
+  };
+
+  if (shape === "single") {
+    addKey(originX, originY);
+    return keys;
+  }
+
+  if (shape === "row") {
+    if (orientation === "vertical") {
+      for (
+        let y = GRID_INDEX_START;
+        y < gridHeight;
+        y += GRID_INDEX_INCREMENT
+      ) {
+        addKey(originX, y);
+      }
+    } else {
+      for (
+        let x = GRID_INDEX_START;
+        x < gridWidth;
+        x += GRID_INDEX_INCREMENT
+      ) {
+        addKey(x, originY);
+      }
+    }
+    return keys;
+  }
+
+  if (shape === "column") {
+    if (orientation === "vertical") {
+      for (
+        let x = GRID_INDEX_START;
+        x < gridWidth;
+        x += GRID_INDEX_INCREMENT
+      ) {
+        addKey(x, originY);
+      }
+    } else {
+      for (
+        let y = GRID_INDEX_START;
+        y < gridHeight;
+        y += GRID_INDEX_INCREMENT
+      ) {
+        addKey(originX, y);
+      }
+    }
+    return keys;
+  }
+
+  const radius = Math.floor(size / BRUSH_DIAMETER_DIVISOR);
+  for (
+    let offsetX = -radius;
+    offsetX <= radius;
+    offsetX += GRID_INDEX_INCREMENT
+  ) {
+    for (
+      let offsetY = -radius;
+      offsetY <= radius;
+      offsetY += GRID_INDEX_INCREMENT
+    ) {
+      const isInsideBrush =
+        shape === "square" ||
+        offsetX * offsetX + offsetY * offsetY <= radius * radius;
+      if (isInsideBrush) addKey(originX + offsetX, originY + offsetY);
+    }
+  }
+  return keys;
 }
 
 /**

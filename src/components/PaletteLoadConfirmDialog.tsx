@@ -31,8 +31,14 @@ export function PaletteLoadConfirmDialog({
   onConfirm,
   paletteToLoad,
 }: PaletteLoadConfirmDialogProps) {
-  const { customPalette, savePalette, editingPaletteId, updatePalette } =
-    useCustomStore();
+  const {
+    customPalette,
+    patternOverride,
+    patternDirectionOverride,
+    savePalette,
+    editingPaletteId,
+    updatePalette,
+  } = useCustomStore();
   const [saveName, setSaveName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -48,6 +54,8 @@ export function PaletteLoadConfirmDialog({
         // Update existing palette
         updatePalette(editingPaletteId, {
           colors: customPalette,
+          patternOverride,
+          patternDirectionOverride,
           name: saveName.trim(),
         });
         toast.success("Palette updated successfully!");
