@@ -20,6 +20,7 @@ import {
 } from "@dnd-kit/sortable";
 import { HexColorPicker } from "react-colorful";
 import { useCustomStore } from "@/store/customStore";
+import type { PaintEstimateMode } from "@/store/customStore";
 import { blendHexColors } from "@/lib/colorUtils";
 import {
   simulatePaintLikeMix,
@@ -68,6 +69,7 @@ import { BlendingGuide } from "./BlendingGuide";
 import { computePaintTotals, hasSharedParts } from "./mixTotals";
 import {
   paintAmountForSquares,
+  paintAmountForColorGrams,
   GRAMS_PER_SQUARE,
 } from "./paintEstimate";
 import { ColorHarmonyGenerator } from "./ColorHarmonyGenerator";
@@ -117,6 +119,12 @@ const ACTION_BLUE = `${ACTION_BTN} bg-blue-600 hover:bg-blue-500 ring-blue-400/4
 const ACTION_SLATE = `${ACTION_BTN} bg-slate-700 hover:bg-slate-600 ring-slate-400/30`;
 const ACTION_RED = `${ACTION_BTN} bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 ring-red-400/40`;
 const SELECTED_BLEND_COLOR_COUNT = 2;
+// Paint-estimate input modes: derive the per-color mass from the square
+// count, or type the total grams for one color directly.
+const PAINT_MODE_OPTIONS: { value: PaintEstimateMode; label: string }[] = [
+  { value: "perSquare", label: "g / square" },
+  { value: "perColor", label: "g / color" },
+];
 // Drag-to-reorder activation. Mouse starts after a small movement; touch
 // requires a long-press so quick swipes over the palette scroll the page
 // instead of grabbing a swatch.
@@ -192,21 +200,31 @@ export function PaletteManager() {
 
   // Piece-size inputs live in the store (as raw entered text) so they save
   // onto the palette and come back when it's reopened — no re-entering. The
-  // "how much paint to buy" estimate splits the squares evenly across the
-  // palette's colors, each square costing a fixed mass of paint. A blank or
-  // non-positive grams value falls back to the default.
+  // "how much paint to buy" estimate has two modes: derive the per-color
+  // mass from the square count (squares ÷ colors × grams-per-square), or
+  // take a directly-entered total grams-per-color. A blank or non-positive
+  // grams-per-square value falls back to the default.
+  const paintMode = pieceSize.paintMode ?? "perSquare";
   const effectiveGramsPerSquare =
     Number(pieceSize.gramsPerSquare) > 0
       ? Number(pieceSize.gramsPerSquare)
       : GRAMS_PER_SQUARE;
   const paintAmount = useMemo(
     () =>
-      paintAmountForSquares(
-        Number(pieceSize.squares),
-        customPalette.length,
-        effectiveGramsPerSquare
-      ),
-    [pieceSize.squares, customPalette.length, effectiveGramsPerSquare]
+      paintMode === "perColor"
+        ? paintAmountForColorGrams(Number(pieceSize.gramsPerColor))
+        : paintAmountForSquares(
+            Number(pieceSize.squares),
+            customPalette.length,
+            effectiveGramsPerSquare
+          ),
+    [
+      paintMode,
+      pieceSize.gramsPerColor,
+      pieceSize.squares,
+      customPalette.length,
+      effectiveGramsPerSquare,
+    ]
   );
 
   const handMixPreview = useMemo(() => {
@@ -706,62 +724,104 @@ export function PaletteManager() {
           </div>
         </div>
 
-        {/* Piece size → paint to buy. Enter how many squares the finished
-            piece is; each color's swatch then shows how much paint to
-            purchase for its even share of those squares. Saved with the
-            palette, so it comes back when you reopen it. */}
+        {/* Piece size → paint to buy. Two ways to size each color's paint:
+            derive it from the square count (grams-per-square × squares ÷
+            colors), or enter a total grams-per-color directly. Saved with
+            the palette, so it comes back when you reopen it. */}
         {customPalette.length > 0 && (
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-            {/* Piece size section */}
-            <div className="flex items-center gap-2 rounded-xl border border-amber-400/40 bg-amber-500/10 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.10),0_1px_3px_rgba(0,0,0,0.20)]">
-              <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] bg-amber-600/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_1px_2px_rgba(0,0,0,0.10)]">
-                <PaintBucket className="h-4 w-4 text-white" />
-              </span>
-              <Label
-                htmlFor="square-count"
-                className="whitespace-nowrap text-sm text-slate-200"
-              >
-                Piece size
-              </Label>
-              <Input
-                id="square-count"
-                type="number"
-                inputMode="numeric"
-                min={0}
-                value={pieceSize.squares}
-                onChange={(e) => setPieceSize({ squares: e.target.value })}
-                placeholder="e.g. 400"
-                className="h-8 w-24"
-              />
-              <span className="whitespace-nowrap text-xs text-slate-400">
-                squares
-              </span>
+            {/* Mode toggle: per-square vs. per-color */}
+            <div className="inline-flex items-center gap-0.5 rounded-xl border border-amber-400/40 bg-amber-500/10 p-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.10),0_1px_3px_rgba(0,0,0,0.20)]">
+              {PAINT_MODE_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setPieceSize({ paintMode: option.value })}
+                  className={cn(
+                    "rounded-[10px] px-2.5 py-1 text-xs font-medium transition-colors",
+                    paintMode === option.value
+                      ? "bg-amber-600/85 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_1px_2px_rgba(0,0,0,0.10)]"
+                      : "text-slate-300 hover:text-white"
+                  )}
+                >
+                  {option.label}
+                </button>
+              ))}
             </div>
 
-            {/* Paint-per-square section — adjustable, defaults to
-                GRAMS_PER_SQUARE. */}
+            {/* Piece size (squares) — only needed when deriving from squares */}
+            {paintMode === "perSquare" && (
+              <div className="flex items-center gap-2 rounded-xl border border-amber-400/40 bg-amber-500/10 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.10),0_1px_3px_rgba(0,0,0,0.20)]">
+                <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] bg-amber-600/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_1px_2px_rgba(0,0,0,0.10)]">
+                  <PaintBucket className="h-4 w-4 text-white" />
+                </span>
+                <Label
+                  htmlFor="square-count"
+                  className="whitespace-nowrap text-sm text-slate-200"
+                >
+                  Piece size
+                </Label>
+                <Input
+                  id="square-count"
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  value={pieceSize.squares}
+                  onChange={(e) => setPieceSize({ squares: e.target.value })}
+                  placeholder="e.g. 400"
+                  className="h-8 w-24"
+                />
+                <span className="whitespace-nowrap text-xs text-slate-400">
+                  squares
+                </span>
+              </div>
+            )}
+
+            {/* Paint amount — grams-per-square (defaults to GRAMS_PER_SQUARE)
+                or total grams-per-color, depending on mode. */}
             <div className="flex items-center gap-2 rounded-xl border border-amber-400/40 bg-amber-500/10 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.10),0_1px_3px_rgba(0,0,0,0.20)]">
+              {paintMode === "perColor" && (
+                <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] bg-amber-600/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_1px_2px_rgba(0,0,0,0.10)]">
+                  <PaintBucket className="h-4 w-4 text-white" />
+                </span>
+              )}
               <Label
-                htmlFor="grams-per-square"
+                htmlFor="paint-grams"
                 className="whitespace-nowrap text-sm text-slate-200"
               >
                 Paint
               </Label>
-              <Input
-                id="grams-per-square"
-                type="number"
-                inputMode="decimal"
-                min={0}
-                step="0.5"
-                value={pieceSize.gramsPerSquare}
-                onChange={(e) =>
-                  setPieceSize({ gramsPerSquare: e.target.value })
-                }
-                placeholder={String(GRAMS_PER_SQUARE)}
-                className="h-8 w-20"
-              />
+              {paintMode === "perColor" ? (
+                <Input
+                  id="paint-grams"
+                  type="number"
+                  inputMode="decimal"
+                  min={0}
+                  step="1"
+                  value={pieceSize.gramsPerColor}
+                  onChange={(e) =>
+                    setPieceSize({ gramsPerColor: e.target.value })
+                  }
+                  placeholder="e.g. 120"
+                  className="h-8 w-24"
+                />
+              ) : (
+                <Input
+                  id="paint-grams"
+                  type="number"
+                  inputMode="decimal"
+                  min={0}
+                  step="0.5"
+                  value={pieceSize.gramsPerSquare}
+                  onChange={(e) =>
+                    setPieceSize({ gramsPerSquare: e.target.value })
+                  }
+                  placeholder={String(GRAMS_PER_SQUARE)}
+                  className="h-8 w-20"
+                />
+              )}
               <span className="whitespace-nowrap text-xs text-slate-400">
-                g / square
+                {paintMode === "perColor" ? "g / color" : "g / square"}
               </span>
             </div>
 
@@ -774,9 +834,13 @@ export function PaletteManager() {
                   of each color ·{" "}
                   <span className="tabular-nums">
                     {Math.round(paintAmount.grams)} g
-                  </span>{" "}
-                  · {effectiveGramsPerSquare} g/square
+                  </span>
+                  {paintMode === "perSquare" && (
+                    <> · {effectiveGramsPerSquare} g/square</>
+                  )}
                 </>
+              ) : paintMode === "perColor" ? (
+                <>Enter grams per color to size each color&apos;s paint.</>
               ) : (
                 <>Enter the square count to size each color&apos;s paint.</>
               )}

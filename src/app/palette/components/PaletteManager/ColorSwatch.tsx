@@ -25,7 +25,7 @@ import { toast } from "sonner";
 import { handMixMatchPercent } from "@/lib/paintMixSimulator";
 import { ColorSwatchProps } from "./types";
 import { swatchParts } from "./mixTotals";
-import { formatInUnit } from "./paintEstimate";
+import { formatGrams } from "./paintEstimate";
 
 // Mobile: short grid tiles so many colors stay tappable; sm+: tall
 // side-by-side paint-strip bars.
@@ -108,10 +108,10 @@ export function ColorSwatch({
   const textColorStyle = { color: textColor };
 
   // With a piece size set, a mixed color's total paint splits across its
-  // recipe by the integer part ratio, so each ingredient reads as the
-  // pints/quarts to buy instead of an abstract "N parts". Formatted in the
-  // color total's own unit so the ingredients read as a ratio and sum back
-  // to the swatch's buy badge.
+  // recipe by the integer part ratio, so each ingredient reads as the grams
+  // to weigh out instead of an abstract "N parts". Quoted by mass (not the
+  // color total's retail volume) since you hit the ratio on a scale; the
+  // per-ingredient grams still sum back to the color's total mass.
   const mixComponentAmount = (parts: number) => {
     if (!paintAmount || !paintMixRecipe) return null;
     const totalParts = paintMixRecipe.components.reduce(
@@ -119,10 +119,7 @@ export function ColorSwatch({
       0
     );
     if (totalParts <= 0) return null;
-    return formatInUnit(
-      (paintAmount.value * parts) / totalParts,
-      paintAmount.unit
-    );
+    return formatGrams((paintAmount.grams * parts) / totalParts);
   };
 
   const copyHex = (e: React.MouseEvent) => {

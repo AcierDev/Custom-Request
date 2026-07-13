@@ -1,6 +1,13 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCustomStore } from "@/store/customStore";
 import { Button } from "@/components/ui/button";
@@ -70,6 +77,11 @@ import { PatternEditor } from "./components/PatternEditor";
 import { PaletteColorEditor } from "./components/PaletteColorEditor";
 import { WallColorPicker } from "@/components/preview/WallColorPicker";
 import { PatternControls } from "@/components/preview/PatternControls";
+import {
+  FourAngleImageCapture,
+  type CaptureFourAngleImage,
+} from "@/components/preview/FourAngleImageCapture";
+import { toast } from "sonner";
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ 🎥 ROOM COLLISION                                                     ║
@@ -140,6 +152,8 @@ const ROOM_COLLISION_INSET = 0.7;
 const ROOM_COLLISION_HARD_CLAMP_SLACK = 0.6;
 const ROOM_COLLISION_MIN_OFFSET = 1e-4;
 const ROOM_COLLISION_MIN_DISTANCE = 1.2;
+const FOUR_ANGLE_EXPORT_FILENAME = "custom-art-four-angles.png";
+const DOWNLOAD_URL_REVOKE_DELAY_MS = 1000;
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ 🎯 ART CAMERA FOLLOW                                                  ║
@@ -346,6 +360,56 @@ export default function DesignPage() {
   const [showPatternEditor, setShowPatternEditor] = useState(false);
   const [mobileOptionsOpen, setMobileOptionsOpen] = useState(false);
   const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>("afternoon");
+  const [isSavingImage, setIsSavingImage] = useState(false);
+  const [isImageCaptureReady, setIsImageCaptureReady] = useState(false);
+  const isViewerMountedRef = useRef(true);
+  const captureFourAngleImageRef = useRef<CaptureFourAngleImage | null>(null);
+  const setCaptureFourAngleImage = useCallback(
+    (capture: CaptureFourAngleImage | null) => {
+      captureFourAngleImageRef.current = capture;
+      if (isViewerMountedRef.current) {
+        setIsImageCaptureReady(Boolean(capture));
+      }
+    },
+    []
+  );
+
+  const handleSaveImage = async () => {
+    const capture = captureFourAngleImageRef.current;
+    if (!capture) {
+      toast.error("The viewer is still preparing the image exporter.");
+      return;
+    }
+
+    setIsSavingImage(true);
+
+    try {
+      const blob = await capture();
+      if (!isViewerMountedRef.current) return;
+
+      const downloadUrl = URL.createObjectURL(blob);
+      const downloadLink = document.createElement("a");
+      downloadLink.href = downloadUrl;
+      downloadLink.download = FOUR_ANGLE_EXPORT_FILENAME;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      downloadLink.remove();
+      window.setTimeout(
+        () => URL.revokeObjectURL(downloadUrl),
+        DOWNLOAD_URL_REVOKE_DELAY_MS
+      );
+      toast.success("Four-angle image downloaded.");
+    } catch (error) {
+      if (!isViewerMountedRef.current) return;
+
+      console.error("Failed to export the four-angle image", error);
+      toast.error("Failed to export the four-angle image.");
+    } finally {
+      if (isViewerMountedRef.current) {
+        setIsSavingImage(false);
+      }
+    }
+  };
 
   // Custom choice dialog hook
   const {
@@ -353,6 +417,13 @@ export default function DesignPage() {
     handleChoiceMade,
     handleDialogClose: handleCustomChoiceDialogClose,
   } = useCustomChoiceDialog();
+
+  useEffect(() => {
+    isViewerMountedRef.current = true;
+    return () => {
+      isViewerMountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     setMounted(true);
@@ -744,6 +815,14 @@ export default function DesignPage() {
             />
           )}
           </animated.group>
+          {/* Register export only after the complete texture-backed scene
+              has resolved, preventing an early click from saving empty tiles. */}
+          <FourAngleImageCapture
+            bounds={showRoom ? camBounds : null}
+            collisionInset={ROOM_COLLISION_INSET}
+            minimumDistance={ROOM_COLLISION_MIN_DISTANCE}
+            onReady={setCaptureFourAngleImage}
+          />
           </Suspense>
 
           {/* Controls live OUTSIDE the Suspense boundary. A texture
@@ -838,13 +917,20 @@ export default function DesignPage() {
           <Button
             variant="outline"
             size={isMobile ? "sm" : "default"}
+            disabled={isSavingImage || !isImageCaptureReady}
+            aria-busy={isSavingImage}
             className={cn(
               "glass-surface text-gray-200 hover:bg-gray-900/50 hover:border-white/30 hover:text-white",
               isMobile && "rounded-full ring-1 ring-white/15 text-xs font-medium border-0"
             )}
+            onClick={handleSaveImage}
           >
             <Download className="w-4 h-4 shrink-0" />
-            {(isMobile || !isMobile) && (isMobile ? "Save" : "Save Image")}
+            {isSavingImage
+              ? "Saving…"
+              : isMobile
+                ? "Save"
+                : "Save Image"}
           </Button>
         )}
         {/* iOS-mobile-only — renders null elsewhere. Bakes a life-size,

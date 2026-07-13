@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCollection } from "@/lib/mongodb";
 import { nanoid } from "nanoid";
-import { ItemDesigns } from "@/typings/types";
 
 // Collection name for shared designs
 const SHARED_DESIGNS_COLLECTION = "sharedDesigns";
-// Each user's whole store snapshot (including savedPalettes) lives in one
-// doc here — the live source the share overlay reads from.
-const USER_DATA_COLLECTION = "userData";
+const SHARE_ID_LENGTH = 12;
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,7 +21,7 @@ export async function POST(request: NextRequest) {
     const collection = await getCollection(SHARED_DESIGNS_COLLECTION);
 
     // Generate a unique ID for the shared design
-    const shareId = nanoid(12); // 12 character ID for shorter URLs
+    const shareId = nanoid(SHARE_ID_LENGTH);
 
     // Create the shared design document
     const sharedDesign = {
@@ -40,7 +37,6 @@ export async function POST(request: NextRequest) {
     // Insert the shared design
     await collection.insertOne(sharedDesign);
 
-    // Create indexes for better performance
     // Create indexes for better performance
     try {
       await collection.createIndexes([
@@ -117,30 +113,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // The share doc is a frozen snapshot, but a custom-palette share should
-    // always show its owner's LATEST saved palette: resolve it fresh on
-    // every read and lay its colors over the snapshot. The snapshot remains
-    // the fallback for legacy/guest shares (no owner identity), owners with
-    // no saved palettes yet, and official-catalog designs (whose colors are
-    // fixed, not palette-driven).
-    const latestPalette =
-      sharedDesign.designData?.selectedDesign === ItemDesigns.Custom
-        ? await resolveLatestSavedPalette(sharedDesign.userId, sharedDesign.email)
-        : null;
-    const designData = latestPalette
-      ? {
-          ...sharedDesign.designData,
-          customPalette: latestPalette.colors,
-          patternOverride: latestPalette.patternOverride ?? {},
-          patternDirectionOverride:
-            latestPalette.patternDirectionOverride ?? {},
-        }
-      : sharedDesign.designData;
-
     return NextResponse.json({
       shareId: sharedDesign.shareId,
-      designData,
-      paletteName: latestPalette?.name ?? null,
+      // A shared design is immutable: return the exact palette, square color
+      // map, and direction map captured by POST.
+      designData: sharedDesign.designData,
       createdAt: sharedDesign.createdAt,
       accessCount: (sharedDesign.accessCount ?? 0) + (isPoll ? 0 : 1), // Return updated count
     });
@@ -150,57 +127,5 @@ export async function GET(request: NextRequest) {
       { error: "Failed to retrieve shared design" },
       { status: 500 }
     );
-  }
-}
-
-interface StoredSavedPalette {
-  name?: string;
-  colors?: unknown[];
-  patternOverride?: Record<string, number>;
-  patternDirectionOverride?: Record<string, string>;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-/** Most recent save wins: editing an existing palette (updatedAt) counts as
- *  much as creating a new one (createdAt). */
-function paletteSavedAtMs(palette: StoredSavedPalette): number {
-  return Date.parse(palette.updatedAt ?? palette.createdAt ?? "") || 0;
-}
-
-/** Look up the share owner's userData doc and return their most recently
- *  saved palette, or null when it can't be resolved. Never throws — a
- *  lookup failure degrades to the share's frozen snapshot. */
-async function resolveLatestSavedPalette(
-  userId: string | null | undefined,
-  email: string | null | undefined
-): Promise<StoredSavedPalette | null> {
-  const identityClauses: Record<string, string>[] = [];
-  if (userId) identityClauses.push({ userId });
-  if (email) identityClauses.push({ email });
-  if (identityClauses.length === 0) return null;
-
-  try {
-    const userData = await getCollection(USER_DATA_COLLECTION);
-    const owner = await userData.findOne(
-      { $or: identityClauses },
-      { projection: { "storeData.savedPalettes": 1 } }
-    );
-    const palettes = owner?.storeData?.savedPalettes;
-    if (!Array.isArray(palettes)) return null;
-
-    let latest: StoredSavedPalette | null = null;
-    for (const palette of palettes as StoredSavedPalette[]) {
-      if (!Array.isArray(palette?.colors) || palette.colors.length === 0) {
-        continue;
-      }
-      if (!latest || paletteSavedAtMs(palette) > paletteSavedAtMs(latest)) {
-        latest = palette;
-      }
-    }
-    return latest;
-  } catch (error) {
-    console.error("Error resolving latest saved palette:", error);
-    return null;
   }
 }

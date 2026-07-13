@@ -26,6 +26,10 @@ import { nanoid } from "nanoid";
 const DEFAULT_DEBOUNCE_DELAY_MS = 1_000;
 const STORE_PERSISTENCE_DEBOUNCE_MS = 2_000;
 const STORE_PERSISTENCE_INTERVAL_MS = 30_000;
+const DEFAULT_SCATTER_EASE = 50;
+const DEFAULT_SCATTER_WIDTH = 10;
+const DEFAULT_SCATTER_AMOUNT = 50;
+const DEFAULT_USE_MINI = false;
 
 // Add debounce utility function
 const debounce = <Args extends unknown[]>(
@@ -155,16 +159,27 @@ export interface PaletteVersion {
 // text (empty = unset) so loading a palette restores exactly what was
 // typed and decimals survive editing. Parsed to numbers only for the
 // estimate math. Lives on the palette so you don't re-enter it each time.
+/** How the per-color paint mass is arrived at: derived from the square
+ *  count (grams-per-square × squares ÷ colors) or entered directly as a
+ *  total grams-per-color. */
+export type PaintEstimateMode = "perSquare" | "perColor";
+
 export interface PieceSize {
   /** Total squares in the finished piece. */
   squares: string;
-  /** Grams of paint per square. */
+  /** Grams of paint per square (used when mode is "perSquare"). */
   gramsPerSquare: string;
+  /** Total grams of paint for one color (used when mode is "perColor"). */
+  gramsPerColor: string;
+  /** Which of the two inputs drives the estimate. */
+  paintMode: PaintEstimateMode;
 }
 
 export const DEFAULT_PIECE_SIZE: PieceSize = {
   squares: "",
   gramsPerSquare: String(GRAMS_PER_SQUARE),
+  gramsPerColor: "",
+  paintMode: "perSquare",
 };
 
 export interface SavedPalette {
@@ -657,8 +672,29 @@ export interface ShareableState {
   scatterEase?: number;
   scatterWidth?: number;
   scatterAmount?: number;
+  drawnPatternGrid?: PatternCell[][] | null;
+  drawnPatternGridSize?: { width: number; height: number } | null;
   patternOverride?: PatternColorOverrides;
   patternDirectionOverride?: PatternDirectionOverrides;
+}
+
+function cloneSharedPatternGrid(
+  grid: PatternCell[][] | null | undefined,
+  size: { width: number; height: number } | null | undefined
+): {
+  drawnPatternGrid: PatternCell[][] | null;
+  drawnPatternGridSize: { width: number; height: number } | null;
+} {
+  if (!grid || !size) {
+    return { drawnPatternGrid: null, drawnPatternGridSize: null };
+  }
+
+  return {
+    drawnPatternGrid: grid.map((row) =>
+      row.map((cell) => ({ ...cell }))
+    ),
+    drawnPatternGridSize: { ...size },
+  };
 }
 
 export type DraftSetItem = {
@@ -812,6 +848,8 @@ const AUTO_SAVE_TRACKED_PROPERTIES: (keyof CustomState)[] = [
   "scatterEase",
   "scatterWidth",
   "scatterAmount",
+  "drawnPatternGrid",
+  "drawnPatternGridSize",
   "patternOverride",
   "patternDirectionOverride",
 ];
@@ -872,9 +910,9 @@ export const useCustomStore = create<CustomStore>()(
     lastSaved: 0,
     autoSaveEnabled: true,
     dataSyncVersion: 1,
-    scatterEase: 50,
-    scatterWidth: 10,
-    scatterAmount: 50,
+    scatterEase: DEFAULT_SCATTER_EASE,
+    scatterWidth: DEFAULT_SCATTER_WIDTH,
+    scatterAmount: DEFAULT_SCATTER_AMOUNT,
     drawnPatternGrid: null,
     drawnPatternGridSize: null,
     paletteHistory: [],
@@ -1532,7 +1570,7 @@ export const useCustomStore = create<CustomStore>()(
 
         return {
           customPalette: [...colorsWithIds],
-          pieceSize: palette.pieceSize ?? DEFAULT_PIECE_SIZE,
+          pieceSize: { ...DEFAULT_PIECE_SIZE, ...palette.pieceSize },
           selectedDesign: ItemDesigns.Custom,
           currentColors: createColorMap(colorsWithIds),
           selectedColors: [],
@@ -1776,6 +1814,10 @@ export const useCustomStore = create<CustomStore>()(
     },
     getShareableStateSnapshot: () => {
       const state = get();
+      const sharedPatternGrid = cloneSharedPatternGrid(
+        state.drawnPatternGrid,
+        state.drawnPatternGridSize
+      );
       return {
         dimensions: state.dimensions,
         selectedDesign: state.selectedDesign,
@@ -1788,6 +1830,10 @@ export const useCustomStore = create<CustomStore>()(
         style: state.style,
         useMini: state.useMini,
         activeCustomMode: state.activeCustomMode,
+        scatterEase: state.scatterEase,
+        scatterWidth: state.scatterWidth,
+        scatterAmount: state.scatterAmount,
+        ...sharedPatternGrid,
         patternOverride: { ...state.patternOverride },
         patternDirectionOverride: { ...state.patternDirectionOverride },
       };
@@ -1931,6 +1977,10 @@ export const useCustomStore = create<CustomStore>()(
                 : 0,
           })
         );
+        const sharedPatternGrid = cloneSharedPatternGrid(
+          shareableState.drawnPatternGrid,
+          shareableState.drawnPatternGridSize
+        );
 
         set({
           dimensions: shareableState.dimensions,
@@ -1942,7 +1992,15 @@ export const useCustomStore = create<CustomStore>()(
           customPalette: loadedPalette,
           isRotated: shareableState.isRotated,
           style: shareableState.style,
+          useMini: shareableState.useMini ?? DEFAULT_USE_MINI,
           activeCustomMode: shareableState.activeCustomMode || "palette",
+          scatterEase:
+            shareableState.scatterEase ?? DEFAULT_SCATTER_EASE,
+          scatterWidth:
+            shareableState.scatterWidth ?? DEFAULT_SCATTER_WIDTH,
+          scatterAmount:
+            shareableState.scatterAmount ?? DEFAULT_SCATTER_AMOUNT,
+          ...sharedPatternGrid,
           patternOverride: { ...(shareableState.patternOverride ?? {}) },
           patternDirectionOverride: {
             ...(shareableState.patternDirectionOverride ?? {}),
@@ -1985,6 +2043,10 @@ export const useCustomStore = create<CustomStore>()(
                 : 0,
           })
         );
+        const sharedPatternGrid = cloneSharedPatternGrid(
+          designData.drawnPatternGrid,
+          designData.drawnPatternGridSize
+        );
 
         set({
           dimensions: designData.dimensions,
@@ -1996,11 +2058,12 @@ export const useCustomStore = create<CustomStore>()(
           customPalette: loadedPalette,
           isRotated: designData.isRotated,
           style: designData.style,
-          // Honor the sharer's square-size choice (the snapshot carries it).
-          ...(typeof designData.useMini === "boolean"
-            ? { useMini: designData.useMini }
-            : {}),
+          useMini: designData.useMini ?? DEFAULT_USE_MINI,
           activeCustomMode: designData.activeCustomMode || "palette",
+          scatterEase: designData.scatterEase ?? DEFAULT_SCATTER_EASE,
+          scatterWidth: designData.scatterWidth ?? DEFAULT_SCATTER_WIDTH,
+          scatterAmount: designData.scatterAmount ?? DEFAULT_SCATTER_AMOUNT,
+          ...sharedPatternGrid,
           patternOverride: { ...(designData.patternOverride ?? {}) },
           patternDirectionOverride: {
             ...(designData.patternDirectionOverride ?? {}),
@@ -2140,6 +2203,13 @@ export const useCustomStore = create<CustomStore>()(
           useMini: get().useMini,
           viewSettings: get().viewSettings,
           activeCustomMode: get().activeCustomMode,
+          scatterEase: get().scatterEase,
+          scatterWidth: get().scatterWidth,
+          scatterAmount: get().scatterAmount,
+          ...cloneSharedPatternGrid(
+            get().drawnPatternGrid,
+            get().drawnPatternGridSize
+          ),
           patternOverride: get().patternOverride,
           patternDirectionOverride: get().patternDirectionOverride,
           draftSet: get().draftSet,
@@ -2197,6 +2267,13 @@ export const useCustomStore = create<CustomStore>()(
               useMini: get().useMini,
               viewSettings: get().viewSettings,
               activeCustomMode: get().activeCustomMode,
+              scatterEase: get().scatterEase,
+              scatterWidth: get().scatterWidth,
+              scatterAmount: get().scatterAmount,
+              ...cloneSharedPatternGrid(
+                get().drawnPatternGrid,
+                get().drawnPatternGridSize
+              ),
               patternOverride: get().patternOverride,
               patternDirectionOverride: get().patternDirectionOverride,
               editingPaletteId: get().editingPaletteId,
@@ -2349,11 +2426,23 @@ export const useCustomStore = create<CustomStore>()(
           orientation: mergedState.orientation || get().orientation,
           isReversed: mergedState.isReversed ?? get().isReversed,
           customPalette: mergedState.customPalette || get().customPalette,
-          pieceSize: mergedState.pieceSize ?? get().pieceSize,
+          pieceSize: mergedState.pieceSize
+            ? { ...DEFAULT_PIECE_SIZE, ...mergedState.pieceSize }
+            : get().pieceSize,
           isRotated: mergedState.isRotated ?? get().isRotated,
           style: mergedState.style || get().style,
           activeCustomMode:
             mergedState.activeCustomMode || get().activeCustomMode,
+          scatterEase:
+            mergedState.scatterEase ?? DEFAULT_SCATTER_EASE,
+          scatterWidth:
+            mergedState.scatterWidth ?? DEFAULT_SCATTER_WIDTH,
+          scatterAmount:
+            mergedState.scatterAmount ?? DEFAULT_SCATTER_AMOUNT,
+          ...cloneSharedPatternGrid(
+            mergedState.drawnPatternGrid,
+            mergedState.drawnPatternGridSize
+          ),
           patternOverride: { ...(mergedState.patternOverride ?? {}) },
           patternDirectionOverride: {
             ...(mergedState.patternDirectionOverride ?? {}),

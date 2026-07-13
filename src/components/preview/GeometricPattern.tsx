@@ -229,24 +229,24 @@ function GeometricPatternComponent({
   const scatterAmount = useCustomStore((s) => s.scatterAmount);
 
   // Use values from customDesign when provided, otherwise use store values
-  const dimensions = customDesign?.dimensions || storeDimensions;
+  const dimensions = customDesign?.dimensions ?? storeDimensions;
   const selectedDesign =
-    customDesign?.selectedDesign || storeSelectedDesign;
+    customDesign?.selectedDesign ?? storeSelectedDesign;
   // When Custom is selected but there's nothing to preview (no palette
   // colors and no drawn pattern), render every square a single dark
   // blue instead of an empty / white screen.
   const customPaletteSource =
-    customDesign?.customPalette || storeCustomPalette;
+    customDesign?.customPalette ?? storeCustomPalette;
   const nothingToPreview =
     selectedDesign === ItemDesigns.Custom &&
     customPaletteSource.length === 0 &&
     (!drawnPatternGrid || !drawnPatternGridSize);
-  const colorPattern = customDesign?.colorPattern || storeColorPattern;
-  const orientation = customDesign?.orientation || storeOrientation;
+  const colorPattern = customDesign?.colorPattern ?? storeColorPattern;
+  const orientation = customDesign?.orientation ?? storeOrientation;
   const patternRotationZ = getPatternOrientationRotation(orientation);
-  const isReversed = customDesign?.isReversed || storeIsReversed;
-  const isRotated = customDesign?.isRotated || storeIsRotated;
-  const useMini = customDesign?.useMini || storeUseMini;
+  const isReversed = customDesign?.isReversed ?? storeIsReversed;
+  const isRotated = customDesign?.isRotated ?? storeIsRotated;
+  const useMini = customDesign?.useMini ?? storeUseMini;
   const customPalette = nothingToPreview
     ? EMPTY_FALLBACK_PALETTE
     : customPaletteSource;
@@ -798,9 +798,8 @@ function GeometricPatternComponent({
 
   // Publish the EXACT computed art to the AR snapshot so "View in your room"
   // (USDZ export) is pixel-faithful to what's on screen — on the viewer AND the
-  // shared page (both mount this component). The instances carry Math.random-
-  // seeded tile rotations + grain cells, so re-deriving them elsewhere would
-  // not match; we hand off the live array instead.
+  // shared page (both mount this component). We hand off the live array so the
+  // export uses the exact computed transforms and grain cells.
   useEffect(() => {
     publishArtSnapshot({
       instances,

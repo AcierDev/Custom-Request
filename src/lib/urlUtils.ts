@@ -5,6 +5,15 @@ import {
 
 const SHORT_PATTERN_COLOR_OVERRIDES_KEY = "po";
 const SHORT_PATTERN_DIRECTION_OVERRIDES_KEY = "pdo";
+const SHORT_USE_MINI_KEY = "m";
+const SHORT_CUSTOM_MODE_KEY = "cm";
+const SHORT_SCATTER_EASE_KEY = "se";
+const SHORT_SCATTER_WIDTH_KEY = "sw";
+const SHORT_SCATTER_AMOUNT_KEY = "sa";
+const SHORT_DRAWN_PATTERN_GRID_KEY = "pg";
+const SHORT_DRAWN_PATTERN_SIZE_KEY = "pgs";
+const SHORT_BOOLEAN_FALSE = 0;
+const SHORT_BOOLEAN_TRUE = 1;
 
 /**
  * Compresses a JSON string to make it more URL-friendly
@@ -150,8 +159,39 @@ export const generateShortShareableUrl = (stateData: any): string => {
       const hex = color.hex.startsWith("#")
         ? color.hex.substring(1)
         : color.hex;
-      return color.name ? [hex, color.name] : hex;
+      const extraPercent = color.extraPercent ?? 0;
+      return color.name || extraPercent !== 0
+        ? [hex, color.name ?? "", extraPercent]
+        : hex;
     });
+  }
+
+  if (typeof stateData.useMini === "boolean") {
+    minimalState[SHORT_USE_MINI_KEY] = stateData.useMini
+      ? SHORT_BOOLEAN_TRUE
+      : SHORT_BOOLEAN_FALSE;
+  }
+  if (stateData.activeCustomMode) {
+    minimalState[SHORT_CUSTOM_MODE_KEY] =
+      stateData.activeCustomMode === "pattern"
+        ? SHORT_BOOLEAN_TRUE
+        : SHORT_BOOLEAN_FALSE;
+  }
+  if (typeof stateData.scatterEase === "number") {
+    minimalState[SHORT_SCATTER_EASE_KEY] = stateData.scatterEase;
+  }
+  if (typeof stateData.scatterWidth === "number") {
+    minimalState[SHORT_SCATTER_WIDTH_KEY] = stateData.scatterWidth;
+  }
+  if (typeof stateData.scatterAmount === "number") {
+    minimalState[SHORT_SCATTER_AMOUNT_KEY] = stateData.scatterAmount;
+  }
+  if (stateData.drawnPatternGrid && stateData.drawnPatternGridSize) {
+    minimalState[SHORT_DRAWN_PATTERN_GRID_KEY] = stateData.drawnPatternGrid;
+    minimalState[SHORT_DRAWN_PATTERN_SIZE_KEY] = [
+      stateData.drawnPatternGridSize.width,
+      stateData.drawnPatternGridSize.height,
+    ];
   }
 
   if (Object.keys(stateData.patternOverride ?? {}).length) {
@@ -243,13 +283,45 @@ export const extractStateFromShortUrl = <T>(compressedData: string): T => {
         if (typeof color === "string") {
           return { hex: color.startsWith("#") ? color : `#${color}` };
         } else {
-          // It's an array with [hex, name]
+          // It's an array with [hex, name, extraPercent].
           return {
             hex: color[0].startsWith("#") ? color[0] : `#${color[0]}`,
             name: color[1],
+            extraPercent: typeof color[2] === "number" ? color[2] : 0,
           };
         }
       });
+    }
+
+    if (minimalState[SHORT_USE_MINI_KEY] !== undefined) {
+      fullState.useMini =
+        minimalState[SHORT_USE_MINI_KEY] === SHORT_BOOLEAN_TRUE;
+    }
+    if (minimalState[SHORT_CUSTOM_MODE_KEY] !== undefined) {
+      fullState.activeCustomMode =
+        minimalState[SHORT_CUSTOM_MODE_KEY] === SHORT_BOOLEAN_TRUE
+          ? "pattern"
+          : "palette";
+    }
+    if (minimalState[SHORT_SCATTER_EASE_KEY] !== undefined) {
+      fullState.scatterEase = minimalState[SHORT_SCATTER_EASE_KEY];
+    }
+    if (minimalState[SHORT_SCATTER_WIDTH_KEY] !== undefined) {
+      fullState.scatterWidth = minimalState[SHORT_SCATTER_WIDTH_KEY];
+    }
+    if (minimalState[SHORT_SCATTER_AMOUNT_KEY] !== undefined) {
+      fullState.scatterAmount = minimalState[SHORT_SCATTER_AMOUNT_KEY];
+    }
+    if (
+      minimalState[SHORT_DRAWN_PATTERN_GRID_KEY] &&
+      minimalState[SHORT_DRAWN_PATTERN_SIZE_KEY]
+    ) {
+      fullState.drawnPatternGrid =
+        minimalState[SHORT_DRAWN_PATTERN_GRID_KEY];
+      fullState.drawnPatternGridSize = {
+        width: minimalState[SHORT_DRAWN_PATTERN_SIZE_KEY][0],
+        height: minimalState[SHORT_DRAWN_PATTERN_SIZE_KEY][1],
+      };
     }
 
     if (minimalState[SHORT_PATTERN_COLOR_OVERRIDES_KEY]) {

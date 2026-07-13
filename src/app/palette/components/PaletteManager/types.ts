@@ -38,7 +38,7 @@ export interface ColorSwatchProps {
   /** Paint to buy for this color's even share of the piece. Set once a
    *  square count is entered; when present it replaces the "parts" badge
    *  with a purchasable-volume badge and expresses mix ingredients in
-   *  pints/quarts too. */
+   *  grams to weigh out too. */
   paintAmount?: PaintAmount;
   /** Paint-like prediction for whether this generated blend is hand-mixable. */
   handMix?: HandMixSimulation;

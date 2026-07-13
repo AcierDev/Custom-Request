@@ -4,9 +4,8 @@
 //
 // The live 3D preview (GeometricPattern) already computes the exact per-square
 // instance set the viewer renders — colors, positions, rotations, grain cell
-// indices. That computation is seeded with Math.random (tile rotations, fade
-// dithering), so re-deriving it would NOT match what the user sees. Instead the
-// component PUBLISHES its computed instances here, and the AR/USDZ exporter
+// indices. The layout is deterministic, and the component also PUBLISHES its
+// computed instances here so the AR/USDZ exporter
 // reads this snapshot — so the model placed on the wall is pixel-faithful to
 // the on-screen art on BOTH the viewer and the shared page (both mount
 // GeometricPattern).

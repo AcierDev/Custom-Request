@@ -60,6 +60,30 @@ const SOLID_LINE_MIN_SWAP_SPACING = 5;
  * a clean run longer than this.
  */
 const MAX_RUN_WITHOUT_MIX = 7;
+const DETERMINISTIC_HASH_X_FACTOR = 127.1;
+const DETERMINISTIC_HASH_Y_FACTOR = 311.7;
+const DETERMINISTIC_HASH_SCALE = 43758.5453;
+const ROTATION_HASH_SALT = 17.23;
+const SEAM_BLEND_HASH_SALT = 53.79;
+const FALLBACK_COLOR_HASH_SALT = 91.41;
+const ROTATION_SEED_THRESHOLD = 0.5;
+
+/** Stable pseudo-random value in [0, 1) for a grid coordinate and purpose. */
+function deterministicGridValue(
+  x: number,
+  y: number,
+  salt: number
+): number {
+  return (
+    Math.abs(
+      Math.sin(
+        x * DETERMINISTIC_HASH_X_FACTOR +
+          y * DETERMINISTIC_HASH_Y_FACTOR +
+          salt
+      ) * DETERMINISTIC_HASH_SCALE
+    ) % 1
+  );
+}
 
 /**
  * Number of squares to swap across a solid-color seam of `borderLength` squares.
@@ -104,14 +128,19 @@ function swapAcrossSeam(
   const pairs = mixedRows / 2;
   if (pairs <= 0) return;
 
-  // One mixed row per evenly sized bucket, placed randomly within the bucket so
-  // mixes are spread along the seam and never cluster.
+  // One mixed row per evenly sized bucket. The coordinate hash keeps the
+  // organic-looking placement identical in the builder and every shared view.
   const positions: number[] = [];
   for (let i = 0; i < mixedRows; i++) {
     const start = Math.floor((i * lineLength) / mixedRows);
     const end = Math.floor(((i + 1) * lineLength) / mixedRows);
     const span = Math.max(1, end - start);
-    positions.push(start + Math.floor(Math.random() * span));
+    const bucketValue = deterministicGridValue(
+      lineA,
+      lineB,
+      SEAM_BLEND_HASH_SALT + i
+    );
+    positions.push(start + Math.floor(bucketValue * span));
   }
 
   // Alternate buckets between the two columns and swap each pair, conserving
@@ -245,9 +274,9 @@ const BRUSH_DIAMETER_DIVISOR = 2;
 
 const SQUARE_DIRECTION_ROTATION_Z: Record<SquareDirection, number> = {
   north: NO_ROTATION_RADIANS,
-  east: QUARTER_TURN_RADIANS,
+  east: -QUARTER_TURN_RADIANS,
   south: HALF_TURN_RADIANS,
-  west: -QUARTER_TURN_RADIANS,
+  west: QUARTER_TURN_RADIANS,
 };
 
 export function getPatternSquareKey(x: number, y: number): string {
@@ -393,10 +422,14 @@ export function initializeRotationSeeds(
 ): boolean[][] {
   return Array(width)
     .fill(0)
-    .map(() =>
+    .map((_, x) =>
       Array(height)
         .fill(0)
-        .map(() => Math.random() < 0.5)
+        .map(
+          (_, y) =>
+            deterministicGridValue(x, y, ROTATION_HASH_SALT) <
+            ROTATION_SEED_THRESHOLD
+        )
     );
 }
 
@@ -417,7 +450,7 @@ export function initializeTextureVariations(
           // production's Math.floor(14*random()), but deterministic so it
           // doesn't reshuffle on every re-render).
           textureIndex: Math.floor(
-            (Math.abs(Math.sin(x * 127.1 + y * 311.7) * 43758.5453) % 1) *
+            deterministicGridValue(x, y, NO_ROTATION_RADIANS) *
               GRAIN_ATLAS.count
           ),
         }))
@@ -1028,8 +1061,10 @@ export function generateColorMap(
             break;
 
           default:
-            // Fallback to random
-            colorIndex = Math.floor(Math.random() * colorEntries.length);
+            colorIndex = Math.floor(
+              deterministicGridValue(x, y, FALLBACK_COLOR_HASH_SALT) *
+                colorEntries.length
+            );
         }
 
         // Apply reversal if needed

@@ -88,6 +88,31 @@ export function formatInUnit(
   };
 }
 
+// Mix-to-match ingredients are quoted by mass, not converted to a retail
+// volume: you weigh each part on a scale to hit the ratio, so grams read
+// directly. Rounded to the nearest 10 g so the number is easy to weigh out;
+// a real, nonzero mass is floored at one increment so it never rounds down
+// to a misleading "0 g".
+const GRAM_ROUNDING = 10;
+const roundGrams = (value: number) => {
+  if (!(value > 0)) return 0;
+  return Math.max(
+    GRAM_ROUNDING,
+    Math.round(value / GRAM_ROUNDING) * GRAM_ROUNDING
+  );
+};
+
+/** Format a mass in grams as full + short labels ("30 g" for both — the
+ *  unit is already terse), rounded to the nearest 10 g. Lets a mix's
+ *  ingredients render by weight so each part can be weighed on a scale. */
+export function formatGrams(
+  grams: number
+): { grams: number; label: string; shortLabel: string } {
+  const rounded = roundGrams(grams);
+  const text = `${rounded} g`;
+  return { grams: rounded, label: text, shortLabel: text };
+}
+
 /** Pick the smallest retail unit that keeps the number readable, then
  *  format the volume as both a full and abbreviated label. */
 function describeVolume(grams: number, ml: number): PaintAmount {
@@ -133,4 +158,14 @@ export function paintAmountForSquares(
   const grams = (totalSquares / colorCount) * gramsPerSquare;
   const ml = grams / PAINT_DENSITY_G_PER_ML;
   return describeVolume(grams, ml);
+}
+
+/** Estimate straight from a directly-entered total mass per color, skipping
+ *  the square-count math. Returns null for a blank or non-positive value. */
+export function paintAmountForColorGrams(
+  gramsPerColor: number
+): PaintAmount | null {
+  if (!(gramsPerColor > 0)) return null;
+  const ml = gramsPerColor / PAINT_DENSITY_G_PER_ML;
+  return describeVolume(gramsPerColor, ml);
 }
