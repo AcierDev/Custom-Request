@@ -45,7 +45,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
       <MobileWarning />
       <Navbar />
       <div className="flex-1 overflow-auto no-scrollbar border-t border-sky-400/40">
-        <div className="mt-14 lg:mt-0 flex h-full min-h-0 flex-col lg:ml-[4.5rem]">
+        <div className="mt-14 flex h-full min-h-0 flex-col lg:ml-[var(--desktop-nav-rail-width)] lg:mt-0">
           <main className="min-h-0 flex-1 w-full pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-16">
             {children}
           </main>
