@@ -12,6 +12,7 @@ import {
   ImageOff,
   X,
   Info,
+  Download,
 } from "lucide-react";
 import {
   useCustomStore,
@@ -33,6 +34,7 @@ import { cn } from "@/lib/utils";
 import { sizeToInchLabel } from "@/lib/size-pills";
 import { decompressJsonFromUrl } from "@/lib/urlUtils";
 import { ARButton } from "@/components/ARButton";
+import { useFourAngleImageDownload } from "@/hooks/useFourAngleImageDownload";
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ 🔗 CONSTANTS                                                          ║
@@ -44,6 +46,12 @@ import { ARButton } from "@/components/ARButton";
 const BUILDER_URL = "https://custom.everwood.shop";
 // Network requests that hang shouldn't strand the recipient on a loader.
 const FETCH_TIMEOUT_MS = 10000;
+const SHARED_IMAGE_EXPORT_FILENAME = "shared-art-four-angles.png";
+const SHARED_ACTIONS_CLASS = "z-50 flex items-center gap-2";
+const SHARED_ACTION_BUTTON_CLASS =
+  "rounded-full glass-surface hover:bg-gray-900/50 hover:border-white/30 transition-colors";
+const SHARED_ICON_BUTTON_CLASS = "h-9 w-9";
+const SHARED_ACTION_ICON_CLASS = "h-4 w-4 text-gray-200";
 // Only show the view count once it reads as real social proof, never
 // "Viewed 1 time".
 const VIEW_COUNT_THRESHOLD = 5;
@@ -83,6 +91,12 @@ export default function SharedDesignPage() {
   const [sheetTab, setSheetTab] = useState<"about" | "view">("about");
   const [placardOpen, setPlacardOpen] = useState(true);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const {
+    isSavingImage,
+    isImageCaptureReady,
+    setCapture: setCaptureFourAngleImage,
+    saveImage: handleSaveImage,
+  } = useFourAngleImageDownload(SHARED_IMAGE_EXPORT_FILENAME);
 
   // Environment controls are LOCAL — never the store's persisted
   // viewSettings — so a recipient trying a wall color can't have it
@@ -253,6 +267,7 @@ export default function SharedDesignPage() {
           autoOrbit={!reducedMotion}
           isMobile={isMobile}
           className="w-full h-full"
+          onCaptureReady={setCaptureFourAngleImage}
         />
       </div>
 
@@ -351,24 +366,45 @@ export default function SharedDesignPage() {
         )}
       </AnimatePresence>
 
-      {/* ── Hide-UI toggle ──────────────────────────────────────────── */}
+      {/* ── Image export + Hide-UI toggle ───────────────────────────── */}
       <div
         className={cn(
-          "z-50",
+          SHARED_ACTIONS_CLASS,
           isMobile ? "fixed top-3 right-3" : "absolute bottom-6 right-6"
         )}
       >
+        {showUI && (
+          <Button
+            type="button"
+            variant="ghost"
+            size={isMobile ? "icon" : "sm"}
+            disabled={isSavingImage || !isImageCaptureReady}
+            aria-busy={isSavingImage}
+            aria-label="Save image"
+            onClick={handleSaveImage}
+            className={cn(
+              SHARED_ACTION_BUTTON_CLASS,
+              isMobile && SHARED_ICON_BUTTON_CLASS
+            )}
+          >
+            <Download className={SHARED_ACTION_ICON_CLASS} />
+            {!isMobile && (isSavingImage ? "Saving…" : "Save image")}
+          </Button>
+        )}
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setShowUI((v) => !v)}
           aria-label={showUI ? "Hide interface" : "Show interface"}
-          className="rounded-full w-9 h-9 glass-surface hover:bg-gray-900/50 hover:border-white/30 transition-colors"
+          className={cn(
+            SHARED_ACTION_BUTTON_CLASS,
+            SHARED_ICON_BUTTON_CLASS
+          )}
         >
           {showUI ? (
-            <EyeOff className="w-4 h-4 text-gray-200" />
+            <EyeOff className={SHARED_ACTION_ICON_CLASS} />
           ) : (
-            <Eye className="w-4 h-4 text-gray-200" />
+            <Eye className={SHARED_ACTION_ICON_CLASS} />
           )}
         </Button>
       </div>

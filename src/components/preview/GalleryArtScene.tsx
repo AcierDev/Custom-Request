@@ -26,6 +26,10 @@ import {
 import { Ruler3D } from "./Ruler3D";
 import { frameAlpha } from "./animationUtils";
 import { useCustomStore } from "@/store/customStore";
+import {
+  FourAngleImageCapture,
+  type CaptureFourAngleImage,
+} from "./FourAngleImageCapture";
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ 🖼️ GALLERY ART SCENE — read-only gallery render of a fixed piece      ║
@@ -401,6 +405,8 @@ interface GalleryArtSceneProps {
   className?: string;
   /** Pixel-ratio cap; lower on mobile for perf. */
   isMobile?: boolean;
+  /** Registers the scene's four-angle image exporter when it is ready. */
+  onCaptureReady?: (capture: CaptureFourAngleImage | null) => void;
 }
 
 /**
@@ -420,6 +426,7 @@ export function GalleryArtScene({
   autoOrbit = false,
   className,
   isMobile = false,
+  onCaptureReady,
 }: GalleryArtSceneProps) {
   const dimensions = useCustomStore((s) => s.dimensions);
   const style = useCustomStore((s) => s.style);
@@ -561,6 +568,18 @@ export function GalleryArtScene({
             />
           )}
         </group>
+
+        {onCaptureReady && (
+          <FourAngleImageCapture
+            artWidthSquares={dimensions.width}
+            artHeightSquares={dimensions.height}
+            baseDistance={showRoom ? fitMaxDistance : undefined}
+            bounds={showRoom ? camBounds : null}
+            collisionInset={ROOM_COLLISION_INSET}
+            minimumDistance={ROOM_COLLISION_MIN_DISTANCE}
+            onReady={onCaptureReady}
+          />
+        )}
       </Suspense>
 
       {/* Controls live OUTSIDE the Suspense boundary — a texture load

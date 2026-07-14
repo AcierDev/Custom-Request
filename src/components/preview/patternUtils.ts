@@ -67,6 +67,7 @@ const ROTATION_HASH_SALT = 17.23;
 const SEAM_BLEND_HASH_SALT = 53.79;
 const FALLBACK_COLOR_HASH_SALT = 91.41;
 const ROTATION_SEED_THRESHOLD = 0.5;
+const PALETTE_POSITION_OFFSET = 1;
 
 /** Stable pseudo-random value in [0, 1) for a grid coordinate and purpose. */
 function deterministicGridValue(
@@ -240,7 +241,11 @@ export function getColorEntries(selectedDesign: string, customPalette: any[]) {
   if (selectedDesign === ItemDesigns.Custom && customPalette.length > 0) {
     colorEntries = customPalette.map((color, i) => [
       i.toString(),
-      { hex: color.hex, name: `Color ${i + 1}` },
+      {
+        hex: color.hex,
+        name:
+          color.name?.trim() || `Color ${i + PALETTE_POSITION_OFFSET}`,
+      },
     ]);
   } else {
     const colorMap = DESIGN_COLORS[selectedDesign as ItemDesigns];

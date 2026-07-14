@@ -1,15 +1,12 @@
 "use client";
 
-import {
-  hoverStore,
-  useCustomStore,
-  type RenderedPatternColorIndexes,
-} from "@/store/customStore";
+import { useCustomStore } from "@/store/customStore";
 import { getDimensionsDetails } from "@/lib/utils";
 import { memo, useRef, useEffect, useState, useMemo, useCallback } from "react";
 import { Html } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
+import { hoverStore } from "@/store/customStore";
 import { useStore } from "zustand";
 import { InstancedSquares, SquareInstance } from "./InstancedSquares";
 import { PlywoodBase } from "./PlywoodBase";
@@ -41,10 +38,6 @@ const EMPTY_FALLBACK_PALETTE = [
   { hex: EMPTY_FALLBACK_BLUE, name: "Dark Blue" },
 ];
 const NO_AXIS_ROTATION = 0;
-const MAX_RENDERED_SQUARE_COUNT = 2500;
-
-const normalizePatternColorHex = (hex: string): string =>
-  hex.trim().toLowerCase();
 
 // Place the color label to the RIGHT of the square it points at — beside it,
 // out of the way but still attached. The horizontal offset (group-local world
@@ -229,13 +222,7 @@ function GeometricPatternComponent({
   const applyPatternSquareEdit = useCustomStore(
     (s) => s.applyPatternSquareEdit
   );
-  const setRenderedPatternColorIndexes = useCustomStore(
-    (s) => s.setRenderedPatternColorIndexes
-  );
   const isPatternEditorActive = useCustomStore((s) => s.isPatternEditorActive);
-  const isPatternColorReplaceActive = useCustomStore(
-    (s) => s.isPatternColorReplaceActive
-  );
   const patternEditingMode = useCustomStore((s) => s.patternEditingMode);
   const scatterEase = useCustomStore((s) => s.scatterEase);
   const scatterWidth = useCustomStore((s) => s.scatterWidth);
@@ -269,14 +256,6 @@ function GeometricPatternComponent({
     () => getColorEntries(selectedDesign, customPalette),
     [selectedDesign, customPalette]
   );
-  const colorIndexByHex = useMemo(() => {
-    const indexes = new Map<string, number>();
-    colorEntries.forEach(([, entry], index) => {
-      const normalizedHex = normalizePatternColorHex(entry.hex);
-      if (!indexes.has(normalizedHex)) indexes.set(normalizedHex, index);
-    });
-    return indexes;
-  }, [colorEntries]);
 
   const setHoverInfo = useStore(hoverStore, (s) => s.setHoverInfo);
   const setPinnedInfo = useStore(hoverStore, (s) => s.setPinnedInfo);
@@ -543,28 +522,29 @@ function GeometricPatternComponent({
   // Build a flat list of per-square instance descriptors. One pass; the
   // GPU work (transform/colour/grain) is carried as instance attributes
   // by <InstancedSquares /> rather than as ~2500 React meshes.
-  const { instances, effectivePatternColorIndexes } = useMemo(() => {
+  const instances = useMemo(() => {
     const squares: SquareInstance[] = [];
-    const colorIndexes: RenderedPatternColorIndexes = {};
     const sizeScale = useMini ? 0.9 : 1.0;
 
     // Limit the maximum number of squares to render based on device capability
+    const maxSquares = 2500; // Adjust this threshold based on testing
     const totalSquares = currentGridWidth * currentGridHeight;
-    const shouldLimitSquares = totalSquares > MAX_RENDERED_SQUARE_COUNT;
+    const shouldLimitSquares = totalSquares > maxSquares;
 
     // If there are too many squares, skip rendering some in a grid pattern
     const skipFactor = shouldLimitSquares
-      ? Math.ceil(
-          Math.sqrt(totalSquares / MAX_RENDERED_SQUARE_COUNT)
-        ) // Use Math.sqrt for more even skipping
+      ? Math.ceil(Math.sqrt(totalSquares / maxSquares)) // Use Math.sqrt for more even skipping
       : 1;
 
     for (let x = 0; x < currentGridWidth; x++) {
       for (let y = 0; y < currentGridHeight; y++) {
+        // Skip squares in a grid pattern for performance if necessary
+        if (shouldLimitSquares && (x % skipFactor !== 0 || y % skipFactor !== 0))
+          continue;
+
         // Get color information based on whether we have a drawn pattern
         let color: string | null = null;
         let colorName: string | undefined = undefined;
-        let colorIndex: number | undefined;
 
         if (hasDrawnPattern && drawnPatternGrid && drawnPatternGridSize) {
           // Y-axis is flipped: drawn pattern's bottom row is preview's top row.
@@ -582,12 +562,6 @@ function GeometricPatternComponent({
             const cell = drawnPatternGrid[accessY][x];
             color = cell.color || "#FFFFFF00"; // Use transparent if no color
             colorName = cell.colorName;
-            const drawnColorIndex = colorIndexByHex.get(
-              normalizePatternColorHex(color)
-            );
-            if (drawnColorIndex !== undefined) {
-              colorIndex = drawnColorIndex;
-            }
           } else {
             // This case means x or y (after flipping) is out of bounds for drawnPatternGrid
             // This might happen if drawnPatternGridSize doesn't match currentGridWidth/Height exactly,
@@ -600,33 +574,18 @@ function GeometricPatternComponent({
           if (color === "#FFFFFF00") continue;
         } else {
           // Use the procedurally generated color (existing logic)
-          colorIndex = getColorIndexDebug(x, y);
+          const colorIndex = getColorIndexDebug(x, y);
           const colorEntry = colorEntries[colorIndex];
           color = colorEntry?.[1].hex || "#8B5E3B"; // Default procedural color
           colorName = colorEntry?.[1].name;
         }
 
-        const patternKey = getPatternSquareKey(x, y);
-        const colorOverrideIndex = patternOverride[patternKey];
+        const colorOverrideIndex =
+          patternOverride[getPatternSquareKey(x, y)];
         if (colorOverrideIndex !== undefined) {
           const colorEntry = colorEntries[colorOverrideIndex];
           color = colorEntry?.[1].hex || "#8B5E3B";
           colorName = colorEntry?.[1].name;
-          colorIndex = colorEntry ? colorOverrideIndex : undefined;
-        }
-
-        if (color && color !== "null" && colorIndex !== undefined) {
-          colorIndexes[patternKey] = colorIndex;
-        }
-
-        // Keep replacement data complete even when the 3D renderer skips
-        // squares for performance.
-        if (
-          shouldLimitSquares &&
-          (x % skipFactor !== NO_AXIS_ROTATION ||
-            y % skipFactor !== NO_AXIS_ROTATION)
-        ) {
-          continue;
         }
 
         // Calculate base position without drift
@@ -642,7 +601,7 @@ function GeometricPatternComponent({
           rotationSeedsRef.current!
         );
         const directionOverride =
-          patternDirectionOverride[patternKey];
+          patternDirectionOverride[getPatternSquareKey(x, y)];
         if (directionOverride !== undefined) {
           rotation = getSquareDirectionRotation(
             directionOverride,
@@ -658,7 +617,6 @@ function GeometricPatternComponent({
             y,
             color,
             colorName,
-            colorIndex,
             px: baseXPos,
             py: yPos,
             // Square.tsx places the wedge at z + height/2 on top of the
@@ -674,15 +632,11 @@ function GeometricPatternComponent({
         }
       }
     }
-    return {
-      instances: squares,
-      effectivePatternColorIndexes: colorIndexes,
-    };
+    return squares;
   }, [
     adjustedModelWidth,
     adjustedModelHeight,
     colorEntries,
-    colorIndexByHex,
     orientation,
     colorPattern,
     isReversed,
@@ -708,20 +662,6 @@ function GeometricPatternComponent({
     currentGridWidth,
     currentGridHeight,
   ]);
-
-  useEffect(() => {
-    if (customDesign) return;
-    setRenderedPatternColorIndexes(effectivePatternColorIndexes);
-  }, [
-    customDesign,
-    effectivePatternColorIndexes,
-    setRenderedPatternColorIndexes,
-  ]);
-
-  useEffect(() => {
-    if (customDesign) return;
-    return () => setRenderedPatternColorIndexes({});
-  }, [customDesign, setRenderedPatternColorIndexes]);
 
   const renderedPatternKeys = useMemo(
     () =>
@@ -939,7 +879,6 @@ function GeometricPatternComponent({
           enablePatternEditing={
             isPatternEditorActive && patternEditingMode.tool !== "none"
           }
-          enablePatternColorPicking={isPatternColorReplaceActive}
         />
 
         {/* Overlays live INSIDE the transformed group so their anchor

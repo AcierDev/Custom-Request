@@ -25,8 +25,6 @@ export interface SquareInstance {
   y: number;
   color: string;
   colorName?: string;
-  /** Palette index currently visible on this square. */
-  colorIndex?: number;
   /** Final group-local position (drift applied separately via driftDir). */
   px: number;
   py: number;
@@ -80,8 +78,6 @@ interface InstancedSquaresProps {
   bloomOnResize?: boolean;
   /** Keep square picking enabled while editing even if color hints are hidden. */
   enablePatternEditing?: boolean;
-  /** Keep click picking enabled while choosing colors for Replace mode. */
-  enablePatternColorPicking?: boolean;
   /** Instance indexes covered by the current row/column/shape brush. */
   highlightedInstanceIds?: readonly number[];
   onPatternHover?: (x: number, y: number) => void;
@@ -344,7 +340,6 @@ function InstancedSquaresComponent({
   revealNonce = 0,
   bloomOnResize = true,
   enablePatternEditing = false,
-  enablePatternColorPicking = false,
   highlightedInstanceIds = EMPTY_HIGHLIGHTED_INSTANCE_IDS,
   onPatternHover,
   onPatternUnhover,
@@ -961,9 +956,7 @@ function InstancedSquaresComponent({
           enablePatternEditing ? handlePointerEnd : undefined
         }
         onClick={
-          showColorInfo || enablePatternEditing || enablePatternColorPicking
-            ? handleClick
-            : undefined
+          showColorInfo || enablePatternEditing ? handleClick : undefined
         }
       />
       <mesh

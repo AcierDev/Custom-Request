@@ -15,18 +15,37 @@ import {
 
 const EXPORT_GRID_COLUMN_COUNT = 2;
 const EXPORT_GRID_ROW_COUNT = 2;
-const EXPORT_TILE_WIDTH_PX = 1200;
-const EXPORT_TILE_HEIGHT_PX = 675;
-const EXPORT_CANVAS_WIDTH_PX =
-  EXPORT_TILE_WIDTH_PX * EXPORT_GRID_COLUMN_COUNT;
-const EXPORT_CANVAS_HEIGHT_PX =
-  EXPORT_TILE_HEIGHT_PX * EXPORT_GRID_ROW_COUNT;
+const EXPORT_CANVAS_WIDTH_PX = 3840;
+const EXPORT_CANVAS_HEIGHT_PX = 2160;
+const EXPORT_TILE_WIDTH_PX =
+  EXPORT_CANVAS_WIDTH_PX / EXPORT_GRID_COLUMN_COUNT;
+const EXPORT_TILE_HEIGHT_PX =
+  EXPORT_CANVAS_HEIGHT_PX / EXPORT_GRID_ROW_COUNT;
 const EXPORT_TILE_ASPECT_RATIO = EXPORT_TILE_WIDTH_PX / EXPORT_TILE_HEIGHT_PX;
 const EXPORT_IMAGE_MIME_TYPE = "image/png";
 const EXPORT_BACKGROUND_COLOR = "#020617";
 const EXPORT_VIEW_LIMIT_FRACTION = 0.5;
-const EXPORT_CAMERA_CLOSER_FRACTION = 0.25;
-const EXPORT_CAMERA_DISTANCE_SCALE = 1 - EXPORT_CAMERA_CLOSER_FRACTION;
+// Ease farther back as the art fills more of a tile, then move every size
+// uniformly closer by the configured distance scale.
+const EXPORT_CAMERA_DISTANCE_CONFIG = {
+  closestScale: 0.75,
+  farthestScale: 1,
+  allSizesDistanceScale: 0.95,
+  smallestArtWidthSquares: 14,
+  smallestArtHeightSquares: 7,
+  largestArtWidthSquares: 40,
+  largestArtHeightSquares: 16,
+} as const;
+const EXPORT_SMALLEST_ART_SPAN = Math.max(
+  EXPORT_CAMERA_DISTANCE_CONFIG.smallestArtWidthSquares,
+  EXPORT_CAMERA_DISTANCE_CONFIG.smallestArtHeightSquares *
+    EXPORT_TILE_ASPECT_RATIO
+);
+const EXPORT_LARGEST_ART_SPAN = Math.max(
+  EXPORT_CAMERA_DISTANCE_CONFIG.largestArtWidthSquares,
+  EXPORT_CAMERA_DISTANCE_CONFIG.largestArtHeightSquares *
+    EXPORT_TILE_ASPECT_RATIO
+);
 const EXPORT_COLOR_CHANNEL_COUNT = 4;
 const EXPORT_RED_CHANNEL_OFFSET = 0;
 const EXPORT_GREEN_CHANNEL_OFFSET = 1;
@@ -86,11 +105,38 @@ export type RoomCaptureBounds = {
 export type CaptureFourAngleImage = () => Promise<Blob>;
 
 type FourAngleImageCaptureProps = {
+  artWidthSquares: number;
+  artHeightSquares: number;
+  baseDistance?: number;
   bounds: RoomCaptureBounds | null;
   collisionInset: number;
   minimumDistance: number;
   onReady: (capture: CaptureFourAngleImage | null) => void;
 };
+
+function getArtSizeCameraDistanceScale(
+  artWidthSquares: number,
+  artHeightSquares: number
+) {
+  const projectedArtSpan = Math.max(
+    artWidthSquares,
+    artHeightSquares * EXPORT_TILE_ASPECT_RATIO
+  );
+  const sizeProgress = THREE.MathUtils.clamp(
+    (projectedArtSpan - EXPORT_SMALLEST_ART_SPAN) /
+      (EXPORT_LARGEST_ART_SPAN - EXPORT_SMALLEST_ART_SPAN),
+    0,
+    1
+  );
+
+  return (
+    THREE.MathUtils.lerp(
+      EXPORT_CAMERA_DISTANCE_CONFIG.closestScale,
+      EXPORT_CAMERA_DISTANCE_CONFIG.farthestScale,
+      sizeProgress
+    ) * EXPORT_CAMERA_DISTANCE_CONFIG.allSizesDistanceScale
+  );
+}
 
 function getBoundedCaptureDistance(
   requestedDistance: number,
@@ -144,6 +190,9 @@ function canvasToPngBlob(canvas: HTMLCanvasElement) {
 }
 
 export function FourAngleImageCapture({
+  artWidthSquares,
+  artHeightSquares,
+  baseDistance,
   bounds,
   collisionInset,
   minimumDistance,
@@ -196,7 +245,8 @@ export function FourAngleImageCapture({
       const isPerspectiveCamera = perspectiveCamera.isPerspectiveCamera;
       const originalCameraAspect = perspectiveCamera.aspect;
       const target = controls.target.clone();
-      const requestedDistance = originalPosition.distanceTo(target);
+      const requestedDistance =
+        baseDistance ?? originalPosition.distanceTo(target);
       const boundedCaptureDistance = getBoundedCaptureDistance(
         requestedDistance,
         target,
@@ -204,9 +254,13 @@ export function FourAngleImageCapture({
         collisionInset,
         minimumDistance
       );
+      const cameraDistanceScale = getArtSizeCameraDistanceScale(
+        artWidthSquares,
+        artHeightSquares
+      );
       const captureDistance = Math.max(
         minimumDistance,
-        boundedCaptureDistance * EXPORT_CAMERA_DISTANCE_SCALE
+        boundedCaptureDistance * cameraDistanceScale
       );
       const offset = new THREE.Vector3();
       const webGlContext = gl.getContext();
@@ -356,6 +410,9 @@ export function FourAngleImageCapture({
     onReady(capture);
     return () => onReady(null);
   }, [
+    artHeightSquares,
+    artWidthSquares,
+    baseDistance,
     bounds,
     camera,
     collisionInset,

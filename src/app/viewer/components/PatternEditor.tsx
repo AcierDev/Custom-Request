@@ -1,11 +1,14 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
+import { useStore } from "zustand";
+import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import {
   PATTERN_BRUSH_SIZE_CONFIG,
+  hoverStore,
   useCustomStore,
   type PatternBrushShape,
   type PatternEditingMode,
@@ -23,12 +26,14 @@ import {
   ArrowRight,
   ArrowDown,
   ArrowLeft,
+  ArrowRightLeft,
   Rows3,
   Columns3,
   Square,
   Circle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PatternHistoryControls } from "./PatternHistoryControls";
 
 interface PatternEditorProps {
   className?: string;
@@ -61,7 +66,14 @@ const BRUSH_OPTIONS = [
   Icon: typeof MousePointer;
 }>;
 const HUMAN_INDEX_OFFSET = 1;
+const EMPTY_SQUARE_COUNT = 0;
 const SINGULAR_SQUARE_COUNT = 1;
+const MINIMUM_REPLACE_COLOR_COUNT = 2;
+const MISSING_PALETTE_INDEX = -1;
+const PATTERN_EDITOR_CONTENT_ID = "viewer-pattern-editor-controls";
+const COMPACT_ACTION_BUTTON_CLASS = "h-7 px-2 text-xs";
+const COMPACT_ACTION_ICON_CLASS = "mr-1 h-3 w-3";
+const DIRECTION_HEADER_CLASS = "flex items-center justify-between gap-2";
 const TOOL_INSTRUCTIONS: Record<PatternEditingMode["tool"], string> = {
   none: "Select a color or direction to start editing",
   color: "Click or drag across squares to paint them",
@@ -69,12 +81,21 @@ const TOOL_INSTRUCTIONS: Record<PatternEditingMode["tool"], string> = {
   eraser: "Click or drag across squares to reset them",
 };
 
+const normalizePaletteHex = (hex: string): string =>
+  hex.trim().toLowerCase();
+
+const formatSquareCount = (count: number): string =>
+  `${count} square${count === SINGULAR_SQUARE_COUNT ? "" : "s"}`;
+
 export function PatternEditor({ className }: PatternEditorProps) {
   const selectedDesign = useCustomStore((s) => s.selectedDesign);
   const customPalette = useCustomStore((s) => s.customPalette);
   const patternOverride = useCustomStore((s) => s.patternOverride);
   const patternDirectionOverride = useCustomStore(
     (s) => s.patternDirectionOverride
+  );
+  const clearPatternDirectionOverride = useCustomStore(
+    (s) => s.clearPatternDirectionOverride
   );
   const clearPatternOverride = useCustomStore((s) => s.clearPatternOverride);
   const patternEditingMode = useCustomStore((s) => s.patternEditingMode);
@@ -90,58 +111,238 @@ export function PatternEditor({ className }: PatternEditorProps) {
   const setIsPatternEditorActive = useCustomStore(
     (s) => s.setIsPatternEditorActive
   );
+  const setIsPatternColorReplaceActive = useCustomStore(
+    (s) => s.setIsPatternColorReplaceActive
+  );
+  const renderedPatternColorIndexes = useCustomStore(
+    (s) => s.renderedPatternColorIndexes
+  );
+  const replaceRenderedPatternColors = useCustomStore(
+    (s) => s.replaceRenderedPatternColors
+  );
+  const pinnedColorInfo = useStore(hoverStore, (s) => s.pinnedInfo);
+  const setPinnedColorInfo = useStore(hoverStore, (s) => s.setPinnedInfo);
 
   const [isCollapsed, setIsCollapsed] = useState(true);
+  const [isReplaceMode, setIsReplaceMode] = useState(false);
+  const [replaceSourceIndex, setReplaceSourceIndex] = useState<number | null>(
+    null
+  );
 
-  const colorEntries = getColorEntries(selectedDesign, customPalette);
+  const colorEntries = useMemo(
+    () => getColorEntries(selectedDesign, customPalette),
+    [customPalette, selectedDesign]
+  );
+  const distinctColorCount = useMemo(
+    () =>
+      new Set(
+        colorEntries.map(([, color]) => normalizePaletteHex(color.hex))
+      ).size,
+    [colorEntries]
+  );
+
+  const cancelReplaceMode = useCallback(() => {
+    setIsReplaceMode(false);
+    setReplaceSourceIndex(null);
+    setPinnedColorInfo(null);
+    setIsPatternEditorActive(false);
+    setIsPatternColorReplaceActive(false);
+    setPatternEditingMode({ tool: "none" });
+  }, [
+    setIsPatternEditorActive,
+    setIsPatternColorReplaceActive,
+    setPatternEditingMode,
+    setPinnedColorInfo,
+  ]);
 
   useEffect(() => {
     if (isCollapsed && isPatternEditorActive) {
       setIsPatternEditorActive(false);
     }
-  }, [isCollapsed, isPatternEditorActive, setIsPatternEditorActive]);
+  }, [
+    isCollapsed,
+    isPatternEditorActive,
+    setIsPatternEditorActive,
+  ]);
+
+  useEffect(
+    () => () => {
+      setIsPatternColorReplaceActive(false);
+      setPinnedColorInfo(null);
+    },
+    [setIsPatternColorReplaceActive, setPinnedColorInfo]
+  );
 
   const handleCollapseToggle = useCallback(() => {
     const willCollapse = !isCollapsed;
     setIsCollapsed(willCollapse);
-    if (willCollapse) setIsPatternEditorActive(false);
-  }, [isCollapsed, setIsPatternEditorActive]);
+    if (willCollapse) {
+      cancelReplaceMode();
+    }
+  }, [cancelReplaceMode, isCollapsed]);
 
   // Memoized event handlers
   const handleClearAll = useCallback(() => {
     clearPatternOverride();
   }, [clearPatternOverride]);
 
+  const handleResetDirections = useCallback(() => {
+    clearPatternDirectionOverride();
+  }, [clearPatternDirectionOverride]);
+
+  const handleReplaceToggle = useCallback(() => {
+    if (isReplaceMode) {
+      cancelReplaceMode();
+      return;
+    }
+
+    setIsReplaceMode(true);
+    setReplaceSourceIndex(null);
+    setPinnedColorInfo(null);
+    setIsPatternEditorActive(false);
+    setIsPatternColorReplaceActive(true);
+    setPatternEditingMode({ tool: "none" });
+  }, [
+    cancelReplaceMode,
+    isReplaceMode,
+    setIsPatternEditorActive,
+    setIsPatternColorReplaceActive,
+    setPatternEditingMode,
+    setPinnedColorInfo,
+  ]);
+
   const handleColorSelect = useCallback(
     (index: number) => {
+      if (isReplaceMode) {
+        const selectedColor = colorEntries[index]?.[1];
+        if (!selectedColor) return;
+
+        if (replaceSourceIndex === null) {
+          setReplaceSourceIndex(index);
+          return;
+        }
+
+        const sourceColor = colorEntries[replaceSourceIndex]?.[1];
+        if (!sourceColor) {
+          setReplaceSourceIndex(index);
+          return;
+        }
+
+        const sourceHex = normalizePaletteHex(sourceColor.hex);
+        const replacementHex = normalizePaletteHex(selectedColor.hex);
+        if (sourceHex === replacementHex) {
+          toast.error("Choose a different replacement color.");
+          return;
+        }
+
+        const sourceIndexes = colorEntries.reduce<number[]>(
+          (indexes, [, color], colorIndex) => {
+            if (normalizePaletteHex(color.hex) === sourceHex) {
+              indexes.push(colorIndex);
+            }
+            return indexes;
+          },
+          []
+        );
+        const sourceIndexSet = new Set(sourceIndexes);
+        const matchingSquareCount = Object.values(
+          renderedPatternColorIndexes
+        ).filter((colorIndex) => sourceIndexSet.has(colorIndex)).length;
+        const sourceLabel =
+          sourceColor.name ||
+          `Color ${replaceSourceIndex + HUMAN_INDEX_OFFSET}`;
+        const replacementLabel =
+          selectedColor.name || `Color ${index + HUMAN_INDEX_OFFSET}`;
+        const historyLabel =
+          `Replaced ${sourceLabel} with ${replacementLabel} ` +
+          `(${formatSquareCount(matchingSquareCount)})`;
+        const replacedSquareCount = replaceRenderedPatternColors(
+          sourceIndexes,
+          index,
+          historyLabel
+        );
+
+        if (replacedSquareCount === EMPTY_SQUARE_COUNT) {
+          toast.error(`No squares use ${sourceLabel}.`);
+          setReplaceSourceIndex(null);
+          return;
+        }
+
+        toast.success(
+          `Replaced ${formatSquareCount(replacedSquareCount)} with ${replacementLabel}`
+        );
+        cancelReplaceMode();
+        return;
+      }
+
       setIsPatternEditorActive(true);
       setPatternEditingMode({
         tool: "color",
         selectedColorIndex: index,
       });
     },
-    [setPatternEditingMode, setIsPatternEditorActive]
+    [
+      colorEntries,
+      cancelReplaceMode,
+      isReplaceMode,
+      renderedPatternColorIndexes,
+      replaceRenderedPatternColors,
+      replaceSourceIndex,
+      setPatternEditingMode,
+      setIsPatternEditorActive,
+    ]
   );
+
+  useEffect(() => {
+    if (!isReplaceMode || !pinnedColorInfo?.color) return;
+
+    const pickedPaletteIndex = colorEntries.findIndex(
+      ([, color]) =>
+        normalizePaletteHex(color.hex) ===
+        normalizePaletteHex(pinnedColorInfo.color)
+    );
+    setPinnedColorInfo(null);
+
+    if (pickedPaletteIndex === MISSING_PALETTE_INDEX) {
+      toast.error("That artwork color is not available in this palette.");
+      return;
+    }
+
+    handleColorSelect(pickedPaletteIndex);
+  }, [
+    colorEntries,
+    handleColorSelect,
+    isReplaceMode,
+    pinnedColorInfo,
+    setPinnedColorInfo,
+  ]);
 
   const handleDirectionSelect = useCallback(
     (direction: SquareDirection) => {
+      cancelReplaceMode();
       setIsPatternEditorActive(true);
       setPatternEditingMode({
         tool: "direction",
         selectedDirection: direction,
       });
     },
-    [setPatternEditingMode, setIsPatternEditorActive]
+    [cancelReplaceMode, setPatternEditingMode, setIsPatternEditorActive]
   );
 
   const handleEraserToggle = useCallback(() => {
+    cancelReplaceMode();
     setIsPatternEditorActive(true);
     setPatternEditingMode(
       patternEditingMode.tool === "eraser"
         ? { tool: "none" }
         : { tool: "eraser" }
     );
-  }, [patternEditingMode, setPatternEditingMode, setIsPatternEditorActive]);
+  }, [
+    cancelReplaceMode,
+    patternEditingMode,
+    setPatternEditingMode,
+    setIsPatternEditorActive,
+  ]);
 
   const modifiedSquareCount = new Set([
     ...Object.keys(patternOverride),
@@ -157,6 +358,11 @@ export function PatternEditor({ className }: PatternEditorProps) {
   const activeBrushSize = sizedBrushShape
     ? patternBrush.sizes[sizedBrushShape]
     : PATTERN_BRUSH_SIZE_CONFIG.default;
+  const replaceSourceLabel =
+    replaceSourceIndex === null
+      ? null
+      : colorEntries[replaceSourceIndex]?.[1].name ||
+        `Color ${replaceSourceIndex + HUMAN_INDEX_OFFSET}`;
 
   return (
     <Card
@@ -171,6 +377,8 @@ export function PatternEditor({ className }: PatternEditorProps) {
           variant="ghost"
           size="sm"
           onClick={handleCollapseToggle}
+          aria-expanded={!isCollapsed}
+          aria-controls={PATTERN_EDITOR_CONTENT_ID}
           className="w-full justify-between text-gray-200 hover:text-white hover:bg-gray-900/40"
         >
           <div className="flex items-center gap-2">
@@ -192,7 +400,7 @@ export function PatternEditor({ className }: PatternEditorProps) {
 
         {/* Collapsible Content */}
         {!isCollapsed && (
-          <div className="mt-4 space-y-4">
+          <div id={PATTERN_EDITOR_CONTENT_ID} className="mt-4 space-y-4">
             {/* Enable/Disable Toggle */}
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-gray-400">
@@ -213,6 +421,7 @@ export function PatternEditor({ className }: PatternEditorProps) {
                   size="sm"
                   variant={isPatternEditorActive ? "default" : "outline"}
                   onClick={() => {
+                    cancelReplaceMode();
                     if (isPatternEditorActive) {
                       setIsPatternEditorActive(false);
                       setPatternEditingMode({ tool: "none" });
@@ -287,47 +496,110 @@ export function PatternEditor({ className }: PatternEditorProps) {
 
             {/* Color Palette */}
             <div className="space-y-2">
-              <span className="text-xs font-medium text-gray-400">Colors</span>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-medium text-gray-400">Colors</span>
+                <Button
+                  type="button"
+                  variant={isReplaceMode ? "ghost" : "outline"}
+                  size="sm"
+                  className={cn(
+                    "h-7 px-2 text-xs",
+                    isReplaceMode
+                      ? "text-red-300 hover:bg-red-900/20 hover:text-red-200"
+                      : "border-white/15 bg-gray-900/40 text-gray-300 hover:text-white"
+                  )}
+                  disabled={
+                    distinctColorCount < MINIMUM_REPLACE_COLOR_COUNT
+                  }
+                  onClick={handleReplaceToggle}
+                >
+                  <ArrowRightLeft className="mr-1 h-3.5 w-3.5" />
+                  {isReplaceMode ? "Cancel" : "Replace"}
+                </Button>
+              </div>
               {colorEntries.length ? (
                 <div className="flex flex-wrap gap-1.5">
                   {colorEntries.map(([key, colorInfo], index) => {
                     const isSelected =
+                      !isReplaceMode &&
                       patternEditingMode.tool === "color" &&
                       patternEditingMode.selectedColorIndex === index;
+                    const isReplaceSource =
+                      isReplaceMode && replaceSourceIndex === index;
+                    const colorLabel =
+                      colorInfo.name ||
+                      `Color ${index + HUMAN_INDEX_OFFSET}`;
 
                     return (
                       <button
                         type="button"
                         key={key}
                         className={cn(
-                          "w-7 h-7 rounded-lg border-2 transition-all duration-200 hover:scale-105 hover:shadow-md",
-                          isSelected
+                          "relative w-7 h-7 rounded-lg border-2 transition-all duration-200 hover:scale-105 hover:shadow-md",
+                          isReplaceSource
+                            ? "border-amber-300 ring-2 ring-amber-300/40 shadow-md"
+                            : isSelected
                             ? "border-indigo-400 ring-2 ring-indigo-400/30 shadow-md"
                             : "border-white/15 hover:border-white/30"
                         )}
                         style={{ backgroundColor: colorInfo.hex }}
                         onClick={() => handleColorSelect(index)}
-                        title={
-                          colorInfo.name || `Color ${index + HUMAN_INDEX_OFFSET}`
-                        }
+                        title={colorLabel}
                         aria-label={
-                          colorInfo.name || `Color ${index + HUMAN_INDEX_OFFSET}`
+                          isReplaceMode
+                            ? replaceSourceIndex === null
+                              ? `Select ${colorLabel} as the color to replace`
+                              : `Replace with ${colorLabel}`
+                            : colorLabel
                         }
-                        aria-pressed={isSelected}
-                      />
+                        aria-pressed={isSelected || isReplaceSource}
+                      >
+                        {isReplaceSource && (
+                          <span className="absolute inset-0 flex items-center justify-center text-[0.65rem] font-bold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                            1
+                          </span>
+                        )}
+                      </button>
                     );
                   })}
                 </div>
               ) : (
                 <p className="text-xs text-gray-500">No paint colors available</p>
               )}
+              {isReplaceMode && (
+                <div
+                  role="status"
+                  className="rounded-md border border-amber-300/20 bg-amber-300/10 px-2 py-1.5 text-[0.7rem] text-amber-100"
+                >
+                  {replaceSourceLabel
+                    ? `2. Select the replacement for ${replaceSourceLabel} on the artwork or palette`
+                    : "1. Select the color to replace on the artwork or palette"}
+                </div>
+              )}
             </div>
 
             {/* Square Direction */}
             <div className="space-y-2">
-              <span className="text-xs font-medium text-gray-400">
-                Direction (raised edge)
-              </span>
+              <div className={DIRECTION_HEADER_CLASS}>
+                <span className="text-xs font-medium text-gray-400">
+                  Direction (raised edge)
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    COMPACT_ACTION_BUTTON_CLASS,
+                    "text-gray-400 hover:text-gray-200"
+                  )}
+                  disabled={!Object.keys(patternDirectionOverride).length}
+                  onClick={handleResetDirections}
+                  title="Reset every square's direction without changing colors"
+                >
+                  <RotateCcw className={COMPACT_ACTION_ICON_CLASS} />
+                  Reset directions
+                </Button>
+              </div>
               <div className="flex flex-wrap gap-1.5">
                 {DIRECTION_OPTIONS.map(({ direction, label, Icon }) => {
                   const isSelected =
@@ -381,29 +653,33 @@ export function PatternEditor({ className }: PatternEditorProps) {
               </button>
             </div>
 
+            <PatternHistoryControls />
+
             {/* Instructions */}
-            <div className="text-xs text-gray-400 space-y-0.5 bg-gray-900/40 border border-white/10 rounded-lg p-2">
-              <div className="flex items-center gap-1.5 mb-2">
-                <MousePointer className="w-3 h-3" />
-                <span className="font-medium">
-                  {isPatternEditorActive
-                    ? activeInstruction
-                    : "Select a tool to enable editing"}
-                </span>
+            {!isReplaceMode && (
+              <div className="text-xs text-gray-400 space-y-0.5 bg-gray-900/40 border border-white/10 rounded-lg p-2">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <MousePointer className="w-3 h-3" />
+                  <span className="font-medium">
+                    {isPatternEditorActive
+                      ? activeInstruction
+                      : "Select a tool to enable editing"}
+                  </span>
+                </div>
+                {isPatternEditorActive ? (
+                  <>
+                    <p>• Choose an area and tool, then click or drag</p>
+                    <p>• Reset restores color and direction in that area</p>
+                    <p>• Press 'h' to hide/show UI controls</p>
+                  </>
+                ) : (
+                  <>
+                    <p>• Click "Active" above to enable the pattern editor</p>
+                    <p>• Selecting any tool also enables it automatically</p>
+                  </>
+                )}
               </div>
-              {isPatternEditorActive ? (
-                <>
-                  <p>• Choose an area and tool, then click or drag</p>
-                  <p>• Reset restores color and direction in that area</p>
-                  <p>• Press 'h' to hide/show UI controls</p>
-                </>
-              ) : (
-                <>
-                  <p>• Click "Active" above to enable the pattern editor</p>
-                  <p>• Selecting any tool also enables it automatically</p>
-                </>
-              )}
-            </div>
+            )}
 
             {/* Stats */}
             {Boolean(modifiedSquareCount) && (

@@ -2,7 +2,6 @@
 
 import {
   Suspense,
-  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -77,11 +76,8 @@ import { PatternEditor } from "./components/PatternEditor";
 import { PaletteColorEditor } from "./components/PaletteColorEditor";
 import { WallColorPicker } from "@/components/preview/WallColorPicker";
 import { PatternControls } from "@/components/preview/PatternControls";
-import {
-  FourAngleImageCapture,
-  type CaptureFourAngleImage,
-} from "@/components/preview/FourAngleImageCapture";
-import { toast } from "sonner";
+import { FourAngleImageCapture } from "@/components/preview/FourAngleImageCapture";
+import { useFourAngleImageDownload } from "@/hooks/useFourAngleImageDownload";
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ 🎥 ROOM COLLISION                                                     ║
@@ -94,10 +90,19 @@ const CAMERA_FOLLOW_EASE = 0.08;
 const CAMERA_FOLLOW_SETTLE = 0.001;
 const CAMERA_FOV = 40;
 const CAMERA_ZOOM = 1;
-// Wheel / trackpad scroll-to-zoom speed. 87.5% faster than OrbitControls'
-// default (1.0) so laptop trackpad + mouse-wheel zoom feels snappier. (Touch
-// pinch-zoom uses its own gesture path — see TOUCH_GESTURES below.)
-const ZOOM_SPEED = 1.875;
+// OrbitControls treats every wheel event as the same fixed dolly step, which
+// makes a trackpad's stream of tiny deltas feel jumpy. Desktop wheel input is
+// handled by SmoothWheelZoom instead; zoomSpeed remains for touch pinch.
+const TOUCH_ZOOM_SPEED = 1.875;
+const TRACKPAD_ZOOM_SENSITIVITY = 0.0045;
+const TRACKPAD_ZOOM_EASE = 0.22;
+const TRACKPAD_ZOOM_MAX_DELTA_PX = 60;
+const MOUSE_WHEEL_ZOOM_STEP = 1.1;
+const MOUSE_WHEEL_ZOOM_EASE = 0.3;
+const MOUSE_WHEEL_DELTA_THRESHOLD_PX = 50;
+const WHEEL_INPUT_GESTURE_GAP_MS = 160;
+const WHEEL_ZOOM_SETTLE_DISTANCE = 0.001;
+type WheelZoomInput = "mouse-wheel" | "trackpad";
 // Touch gesture map: one finger orbits, two fingers pinch-zoom (dolly). Pan is
 // disabled (enablePan={false}) so the two-finger gesture only moves the camera
 // in/out — it does NOT resize the art (size is still changed via the Size
@@ -152,8 +157,6 @@ const ROOM_COLLISION_INSET = 0.7;
 const ROOM_COLLISION_HARD_CLAMP_SLACK = 0.6;
 const ROOM_COLLISION_MIN_OFFSET = 1e-4;
 const ROOM_COLLISION_MIN_DISTANCE = 1.2;
-const FOUR_ANGLE_EXPORT_FILENAME = "custom-art-four-angles.png";
-const DOWNLOAD_URL_REVOKE_DELAY_MS = 1000;
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ 🎯 ART CAMERA FOLLOW                                                  ║
@@ -207,6 +210,135 @@ function ArtCameraFollow({ target }: { target: [number, number, number] }) {
     camera.position.y += moveY;
     camera.position.z += moveZ;
     controls.update?.();
+    invalidate();
+  });
+
+  return null;
+}
+
+/** Accumulates high-resolution trackpad deltas into a target distance, then
+ * eases the camera toward it instead of applying one fixed jump per event. */
+function SmoothWheelZoom() {
+  const camera = useThree((s) => s.camera);
+  const controls = useThree((s) => s.controls) as
+    | {
+        enabled?: boolean;
+        target: { x: number; y: number; z: number };
+        minDistance: number;
+        maxDistance: number;
+        update?: () => void;
+      }
+    | null;
+  const gl = useThree((s) => s.gl);
+  const invalidate = useThree((s) => s.invalidate);
+  const targetDistance = useRef(Number.NaN);
+  const zoomEase = useRef(TRACKPAD_ZOOM_EASE);
+  const inputMode = useRef<WheelZoomInput | null>(null);
+  const lastWheelEventAt = useRef(Number.NEGATIVE_INFINITY);
+  const isAnimating = useRef(false);
+
+  useEffect(() => {
+    if (!controls) return;
+
+    const element = gl.domElement;
+    const handleWheel = (event: WheelEvent) => {
+      if (controls.enabled === false || event.deltaY === 0) return;
+
+      // Block OrbitControls' direction-only wheel handler while preserving its
+      // pointer and touch handlers for orbiting and pinch zoom.
+      event.preventDefault();
+      event.stopImmediatePropagation();
+
+      const beginsNewGesture =
+        event.timeStamp - lastWheelEventAt.current >
+        WHEEL_INPUT_GESTURE_GAP_MS;
+      if (beginsNewGesture || inputMode.current === null) {
+        inputMode.current =
+          event.deltaMode !== WheelEvent.DOM_DELTA_PIXEL ||
+          Math.abs(event.deltaY) >= MOUSE_WHEEL_DELTA_THRESHOLD_PX
+            ? "mouse-wheel"
+            : "trackpad";
+      }
+      lastWheelEventAt.current = event.timeStamp;
+
+      const currentDistance = Math.hypot(
+        camera.position.x - controls.target.x,
+        camera.position.y - controls.target.y,
+        camera.position.z - controls.target.z
+      );
+      const startingDistance = isAnimating.current
+        ? targetDistance.current
+        : currentDistance;
+      const isMouseWheel = inputMode.current === "mouse-wheel";
+      const trackpadDelta = Math.max(
+        -TRACKPAD_ZOOM_MAX_DELTA_PX,
+        Math.min(TRACKPAD_ZOOM_MAX_DELTA_PX, event.deltaY)
+      );
+      const requestedDistance = isMouseWheel
+        ? event.deltaY > 0
+          ? startingDistance * MOUSE_WHEEL_ZOOM_STEP
+          : startingDistance / MOUSE_WHEEL_ZOOM_STEP
+        : startingDistance *
+          Math.exp(trackpadDelta * TRACKPAD_ZOOM_SENSITIVITY);
+      zoomEase.current = isMouseWheel
+        ? MOUSE_WHEEL_ZOOM_EASE
+        : TRACKPAD_ZOOM_EASE;
+
+      targetDistance.current = Math.max(
+        controls.minDistance,
+        Math.min(controls.maxDistance, requestedDistance)
+      );
+      isAnimating.current =
+        Math.abs(targetDistance.current - currentDistance) >
+        WHEEL_ZOOM_SETTLE_DISTANCE;
+      invalidate();
+    };
+
+    element.addEventListener("wheel", handleWheel, {
+      capture: true,
+      passive: false,
+    });
+    return () => {
+      element.removeEventListener("wheel", handleWheel, { capture: true });
+    };
+  }, [camera, controls, gl, invalidate]);
+
+  useFrame((_, delta) => {
+    if (!controls || !isAnimating.current) return;
+
+    const t = controls.target;
+    const offsetX = camera.position.x - t.x;
+    const offsetY = camera.position.y - t.y;
+    const offsetZ = camera.position.z - t.z;
+    const currentDistance = Math.hypot(offsetX, offsetY, offsetZ);
+    if (currentDistance < ROOM_COLLISION_MIN_OFFSET) {
+      isAnimating.current = false;
+      return;
+    }
+
+    const clampedTarget = Math.max(
+      controls.minDistance,
+      Math.min(controls.maxDistance, targetDistance.current)
+    );
+    targetDistance.current = clampedTarget;
+    const remaining = clampedTarget - currentDistance;
+    const nextDistance =
+      Math.abs(remaining) <= WHEEL_ZOOM_SETTLE_DISTANCE
+        ? clampedTarget
+        : currentDistance + remaining * frameAlpha(zoomEase.current, delta);
+    const distanceScale = nextDistance / currentDistance;
+
+    camera.position.set(
+      t.x + offsetX * distanceScale,
+      t.y + offsetY * distanceScale,
+      t.z + offsetZ * distanceScale
+    );
+    controls.update?.();
+
+    if (nextDistance === clampedTarget) {
+      isAnimating.current = false;
+      return;
+    }
     invalidate();
   });
 
@@ -360,56 +492,12 @@ export default function DesignPage() {
   const [showPatternEditor, setShowPatternEditor] = useState(false);
   const [mobileOptionsOpen, setMobileOptionsOpen] = useState(false);
   const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>("afternoon");
-  const [isSavingImage, setIsSavingImage] = useState(false);
-  const [isImageCaptureReady, setIsImageCaptureReady] = useState(false);
-  const isViewerMountedRef = useRef(true);
-  const captureFourAngleImageRef = useRef<CaptureFourAngleImage | null>(null);
-  const setCaptureFourAngleImage = useCallback(
-    (capture: CaptureFourAngleImage | null) => {
-      captureFourAngleImageRef.current = capture;
-      if (isViewerMountedRef.current) {
-        setIsImageCaptureReady(Boolean(capture));
-      }
-    },
-    []
-  );
-
-  const handleSaveImage = async () => {
-    const capture = captureFourAngleImageRef.current;
-    if (!capture) {
-      toast.error("The viewer is still preparing the image exporter.");
-      return;
-    }
-
-    setIsSavingImage(true);
-
-    try {
-      const blob = await capture();
-      if (!isViewerMountedRef.current) return;
-
-      const downloadUrl = URL.createObjectURL(blob);
-      const downloadLink = document.createElement("a");
-      downloadLink.href = downloadUrl;
-      downloadLink.download = FOUR_ANGLE_EXPORT_FILENAME;
-      document.body.appendChild(downloadLink);
-      downloadLink.click();
-      downloadLink.remove();
-      window.setTimeout(
-        () => URL.revokeObjectURL(downloadUrl),
-        DOWNLOAD_URL_REVOKE_DELAY_MS
-      );
-      toast.success("Four-angle image downloaded.");
-    } catch (error) {
-      if (!isViewerMountedRef.current) return;
-
-      console.error("Failed to export the four-angle image", error);
-      toast.error("Failed to export the four-angle image.");
-    } finally {
-      if (isViewerMountedRef.current) {
-        setIsSavingImage(false);
-      }
-    }
-  };
+  const {
+    isSavingImage,
+    isImageCaptureReady,
+    setCapture: setCaptureFourAngleImage,
+    saveImage: handleSaveImage,
+  } = useFourAngleImageDownload();
 
   // Custom choice dialog hook
   const {
@@ -417,13 +505,6 @@ export default function DesignPage() {
     handleChoiceMade,
     handleDialogClose: handleCustomChoiceDialogClose,
   } = useCustomChoiceDialog();
-
-  useEffect(() => {
-    isViewerMountedRef.current = true;
-    return () => {
-      isViewerMountedRef.current = false;
-    };
-  }, []);
 
   useEffect(() => {
     setMounted(true);
@@ -708,7 +789,7 @@ export default function DesignPage() {
           overlay; hidden on mobile where it can't fit alongside the
           bottom-sheet controls. */}
       {showUIControls && !isMobile && (
-        <div className="absolute top-4 left-4 z-40 w-80">
+        <div className="absolute top-4 left-4 z-40 w-80 max-h-[calc(100vh-2rem)] overflow-y-auto no-scrollbar">
           <PatternEditor />
         </div>
       )}
@@ -818,6 +899,9 @@ export default function DesignPage() {
           {/* Register export only after the complete texture-backed scene
               has resolved, preventing an early click from saving empty tiles. */}
           <FourAngleImageCapture
+            artWidthSquares={dimensions.width}
+            artHeightSquares={dimensions.height}
+            baseDistance={showRoom ? fitMaxDistance : undefined}
             bounds={showRoom ? camBounds : null}
             collisionInset={ROOM_COLLISION_INSET}
             minimumDistance={ROOM_COLLISION_MIN_DISTANCE}
@@ -834,7 +918,7 @@ export default function DesignPage() {
           <OrbitControls
             enablePan={false}
             touches={TOUCH_GESTURES}
-            zoomSpeed={ZOOM_SPEED}
+            zoomSpeed={TOUCH_ZOOM_SPEED}
             minDistance={ROOM_COLLISION_MIN_DISTANCE}
             maxDistance={fitMaxDistance}
             minAzimuthAngle={showRoom ? -ORBIT_MAX_AZIMUTH : -ORBIT_FREE_MAX_AZIMUTH}
@@ -844,6 +928,7 @@ export default function DesignPage() {
             target={initialCameraTarget.current}
             makeDefault
           />
+          <SmoothWheelZoom />
           <ArtCameraFollow target={artCenter} />
           {/* Collision keeps the camera inside the room walls. With the room
               hidden the art is free-floating, so skip it — otherwise the
@@ -910,7 +995,7 @@ export default function DesignPage() {
             onClick={() => setShowPatternEditor((v) => !v)}
           >
             <Palette className="w-4 h-4 shrink-0" />
-            {(isMobile || !isMobile) && (isMobile ? "Pattern" : "Pattern Editor")}
+            {isMobile ? "Palette" : "Palette Editor"}
           </Button>
         )}
         {showUIControls && (
@@ -966,7 +1051,7 @@ export default function DesignPage() {
       )}
 
       {/* ╔═══╗ ═══════════════════════════════════════════════════════ ╔═══╗
-          ║ 🎨 PATTERN EDITOR PANEL — palette color editing             ║
+          ║ 🎨 PALETTE EDITOR PANEL — palette color editing             ║
           ╚═══╝ ═══════════════════════════════════════════════════════ ╚═══╝ */}
       {/* Desktop: left-side scrollable panel. Capped height + scroll so
           a large palette never runs off-screen. */}
@@ -992,7 +1077,7 @@ export default function DesignPage() {
         {showUIControls && showPatternEditor && isMobile && (
           <>
             <motion.button
-              aria-label="Close pattern editor"
+              aria-label="Close palette editor"
               className="fixed inset-0 z-40 bg-slate-950/30 backdrop-blur-[1px]"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
