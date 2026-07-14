@@ -228,6 +228,8 @@ export function PaletteColorEditor({
   const normalizedAiPrompt = aiPrompt.trim();
   const canSubmitAiPrompt =
     !isAiSubmitting &&
+    activePalette.length >= AI_PALETTE_CONFIG.minPaletteColors &&
+    activePalette.length <= AI_PALETTE_CONFIG.maxPaletteColors &&
     normalizedAiPrompt.length >= AI_PALETTE_CONFIG.minPromptLength &&
     normalizedAiPrompt.length <= AI_PALETTE_CONFIG.maxPromptLength;
 

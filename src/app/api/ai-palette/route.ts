@@ -81,6 +81,7 @@ const requestSchema = z.object({
     .max(AI_PALETTE_CONFIG.maxPromptLength),
   currentPalette: z
     .array(inputColorSchema)
+    .min(AI_PALETTE_CONFIG.minPaletteColors)
     .max(AI_PALETTE_CONFIG.maxPaletteColors),
   pattern: patternSchema,
 });
