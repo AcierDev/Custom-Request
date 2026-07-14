@@ -22,6 +22,7 @@ import { shallow } from "zustand/shallow";
 import { DEFAULT_WOOD_STYLE_ID } from "@/components/preview/woodStyles";
 import { DEFAULT_WALL_COLOR } from "@/components/preview/wallColors";
 import { nanoid } from "nanoid";
+import type { AiPaletteResponse } from "@/lib/aiPalette";
 
 const DEFAULT_DEBOUNCE_DELAY_MS = 1_000;
 const STORE_PERSISTENCE_DEBOUNCE_MS = 2_000;
@@ -30,6 +31,8 @@ const DEFAULT_SCATTER_EASE = 50;
 const DEFAULT_SCATTER_WIDTH = 10;
 const DEFAULT_SCATTER_AMOUNT = 50;
 const DEFAULT_USE_MINI = false;
+const ARRAY_START_INDEX = 0;
+const ARRAY_INDEX_OFFSET = 1;
 
 // Add debounce utility function
 const debounce = <Args extends unknown[]>(
@@ -386,6 +389,7 @@ interface CustomStore extends CustomState {
   resetPaletteEditor: () => void;
   loadOfficialPalette: (design: ItemDesigns) => void;
   setCustomPalette: (palette: CustomColor[]) => void;
+  applyAiPalette: (response: AiPaletteResponse) => void;
   generateShareableLink: () => string;
   generateShortShareableLink: () => string;
   getShareableStateSnapshot: () => ShareableState;
@@ -597,6 +601,9 @@ const createColorMap = (colors: CustomColor[]): ColorMap => {
     ])
   );
 };
+
+const normalizeAiPaletteHex = (hex: string): string =>
+  hex.trim().toUpperCase();
 
 const normalizeSavedPaletteToCustomColors = (
   palette: SavedPalette
@@ -1804,6 +1811,133 @@ export const useCustomStore = create<CustomStore>()(
           currentColors: createColorMap(paletteWithIds),
           paletteHistory: newHistory,
           paletteHistoryIndex: newHistory.length - 1,
+        };
+      }),
+    applyAiPalette: (response) =>
+      set((state) => {
+        const officialPalette: CustomColor[] = Object.values(
+          DESIGN_COLORS[state.selectedDesign] ?? {}
+        ).map((color) => ({
+          id: nanoid(),
+          hex: color.hex,
+          name: color.name,
+        }));
+        const drawnPaletteByHex = new Map<string, CustomColor>();
+
+        if (
+          state.selectedDesign === ItemDesigns.Custom &&
+          state.activeCustomMode === "pattern" &&
+          state.drawnPatternGrid
+        ) {
+          state.drawnPatternGrid.forEach((row) => {
+            row.forEach((cell) => {
+              if (!cell.color) return;
+              const hex = normalizeAiPaletteHex(cell.color);
+              if (drawnPaletteByHex.has(hex)) return;
+              const existingColor = state.customPalette.find(
+                (color) => normalizeAiPaletteHex(color.hex) === hex
+              );
+              drawnPaletteByHex.set(
+                hex,
+                existingColor ?? {
+                  id: nanoid(),
+                  hex,
+                  name: cell.colorName,
+                }
+              );
+            });
+          });
+        }
+
+        const basePalette = drawnPaletteByHex.size
+          ? Array.from(drawnPaletteByHex.values())
+          : state.selectedDesign === ItemDesigns.Custom
+          ? state.customPalette
+          : officialPalette;
+        const isReplacement = response.operation === "replace_colors";
+        const replacementByHex = new Map(
+          response.replacements.map(({ sourceHex, replacement }) => [
+            normalizeAiPaletteHex(sourceHex),
+            replacement,
+          ])
+        );
+        const paletteWithIds: CustomColor[] = isReplacement
+          ? reblendMixedColors(
+              response.palette.map((color, index) => {
+                const previousColor = basePalette[index];
+                const hex = normalizeAiPaletteHex(color.hex);
+                const name = color.name?.trim() || previousColor?.name || "";
+                if (!previousColor) return { id: nanoid(), hex, name };
+                if (normalizeAiPaletteHex(previousColor.hex) === hex) {
+                  return { ...previousColor, hex, name };
+                }
+                return {
+                  ...detachColorMetadata(previousColor),
+                  hex,
+                  name,
+                };
+              })
+            )
+          : response.palette.map((color, index) => ({
+              id: basePalette[index]?.id || nanoid(),
+              hex: normalizeAiPaletteHex(color.hex),
+              name: color.name?.trim() || "",
+            }));
+        const drawnPatternGrid =
+          isReplacement && state.drawnPatternGrid
+            ? state.drawnPatternGrid.map((row) =>
+                row.map((cell) => {
+                  if (!cell.color) return { ...cell };
+                  const replacement = replacementByHex.get(
+                    normalizeAiPaletteHex(cell.color)
+                  );
+                  return replacement
+                    ? {
+                        ...cell,
+                        color: normalizeAiPaletteHex(replacement.hex),
+                        colorName:
+                          replacement.name?.trim() || cell.colorName,
+                      }
+                    : { ...cell };
+                })
+              )
+            : state.drawnPatternGrid;
+        const historyBase =
+          state.selectedDesign === ItemDesigns.Custom
+            ? state.paletteHistory.slice(
+                ARRAY_START_INDEX,
+                state.paletteHistoryIndex + ARRAY_INDEX_OFFSET
+              )
+            : [];
+        const paletteHistory = [...historyBase, paletteWithIds];
+
+        return {
+          customPalette: paletteWithIds,
+          currentColors:
+            isReplacement && state.activeCustomMode === "pattern"
+              ? null
+              : createColorMap(paletteWithIds),
+          selectedDesign: ItemDesigns.Custom,
+          activeCustomMode: isReplacement
+            ? state.activeCustomMode
+            : "palette",
+          colorPattern: response.pattern.colorPattern,
+          orientation: response.pattern.orientation,
+          isReversed: response.pattern.isReversed,
+          isRotated: response.pattern.isRotated,
+          selectedColors: [],
+          editingPaletteId:
+            state.selectedDesign === ItemDesigns.Custom
+              ? state.editingPaletteId
+              : null,
+          drawnPatternGrid,
+          patternOverride: isReplacement ? state.patternOverride : {},
+          patternDirectionOverride: isReplacement
+            ? state.patternDirectionOverride
+            : {},
+          paletteHistory,
+          paletteHistoryIndex:
+            paletteHistory.length - ARRAY_INDEX_OFFSET,
         };
       }),
     generateShareableLink: () => {
