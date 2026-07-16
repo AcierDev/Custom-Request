@@ -12,7 +12,6 @@ import {
   Grid,
   Info,
   Paperclip,
-  SplitSquareVertical,
   Sparkles,
   Image,
 } from "lucide-react";
@@ -27,14 +26,12 @@ export function ViewControls({ className = "" }: ViewControlsProps) {
   const metallic = useCustomStore((s) => s.viewSettings.metallic);
   const showColorInfo = useCustomStore((s) => s.viewSettings.showColorInfo);
   const showHanger = useCustomStore((s) => s.viewSettings.showHanger);
-  const showSplitPanel = useCustomStore((s) => s.viewSettings.showSplitPanel);
   const showRoom = useCustomStore((s) => s.viewSettings.showRoom);
   const setShowRuler = useCustomStore((s) => s.setShowRuler);
   const setShowWoodGrain = useCustomStore((s) => s.setShowWoodGrain);
   const setMetallic = useCustomStore((s) => s.setMetallic);
   const setShowColorInfo = useCustomStore((s) => s.setShowColorInfo);
   const setShowHanger = useCustomStore((s) => s.setShowHanger);
-  const setShowSplitPanel = useCustomStore((s) => s.setShowSplitPanel);
   const setShowRoom = useCustomStore((s) => s.setShowRoom);
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -136,20 +133,6 @@ export function ViewControls({ className = "" }: ViewControlsProps) {
               <Switch
                 checked={showColorInfo}
                 onCheckedChange={setShowColorInfo}
-                className="data-[state=checked]:bg-indigo-600"
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <SplitSquareVertical className="w-4 h-4 text-slate-400" />
-                <span className="text-sm text-slate-300">
-                  Split Panel View
-                </span>
-              </div>
-              <Switch
-                checked={showSplitPanel}
-                onCheckedChange={setShowSplitPanel}
                 className="data-[state=checked]:bg-indigo-600"
               />
             </div>

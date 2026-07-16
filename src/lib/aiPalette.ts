@@ -4,7 +4,7 @@
 
 export const AI_PALETTE_CONFIG = {
   apiPath: "/api/ai-palette",
-  defaultModel: "openai/gpt-5.4",
+  defaultModel: "openrouter/free",
   minPromptLength: 1,
   maxPromptLength: 500,
   minPaletteColors: 1,
@@ -14,13 +14,18 @@ export const AI_PALETTE_CONFIG = {
   defaultGeneratedColorCount: 6,
   defaultColorPattern: "fade",
   maxColorNameLength: 48,
+  minDimensionSquares: 1,
+  maxDimensionSquares: 64,
   maxRequestBytes: 16_384,
-  maxOutputTokens: 2_000,
+  maxOutputTokens: 768,
+  modelTemperature: 0,
   requestTimeoutMs: 30_000,
   clientRequestTimeoutMs: 35_000,
   rateLimitWindowMs: 60_000,
   rateLimitMaxRequests: 10,
   rateLimitMaxEntries: 1_000,
+  responseCacheTtlMs: 600_000,
+  responseCacheMaxEntries: 250,
 } as const;
 
 export const AI_PALETTE_COLOR_PATTERNS = [
@@ -34,6 +39,12 @@ export const AI_PALETTE_COLOR_PATTERNS = [
 ] as const;
 
 export const AI_PALETTE_ORIENTATIONS = ["horizontal", "vertical"] as const;
+export const AI_SQUARE_DIRECTIONS = [
+  "north",
+  "east",
+  "south",
+  "west",
+] as const;
 
 export const HEX_COLOR_PATTERN = /^#[\dA-Fa-f]{6}$/;
 
@@ -42,6 +53,23 @@ export type AiPaletteColorPattern =
 
 export type AiPaletteOrientation =
   (typeof AI_PALETTE_ORIENTATIONS)[number];
+
+export type AiSquareDirection = (typeof AI_SQUARE_DIRECTIONS)[number];
+export type AiSquareEdit =
+  | {
+      type: "direction";
+      direction: AiSquareDirection;
+      sourceColorIndexes: number[];
+    }
+  | {
+      type: "visibility";
+      hidden: boolean;
+      sourceColorIndexes: number[];
+    }
+  | {
+      type: "reset";
+      target: "directions" | "visibility" | "all";
+    };
 
 export interface AiPaletteColor {
   hex: string;
@@ -55,13 +83,25 @@ export interface AiPalettePattern {
   isRotated: boolean;
 }
 
+export interface AiPaletteDimensions {
+  width: number;
+  height: number;
+}
+
 export interface AiPaletteRequest {
   prompt: string;
   currentPalette: AiPaletteColor[];
   pattern: AiPalettePattern;
+  dimensions: AiPaletteDimensions;
+  clarificationContext?: string;
 }
 
-export type AiPaletteOperation = "replace_colors" | "set_palette";
+export type AiPaletteOperation =
+  | "replace_colors"
+  | "set_palette"
+  | "set_dimensions"
+  | "edit_squares"
+  | "ask_question";
 
 export interface AiPaletteReplacement {
   sourceHex: string;
@@ -72,5 +112,8 @@ export interface AiPaletteResponse {
   operation: AiPaletteOperation;
   palette: AiPaletteColor[];
   pattern: AiPalettePattern;
+  dimensions: AiPaletteDimensions;
   replacements: AiPaletteReplacement[];
+  squareEdit?: AiSquareEdit;
+  question?: string;
 }

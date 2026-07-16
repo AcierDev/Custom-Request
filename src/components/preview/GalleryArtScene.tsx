@@ -30,6 +30,10 @@ import {
   FourAngleImageCapture,
   type CaptureFourAngleImage,
 } from "./FourAngleImageCapture";
+import {
+  PANEL_LAYOUT_CONFIG,
+  getInstalledArtWidthSceneUnits,
+} from "@/lib/panelLayout";
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ 🖼️ GALLERY ART SCENE — read-only gallery render of a fixed piece      ║
@@ -57,6 +61,7 @@ const ROOM_REF_HEIGHT = 16 * 0.5;
 
 const CAMERA_FOV = 40;
 const CAMERA_ZOOM = 1;
+const ART_SCENE_UNITS_PER_SQUARE = 0.5;
 // Wheel / trackpad scroll-to-zoom speed. 87.5% faster than OrbitControls'
 // default (1.0) so laptop trackpad + mouse-wheel zoom feels snappier. Touch
 // pinch-zoom is unaffected (OrbitControls' pinch path ignores zoomSpeed).
@@ -433,10 +438,25 @@ export function GalleryArtScene({
   // Wood grain follows the loaded design's setting (the art surface is
   // store-driven). Grain off → each square renders its flat color, no grain.
   const showWoodGrain = useCustomStore((s) => s.viewSettings.showWoodGrain);
+  const showSplitPanel = useCustomStore(
+    (s) => s.viewSettings.showSplitPanel
+  );
+  const panelCount = useCustomStore((s) => s.viewSettings.panelCount);
+  const panelSpacingInches = useCustomStore(
+    (s) => s.viewSettings.panelSpacingInches
+  );
 
   const currentWallColor = wallColor || WALL_COLOR;
   const sceneW = ROOM_REF_WIDTH;
   const sceneH = ROOM_REF_HEIGHT;
+  const activePanelCount = showSplitPanel
+    ? panelCount
+    : PANEL_LAYOUT_CONFIG.singleCount;
+  const installedArtWidth = getInstalledArtWidthSceneUnits(
+    dimensions.width * ART_SCENE_UNITS_PER_SQUARE,
+    activePanelCount,
+    panelSpacingInches
+  );
 
   const { artCenterX, displayArtCenterX, bookcaseFill } = useMemo(
     () => computeArtLayout(dimensions.width, showRoom),
@@ -457,9 +477,14 @@ export function GalleryArtScene({
         : 1.6;
     return Math.max(
       maxCamDistance,
-      fitWidthDistance(ROOM_REF_WIDTH, CAMERA_FOV, aspect, ZOOM_FIT_WIDTH_MARGIN)
+      fitWidthDistance(
+        Math.max(ROOM_REF_WIDTH, installedArtWidth),
+        CAMERA_FOV,
+        aspect,
+        ZOOM_FIT_WIDTH_MARGIN
+      )
     );
-  }, [maxCamDistance]);
+  }, [installedArtWidth, maxCamDistance]);
   const camBounds = useMemo(() => roomBounds(sceneW, sceneH), [sceneW, sceneH]);
   const windowPos = useMemo(
     () => rightWindowWorldPos(ROOM_REF_WIDTH, ROOM_REF_HEIGHT),
@@ -473,10 +498,10 @@ export function GalleryArtScene({
       leftLampWorldPos(
         ROOM_REF_WIDTH,
         ROOM_REF_HEIGHT,
-        dimensions.width * 0.5,
+        installedArtWidth,
         displayArtCenterX
       ),
-    [dimensions.width, displayArtCenterX]
+    [installedArtWidth, displayArtCenterX]
   );
   // Ceiling-downlight position above the art so the overhead shadow drops
   // straight down the piece wherever it hangs.
@@ -542,7 +567,7 @@ export function GalleryArtScene({
           <Room
             width={ROOM_REF_WIDTH}
             height={ROOM_REF_HEIGHT}
-            artWidth={dimensions.width * 0.5}
+            artWidth={installedArtWidth}
             artCenterX={artCenterX}
             fillFactor={bookcaseFill}
             timeOfDay={timeOfDay}
@@ -563,7 +588,7 @@ export function GalleryArtScene({
 
           {showRuler && (
             <Ruler3D
-              width={dimensions.width * 0.5}
+              width={installedArtWidth}
               height={dimensions.height * 0.5}
             />
           )}
@@ -571,7 +596,9 @@ export function GalleryArtScene({
 
         {onCaptureReady && (
           <FourAngleImageCapture
-            artWidthSquares={dimensions.width}
+            artWidthSquares={
+              installedArtWidth / ART_SCENE_UNITS_PER_SQUARE
+            }
             artHeightSquares={dimensions.height}
             baseDistance={showRoom ? fitMaxDistance : undefined}
             bounds={showRoom ? camBounds : null}
@@ -605,7 +632,7 @@ export function GalleryArtScene({
         <RoomCollision
           bounds={camBounds}
           fallbackMax={maxCamDistance}
-          fitWidth={ROOM_REF_WIDTH}
+          fitWidth={Math.max(ROOM_REF_WIDTH, installedArtWidth)}
           fitMargin={ZOOM_FIT_WIDTH_MARGIN}
         />
       )}

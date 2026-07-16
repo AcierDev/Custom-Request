@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useStore } from "zustand";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
@@ -31,8 +31,12 @@ import {
   Columns3,
   Square,
   Circle,
+  EyeOff,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ItemDesigns } from "@/typings/types";
+import { AiPatternPrompt } from "./AiPatternPrompt";
 import { PatternHistoryControls } from "./PatternHistoryControls";
 
 interface PatternEditorProps {
@@ -74,10 +78,16 @@ const PATTERN_EDITOR_CONTENT_ID = "viewer-pattern-editor-controls";
 const COMPACT_ACTION_BUTTON_CLASS = "h-7 px-2 text-xs";
 const COMPACT_ACTION_ICON_CLASS = "mr-1 h-3 w-3";
 const DIRECTION_HEADER_CLASS = "flex items-center justify-between gap-2";
+const COLOR_CONTEXT_MENU_ID = "pattern-editor-color-context-menu";
+const CONTEXT_MENU_WIDTH_PX = 160;
+const CONTEXT_MENU_HEIGHT_PX = 40;
+const CONTEXT_MENU_VIEWPORT_GAP_PX = 8;
+const CONTEXT_MENU_ANCHOR_DIVISOR = 2;
 const TOOL_INSTRUCTIONS: Record<PatternEditingMode["tool"], string> = {
-  none: "Select a color or direction to start editing",
+  none: "Select a color, direction, or visibility tool to start editing",
   color: "Click or drag across squares to paint them",
   direction: "Click or drag across squares to turn them",
+  hide: "Click or drag across squares to hide them",
   eraser: "Click or drag across squares to reset them",
 };
 
@@ -87,15 +97,29 @@ const normalizePaletteHex = (hex: string): string =>
 const formatSquareCount = (count: number): string =>
   `${count} square${count === SINGULAR_SQUARE_COUNT ? "" : "s"}`;
 
+interface ColorContextMenuState {
+  colorIndex: number;
+  colorLabel: string;
+  left: number;
+  top: number;
+}
+
 export function PatternEditor({ className }: PatternEditorProps) {
   const selectedDesign = useCustomStore((s) => s.selectedDesign);
   const customPalette = useCustomStore((s) => s.customPalette);
+  const removeCustomColor = useCustomStore((s) => s.removeCustomColor);
   const patternOverride = useCustomStore((s) => s.patternOverride);
   const patternDirectionOverride = useCustomStore(
     (s) => s.patternDirectionOverride
   );
+  const patternHiddenOverride = useCustomStore(
+    (s) => s.patternHiddenOverride
+  );
   const clearPatternDirectionOverride = useCustomStore(
     (s) => s.clearPatternDirectionOverride
+  );
+  const clearPatternHiddenOverride = useCustomStore(
+    (s) => s.clearPatternHiddenOverride
   );
   const clearPatternOverride = useCustomStore((s) => s.clearPatternOverride);
   const patternEditingMode = useCustomStore((s) => s.patternEditingMode);
@@ -128,6 +152,10 @@ export function PatternEditor({ className }: PatternEditorProps) {
   const [replaceSourceIndex, setReplaceSourceIndex] = useState<number | null>(
     null
   );
+  const [colorContextMenu, setColorContextMenu] =
+    useState<ColorContextMenuState | null>(null);
+  const contextMenuRef = useRef<HTMLDivElement>(null);
+  const contextMenuActionRef = useRef<HTMLButtonElement>(null);
 
   const colorEntries = useMemo(
     () => getColorEntries(selectedDesign, customPalette),
@@ -154,6 +182,84 @@ export function PatternEditor({ className }: PatternEditorProps) {
     setPatternEditingMode,
     setPinnedColorInfo,
   ]);
+
+  const openColorContextMenu = useCallback(
+    (colorIndex: number, colorLabel: string, left: number, top: number) => {
+      if (selectedDesign !== ItemDesigns.Custom) return;
+
+      const maximumLeft = Math.max(
+        CONTEXT_MENU_VIEWPORT_GAP_PX,
+        window.innerWidth -
+          CONTEXT_MENU_WIDTH_PX -
+          CONTEXT_MENU_VIEWPORT_GAP_PX
+      );
+      const maximumTop = Math.max(
+        CONTEXT_MENU_VIEWPORT_GAP_PX,
+        window.innerHeight -
+          CONTEXT_MENU_HEIGHT_PX -
+          CONTEXT_MENU_VIEWPORT_GAP_PX
+      );
+
+      setColorContextMenu({
+        colorIndex,
+        colorLabel,
+        left: Math.min(
+          Math.max(left, CONTEXT_MENU_VIEWPORT_GAP_PX),
+          maximumLeft
+        ),
+        top: Math.min(
+          Math.max(top, CONTEXT_MENU_VIEWPORT_GAP_PX),
+          maximumTop
+        ),
+      });
+    },
+    [selectedDesign]
+  );
+
+  useEffect(() => {
+    if (!colorContextMenu) return;
+
+    contextMenuActionRef.current?.focus();
+
+    const closeContextMenu = (event: PointerEvent) => {
+      if (
+        event.target instanceof Node &&
+        contextMenuRef.current?.contains(event.target)
+      ) {
+        return;
+      }
+      setColorContextMenu(null);
+    };
+    const closeContextMenuOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setColorContextMenu(null);
+    };
+    const closeContextMenuOnViewportChange = () => setColorContextMenu(null);
+
+    window.addEventListener("pointerdown", closeContextMenu);
+    window.addEventListener("keydown", closeContextMenuOnEscape);
+    window.addEventListener("resize", closeContextMenuOnViewportChange);
+    window.addEventListener("scroll", closeContextMenuOnViewportChange, true);
+
+    return () => {
+      window.removeEventListener("pointerdown", closeContextMenu);
+      window.removeEventListener("keydown", closeContextMenuOnEscape);
+      window.removeEventListener("resize", closeContextMenuOnViewportChange);
+      window.removeEventListener(
+        "scroll",
+        closeContextMenuOnViewportChange,
+        true
+      );
+    };
+  }, [colorContextMenu]);
+
+  const handleDeleteColor = useCallback(() => {
+    if (!colorContextMenu) return;
+
+    removeCustomColor(colorContextMenu.colorIndex);
+    cancelReplaceMode();
+    toast.success(`Deleted ${colorContextMenu.colorLabel}`);
+    setColorContextMenu(null);
+  }, [cancelReplaceMode, colorContextMenu, removeCustomColor]);
 
   useEffect(() => {
     if (isCollapsed && isPatternEditorActive) {
@@ -344,9 +450,25 @@ export function PatternEditor({ className }: PatternEditorProps) {
     setIsPatternEditorActive,
   ]);
 
+  const handleHideToggle = useCallback(() => {
+    cancelReplaceMode();
+    setIsPatternEditorActive(true);
+    setPatternEditingMode(
+      patternEditingMode.tool === "hide"
+        ? { tool: "none" }
+        : { tool: "hide" }
+    );
+  }, [
+    cancelReplaceMode,
+    patternEditingMode,
+    setPatternEditingMode,
+    setIsPatternEditorActive,
+  ]);
+
   const modifiedSquareCount = new Set([
     ...Object.keys(patternOverride),
     ...Object.keys(patternDirectionOverride),
+    ...Object.keys(patternHiddenOverride),
   ]).size;
 
   const activeInstruction =
@@ -371,7 +493,7 @@ export function PatternEditor({ className }: PatternEditorProps) {
         className
       )}
     >
-      <div className="p-4">
+      <div>
         {/* Header */}
         <Button
           variant="ghost"
@@ -379,7 +501,7 @@ export function PatternEditor({ className }: PatternEditorProps) {
           onClick={handleCollapseToggle}
           aria-expanded={!isCollapsed}
           aria-controls={PATTERN_EDITOR_CONTENT_ID}
-          className="w-full justify-between text-gray-200 hover:text-white hover:bg-gray-900/40"
+          className="h-auto w-full justify-between rounded-[0.7rem] p-4 text-gray-200 hover:bg-gray-900/40 hover:text-white"
         >
           <div className="flex items-center gap-2">
             <Palette className="w-4 h-4" />
@@ -400,7 +522,12 @@ export function PatternEditor({ className }: PatternEditorProps) {
 
         {/* Collapsible Content */}
         {!isCollapsed && (
-          <div id={PATTERN_EDITOR_CONTENT_ID} className="mt-4 space-y-4">
+          <div
+            id={PATTERN_EDITOR_CONTENT_ID}
+            className="space-y-4 px-4 pb-4 pt-2"
+          >
+            <AiPatternPrompt />
+
             {/* Enable/Disable Toggle */}
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-gray-400">
@@ -529,6 +656,10 @@ export function PatternEditor({ className }: PatternEditorProps) {
                     const colorLabel =
                       colorInfo.name ||
                       `Color ${index + HUMAN_INDEX_OFFSET}`;
+                    const canDeleteColor =
+                      selectedDesign === ItemDesigns.Custom;
+                    const isContextMenuOpen =
+                      colorContextMenu?.colorIndex === index;
 
                     return (
                       <button
@@ -544,7 +675,41 @@ export function PatternEditor({ className }: PatternEditorProps) {
                         )}
                         style={{ backgroundColor: colorInfo.hex }}
                         onClick={() => handleColorSelect(index)}
+                        onContextMenu={(event) => {
+                          if (!canDeleteColor) return;
+                          event.preventDefault();
+                          openColorContextMenu(
+                            index,
+                            colorLabel,
+                            event.clientX,
+                            event.clientY
+                          );
+                        }}
+                        onKeyDown={(event) => {
+                          const opensContextMenu =
+                            event.key === "ContextMenu" ||
+                            (event.shiftKey && event.key === "F10");
+                          if (!canDeleteColor || !opensContextMenu) return;
+
+                          event.preventDefault();
+                          const bounds =
+                            event.currentTarget.getBoundingClientRect();
+                          openColorContextMenu(
+                            index,
+                            colorLabel,
+                            bounds.left +
+                              bounds.width / CONTEXT_MENU_ANCHOR_DIVISOR,
+                            bounds.bottom
+                          );
+                        }}
                         title={colorLabel}
+                        aria-haspopup={canDeleteColor ? "menu" : undefined}
+                        aria-controls={
+                          isContextMenuOpen ? COLOR_CONTEXT_MENU_ID : undefined
+                        }
+                        aria-expanded={
+                          canDeleteColor ? isContextMenuOpen : undefined
+                        }
                         aria-label={
                           isReplaceMode
                             ? replaceSourceIndex === null
@@ -565,6 +730,30 @@ export function PatternEditor({ className }: PatternEditorProps) {
                 </div>
               ) : (
                 <p className="text-xs text-gray-500">No paint colors available</p>
+              )}
+              {colorContextMenu && (
+                <div
+                  ref={contextMenuRef}
+                  id={COLOR_CONTEXT_MENU_ID}
+                  role="menu"
+                  aria-label={`Actions for ${colorContextMenu.colorLabel}`}
+                  className="fixed z-50 min-w-40 rounded-md border border-white/15 bg-slate-950 p-1 text-slate-100 shadow-xl"
+                  style={{
+                    left: colorContextMenu.left,
+                    top: colorContextMenu.top,
+                  }}
+                >
+                  <button
+                    ref={contextMenuActionRef}
+                    type="button"
+                    role="menuitem"
+                    className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm text-red-300 outline-none hover:bg-red-900/30 focus:bg-red-900/30 focus:text-red-200"
+                    onClick={handleDeleteColor}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete color
+                  </button>
+                </div>
               )}
               {isReplaceMode && (
                 <div
@@ -628,12 +817,56 @@ export function PatternEditor({ className }: PatternEditorProps) {
               </div>
             </div>
 
+            {/* Square Visibility */}
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-medium text-gray-400">
+                  Hide squares
+                </p>
+                <p className="text-[0.7rem] text-gray-500">
+                  Remove squares while keeping their spots editable
+                </p>
+              </div>
+              <div className="flex items-center gap-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    COMPACT_ACTION_BUTTON_CLASS,
+                    "text-gray-400 hover:text-gray-200"
+                  )}
+                  disabled={!Object.keys(patternHiddenOverride).length}
+                  onClick={clearPatternHiddenOverride}
+                  title="Show every hidden square"
+                >
+                  <RotateCcw className={COMPACT_ACTION_ICON_CLASS} />
+                  Show all
+                </Button>
+                <button
+                  type="button"
+                  className={cn(
+                    "w-8 h-8 rounded-lg border-2 flex items-center justify-center transition-all duration-200 hover:scale-105",
+                    patternEditingMode.tool === "hide"
+                      ? "border-indigo-400 bg-indigo-500/20 ring-2 ring-indigo-400/30 shadow-md"
+                      : "border-white/15 bg-gray-800 hover:border-white/30"
+                  )}
+                  onClick={handleHideToggle}
+                  title="Hide selected squares"
+                  aria-label="Hide selected area"
+                  aria-pressed={patternEditingMode.tool === "hide"}
+                >
+                  <EyeOff className="w-4 h-4 text-gray-300" />
+                </button>
+              </div>
+            </div>
+
             {/* Reset Tool */}
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-400">Reset area</p>
                 <p className="text-[0.7rem] text-gray-500">
-                  Restore its generated color and direction
+                  Restore its generated color, direction, and visibility
                 </p>
               </div>
               <button
@@ -669,7 +902,7 @@ export function PatternEditor({ className }: PatternEditorProps) {
                 {isPatternEditorActive ? (
                   <>
                     <p>• Choose an area and tool, then click or drag</p>
-                    <p>• Reset restores color and direction in that area</p>
+                    <p>• Hidden spots stay selectable so Reset can restore them</p>
                     <p>• Press 'h' to hide/show UI controls</p>
                   </>
                 ) : (

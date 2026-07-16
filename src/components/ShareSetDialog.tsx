@@ -68,6 +68,9 @@ export function ShareSetDialog({
         patternDirectionOverride: {
           ...(palette.patternDirectionOverride ?? {}),
         },
+        patternHiddenOverride: {
+          ...(palette.patternHiddenOverride ?? {}),
+        },
       },
     }));
   }, [open, palettes, getShareableStateSnapshot]);

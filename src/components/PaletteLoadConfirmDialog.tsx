@@ -35,6 +35,7 @@ export function PaletteLoadConfirmDialog({
     customPalette,
     patternOverride,
     patternDirectionOverride,
+    patternHiddenOverride,
     savePalette,
     editingPaletteId,
     updatePalette,
@@ -56,6 +57,7 @@ export function PaletteLoadConfirmDialog({
           colors: customPalette,
           patternOverride,
           patternDirectionOverride,
+          patternHiddenOverride,
           name: saveName.trim(),
         });
         toast.success("Palette updated successfully!");

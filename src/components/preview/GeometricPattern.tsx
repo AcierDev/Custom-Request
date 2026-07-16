@@ -13,6 +13,7 @@ import * as THREE from "three";
 import { useStore } from "zustand";
 import { InstancedSquares, SquareInstance } from "./InstancedSquares";
 import { PlywoodBase } from "./PlywoodBase";
+import { MultiPanelPlywoodBase } from "./MultiPanelPlywoodBase";
 import { publishArtSnapshot } from "@/lib/ar/artSnapshot";
 import { ItemDesigns } from "@/typings/types";
 import {
@@ -33,6 +34,12 @@ import {
   getSquareDirectionRotation,
 } from "./patternUtils";
 import { useSpring } from "@react-spring/three";
+import {
+  PANEL_LAYOUT_CONFIG,
+  buildPanelColumnLayout,
+  getPanelForColumn,
+  normalizePanelSpacingInches,
+} from "@/lib/panelLayout";
 
 // Shown when Custom is selected with no palette colors and no drawn
 // pattern: every square renders this single dark blue.
@@ -218,12 +225,19 @@ function GeometricPatternComponent({
   const storeUseMini = useCustomStore((s) => s.useMini);
   const storeCustomPalette = useCustomStore((s) => s.customPalette);
   const showSplitPanel = useCustomStore((s) => s.viewSettings.showSplitPanel);
+  const panelCount = useCustomStore((s) => s.viewSettings.panelCount);
+  const panelSpacingInches = useCustomStore(
+    (s) => s.viewSettings.panelSpacingInches
+  );
   const drawnPatternGrid = useCustomStore((s) => s.drawnPatternGrid);
   const drawnPatternGridSize = useCustomStore((s) => s.drawnPatternGridSize);
   const activeCustomMode = useCustomStore((s) => s.activeCustomMode);
   const patternOverride = useCustomStore((s) => s.patternOverride);
   const patternDirectionOverride = useCustomStore(
     (s) => s.patternDirectionOverride
+  );
+  const patternHiddenOverride = useCustomStore(
+    (s) => s.patternHiddenOverride
   );
   const patternBrush = useCustomStore((s) => s.patternBrush);
   const applyPatternSquareEdit = useCustomStore(
@@ -399,7 +413,7 @@ function GeometricPatternComponent({
   }
 
   // Optimize color map generation with better dependency tracking
-  const colorMapDetails = useMemo(() => {
+  useMemo(() => {
     if (
       !colorMapRef.current ||
       colorMapRef.current.length !== adjustedModelWidth ||
@@ -455,11 +469,6 @@ function GeometricPatternComponent({
         extraPercentByIndex?.join(",") ?? "";
     }
 
-    return {
-      oneThirdWidth: Math.floor(adjustedModelWidth / 3),
-      twoThirdsWidth: Math.floor(adjustedModelWidth / 3) * 2,
-      driftAmount: squareSize * 2,
-    };
   }, [
     adjustedModelWidth,
     adjustedModelHeight,
@@ -471,31 +480,40 @@ function GeometricPatternComponent({
     customPalette,
     customPalette.length,
     colorEntries,
-    squareSize,
     scatterEase,
     scatterWidth,
     scatterAmount,
   ]);
 
-  const { oneThirdWidth, twoThirdsWidth, driftAmount } = colorMapDetails;
+  const effectivePanelCount = showSplitPanel
+    ? panelCount
+    : PANEL_LAYOUT_CONFIG.singleCount;
+  const panelLayout = useMemo(
+    () => buildPanelColumnLayout(currentGridWidth, effectivePanelCount),
+    [currentGridWidth, effectivePanelCount]
+  );
+  const driftAmount =
+    normalizePanelSpacingInches(panelSpacingInches) /
+    PANEL_LAYOUT_CONFIG.inchesPerSceneUnit;
 
   // Memoize the drift factor spring to prevent recreation
   const driftFactorSpring = useSpring({
-    driftFactor: showSplitPanel ? 1 : 0,
+    driftFactor:
+      showSplitPanel &&
+      effectivePanelCount > PANEL_LAYOUT_CONFIG.singleCount
+        ? 1
+        : 0,
     config: { mass: 1, tension: 170, friction: 26 },
   });
   const { driftFactor } = driftFactorSpring;
 
-  // Which way a column drifts when the panel splits: left third → -1,
-  // right third → +1, middle → 0. The actual offset is applied per-frame
-  // inside <InstancedSquares /> so it never re-renders React.
+  // Each panel gets a centered offset multiplier. The actual inch-based
+  // gap is applied per-frame inside <InstancedSquares /> so changing the
+  // layout animates without rebuilding every square mesh.
   const driftDirForColumn = useCallback(
-    (xIndex: number) => {
-      if (xIndex < oneThirdWidth) return -1;
-      if (xIndex >= twoThirdsWidth) return 1;
-      return 0;
-    },
-    [oneThirdWidth, twoThirdsWidth]
+    (xIndex: number) =>
+      getPanelForColumn(panelLayout, xIndex)?.offsetMultiplier ?? 0,
+    [panelLayout]
   );
 
   const getDriftFactor = useCallback(
@@ -607,6 +625,7 @@ function GeometricPatternComponent({
         }
 
         const patternKey = getPatternSquareKey(x, y);
+        const isHidden = patternHiddenOverride[patternKey] === true;
         const colorOverrideIndex = patternOverride[patternKey];
         if (colorOverrideIndex !== undefined) {
           const colorEntry = colorEntries[colorOverrideIndex];
@@ -615,7 +634,12 @@ function GeometricPatternComponent({
           colorIndex = colorEntry ? colorOverrideIndex : undefined;
         }
 
-        if (color && color !== "null" && colorIndex !== undefined) {
+        if (
+          !isHidden &&
+          color &&
+          color !== "null" &&
+          colorIndex !== undefined
+        ) {
           colorIndexes[patternKey] = colorIndex;
         }
 
@@ -659,6 +683,7 @@ function GeometricPatternComponent({
             color,
             colorName,
             colorIndex,
+            hidden: isHidden,
             px: baseXPos,
             py: yPos,
             // Square.tsx places the wedge at z + height/2 on top of the
@@ -704,6 +729,7 @@ function GeometricPatternComponent({
     scatterAmount,
     patternOverride,
     patternDirectionOverride,
+    patternHiddenOverride,
     patternRotationZ,
     currentGridWidth,
     currentGridHeight,
@@ -862,7 +888,7 @@ function GeometricPatternComponent({
   // export uses the exact computed transforms and grain cells.
   useEffect(() => {
     publishArtSnapshot({
-      instances,
+      instances: instances.filter((instance) => !instance.hidden),
       orientationRotationZ: orientation === "vertical" ? Math.PI / 2 : 0,
       totalWidth,
       totalHeight,
@@ -900,24 +926,35 @@ function GeometricPatternComponent({
           isRotated ? 1 : 0
         }-${useMini ? 1 : 0}-${scatterEase ?? 50}-${scatterWidth ?? 10}-${
           scatterAmount ?? 50
-        }`}
+        }-${effectivePanelCount}-${panelSpacingInches}`}
         rotation={[NO_AXIS_ROTATION, NO_AXIS_ROTATION, patternRotationZ]}
         position={[0, 0, 0]}
         onClick={showColorInfo ? handleGroupClick : undefined}
       >
         {/* Hidden until the size-change reveal lands so the backing and
             hanger don't pop in behind the blooming squares. */}
-        {!bloomActive && (
-          <PlywoodBase
-            width={totalWidth}
-            height={totalHeight}
-            showWoodGrain={showWoodGrain}
-            squareSize={squareSize}
-            adjustedModelWidth={adjustedModelWidth}
-            adjustedModelHeight={adjustedModelHeight}
-            useMini={useMini}
-          />
-        )}
+        {!bloomActive &&
+          (effectivePanelCount > PANEL_LAYOUT_CONFIG.singleCount ? (
+            <MultiPanelPlywoodBase
+              squareSize={squareSize}
+              adjustedModelWidth={adjustedModelWidth}
+              adjustedModelHeight={adjustedModelHeight}
+              useMini={useMini}
+              showWoodGrain={showWoodGrain}
+              panelCount={effectivePanelCount}
+              panelSpacingInches={panelSpacingInches}
+            />
+          ) : (
+            <PlywoodBase
+              width={totalWidth}
+              height={totalHeight}
+              showWoodGrain={showWoodGrain}
+              squareSize={squareSize}
+              adjustedModelWidth={adjustedModelWidth}
+              adjustedModelHeight={adjustedModelHeight}
+              useMini={useMini}
+            />
+          ))}
 
         {/* Single instanced draw call for the whole square grid */}
         <InstancedSquares

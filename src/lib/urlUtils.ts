@@ -5,6 +5,7 @@ import {
 
 const SHORT_PATTERN_COLOR_OVERRIDES_KEY = "po";
 const SHORT_PATTERN_DIRECTION_OVERRIDES_KEY = "pdo";
+const SHORT_PATTERN_HIDDEN_OVERRIDES_KEY = "pho";
 const SHORT_USE_MINI_KEY = "m";
 const SHORT_CUSTOM_MODE_KEY = "cm";
 const SHORT_SCATTER_EASE_KEY = "se";
@@ -202,6 +203,10 @@ export const generateShortShareableUrl = (stateData: any): string => {
     minimalState[SHORT_PATTERN_DIRECTION_OVERRIDES_KEY] =
       stateData.patternDirectionOverride;
   }
+  if (Object.keys(stateData.patternHiddenOverride ?? {}).length) {
+    minimalState[SHORT_PATTERN_HIDDEN_OVERRIDES_KEY] =
+      stateData.patternHiddenOverride;
+  }
 
   const jsonString = JSON.stringify(minimalState);
   const compressed = compressJsonForUrl(jsonString);
@@ -331,6 +336,10 @@ export const extractStateFromShortUrl = <T>(compressedData: string): T => {
     if (minimalState[SHORT_PATTERN_DIRECTION_OVERRIDES_KEY]) {
       fullState.patternDirectionOverride =
         minimalState[SHORT_PATTERN_DIRECTION_OVERRIDES_KEY];
+    }
+    if (minimalState[SHORT_PATTERN_HIDDEN_OVERRIDES_KEY]) {
+      fullState.patternHiddenOverride =
+        minimalState[SHORT_PATTERN_HIDDEN_OVERRIDES_KEY];
     }
 
     return fullState as T;

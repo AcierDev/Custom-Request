@@ -27,13 +27,15 @@ export interface SquareInstance {
   colorName?: string;
   /** Palette index currently visible on this square. */
   colorIndex?: number;
+  /** Hidden squares keep their pick plane so the editor can restore them. */
+  hidden: boolean;
   /** Final group-local position (drift applied separately via driftDir). */
   px: number;
   py: number;
   pz: number;
   /** Base X before split-panel drift. */
   baseX: number;
-  /** -1 / 0 / +1 — which way this square drifts when the panel splits. */
+  /** Centered panel offset multiplier used for the configured gap. */
   driftDir: number;
   rotationZ: number;
   scaleXY: number;
@@ -192,6 +194,15 @@ const HIGHLIGHT_RENDER_ORDER = 3;
 // the eye reads the square's centre and keeps parallax minimal.
 const PICK_PLANE_Z_OFFSET = 0.1;
 const PRIMARY_POINTER_BUTTON = 0;
+
+const getDriftedInstanceX = (
+  square: SquareInstance,
+  driftAmount: number,
+  driftFactor: number
+): number =>
+  square.driftDir !== NO_DRIFT_DIRECTION
+    ? square.baseX + square.driftDir * driftAmount * driftFactor
+    : square.px;
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ ✨ SIZE-CHANGE BLOOM                                                   ║
@@ -598,9 +609,7 @@ function InstancedSquaresComponent({
       if (!square) return;
 
       selectionHighlightTransform.position.set(
-        square.driftDir !== NO_DRIFT_DIRECTION
-          ? square.baseX + square.driftDir * driftAmount * driftFactor
-          : square.px,
+        getDriftedInstanceX(square, driftAmount, driftFactor),
         square.py,
         square.pz
       );
@@ -703,14 +712,20 @@ function InstancedSquaresComponent({
       onBloomCompleteRef.current?.();
     }
 
+    const currentDriftFactor = getDriftFactor();
     for (let i = 0; i < instances.length; i++) {
       const s = instances[i];
-      tmpPos.set(s.px, s.py, s.pz);
+      const px = getDriftedInstanceX(
+        s,
+        driftAmount,
+        currentDriftFactor
+      );
+      tmpPos.set(px, s.py, s.pz);
       tmpEuler.set(0, 0, s.rotationZ);
       tmpQuat.setFromEuler(tmpEuler);
       // Start the grid collapsed so the first frame shows nothing pop in
       // at full size before the wave begins.
-      const sc = startBloom ? 0 : 1;
+      const sc = s.hidden || startBloom ? 0 : 1;
       tmpScale.set(s.scaleXY * sc, s.scaleXY * sc, s.scaleZ * sc);
       tmpMatrix.compose(tmpPos, tmpQuat, tmpScale);
       mesh.setMatrixAt(i, tmpMatrix);
@@ -723,7 +738,7 @@ function InstancedSquaresComponent({
       // Flat pick proxy: full size (never collapsed by the bloom), a touch
       // in front of the wedge. Same rotation (tmpQuat) so seams line up.
       if (pickMesh) {
-        tmpPos.set(s.px, s.py, s.pz + PICK_PLANE_Z_OFFSET);
+        tmpPos.set(px, s.py, s.pz + PICK_PLANE_Z_OFFSET);
         tmpScale.set(s.scaleXY, s.scaleXY, 1);
         tmpMatrix.compose(tmpPos, tmpQuat, tmpScale);
         pickMesh.setMatrixAt(i, tmpMatrix);
@@ -743,7 +758,15 @@ function InstancedSquaresComponent({
     // `material` is intentionally a dependency: it lives in the <instancedMesh>
     // args, so toggling wood grain / metallic / wood style recreates the mesh
     // with a zeroed instance buffer. Re-running here repopulates the new mesh.
-  }, [instances, geometry, material, revealNonce, bloomOnResize]);
+  }, [
+    instances,
+    geometry,
+    material,
+    revealNonce,
+    bloomOnResize,
+    driftAmount,
+    getDriftFactor,
+  ]);
 
   // One per-frame matrix writer for both the size-change bloom and the
   // split-panel drift. It stays idle (early return) unless the bloom is
@@ -772,15 +795,14 @@ function InstancedSquaresComponent({
     for (let i = 0; i < instances.length; i++) {
       const s = instances[i];
 
-      let sc = 1;
-      if (blooming) {
+      let sc = s.hidden ? 0 : 1;
+      if (blooming && !s.hidden) {
         const t = (elapsed - delays[i]) / BLOOM_DURATION;
         if (t < 1) allDone = false;
         sc = t <= 0 ? 0 : t >= 1 ? 1 : easeOutBack(t);
       }
 
-      const px =
-        s.driftDir !== 0 ? s.baseX + s.driftDir * driftAmount * f : s.px;
+      const px = getDriftedInstanceX(s, driftAmount, f);
       tmpPos.set(px, s.py, s.pz);
       tmpEuler.set(0, 0, s.rotationZ);
       tmpQuat.setFromEuler(tmpEuler);
@@ -823,7 +845,11 @@ function InstancedSquaresComponent({
     }
     const s = instances[instanceId];
     hl.visible = true;
-    hl.position.set(s.baseX, s.py, s.pz);
+    hl.position.set(
+      getDriftedInstanceX(s, driftAmount, getDriftFactor()),
+      s.py,
+      s.pz
+    );
     hl.rotation.set(0, 0, s.rotationZ);
     hl.scale.set(
       s.scaleXY * HIGHLIGHT_SCALE,
@@ -836,12 +862,18 @@ function InstancedSquaresComponent({
   const interactWithInstance = (instanceId: number | undefined) => {
     if (instanceId === undefined || !instances[instanceId]) return;
     const square = instances[instanceId];
+    if (square.hidden && !enablePatternEditing) return;
+    const worldX = getDriftedInstanceX(
+      square,
+      driftAmount,
+      getDriftFactor()
+    );
     onClick(
       square.x,
       square.y,
       square.color,
       square.colorName,
-      square.baseX,
+      worldX,
       square.py,
       square.pz + PICK_PLANE_Z_OFFSET
     );
@@ -892,6 +924,14 @@ function InstancedSquaresComponent({
 
     if (!showColorInfo) return;
     if (id === undefined || !instances[id]) return;
+    if (instances[id].hidden) {
+      if (hoveredInstanceRef.current !== undefined) {
+        hoveredInstanceRef.current = undefined;
+        moveHighlight(undefined);
+        onUnhover();
+      }
+      return;
+    }
     if (hoveredInstanceRef.current === id) return;
     hoveredInstanceRef.current = id;
     const s = instances[id];
@@ -899,7 +939,15 @@ function InstancedSquaresComponent({
     // Anchor overlays on the square's actual position, not its grid index.
     // Z is the pick-plane (the square's picked face), so the label pins to the
     // surface instead of floating in front of it and parallax-drifting away.
-    onHover(s.x, s.y, s.color, s.colorName, s.baseX, s.py, s.pz + PICK_PLANE_Z_OFFSET);
+    onHover(
+      s.x,
+      s.y,
+      s.color,
+      s.colorName,
+      getDriftedInstanceX(s, driftAmount, getDriftFactor()),
+      s.py,
+      s.pz + PICK_PLANE_Z_OFFSET
+    );
   };
 
   const handleOut = () => {

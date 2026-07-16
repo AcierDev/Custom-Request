@@ -71,6 +71,7 @@ function buildCoastalGrid(): SquareInstance[] {
         y,
         color: entry?.[1].hex ?? "#8B5E3B",
         colorName: entry?.[1].name,
+        hidden: false,
         px: baseXPos,
         py: yPos,
         pz: zPos + SQUARE_SIZE / 2,

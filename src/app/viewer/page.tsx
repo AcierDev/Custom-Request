@@ -19,7 +19,6 @@ import {
   Eye,
   EyeOff,
   SlidersHorizontal,
-  Palette,
   X,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -73,11 +72,16 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { PatternEditor } from "./components/PatternEditor";
-import { PaletteColorEditor } from "./components/PaletteColorEditor";
+import { PaletteVersionSwitcher } from "./components/PaletteVersionSwitcher";
 import { WallColorPicker } from "@/components/preview/WallColorPicker";
 import { PatternControls } from "@/components/preview/PatternControls";
+import { PanelLayoutControls } from "@/components/preview/PanelLayoutControls";
 import { FourAngleImageCapture } from "@/components/preview/FourAngleImageCapture";
 import { useFourAngleImageDownload } from "@/hooks/useFourAngleImageDownload";
+import {
+  PANEL_LAYOUT_CONFIG,
+  getInstalledArtWidthSceneUnits,
+} from "@/lib/panelLayout";
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ 🎥 ROOM COLLISION                                                     ║
@@ -90,6 +94,14 @@ const CAMERA_FOLLOW_EASE = 0.08;
 const CAMERA_FOLLOW_SETTLE = 0.001;
 const CAMERA_FOV = 40;
 const CAMERA_ZOOM = 1;
+const ART_SCENE_UNITS_PER_SQUARE = 0.5;
+
+const isEditableKeyboardTarget = (target: EventTarget | null): boolean =>
+  target instanceof HTMLInputElement ||
+  target instanceof HTMLTextAreaElement ||
+  target instanceof HTMLSelectElement ||
+  (target instanceof HTMLElement && target.isContentEditable);
+
 // OrbitControls treats every wheel event as the same fixed dolly step, which
 // makes a trackpad's stream of tiny deltas feel jumpy. Desktop wheel input is
 // handled by SmoothWheelZoom instead; zoomSpeed remains for touch pinch.
@@ -479,6 +491,13 @@ export default function DesignPage() {
   const showColorInfo = useCustomStore((s) => s.viewSettings.showColorInfo);
   const showWoodGrain = useCustomStore((s) => s.viewSettings.showWoodGrain);
   const showRoom = useCustomStore((s) => s.viewSettings.showRoom);
+  const showSplitPanel = useCustomStore(
+    (s) => s.viewSettings.showSplitPanel
+  );
+  const panelCount = useCustomStore((s) => s.viewSettings.panelCount);
+  const panelSpacingInches = useCustomStore(
+    (s) => s.viewSettings.panelSpacingInches
+  );
   const showUIControls = useCustomStore((s) => s.viewSettings.showUIControls);
   const wallColor = useCustomStore((s) => s.viewSettings.wallColor);
   const setShowUIControls = useCustomStore((s) => s.setShowUIControls);
@@ -488,8 +507,15 @@ export default function DesignPage() {
   // redirects away — GeometricPattern renders every square a single
   // dark blue so the viewer is never empty.
   const currentWallColor = wallColor || WALL_COLOR;
+  const activePanelCount = showSplitPanel
+    ? panelCount
+    : PANEL_LAYOUT_CONFIG.singleCount;
+  const installedArtWidth = getInstalledArtWidthSceneUnits(
+    dimensions.width * ART_SCENE_UNITS_PER_SQUARE,
+    activePanelCount,
+    panelSpacingInches
+  );
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
-  const [showPatternEditor, setShowPatternEditor] = useState(false);
   const [mobileOptionsOpen, setMobileOptionsOpen] = useState(false);
   const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>("afternoon");
   const {
@@ -515,6 +541,8 @@ export default function DesignPage() {
 
     // Add keyboard shortcut to toggle UI controls
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.isComposing || isEditableKeyboardTarget(e.target)) return;
+
       if (e.key === "h" || e.key === "H") {
         setShowUIControls(!showUIControls);
       }
@@ -531,14 +559,6 @@ export default function DesignPage() {
       setMobileOptionsOpen(false);
     }
   }, [isMobile, showUIControls]);
-
-  // The Pattern Editor panel is part of the UI overlay, so hiding the
-  // UI (Eye toggle / "h") closes it too.
-  useEffect(() => {
-    if (!showUIControls) {
-      setShowPatternEditor(false);
-    }
-  }, [showUIControls]);
 
   // Only dim / show the "empty" hint when there is genuinely nothing to
   // preview. If a custom palette has colors (or a pattern grid exists),
@@ -640,9 +660,14 @@ export default function DesignPage() {
         : 1.6;
     return Math.max(
       maxCamDistance,
-      fitWidthDistance(ROOM_REF_WIDTH, CAMERA_FOV, aspect, ZOOM_FIT_WIDTH_MARGIN)
+      fitWidthDistance(
+        Math.max(ROOM_REF_WIDTH, installedArtWidth),
+        CAMERA_FOV,
+        aspect,
+        ZOOM_FIT_WIDTH_MARGIN
+      )
     );
-  }, [maxCamDistance]);
+  }, [installedArtWidth, maxCamDistance]);
   const camBounds = useMemo(() => roomBounds(sceneW, sceneH), [sceneW, sceneH]);
   const windowPos = useMemo(
     () => rightWindowWorldPos(ROOM_REF_WIDTH, ROOM_REF_HEIGHT),
@@ -656,10 +681,14 @@ export default function DesignPage() {
       leftLampWorldPos(
         ROOM_REF_WIDTH,
         ROOM_REF_HEIGHT,
-        roomDims.width * 0.5,
+        getInstalledArtWidthSceneUnits(
+          roomDims.width * ART_SCENE_UNITS_PER_SQUARE,
+          activePanelCount,
+          panelSpacingInches
+        ),
         artCenterX
       ),
-    [roomDims.width, artCenterX]
+    [roomDims.width, activePanelCount, panelSpacingInches, artCenterX]
   );
   // Ceiling-downlight position above the art so the overhead shadow drops
   // straight down the piece wherever it hangs.
@@ -713,7 +742,7 @@ export default function DesignPage() {
           right-side stack; mobile tucks the stack behind a small button
           so the room stays visible until the user asks for controls. */}
       {showUIControls && !isMobile && (
-        <div className="absolute top-4 right-4 z-50 flex items-start gap-3">
+        <div className="absolute top-4 right-4 z-50 flex max-h-[calc(100vh-2rem)] items-start gap-3 overflow-y-auto pr-1 no-scrollbar">
           <ViewerOptionsStack
             timeOfDay={timeOfDay}
             onTimeOfDayChange={setTimeOfDay}
@@ -862,7 +891,11 @@ export default function DesignPage() {
             <Room
               width={ROOM_REF_WIDTH}
               height={ROOM_REF_HEIGHT}
-              artWidth={roomDims.width * 0.5}
+              artWidth={getInstalledArtWidthSceneUnits(
+                roomDims.width * ART_SCENE_UNITS_PER_SQUARE,
+                activePanelCount,
+                panelSpacingInches
+              )}
               artCenterX={artCenterX}
               fillFactor={bookcaseFill}
               timeOfDay={timeOfDay}
@@ -891,7 +924,7 @@ export default function DesignPage() {
           {/* Ruler if enabled */}
           {showRuler && (
             <Ruler3D
-              width={dimensions.width * 0.5}
+              width={installedArtWidth}
               height={dimensions.height * 0.5}
             />
           )}
@@ -899,7 +932,9 @@ export default function DesignPage() {
           {/* Register export only after the complete texture-backed scene
               has resolved, preventing an early click from saving empty tiles. */}
           <FourAngleImageCapture
-            artWidthSquares={dimensions.width}
+            artWidthSquares={
+              installedArtWidth / ART_SCENE_UNITS_PER_SQUARE
+            }
             artHeightSquares={dimensions.height}
             baseDistance={showRoom ? fitMaxDistance : undefined}
             bounds={showRoom ? camBounds : null}
@@ -937,7 +972,7 @@ export default function DesignPage() {
             <RoomCollision
               bounds={camBounds}
               fallbackMax={maxCamDistance}
-              fitWidth={ROOM_REF_WIDTH}
+              fitWidth={Math.max(ROOM_REF_WIDTH, installedArtWidth)}
               fitMargin={ZOOM_FIT_WIDTH_MARGIN}
             />
           )}
@@ -985,23 +1020,6 @@ export default function DesignPage() {
           <Button
             variant="outline"
             size={isMobile ? "sm" : "default"}
-            className={cn(
-              "glass-surface hover:bg-gray-900/50 hover:border-white/30 hover:text-white",
-              showPatternEditor
-                ? "bg-indigo-600/80 border-indigo-400/40 text-white"
-                : "text-gray-200",
-              isMobile && "rounded-full ring-1 ring-white/15 text-xs font-medium border-0"
-            )}
-            onClick={() => setShowPatternEditor((v) => !v)}
-          >
-            <Palette className="w-4 h-4 shrink-0" />
-            {isMobile ? "Palette" : "Palette Editor"}
-          </Button>
-        )}
-        {showUIControls && (
-          <Button
-            variant="outline"
-            size={isMobile ? "sm" : "default"}
             disabled={isSavingImage || !isImageCaptureReady}
             aria-busy={isSavingImage}
             className={cn(
@@ -1043,62 +1061,12 @@ export default function DesignPage() {
           button; each opens a small popover to change the value without
           opening the full options sheet. Hidden while a bottom sheet is up so
           they don't poke through it. */}
-      {showUIControls && isMobile && !mobileOptionsOpen && !showPatternEditor && (
+      {showUIControls && isMobile && !mobileOptionsOpen && (
         <div className="fixed left-3 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-50 flex items-center gap-2 select-none">
           <DesignCard compact bare />
           <SizeCard compact bare />
         </div>
       )}
-
-      {/* ╔═══╗ ═══════════════════════════════════════════════════════ ╔═══╗
-          ║ 🎨 PALETTE EDITOR PANEL — palette color editing             ║
-          ╚═══╝ ═══════════════════════════════════════════════════════ ╚═══╝ */}
-      {/* Desktop: left-side scrollable panel. Capped height + scroll so
-          a large palette never runs off-screen. */}
-      <AnimatePresence>
-        {showUIControls && showPatternEditor && !isMobile && (
-          <motion.div
-            key="pattern-editor-desktop"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.18 }}
-            className="absolute bottom-6 left-6 z-50 w-80 max-h-[calc(100vh-3rem)] overflow-y-auto no-scrollbar"
-          >
-            <PaletteColorEditor
-              onClose={() => setShowPatternEditor(false)}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Mobile: bottom-sheet overlay (matches the Options sheet). */}
-      <AnimatePresence>
-        {showUIControls && showPatternEditor && isMobile && (
-          <>
-            <motion.button
-              aria-label="Close palette editor"
-              className="fixed inset-0 z-40 bg-slate-950/30 backdrop-blur-[1px]"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowPatternEditor(false)}
-            />
-            <motion.div
-              key="pattern-editor-mobile"
-              className="fixed inset-x-2 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-50 max-h-[72dvh] overflow-y-auto no-scrollbar"
-              initial={{ y: "105%", opacity: 0.8 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: "105%", opacity: 0.8 }}
-              transition={{ type: "spring", stiffness: 420, damping: 36 }}
-            >
-              <PaletteColorEditor
-                onClose={() => setShowPatternEditor(false)}
-              />
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
 
       {/* Share Dialog */}
       <ShareDialog
@@ -1136,6 +1104,8 @@ function ViewerOptionsStack({
   return (
     <div className="flex flex-col gap-3 select-none">
       <ViewControls />
+      <PanelLayoutControls />
+      <PaletteVersionSwitcher />
       <motion.div
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}

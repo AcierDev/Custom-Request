@@ -617,6 +617,7 @@ function GeometricPatternComponent({
             y,
             color,
             colorName,
+            hidden: false,
             px: baseXPos,
             py: yPos,
             // Square.tsx places the wedge at z + height/2 on top of the

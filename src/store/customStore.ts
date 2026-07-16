@@ -23,6 +23,11 @@ import { DEFAULT_WOOD_STYLE_ID } from "@/components/preview/woodStyles";
 import { DEFAULT_WALL_COLOR } from "@/components/preview/wallColors";
 import { nanoid } from "nanoid";
 import type { AiPaletteResponse } from "@/lib/aiPalette";
+import {
+  PANEL_LAYOUT_CONFIG,
+  normalizePanelCount,
+  normalizePanelSpacingInches,
+} from "@/lib/panelLayout";
 
 const DEFAULT_DEBOUNCE_DELAY_MS = 1_000;
 const STORE_PERSISTENCE_DEBOUNCE_MS = 2_000;
@@ -31,6 +36,8 @@ const DEFAULT_SCATTER_EASE = 50;
 const DEFAULT_SCATTER_WIDTH = 10;
 const DEFAULT_SCATTER_AMOUNT = 50;
 const DEFAULT_USE_MINI = false;
+const DEFAULT_SHOW_RULER = false;
+const DEFAULT_SHOW_HANGER = false;
 const ARRAY_START_INDEX = 0;
 const ARRAY_INDEX_OFFSET = 1;
 
@@ -115,6 +122,7 @@ export type CustomMode = "palette" | "pattern";
 export type SquareDirection = "north" | "east" | "south" | "west";
 export type PatternColorOverrides = Record<string, number>;
 export type PatternDirectionOverrides = Record<string, SquareDirection>;
+export type PatternHiddenOverrides = Record<string, boolean>;
 export type RenderedPatternColorIndexes = Record<string, number>;
 export type PatternBrushShape =
   | "single"
@@ -140,6 +148,7 @@ export type PatternEditingMode =
   | { tool: "none" }
   | { tool: "color"; selectedColorIndex: number }
   | { tool: "direction"; selectedDirection: SquareDirection }
+  | { tool: "hide" }
   | { tool: "eraser" };
 
 export interface PatternEditHistoryEntry {
@@ -148,6 +157,7 @@ export interface PatternEditHistoryEntry {
   createdAt: number;
   patternOverride: PatternColorOverrides;
   patternDirectionOverride: PatternDirectionOverrides;
+  patternHiddenOverride: PatternHiddenOverrides;
   designSnapshot?: PatternEditorDesignSnapshot;
 }
 
@@ -232,6 +242,7 @@ export interface SavedPalette {
   pieceSize?: PieceSize;
   patternOverride?: PatternColorOverrides;
   patternDirectionOverride?: PatternDirectionOverrides;
+  patternHiddenOverride?: PatternHiddenOverrides;
 }
 
 export type Folder = {
@@ -313,6 +324,8 @@ interface CustomState {
     showColorInfo: boolean;
     showHanger: boolean;
     showSplitPanel: boolean;
+    panelCount: number;
+    panelSpacingInches: number;
     showFPS: boolean;
     showUIControls: boolean;
     showRoom: boolean;
@@ -337,6 +350,7 @@ interface CustomState {
   // Pattern override functionality for individual square editing
   patternOverride: PatternColorOverrides;
   patternDirectionOverride: PatternDirectionOverrides;
+  patternHiddenOverride: PatternHiddenOverrides;
   patternEditingMode: PatternEditingMode;
   patternBrush: PatternBrushSettings;
   isPatternEditorActive: boolean;
@@ -381,6 +395,8 @@ interface CustomStore extends CustomState {
   setShowColorInfo: (value: boolean) => void;
   setShowHanger: (value: boolean) => void;
   setShowSplitPanel: (value: boolean) => void;
+  setPanelCount: (value: number) => void;
+  setPanelSpacingInches: (value: number) => void;
   setShowFPS: (value: boolean) => void;
   setShowUIControls: (value: boolean) => void;
   setShowRoom: (value: boolean) => void;
@@ -434,6 +450,8 @@ interface CustomStore extends CustomState {
     customPalette: Array<{ hex: string; name?: string; extraPercent?: number }>;
     isRotated: boolean;
     useMini: boolean;
+    panelCount: number;
+    panelSpacingInches: number;
   };
   createSharedDesign: (
     userId?: string,
@@ -498,6 +516,7 @@ interface CustomStore extends CustomState {
     key: string,
     direction: SquareDirection
   ) => void;
+  setPatternSquareHidden: (key: string) => void;
   resetPatternSquare: (key: string) => void;
   applyPatternSquareEdit: (
     keys: readonly string[],
@@ -513,6 +532,7 @@ interface CustomStore extends CustomState {
     historyLabel?: string
   ) => number;
   clearPatternDirectionOverride: () => void;
+  clearPatternHiddenOverride: () => void;
   clearPatternOverride: () => void;
   undoPatternEdit: () => boolean;
   redoPatternEdit: () => boolean;
@@ -703,6 +723,11 @@ const buildShareableStateForPalette = (
       ...(palette.patternDirectionOverride ?? {}),
     };
   }
+  if (!overrides || !("patternHiddenOverride" in overrides)) {
+    next.patternHiddenOverride = {
+      ...(palette.patternHiddenOverride ?? {}),
+    };
+  }
   return next;
 };
 
@@ -726,7 +751,55 @@ export interface ShareableState {
   drawnPatternGridSize?: { width: number; height: number } | null;
   patternOverride?: PatternColorOverrides;
   patternDirectionOverride?: PatternDirectionOverrides;
+  patternHiddenOverride?: PatternHiddenOverrides;
+  panelCount?: number;
+  panelSpacingInches?: number;
 }
+
+const resolveStoredPanelSettings = (
+  settings:
+    | {
+        showSplitPanel?: boolean;
+        panelCount?: number;
+        panelSpacingInches?: number;
+      }
+    | null
+    | undefined
+) => {
+  const isLegacySplit =
+    settings?.showSplitPanel === true && settings.panelCount == null;
+  const panelCount = normalizePanelCount(
+    settings?.panelCount ??
+      (isLegacySplit
+        ? PANEL_LAYOUT_CONFIG.defaultCount
+        : PANEL_LAYOUT_CONFIG.singleCount)
+  );
+  const panelSpacingInches = normalizePanelSpacingInches(
+    settings?.panelSpacingInches ??
+      (isLegacySplit
+        ? PANEL_LAYOUT_CONFIG.legacySpacingInches
+        : PANEL_LAYOUT_CONFIG.defaultSpacingInches)
+  );
+
+  return {
+    showSplitPanel: panelCount > PANEL_LAYOUT_CONFIG.singleCount,
+    panelCount,
+    panelSpacingInches,
+  };
+};
+
+const resolveSharedPanelSettings = (state: ShareableState) => {
+  const panelCount = normalizePanelCount(
+    state.panelCount ?? PANEL_LAYOUT_CONFIG.singleCount
+  );
+  return {
+    showSplitPanel: panelCount > PANEL_LAYOUT_CONFIG.singleCount,
+    panelCount,
+    panelSpacingInches: normalizePanelSpacingInches(
+      state.panelSpacingInches ?? PANEL_LAYOUT_CONFIG.defaultSpacingInches
+    ),
+  };
+};
 
 function cloneSharedPatternGrid(
   grid: PatternCell[][] | null | undefined,
@@ -768,6 +841,8 @@ interface PersistentState extends ShareableState {
     showColorInfo: boolean;
     showHanger: boolean;
     showSplitPanel: boolean;
+    panelCount: number;
+    panelSpacingInches: number;
     showFPS: boolean;
     showUIControls: boolean;
     showRoom: boolean;
@@ -857,7 +932,8 @@ const syncPatternOverridesToActivePalette = (
   savedPalettes: SavedPalette[],
   editingPaletteId: string | null,
   patternOverride: PatternColorOverrides,
-  patternDirectionOverride: PatternDirectionOverrides
+  patternDirectionOverride: PatternDirectionOverrides,
+  patternHiddenOverride: PatternHiddenOverrides
 ): SavedPalette[] => {
   if (!editingPaletteId) return savedPalettes;
 
@@ -870,6 +946,7 @@ const syncPatternOverridesToActivePalette = (
       ...palette,
       patternOverride: { ...patternOverride },
       patternDirectionOverride: { ...patternDirectionOverride },
+      patternHiddenOverride: { ...patternHiddenOverride },
       updatedAt,
     };
   });
@@ -977,7 +1054,9 @@ const formatPatternSquareCount = (count: number): string =>
 const createPatternEditHistoryEntry = (
   state: Pick<
     CustomState,
-    "patternOverride" | "patternDirectionOverride"
+    | "patternOverride"
+    | "patternDirectionOverride"
+    | "patternHiddenOverride"
   >,
   label: string
 ): PatternEditHistoryEntry => ({
@@ -986,6 +1065,7 @@ const createPatternEditHistoryEntry = (
   createdAt: Date.now(),
   patternOverride: { ...state.patternOverride },
   patternDirectionOverride: { ...state.patternDirectionOverride },
+  patternHiddenOverride: { ...state.patternHiddenOverride },
 });
 
 const appendPatternHistoryEntry = (
@@ -1003,6 +1083,7 @@ const getDefaultPatternEditLabel = (
   if (edit.tool === "direction") {
     return `Changed ${squareCount} to ${edit.selectedDirection}`;
   }
+  if (edit.tool === "hide") return `Hid ${squareCount}`;
   if (edit.tool === "eraser") return `Reset ${squareCount}`;
   return "Edited pattern";
 };
@@ -1063,6 +1144,7 @@ const getPatternPaletteRemap = (
     | "customPalette"
     | "patternOverride"
     | "patternDirectionOverride"
+    | "patternHiddenOverride"
     | "patternUndoStack"
     | "patternRedoStack"
     | "savedPalettes"
@@ -1092,7 +1174,8 @@ const getPatternPaletteRemap = (
       state.savedPalettes,
       state.editingPaletteId,
       patternOverride,
-      state.patternDirectionOverride
+      state.patternDirectionOverride,
+      state.patternHiddenOverride
     ),
   };
 };
@@ -1123,6 +1206,7 @@ const AUTO_SAVE_TRACKED_PROPERTIES: (keyof CustomState)[] = [
   "drawnPatternGridSize",
   "patternOverride",
   "patternDirectionOverride",
+  "patternHiddenOverride",
 ];
 
 // Create the store with the subscribeWithSelector middleware
@@ -1166,11 +1250,13 @@ export const useCustomStore = create<CustomStore>()(
       selectedAutoColors: [],
     },
     viewSettings: {
-      showRuler: false,
+      showRuler: DEFAULT_SHOW_RULER,
       showWoodGrain: true,
       showColorInfo: false,
-      showHanger: false,
+      showHanger: DEFAULT_SHOW_HANGER,
       showSplitPanel: false,
+      panelCount: PANEL_LAYOUT_CONFIG.singleCount,
+      panelSpacingInches: PANEL_LAYOUT_CONFIG.defaultSpacingInches,
       showFPS: false,
       showUIControls: true,
       showRoom: true,
@@ -1192,6 +1278,7 @@ export const useCustomStore = create<CustomStore>()(
     draftSet: [],
     patternOverride: {},
     patternDirectionOverride: {},
+    patternHiddenOverride: {},
     patternEditingMode: { tool: "none" },
     patternBrush: {
       shape: "single",
@@ -1248,6 +1335,12 @@ export const useCustomStore = create<CustomStore>()(
                 },
               }));
             }
+
+            parsedState.viewSettings = {
+              ...get().viewSettings,
+              ...(parsedState.viewSettings ?? {}),
+              ...resolveStoredPanelSettings(parsedState.viewSettings),
+            };
 
             set(parsedState);
 
@@ -1595,7 +1688,35 @@ export const useCustomStore = create<CustomStore>()(
       })),
     setShowSplitPanel: (value) =>
       set((state) => ({
-        viewSettings: { ...state.viewSettings, showSplitPanel: value },
+        viewSettings: {
+          ...state.viewSettings,
+          showSplitPanel: value,
+          panelCount: value
+            ? Math.max(
+                PANEL_LAYOUT_CONFIG.defaultCount,
+                normalizePanelCount(state.viewSettings.panelCount)
+              )
+            : PANEL_LAYOUT_CONFIG.singleCount,
+        },
+      })),
+    setPanelCount: (value) =>
+      set((state) => {
+        const panelCount = normalizePanelCount(value);
+        return {
+          viewSettings: {
+            ...state.viewSettings,
+            showSplitPanel:
+              panelCount > PANEL_LAYOUT_CONFIG.singleCount,
+            panelCount,
+          },
+        };
+      }),
+    setPanelSpacingInches: (value) =>
+      set((state) => ({
+        viewSettings: {
+          ...state.viewSettings,
+          panelSpacingInches: normalizePanelSpacingInches(value),
+        },
       })),
     setShowFPS: (value) =>
       set((state) => ({
@@ -1625,6 +1746,9 @@ export const useCustomStore = create<CustomStore>()(
       const patternOverrideSnapshot = { ...get().patternOverride };
       const patternDirectionOverrideSnapshot = {
         ...get().patternDirectionOverride,
+      };
+      const patternHiddenOverrideSnapshot = {
+        ...get().patternHiddenOverride,
       };
       const editingId = get().editingPaletteId;
 
@@ -1673,6 +1797,7 @@ export const useCustomStore = create<CustomStore>()(
               pieceSize: pieceSizeSnapshot,
               patternOverride: patternOverrideSnapshot,
               patternDirectionOverride: patternDirectionOverrideSnapshot,
+              patternHiddenOverride: patternHiddenOverrideSnapshot,
               updatedAt: now,
               // Don't wipe an existing folder when saving without one.
               folderId: folderId ?? palette.folderId,
@@ -1694,6 +1819,7 @@ export const useCustomStore = create<CustomStore>()(
           pieceSize: pieceSizeSnapshot,
           patternOverride: patternOverrideSnapshot,
           patternDirectionOverride: patternDirectionOverrideSnapshot,
+          patternHiddenOverride: patternHiddenOverrideSnapshot,
           createdAt: now,
           folderId,
           currentVersionId: firstVersionId,
@@ -1745,6 +1871,9 @@ export const useCustomStore = create<CustomStore>()(
           patternDirectionOverride: {
             ...(palette.patternDirectionOverride ?? {}),
           },
+          patternHiddenOverride: {
+            ...(palette.patternHiddenOverride ?? {}),
+          },
           patternUndoStack: [],
           patternRedoStack: [],
         };
@@ -1764,8 +1893,14 @@ export const useCustomStore = create<CustomStore>()(
           patternDirectionOverride: {
             ...(palette.patternDirectionOverride ?? {}),
           },
+          patternHiddenOverride: {
+            ...(palette.patternHiddenOverride ?? {}),
+          },
           patternUndoStack: [],
           patternRedoStack: [],
+          editingPaletteId: paletteId,
+          paletteHistory: [[...version.colors]],
+          paletteHistoryIndex: 0,
         };
       }),
     // Restore an older version by branching off it. Append-only and
@@ -1864,6 +1999,9 @@ export const useCustomStore = create<CustomStore>()(
           patternOverride: { ...(palette.patternOverride ?? {}) },
           patternDirectionOverride: {
             ...(palette.patternDirectionOverride ?? {}),
+          },
+          patternHiddenOverride: {
+            ...(palette.patternHiddenOverride ?? {}),
           },
           patternUndoStack: [],
           patternRedoStack: [],
@@ -2042,6 +2180,7 @@ export const useCustomStore = create<CustomStore>()(
         editingPaletteId: null,
         patternOverride: {},
         patternDirectionOverride: {},
+        patternHiddenOverride: {},
         patternUndoStack: [],
         patternRedoStack: [],
         paletteHistory: [],
@@ -2069,6 +2208,7 @@ export const useCustomStore = create<CustomStore>()(
           editingPaletteId: null,
           patternOverride: {},
           patternDirectionOverride: {},
+          patternHiddenOverride: {},
           patternUndoStack: [],
           patternRedoStack: [],
           activeTab: "create",
@@ -2099,8 +2239,66 @@ export const useCustomStore = create<CustomStore>()(
           paletteHistoryIndex: newHistory.length - 1,
         };
       }),
-    applyAiPalette: (response) =>
+    applyAiPalette: (response) => {
+      if (response.operation === "edit_squares" && response.squareEdit) {
+        const squareEdit = response.squareEdit;
+        const state = get();
+
+        if (squareEdit.type === "reset") {
+          if (squareEdit.target === "directions") {
+            state.clearPatternDirectionOverride();
+          } else if (squareEdit.target === "visibility") {
+            state.clearPatternHiddenOverride();
+          } else {
+            state.clearPatternOverride();
+          }
+          return;
+        }
+
+        if (squareEdit.type === "visibility" && !squareEdit.hidden) {
+          state.clearPatternHiddenOverride();
+          return;
+        }
+
+        const sourceColorIndexes = new Set(squareEdit.sourceColorIndexes);
+        const targetKeys = Object.entries(
+          state.renderedPatternColorIndexes
+        ).flatMap(([key, colorIndex]) =>
+          sourceColorIndexes.size === EMPTY_PATTERN_CHANGE_COUNT ||
+          sourceColorIndexes.has(colorIndex)
+            ? [key]
+            : []
+        );
+        if (!targetKeys.length) return;
+
+        if (squareEdit.type === "direction") {
+          state.applyPatternSquareEdit(
+            targetKeys,
+            {
+              tool: "direction",
+              selectedDirection: squareEdit.direction,
+            },
+            `Set ${formatPatternSquareCount(targetKeys.length)} face ${squareEdit.direction}`
+          );
+          return;
+        }
+
+        state.applyPatternSquareEdit(
+          targetKeys,
+          { tool: "hide" },
+          `Hid ${formatPatternSquareCount(targetKeys.length)}`
+        );
+        return;
+      }
+
       set((state) => {
+        if (response.operation === "set_dimensions") {
+          return {
+            dimensions: response.dimensions,
+            pricing: calculatePrice(response.dimensions, state.shippingSpeed),
+          };
+        }
+
         const officialPalette: CustomColor[] = Object.values(
           DESIGN_COLORS[state.selectedDesign] ?? {}
         ).map((color) => ({
@@ -2156,6 +2354,9 @@ export const useCustomStore = create<CustomStore>()(
         const patternDirectionOverride = isReplacement
           ? { ...state.patternDirectionOverride }
           : {};
+        const patternHiddenOverride = isReplacement
+          ? { ...state.patternHiddenOverride }
+          : {};
         const drawnPatternGrid =
           isReplacement && state.drawnPatternGrid
             ? state.drawnPatternGrid.map((row) =>
@@ -2196,6 +2397,8 @@ export const useCustomStore = create<CustomStore>()(
             : state.patternEditingMode;
 
         return {
+          dimensions: response.dimensions,
+          pricing: calculatePrice(response.dimensions, state.shippingSpeed),
           customPalette: paletteWithIds,
           currentColors:
             isReplacement && state.activeCustomMode === "pattern"
@@ -2217,6 +2420,7 @@ export const useCustomStore = create<CustomStore>()(
           drawnPatternGrid,
           patternOverride,
           patternDirectionOverride,
+          patternHiddenOverride,
           patternEditingMode,
           patternUndoStack: appendPatternHistoryEntry(
             state.patternUndoStack,
@@ -2231,10 +2435,12 @@ export const useCustomStore = create<CustomStore>()(
               ? state.editingPaletteId
               : null,
             patternOverride,
-            patternDirectionOverride
+            patternDirectionOverride,
+            patternHiddenOverride
           ),
         };
-      }),
+      });
+    },
     generateShareableLink: () => {
       return generateShareableUrl(get().getShareableStateSnapshot());
     },
@@ -2265,6 +2471,13 @@ export const useCustomStore = create<CustomStore>()(
         ...sharedPatternGrid,
         patternOverride: { ...state.patternOverride },
         patternDirectionOverride: { ...state.patternDirectionOverride },
+        patternHiddenOverride: { ...state.patternHiddenOverride },
+        panelCount: state.viewSettings.showSplitPanel
+          ? normalizePanelCount(state.viewSettings.panelCount)
+          : PANEL_LAYOUT_CONFIG.singleCount,
+        panelSpacingInches: normalizePanelSpacingInches(
+          state.viewSettings.panelSpacingInches
+        ),
       };
     },
     getShareableDesignData: () => {
@@ -2284,6 +2497,12 @@ export const useCustomStore = create<CustomStore>()(
         })),
         isRotated: state.isRotated,
         useMini: state.useMini,
+        panelCount: state.viewSettings.showSplitPanel
+          ? normalizePanelCount(state.viewSettings.panelCount)
+          : PANEL_LAYOUT_CONFIG.singleCount,
+        panelSpacingInches: normalizePanelSpacingInches(
+          state.viewSettings.panelSpacingInches
+        ),
       };
     },
     createSharedDesign: async (userId?: string, email?: string) => {
@@ -2410,8 +2629,9 @@ export const useCustomStore = create<CustomStore>()(
           shareableState.drawnPatternGrid,
           shareableState.drawnPatternGridSize
         );
+        const sharedPanelSettings = resolveSharedPanelSettings(shareableState);
 
-        set({
+        set((state) => ({
           dimensions: shareableState.dimensions,
           selectedDesign: shareableState.selectedDesign,
           shippingSpeed: shareableState.shippingSpeed,
@@ -2434,6 +2654,13 @@ export const useCustomStore = create<CustomStore>()(
           patternDirectionOverride: {
             ...(shareableState.patternDirectionOverride ?? {}),
           },
+          patternHiddenOverride: {
+            ...(shareableState.patternHiddenOverride ?? {}),
+          },
+          viewSettings: {
+            ...state.viewSettings,
+            ...sharedPanelSettings,
+          },
           patternUndoStack: [],
           patternRedoStack: [],
           patternEditingMode: { tool: "none" },
@@ -2449,7 +2676,7 @@ export const useCustomStore = create<CustomStore>()(
             shareableState.dimensions,
             shareableState.shippingSpeed
           ),
-        });
+        }));
 
         return true;
       } catch (error) {
@@ -2478,8 +2705,9 @@ export const useCustomStore = create<CustomStore>()(
           designData.drawnPatternGrid,
           designData.drawnPatternGridSize
         );
+        const sharedPanelSettings = resolveSharedPanelSettings(designData);
 
-        set({
+        set((state) => ({
           dimensions: designData.dimensions,
           selectedDesign: designData.selectedDesign,
           shippingSpeed: designData.shippingSpeed,
@@ -2499,6 +2727,13 @@ export const useCustomStore = create<CustomStore>()(
           patternDirectionOverride: {
             ...(designData.patternDirectionOverride ?? {}),
           },
+          patternHiddenOverride: {
+            ...(designData.patternHiddenOverride ?? {}),
+          },
+          viewSettings: {
+            ...state.viewSettings,
+            ...sharedPanelSettings,
+          },
           patternUndoStack: [],
           patternRedoStack: [],
           patternEditingMode: { tool: "none" },
@@ -2514,7 +2749,7 @@ export const useCustomStore = create<CustomStore>()(
             designData.dimensions,
             designData.shippingSpeed
           ),
-        });
+        }));
 
         return true;
       } catch (error) {
@@ -2538,13 +2773,18 @@ export const useCustomStore = create<CustomStore>()(
             const data = JSON.parse(savedState) as PersistentState & {
               dataSyncVersion?: number;
             };
+            const storedPanelSettings = resolveStoredPanelSettings(
+              data.viewSettings
+            );
 
             const viewSettings = {
-              showRuler: data.viewSettings?.showRuler ?? false,
+              showRuler:
+                data.viewSettings?.showRuler ?? DEFAULT_SHOW_RULER,
               showWoodGrain: data.viewSettings?.showWoodGrain ?? true,
               showColorInfo: data.viewSettings?.showColorInfo ?? false,
-              showHanger: data.viewSettings?.showHanger ?? false,
-              showSplitPanel: data.viewSettings?.showSplitPanel ?? false,
+              showHanger:
+                data.viewSettings?.showHanger ?? DEFAULT_SHOW_HANGER,
+              ...storedPanelSettings,
               showFPS: data.viewSettings?.showFPS ?? false,
               showUIControls: data.viewSettings?.showUIControls ?? true,
               showRoom: data.viewSettings?.showRoom ?? true,
@@ -2645,6 +2885,7 @@ export const useCustomStore = create<CustomStore>()(
           ),
           patternOverride: get().patternOverride,
           patternDirectionOverride: get().patternDirectionOverride,
+          patternHiddenOverride: get().patternHiddenOverride,
           draftSet: get().draftSet,
           editingPaletteId: get().editingPaletteId,
           dataSyncVersion: newVersion,
@@ -2709,6 +2950,7 @@ export const useCustomStore = create<CustomStore>()(
               ),
               patternOverride: get().patternOverride,
               patternDirectionOverride: get().patternDirectionOverride,
+              patternHiddenOverride: get().patternHiddenOverride,
               editingPaletteId: get().editingPaletteId,
               dataSyncVersion: newVersion,
             };
@@ -2851,6 +3093,9 @@ export const useCustomStore = create<CustomStore>()(
           }
         }
 
+        const storedPanelSettings = resolveStoredPanelSettings(
+          mergedState.viewSettings
+        );
         const finalState = {
           dimensions: mergedState.dimensions || get().dimensions,
           selectedDesign: mergedState.selectedDesign || get().selectedDesign,
@@ -2880,6 +3125,9 @@ export const useCustomStore = create<CustomStore>()(
           patternDirectionOverride: {
             ...(mergedState.patternDirectionOverride ?? {}),
           },
+          patternHiddenOverride: {
+            ...(mergedState.patternHiddenOverride ?? {}),
+          },
           patternUndoStack: [],
           patternRedoStack: [],
           savedPalettes: ensurePaletteVersions(mergedState.savedPalettes || []),
@@ -2888,7 +3136,7 @@ export const useCustomStore = create<CustomStore>()(
           viewSettings: {
             showRuler:
               mergedState.viewSettings?.showRuler ??
-              get().viewSettings.showRuler,
+              DEFAULT_SHOW_RULER,
             showWoodGrain:
               mergedState.viewSettings?.showWoodGrain ??
               get().viewSettings.showWoodGrain,
@@ -2897,10 +3145,8 @@ export const useCustomStore = create<CustomStore>()(
               get().viewSettings.showColorInfo,
             showHanger:
               mergedState.viewSettings?.showHanger ??
-              get().viewSettings.showHanger,
-            showSplitPanel:
-              mergedState.viewSettings?.showSplitPanel ??
-              get().viewSettings.showSplitPanel,
+              DEFAULT_SHOW_HANGER,
+            ...storedPanelSettings,
             showFPS:
               mergedState.viewSettings?.showFPS ?? get().viewSettings.showFPS,
             showUIControls:
@@ -3184,7 +3430,8 @@ export const useCustomStore = create<CustomStore>()(
             state.savedPalettes,
             state.editingPaletteId,
             patternOverride,
-            state.patternDirectionOverride
+            state.patternDirectionOverride,
+            state.patternHiddenOverride
           ),
         };
       }),
@@ -3198,6 +3445,8 @@ export const useCustomStore = create<CustomStore>()(
         tool: "direction",
         selectedDirection: direction,
       }),
+    setPatternSquareHidden: (key) =>
+      get().applyPatternSquareEdit([key], { tool: "hide" }),
     resetPatternSquare: (key) =>
       get().applyPatternSquareEdit([key], { tool: "eraser" }),
     applyPatternSquareEdit: (keys, edit, historyLabel) =>
@@ -3207,13 +3456,16 @@ export const useCustomStore = create<CustomStore>()(
         if (edit.tool === "color") {
           const changedKeys = keys.filter(
             (key) =>
-              state.patternOverride[key] !== edit.selectedColorIndex
+              state.patternOverride[key] !== edit.selectedColorIndex ||
+              state.patternHiddenOverride[key] === true
           );
           if (!changedKeys.length) return state;
 
           const patternOverride = { ...state.patternOverride };
+          const patternHiddenOverride = { ...state.patternHiddenOverride };
           changedKeys.forEach((key) => {
             patternOverride[key] = edit.selectedColorIndex;
+            delete patternHiddenOverride[key];
           });
           const historyEntry = createPatternEditHistoryEntry(
             state,
@@ -3221,6 +3473,7 @@ export const useCustomStore = create<CustomStore>()(
           );
           return {
             patternOverride,
+            patternHiddenOverride,
             patternUndoStack: appendPatternHistoryEntry(
               state.patternUndoStack,
               historyEntry
@@ -3230,7 +3483,8 @@ export const useCustomStore = create<CustomStore>()(
               state.savedPalettes,
               state.editingPaletteId,
               patternOverride,
-              state.patternDirectionOverride
+              state.patternDirectionOverride,
+              patternHiddenOverride
             ),
           };
         }
@@ -3238,15 +3492,18 @@ export const useCustomStore = create<CustomStore>()(
         if (edit.tool === "direction") {
           const changedKeys = keys.filter(
             (key) =>
-              state.patternDirectionOverride[key] !== edit.selectedDirection
+              state.patternDirectionOverride[key] !== edit.selectedDirection ||
+              state.patternHiddenOverride[key] === true
           );
           if (!changedKeys.length) return state;
 
           const patternDirectionOverride = {
             ...state.patternDirectionOverride,
           };
+          const patternHiddenOverride = { ...state.patternHiddenOverride };
           changedKeys.forEach((key) => {
             patternDirectionOverride[key] = edit.selectedDirection;
+            delete patternHiddenOverride[key];
           });
           const historyEntry = createPatternEditHistoryEntry(
             state,
@@ -3254,6 +3511,7 @@ export const useCustomStore = create<CustomStore>()(
           );
           return {
             patternDirectionOverride,
+            patternHiddenOverride,
             patternUndoStack: appendPatternHistoryEntry(
               state.patternUndoStack,
               historyEntry
@@ -3263,7 +3521,39 @@ export const useCustomStore = create<CustomStore>()(
               state.savedPalettes,
               state.editingPaletteId,
               state.patternOverride,
-              patternDirectionOverride
+              patternDirectionOverride,
+              patternHiddenOverride
+            ),
+          };
+        }
+
+        if (edit.tool === "hide") {
+          const changedKeys = keys.filter(
+            (key) => state.patternHiddenOverride[key] !== true
+          );
+          if (!changedKeys.length) return state;
+
+          const patternHiddenOverride = { ...state.patternHiddenOverride };
+          changedKeys.forEach((key) => {
+            patternHiddenOverride[key] = true;
+          });
+          const historyEntry = createPatternEditHistoryEntry(
+            state,
+            historyLabel ?? getDefaultPatternEditLabel(edit, changedKeys.length)
+          );
+          return {
+            patternHiddenOverride,
+            patternUndoStack: appendPatternHistoryEntry(
+              state.patternUndoStack,
+              historyEntry
+            ),
+            patternRedoStack: [],
+            savedPalettes: syncPatternOverridesToActivePalette(
+              state.savedPalettes,
+              state.editingPaletteId,
+              state.patternOverride,
+              state.patternDirectionOverride,
+              patternHiddenOverride
             ),
           };
         }
@@ -3271,7 +3561,8 @@ export const useCustomStore = create<CustomStore>()(
         const changedKeys = keys.filter(
           (key) =>
             key in state.patternOverride ||
-            key in state.patternDirectionOverride
+            key in state.patternDirectionOverride ||
+            key in state.patternHiddenOverride
         );
         if (!changedKeys.length) return state;
 
@@ -3279,9 +3570,11 @@ export const useCustomStore = create<CustomStore>()(
         const patternDirectionOverride = {
           ...state.patternDirectionOverride,
         };
+        const patternHiddenOverride = { ...state.patternHiddenOverride };
         changedKeys.forEach((key) => {
           delete patternOverride[key];
           delete patternDirectionOverride[key];
+          delete patternHiddenOverride[key];
         });
         const historyEntry = createPatternEditHistoryEntry(
           state,
@@ -3290,6 +3583,7 @@ export const useCustomStore = create<CustomStore>()(
         return {
           patternOverride,
           patternDirectionOverride,
+          patternHiddenOverride,
           patternUndoStack: appendPatternHistoryEntry(
             state.patternUndoStack,
             historyEntry
@@ -3299,7 +3593,8 @@ export const useCustomStore = create<CustomStore>()(
             state.savedPalettes,
             state.editingPaletteId,
             patternOverride,
-            patternDirectionOverride
+            patternDirectionOverride,
+            patternHiddenOverride
           ),
         };
       }),
@@ -3353,7 +3648,33 @@ export const useCustomStore = create<CustomStore>()(
             state.savedPalettes,
             state.editingPaletteId,
             state.patternOverride,
-            patternDirectionOverride
+            patternDirectionOverride,
+            state.patternHiddenOverride
+          ),
+        };
+      }),
+    clearPatternHiddenOverride: () =>
+      set((state) => {
+        if (!Object.keys(state.patternHiddenOverride).length) return state;
+
+        const patternHiddenOverride: PatternHiddenOverrides = {};
+        const historyEntry = createPatternEditHistoryEntry(
+          state,
+          "Restored all hidden squares"
+        );
+        return {
+          patternHiddenOverride,
+          patternUndoStack: appendPatternHistoryEntry(
+            state.patternUndoStack,
+            historyEntry
+          ),
+          patternRedoStack: [],
+          savedPalettes: syncPatternOverridesToActivePalette(
+            state.savedPalettes,
+            state.editingPaletteId,
+            state.patternOverride,
+            state.patternDirectionOverride,
+            patternHiddenOverride
           ),
         };
       }),
@@ -3361,12 +3682,14 @@ export const useCustomStore = create<CustomStore>()(
       set((state) => {
         if (
           !Object.keys(state.patternOverride).length &&
-          !Object.keys(state.patternDirectionOverride).length
+          !Object.keys(state.patternDirectionOverride).length &&
+          !Object.keys(state.patternHiddenOverride).length
         ) {
           return state;
         }
         const patternOverride: PatternColorOverrides = {};
         const patternDirectionOverride: PatternDirectionOverrides = {};
+        const patternHiddenOverride: PatternHiddenOverrides = {};
         const historyEntry = createPatternEditHistoryEntry(
           state,
           "Reset all pattern edits"
@@ -3374,6 +3697,7 @@ export const useCustomStore = create<CustomStore>()(
         return {
           patternOverride,
           patternDirectionOverride,
+          patternHiddenOverride,
           patternUndoStack: appendPatternHistoryEntry(
             state.patternUndoStack,
             historyEntry
@@ -3383,7 +3707,8 @@ export const useCustomStore = create<CustomStore>()(
             state.savedPalettes,
             state.editingPaletteId,
             patternOverride,
-            patternDirectionOverride
+            patternDirectionOverride,
+            patternHiddenOverride
           ),
         };
       }),
@@ -3401,6 +3726,9 @@ export const useCustomStore = create<CustomStore>()(
         const patternDirectionOverride = {
           ...historyEntry.patternDirectionOverride,
         };
+        const patternHiddenOverride = {
+          ...(historyEntry.patternHiddenOverride ?? {}),
+        };
         const restoredDesign = historyEntry.designSnapshot
           ? clonePatternEditorDesignSnapshot(historyEntry.designSnapshot)
           : null;
@@ -3408,6 +3736,7 @@ export const useCustomStore = create<CustomStore>()(
           ...historyEntry,
           patternOverride: { ...state.patternOverride },
           patternDirectionOverride: { ...state.patternDirectionOverride },
+          patternHiddenOverride: { ...state.patternHiddenOverride },
           designSnapshot: historyEntry.designSnapshot
             ? createPatternEditorDesignSnapshot(state)
             : undefined,
@@ -3416,6 +3745,7 @@ export const useCustomStore = create<CustomStore>()(
           ...(restoredDesign ?? {}),
           patternOverride,
           patternDirectionOverride,
+          patternHiddenOverride,
           patternUndoStack: state.patternUndoStack.slice(
             EMPTY_PATTERN_CHANGE_COUNT,
             -SINGULAR_PATTERN_SQUARE_COUNT
@@ -3430,7 +3760,8 @@ export const useCustomStore = create<CustomStore>()(
               ? restoredDesign.editingPaletteId
               : state.editingPaletteId,
             patternOverride,
-            patternDirectionOverride
+            patternDirectionOverride,
+            patternHiddenOverride
           ),
         };
       });
@@ -3450,6 +3781,9 @@ export const useCustomStore = create<CustomStore>()(
         const patternDirectionOverride = {
           ...historyEntry.patternDirectionOverride,
         };
+        const patternHiddenOverride = {
+          ...(historyEntry.patternHiddenOverride ?? {}),
+        };
         const restoredDesign = historyEntry.designSnapshot
           ? clonePatternEditorDesignSnapshot(historyEntry.designSnapshot)
           : null;
@@ -3457,6 +3791,7 @@ export const useCustomStore = create<CustomStore>()(
           ...historyEntry,
           patternOverride: { ...state.patternOverride },
           patternDirectionOverride: { ...state.patternDirectionOverride },
+          patternHiddenOverride: { ...state.patternHiddenOverride },
           designSnapshot: historyEntry.designSnapshot
             ? createPatternEditorDesignSnapshot(state)
             : undefined,
@@ -3465,6 +3800,7 @@ export const useCustomStore = create<CustomStore>()(
           ...(restoredDesign ?? {}),
           patternOverride,
           patternDirectionOverride,
+          patternHiddenOverride,
           patternUndoStack: appendPatternHistoryEntry(
             state.patternUndoStack,
             undoEntry
@@ -3479,7 +3815,8 @@ export const useCustomStore = create<CustomStore>()(
               ? restoredDesign.editingPaletteId
               : state.editingPaletteId,
             patternOverride,
-            patternDirectionOverride
+            patternDirectionOverride,
+            patternHiddenOverride
           ),
         };
       });
