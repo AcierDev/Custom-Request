@@ -22,10 +22,7 @@ import { HexColorPicker } from "react-colorful";
 import { useCustomStore } from "@/store/customStore";
 import type { PaintEstimateMode } from "@/store/customStore";
 import { blendHexColors } from "@/lib/colorUtils";
-import {
-  simulatePaintLikeMix,
-  handMixMatchPercent,
-} from "@/lib/paintMixSimulator";
+import { simulatePaintLikeMix } from "@/lib/paintMixSimulator";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,7 +38,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
 import {
   Tooltip,
   TooltipContent,
@@ -53,11 +49,11 @@ import {
   Info,
   Palette,
   Blend,
-  MousePointerClick,
   RotateCcw,
   Trash2,
   ListChecks,
   PaintBucket,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -66,6 +62,12 @@ import { ColorSwatch } from "./ColorSwatch";
 import { SortableColorSwatch } from "./SortableColorSwatch";
 import { AddColorButton } from "./AddColorButton";
 import { BlendingGuide } from "./BlendingGuide";
+import { MixControls, type MixScope } from "./MixControls";
+import {
+  PALETTE_WIDE_BLEND_CONFIG,
+  getPaletteWideBlendColorCount,
+  insertBlendsBetweenAll,
+} from "./paletteWideBlend";
 import { computePaintTotals, hasSharedParts } from "./mixTotals";
 import {
   paintAmountForSquares,
@@ -101,7 +103,7 @@ function describeColor(hex: string): { rgb: string; hsl: string } | null {
   return {
     rgb: `rgb(${r}, ${g}, ${b})`,
     hsl: `hsl(${Math.round(h)}, ${Math.round(s * 100)}%, ${Math.round(
-      l * 100
+      l * 100,
     )}%)`,
   };
 }
@@ -118,6 +120,7 @@ const ACTION_BTN =
 const ACTION_BLUE = `${ACTION_BTN} bg-blue-600 hover:bg-blue-500 ring-blue-400/40`;
 const ACTION_SLATE = `${ACTION_BTN} bg-slate-700 hover:bg-slate-600 ring-slate-400/30`;
 const ACTION_RED = `${ACTION_BTN} bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 ring-red-400/40`;
+const ACTION_RESET = `${ACTION_BTN} bg-slate-700 hover:bg-rose-600 ring-slate-400/30 hover:ring-rose-400/40`;
 const SELECTED_BLEND_COLOR_COUNT = 2;
 // Paint-estimate input modes: derive the per-color mass from the square
 // count, or type the total grams for one color directly.
@@ -133,13 +136,8 @@ const TOUCH_DRAG_DELAY_MS = 250;
 const TOUCH_DRAG_TOLERANCE_PX = 8;
 const FIRST_SELECTED_INDEX = 0;
 const SECOND_SELECTED_INDEX = 1;
-const FIRST_BLEND_STEP = 1;
 const MISSING_COLOR_INDEX = -1;
-const HAND_MIX_PREVIEW_THEME = {
-  mix: "border-emerald-400/35 bg-emerald-500/15 text-emerald-100",
-  test: "border-amber-400/40 bg-amber-500/15 text-amber-100",
-  buy: "border-rose-400/40 bg-rose-500/15 text-rose-100",
-} as const;
+const DEFAULT_MIX_SCOPE: MixScope = "pair";
 
 export function PaletteManager() {
   const {
@@ -163,12 +161,15 @@ export function PaletteManager() {
   } = useCustomStore();
 
   const [mixMode, setMixMode] = useState(false);
+  const [mixScope, setMixScope] = useState<MixScope>(DEFAULT_MIX_SCOPE);
   const [deleteMode, setDeleteMode] = useState(false);
   const [deleteSelected, setDeleteSelected] = useState<string[]>([]);
   // Index of the last swatch toggled in delete mode — anchor for
   // shift-click range selection.
   const [deleteAnchor, setDeleteAnchor] = useState<number | null>(null);
-  const [blendCount, setBlendCount] = useState(3);
+  const [blendCount, setBlendCount] = useState<number>(
+    PALETTE_WIDE_BLEND_CONFIG.defaultColorsBetween,
+  );
   const [editingColor, setEditingColor] = useState<number | null>(null);
   const [editColorHex, setEditColorHex] = useState("#000000");
   const [editColorName, setEditColorName] = useState("");
@@ -179,15 +180,9 @@ export function PaletteManager() {
   const [hasSeenBlendingGuide, setHasSeenBlendingGuide] = useState(
     () =>
       typeof window !== "undefined" &&
-      localStorage.getItem("hasSeenBlendingGuide") === "true"
+      localStorage.getItem("hasSeenBlendingGuide") === "true",
   );
-  const [showSelectionHint, setShowSelectionHint] = useState(false);
   const [showHarmonyGenerator, setShowHarmonyGenerator] = useState(false);
-  const [tipsShown, setTipsShown] = useState<Record<string, boolean>>({
-    blending: true,
-    harmony: true,
-    selection: true,
-  });
 
   // Palette-wide parts-per-paint so each color's recipe can flag paints
   // that are used heavily across other colors (white/black excluded).
@@ -216,7 +211,7 @@ export function PaletteManager() {
         : paintAmountForSquares(
             Number(pieceSize.squares),
             customPalette.length,
-            effectiveGramsPerSquare
+            effectiveGramsPerSquare,
           ),
     [
       paintMode,
@@ -224,7 +219,7 @@ export function PaletteManager() {
       pieceSize.squares,
       customPalette.length,
       effectiveGramsPerSquare,
-    ]
+    ],
   );
 
   const handMixPreview = useMemo(() => {
@@ -242,20 +237,15 @@ export function PaletteManager() {
     if (!fromColor || !toColor) return [];
 
     return Array.from({ length: blendCount }, (_, index) => {
-      const t = (index + FIRST_BLEND_STEP) / (blendCount + FIRST_BLEND_STEP);
+      const t =
+        (index + PALETTE_WIDE_BLEND_CONFIG.firstBlendStep) /
+        (blendCount + PALETTE_WIDE_BLEND_CONFIG.firstBlendStep);
       const targetHex = blendHexColors(fromColor.hex, toColor.hex, t);
       return simulatePaintLikeMix(fromColor.hex, toColor.hex, t, targetHex);
     });
   }, [blendCount, customPalette, selectedColors]);
 
   useEffect(() => {
-    const hasSeenSelectionHint = localStorage.getItem("hasSeenSelectionHint");
-    if (hasSeenSelectionHint === "true") {
-      setShowSelectionHint(false);
-    } else {
-      setShowSelectionHint(true);
-    }
-
     // Set up event listener for opening harmony generator from color swatches
     const handleOpenHarmonyGenerator = (event: CustomEvent) => {
       const { baseColor } = event.detail;
@@ -267,7 +257,7 @@ export function PaletteManager() {
           document.dispatchEvent(
             new CustomEvent("setHarmonyBaseColor", {
               detail: { baseColor },
-            })
+            }),
           );
         }, 100); // Small delay to ensure the harmony generator is mounted
       }
@@ -280,44 +270,32 @@ export function PaletteManager() {
 
     document.addEventListener(
       "openHarmonyGenerator",
-      handleOpenHarmonyGenerator as EventListener
+      handleOpenHarmonyGenerator as EventListener,
     );
 
     document.addEventListener(
       "closeHarmonyGenerator",
-      handleCloseHarmonyGenerator as EventListener
+      handleCloseHarmonyGenerator as EventListener,
     );
 
     return () => {
       document.removeEventListener(
         "openHarmonyGenerator",
-        handleOpenHarmonyGenerator as EventListener
+        handleOpenHarmonyGenerator as EventListener,
       );
       document.removeEventListener(
         "closeHarmonyGenerator",
-        handleCloseHarmonyGenerator as EventListener
+        handleCloseHarmonyGenerator as EventListener,
       );
     };
   }, []);
 
-  // Show blending guide when there are at least 2 colors but none are selected
+  // Show the one-time mixing guide as soon as blending becomes available.
   useEffect(() => {
     if (customPalette.length >= 2 && !hasSeenBlendingGuide) {
       setShowBlendingGuide(true);
     }
-
-    // Only hide selection hint after user has selected TWO colors
-    // This ensures we don't interfere with the ability to select a second color
-    if (selectedColors.length === 2 && showSelectionHint) {
-      setShowSelectionHint(false);
-      localStorage.setItem("hasSeenSelectionHint", "true");
-    }
-  }, [
-    customPalette.length,
-    selectedColors.length,
-    hasSeenBlendingGuide,
-    showSelectionHint,
-  ]);
+  }, [customPalette.length, hasSeenBlendingGuide]);
 
   const dismissBlendingGuide = () => {
     setShowBlendingGuide(false);
@@ -325,17 +303,8 @@ export function PaletteManager() {
     localStorage.setItem("hasSeenBlendingGuide", "true");
   };
 
-  // Enhanced addColor function that shows the guide
   const handleAddColor = (hex: string) => {
     addCustomColor(hex);
-
-    // If this is the second color and user hasn't seen the hint yet, show it
-    if (customPalette.length === 1 && showSelectionHint) {
-      // Use a safer approach with requestAnimationFrame to avoid DOM manipulation issues
-      requestAnimationFrame(() => {
-        setShowSelectionHint(true); // Ensure hint is visible
-      });
-    }
   };
 
   const handleEditColor = (index: number) => {
@@ -409,9 +378,7 @@ export function PaletteManager() {
 
     // Otherwise, reset and show tips
     localStorage.removeItem("hasSeenBlendingGuide");
-    localStorage.removeItem("hasSeenSelectionHint");
     setHasSeenBlendingGuide(false);
-    setShowSelectionHint(true);
     if (customPalette.length >= 2) {
       setShowBlendingGuide(true);
     }
@@ -420,16 +387,14 @@ export function PaletteManager() {
   // Bulk-add colors resolved from pasted paint codes (e.g. "SW 6910").
   // Names already carry the full purchase label, and setCustomPalette
   // records one undo step for the whole paste.
-  const handleAddColorsByCode = (
-    colors: { hex: string; name: string }[]
-  ) => {
+  const handleAddColorsByCode = (colors: { hex: string; name: string }[]) => {
     if (colors.length === 0) return;
     setCustomPalette([
       ...customPalette,
       ...colors.map((c) => ({ id: nanoid(), hex: c.hex, name: c.name })),
     ]);
     toast.success(
-      `Added ${colors.length} color${colors.length === 1 ? "" : "s"} from codes`
+      `Added ${colors.length} color${colors.length === 1 ? "" : "s"} from codes`,
     );
   };
 
@@ -446,13 +411,60 @@ export function PaletteManager() {
     toast.success(`Added ${colors.length} harmony colors to your palette!`);
   };
 
+  const handleMixScopeChange = (scope: MixScope) => {
+    clearSelectedColors();
+    setMixScope(scope);
+  };
+
+  const handleCreateBlend = () => {
+    setHasSeenBlendingGuide(true);
+
+    if (mixScope === "pair") {
+      addBlendedColors(blendCount);
+    } else {
+      if (
+        customPalette.length <
+        PALETTE_WIDE_BLEND_CONFIG.minimumBlendableColorCount
+      ) {
+        return;
+      }
+
+      const resultColorCount = getPaletteWideBlendColorCount(
+        customPalette.length,
+        blendCount,
+      );
+      const blendedPalette = insertBlendsBetweenAll(
+        customPalette,
+        blendCount,
+        (fromColor, toColor, t) => {
+          const hex = blendHexColors(fromColor.hex, toColor.hex, t);
+          return {
+            id: nanoid(),
+            hex,
+            mix: { fromId: fromColor.id, toId: toColor.id, t },
+            handMix: simulatePaintLikeMix(fromColor.hex, toColor.hex, t, hex),
+          };
+        },
+      );
+
+      setCustomPalette(blendedPalette);
+      clearSelectedColors();
+      toast.success(`Created ${resultColorCount}-color blend`);
+    }
+
+    setMixMode(false);
+    setMixScope(DEFAULT_MIX_SCOPE);
+  };
+
   const toggleMixMode = () => {
-    if (mixMode) clearSelectedColors();
+    const nextMixMode = !mixMode;
+    clearSelectedColors();
+    setMixScope(DEFAULT_MIX_SCOPE);
     if (deleteMode) {
       setDeleteMode(false);
       setDeleteSelected([]);
     }
-    setMixMode((prev) => !prev);
+    setMixMode(nextMixMode);
   };
 
   const toggleDeleteMode = () => {
@@ -461,6 +473,7 @@ export function PaletteManager() {
       if (next && mixMode) {
         clearSelectedColors();
         setMixMode(false);
+        setMixScope(DEFAULT_MIX_SCOPE);
       }
       if (!next) {
         setDeleteSelected([]);
@@ -479,17 +492,13 @@ export function PaletteManager() {
     if (shiftKey && deleteAnchor !== null) {
       const start = Math.min(deleteAnchor, index);
       const end = Math.max(deleteAnchor, index);
-      const rangeIds = customPalette
-        .slice(start, end + 1)
-        .map((c) => c.id);
-      setDeleteSelected((prev) =>
-        Array.from(new Set([...prev, ...rangeIds]))
-      );
+      const rangeIds = customPalette.slice(start, end + 1).map((c) => c.id);
+      setDeleteSelected((prev) => Array.from(new Set([...prev, ...rangeIds])));
       return;
     }
 
     setDeleteSelected((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
     setDeleteAnchor(index);
   };
@@ -498,7 +507,7 @@ export function PaletteManager() {
     if (deleteSelected.length === 0) return;
     const count = deleteSelected.length;
     const newPalette = customPalette.filter(
-      (c) => !deleteSelected.includes(c.id)
+      (c) => !deleteSelected.includes(c.id),
     );
     if (newPalette.length === 0) {
       resetPaletteEditor();
@@ -528,7 +537,7 @@ export function PaletteManager() {
         tolerance: TOUCH_DRAG_TOLERANCE_PX,
       },
     }),
-    useSensor(KeyboardSensor)
+    useSensor(KeyboardSensor),
   );
 
   function handleDragEnd(event: DragEndEvent) {
@@ -547,180 +556,187 @@ export function PaletteManager() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-5">
       {/* Color Palette Display */}
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <h3 className="text-lg font-semibold text-white">
-              {editingPaletteId ? "Edit Palette" : "Your Palette"}
-            </h3>
-            <span className="text-sm text-slate-400">
-              ({customPalette.length} colors)
-            </span>
-            {editingPaletteId && (
-              <span className="ml-2 text-xs px-2 py-1 bg-blue-500/10 dark:bg-blue-900/30 text-blue-300 rounded-full">
-                Editing
+      <div className="space-y-3">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:p-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-lg font-semibold text-white">
+                {editingPaletteId ? "Edit Palette" : "Your Palette"}
+              </h3>
+              <span className="text-sm text-slate-400">
+                ({customPalette.length} colors)
               </span>
-            )}
-          </div>
+              {editingPaletteId && (
+                <span className="ml-2 text-xs px-2 py-1 bg-blue-500/10 dark:bg-blue-900/30 text-blue-300 rounded-full">
+                  Editing
+                </span>
+              )}
+            </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <TooltipProvider delayDuration={300}>
-              {/* Harmony */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="sm"
-                    onClick={() =>
-                      setShowHarmonyGenerator(!showHarmonyGenerator)
-                    }
-                    className={ACTION_BLUE}
-                  >
-                    <Palette className="h-3.5 w-3.5 mr-1.5" />
-                    Harmony
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p>Generate color harmonies</p>
-                </TooltipContent>
-              </Tooltip>
-
-              {/* Select & delete colors */}
-              {deleteMode ? (
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    onClick={handleDeleteSelected}
-                    disabled={deleteSelected.length === 0}
-                    className={ACTION_RED}
-                  >
-                    <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                    Delete
-                    {deleteSelected.length > 0
-                      ? ` (${deleteSelected.length})`
-                      : ""}
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={toggleDeleteMode}
-                    className={ACTION_SLATE}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              ) : (
+            <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
+              <TooltipProvider delayDuration={300}>
+                {/* Harmony */}
                 <Tooltip>
                   <TooltipTrigger asChild>
+                    <Button
+                      size="sm"
+                      onClick={() =>
+                        setShowHarmonyGenerator(!showHarmonyGenerator)
+                      }
+                      className={ACTION_BLUE}
+                    >
+                      <Palette className="h-3.5 w-3.5 mr-1.5" />
+                      Harmony
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p>Generate color harmonies</p>
+                  </TooltipContent>
+                </Tooltip>
+
+                {/* Select & delete colors */}
+                {deleteMode ? (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      onClick={handleDeleteSelected}
+                      disabled={deleteSelected.length === 0}
+                      className={ACTION_RED}
+                    >
+                      <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                      Delete
+                      {deleteSelected.length > 0
+                        ? ` (${deleteSelected.length})`
+                        : ""}
+                    </Button>
                     <Button
                       size="sm"
                       onClick={toggleDeleteMode}
-                      disabled={customPalette.length === 0}
                       className={ACTION_SLATE}
                     >
-                      <ListChecks className="h-3.5 w-3.5 mr-1.5" />
-                      Select &amp; Delete
+                      Cancel
                     </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    <p>Select multiple colors, then delete them</p>
-                  </TooltipContent>
-                </Tooltip>
-              )}
-
-              {/* Divider before the destructive action */}
-              <div className="h-6 w-px bg-white/10" />
-
-              {/* Reset entire palette — warn only when unsaved work is at stake */}
-              {!hasUnsavedChanges ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      size="sm"
-                      disabled={customPalette.length === 0}
-                      onClick={performReset}
-                      className={ACTION_RED}
-                    >
-                      <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
-                      Reset Palette
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    <p>Reset your entire palette</p>
-                  </TooltipContent>
-                </Tooltip>
-              ) : (
-              <Tooltip>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      size="sm"
-                      disabled={customPalette.length === 0}
-                      className={ACTION_RED}
-                    >
-                      <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
-                      Reset Palette
-                    </Button>
-                  </AlertDialogTrigger>
-                  <TooltipContent side="bottom">
-                    <p>Reset your entire palette</p>
-                  </TooltipContent>
-                  <AlertDialogContent className="border border-red-400/30 bg-gradient-to-br from-gray-900 via-gray-900 to-rose-950/40 backdrop-blur-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_8px_30px_rgba(0,0,0,0.5)]">
-                    <AlertDialogHeader>
-                      <AlertDialogTitle className="flex items-center gap-2 text-white">
-                        <span className="inline-flex items-center justify-center h-7 w-7 rounded-[10px] bg-red-600/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_1px_2px_rgba(0,0,0,0.10)]">
-                          <RotateCcw className="h-4 w-4 text-white" />
-                        </span>
-                        Reset Palette?
-                      </AlertDialogTitle>
-                      <AlertDialogDescription className="text-slate-400">
-                        This will remove all colors from your palette. This
-                        action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel className="rounded-[10px] border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 hover:text-white">
-                        Cancel
-                      </AlertDialogCancel>
-                      <AlertDialogAction
-                        className="rounded-[10px] bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 ring-1 ring-red-400/40 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_1px_3px_rgba(0,0,0,0.25)] [text-shadow:_0_1px_2px_rgb(0_0_0_/_48%)]"
-                        onClick={performReset}
+                  </div>
+                ) : (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="sm"
+                        onClick={toggleDeleteMode}
+                        disabled={customPalette.length === 0}
+                        className={ACTION_SLATE}
                       >
-                        Yes, Reset
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </Tooltip>
-              )}
+                        <ListChecks className="h-3.5 w-3.5 mr-1.5" />
+                        Select &amp; Delete
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Select multiple colors, then delete them</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
 
-              {/* Tips toggle */}
-              {(customPalette.length >= 2 || showBlendingGuide) && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={resetAllTips}
-                      className={`h-7 w-7 rounded-full ${
-                        showBlendingGuide
-                          ? "bg-blue-500/10 dark:bg-blue-900/30"
-                          : "bg-gray-800/60"
-                      }`}
-                    >
-                      {showBlendingGuide ? (
-                        <X className="h-3.5 w-3.5 text-blue-300" />
-                      ) : (
-                        <Info className="h-3.5 w-3.5 text-blue-300" />
-                      )}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    <p>{showBlendingGuide ? "Hide tips" : "Show tips"}</p>
-                  </TooltipContent>
-                </Tooltip>
-              )}
-            </TooltipProvider>
+                {/* Divider before the destructive action */}
+                <div className="h-6 w-px bg-white/10" />
+
+                {/* Reset entire palette — warn only when unsaved work is at stake */}
+                {!hasUnsavedChanges ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="sm"
+                        disabled={customPalette.length === 0}
+                        onClick={performReset}
+                        className={ACTION_RESET}
+                      >
+                        <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+                        Reset Palette
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Reset your entire palette</p>
+                    </TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <Tooltip>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          size="sm"
+                          disabled={customPalette.length === 0}
+                          className={ACTION_RESET}
+                        >
+                          <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+                          Reset Palette
+                        </Button>
+                      </AlertDialogTrigger>
+                      <TooltipContent side="bottom">
+                        <p>Reset your entire palette</p>
+                      </TooltipContent>
+                      <AlertDialogContent className="border border-red-400/30 bg-gradient-to-br from-gray-900 via-gray-900 to-rose-950/40 backdrop-blur-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_8px_30px_rgba(0,0,0,0.5)]">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle className="flex items-center gap-2 text-white">
+                            <span className="inline-flex items-center justify-center h-7 w-7 rounded-[10px] bg-red-600/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_1px_2px_rgba(0,0,0,0.10)]">
+                              <RotateCcw className="h-4 w-4 text-white" />
+                            </span>
+                            Reset Palette?
+                          </AlertDialogTitle>
+                          <AlertDialogDescription className="text-slate-400">
+                            This will remove all colors from your palette. This
+                            action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel className="rounded-[10px] border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 hover:text-white">
+                            Cancel
+                          </AlertDialogCancel>
+                          <AlertDialogAction
+                            className="rounded-[10px] bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 ring-1 ring-red-400/40 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_1px_3px_rgba(0,0,0,0.25)] [text-shadow:_0_1px_2px_rgb(0_0_0_/_48%)]"
+                            onClick={performReset}
+                          >
+                            Yes, Reset
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </Tooltip>
+                )}
+
+                {/* Tips toggle */}
+                {(customPalette.length >= 2 || showBlendingGuide) && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label={
+                          showBlendingGuide
+                            ? "Hide mixing tip"
+                            : "Show mixing tip"
+                        }
+                        onClick={resetAllTips}
+                        className={`h-7 w-7 rounded-full ${
+                          showBlendingGuide
+                            ? "bg-blue-500/10 dark:bg-blue-900/30"
+                            : "bg-gray-800/60"
+                        }`}
+                      >
+                        {showBlendingGuide ? (
+                          <X className="h-3.5 w-3.5 text-blue-300" />
+                        ) : (
+                          <Info className="h-3.5 w-3.5 text-blue-300" />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>{showBlendingGuide ? "Hide tips" : "Show tips"}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+              </TooltipProvider>
+            </div>
           </div>
         </div>
 
@@ -729,123 +745,137 @@ export function PaletteManager() {
             colors), or enter a total grams-per-color directly. Saved with
             the palette, so it comes back when you reopen it. */}
         {customPalette.length > 0 && (
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-            {/* Mode toggle: per-square vs. per-color */}
-            <div className="inline-flex items-center gap-0.5 rounded-xl border border-amber-400/40 bg-amber-500/10 p-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.10),0_1px_3px_rgba(0,0,0,0.20)]">
-              {PAINT_MODE_OPTIONS.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setPieceSize({ paintMode: option.value })}
-                  className={cn(
-                    "rounded-[10px] px-2.5 py-1 text-xs font-medium transition-colors",
-                    paintMode === option.value
-                      ? "bg-amber-600/85 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_1px_2px_rgba(0,0,0,0.10)]"
-                      : "text-slate-300 hover:text-white"
-                  )}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Piece size (squares) — only needed when deriving from squares */}
-            {paintMode === "perSquare" && (
-              <div className="flex items-center gap-2 rounded-xl border border-amber-400/40 bg-amber-500/10 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.10),0_1px_3px_rgba(0,0,0,0.20)]">
-                <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] bg-amber-600/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_1px_2px_rgba(0,0,0,0.10)]">
-                  <PaintBucket className="h-4 w-4 text-white" />
-                </span>
-                <Label
-                  htmlFor="square-count"
-                  className="whitespace-nowrap text-sm text-slate-200"
-                >
-                  Piece size
-                </Label>
-                <Input
-                  id="square-count"
-                  type="number"
-                  inputMode="numeric"
-                  min={0}
-                  value={pieceSize.squares}
-                  onChange={(e) => setPieceSize({ squares: e.target.value })}
-                  placeholder="e.g. 400"
-                  className="h-8 w-24"
-                />
-                <span className="whitespace-nowrap text-xs text-slate-400">
-                  squares
-                </span>
-              </div>
-            )}
-
-            {/* Paint amount — grams-per-square (defaults to GRAMS_PER_SQUARE)
-                or total grams-per-color, depending on mode. */}
-            <div className="flex items-center gap-2 rounded-xl border border-amber-400/40 bg-amber-500/10 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.10),0_1px_3px_rgba(0,0,0,0.20)]">
-              {paintMode === "perColor" && (
-                <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] bg-amber-600/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_1px_2px_rgba(0,0,0,0.10)]">
-                  <PaintBucket className="h-4 w-4 text-white" />
-                </span>
-              )}
-              <Label
-                htmlFor="paint-grams"
-                className="whitespace-nowrap text-sm text-slate-200"
-              >
-                Paint
-              </Label>
-              {paintMode === "perColor" ? (
-                <Input
-                  id="paint-grams"
-                  type="number"
-                  inputMode="decimal"
-                  min={0}
-                  step="1"
-                  value={pieceSize.gramsPerColor}
-                  onChange={(e) =>
-                    setPieceSize({ gramsPerColor: e.target.value })
-                  }
-                  placeholder="e.g. 120"
-                  className="h-8 w-24"
-                />
-              ) : (
-                <Input
-                  id="paint-grams"
-                  type="number"
-                  inputMode="decimal"
-                  min={0}
-                  step="0.5"
-                  value={pieceSize.gramsPerSquare}
-                  onChange={(e) =>
-                    setPieceSize({ gramsPerSquare: e.target.value })
-                  }
-                  placeholder={String(GRAMS_PER_SQUARE)}
-                  className="h-8 w-20"
-                />
-              )}
-              <span className="whitespace-nowrap text-xs text-slate-400">
-                {paintMode === "perColor" ? "g / color" : "g / square"}
+          <details className="group rounded-xl border border-amber-400/25 bg-amber-500/[0.07] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-3 py-2 text-sm text-slate-200 [&::-webkit-details-marker]:hidden">
+              <PaintBucket className="h-4 w-4 shrink-0 text-amber-300" />
+              <span className="font-medium">Paint estimate</span>
+              <span className="ml-auto text-xs text-slate-400">
+                {paintAmount ? `≈ ${paintAmount.label} per color` : "Optional"}
               </span>
-            </div>
+              <ChevronDown className="h-4 w-4 shrink-0 text-slate-500 transition-transform group-open:rotate-180" />
+            </summary>
+            <div className="border-t border-amber-400/15 p-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+                {/* Mode toggle: per-square vs. per-color */}
+                <div className="inline-flex items-center gap-0.5 rounded-xl border border-amber-400/40 bg-amber-500/10 p-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.10),0_1px_3px_rgba(0,0,0,0.20)]">
+                  {PAINT_MODE_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setPieceSize({ paintMode: option.value })}
+                      className={cn(
+                        "rounded-[10px] px-2.5 py-1 text-xs font-medium transition-colors",
+                        paintMode === option.value
+                          ? "bg-amber-600/85 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_1px_2px_rgba(0,0,0,0.10)]"
+                          : "text-slate-300 hover:text-white",
+                      )}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
 
-            <p className="text-xs text-slate-400 sm:ml-auto">
-              {paintAmount ? (
-                <>
-                  <span className="font-semibold text-slate-200">
-                    ≈ {paintAmount.label}
-                  </span>{" "}
-                  of each color ·{" "}
-                  <span className="tabular-nums">
-                    {Math.round(paintAmount.grams)} g
-                  </span>
-                  {paintMode === "perSquare" && (
-                    <> · {effectiveGramsPerSquare} g/square</>
+                {/* Piece size (squares) — only needed when deriving from squares */}
+                {paintMode === "perSquare" && (
+                  <div className="flex items-center gap-2 rounded-xl border border-amber-400/40 bg-amber-500/10 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.10),0_1px_3px_rgba(0,0,0,0.20)]">
+                    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] bg-amber-600/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_1px_2px_rgba(0,0,0,0.10)]">
+                      <PaintBucket className="h-4 w-4 text-white" />
+                    </span>
+                    <Label
+                      htmlFor="square-count"
+                      className="whitespace-nowrap text-sm text-slate-200"
+                    >
+                      Piece size
+                    </Label>
+                    <Input
+                      id="square-count"
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      value={pieceSize.squares}
+                      onChange={(e) =>
+                        setPieceSize({ squares: e.target.value })
+                      }
+                      placeholder="e.g. 400"
+                      className="h-8 w-24"
+                    />
+                    <span className="whitespace-nowrap text-xs text-slate-400">
+                      squares
+                    </span>
+                  </div>
+                )}
+
+                {/* Paint amount — grams-per-square (defaults to GRAMS_PER_SQUARE)
+                or total grams-per-color, depending on mode. */}
+                <div className="flex items-center gap-2 rounded-xl border border-amber-400/40 bg-amber-500/10 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.10),0_1px_3px_rgba(0,0,0,0.20)]">
+                  {paintMode === "perColor" && (
+                    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] bg-amber-600/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_1px_2px_rgba(0,0,0,0.10)]">
+                      <PaintBucket className="h-4 w-4 text-white" />
+                    </span>
                   )}
-                </>
-              ) : paintMode === "perColor" ? (
-                <>Enter grams per color to size each color&apos;s paint.</>
-              ) : (
-                <>Enter the square count to size each color&apos;s paint.</>
-              )}
-            </p>
-          </div>
+                  <Label
+                    htmlFor="paint-grams"
+                    className="whitespace-nowrap text-sm text-slate-200"
+                  >
+                    Paint
+                  </Label>
+                  {paintMode === "perColor" ? (
+                    <Input
+                      id="paint-grams"
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      step="1"
+                      value={pieceSize.gramsPerColor}
+                      onChange={(e) =>
+                        setPieceSize({ gramsPerColor: e.target.value })
+                      }
+                      placeholder="e.g. 120"
+                      className="h-8 w-24"
+                    />
+                  ) : (
+                    <Input
+                      id="paint-grams"
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      step="0.5"
+                      value={pieceSize.gramsPerSquare}
+                      onChange={(e) =>
+                        setPieceSize({ gramsPerSquare: e.target.value })
+                      }
+                      placeholder={String(GRAMS_PER_SQUARE)}
+                      className="h-8 w-20"
+                    />
+                  )}
+                  <span className="whitespace-nowrap text-xs text-slate-400">
+                    {paintMode === "perColor" ? "g / color" : "g / square"}
+                  </span>
+                </div>
+
+                <p className="text-xs text-slate-400 sm:ml-auto">
+                  {paintAmount ? (
+                    <>
+                      <span className="font-semibold text-slate-200">
+                        ≈ {paintAmount.label}
+                      </span>{" "}
+                      of each color ·{" "}
+                      <span className="tabular-nums">
+                        {Math.round(paintAmount.grams)} g
+                      </span>
+                      {paintMode === "perSquare" && (
+                        <> · {effectiveGramsPerSquare} g/square</>
+                      )}
+                    </>
+                  ) : paintMode === "perColor" ? (
+                    <>Enter grams per color to size each color&apos;s paint.</>
+                  ) : (
+                    <>Enter the square count to size each color&apos;s paint.</>
+                  )}
+                </p>
+              </div>
+            </div>
+          </details>
         )}
 
         {/* Blending Guide */}
@@ -853,36 +883,6 @@ export function PaletteManager() {
           {showBlendingGuide && (
             <BlendingGuide onDismiss={dismissBlendingGuide} />
           )}
-        </AnimatePresence>
-
-        {/* Selection Hint */}
-        <AnimatePresence>
-          {mixMode &&
-            showSelectionHint &&
-            customPalette.length >= 2 &&
-            selectedColors.length === 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="mb-2 text-center pointer-events-none"
-              >
-                <div className="inline-block bg-blue-500/10 dark:bg-blue-900/30 text-blue-300 text-sm px-3 py-1.5 rounded-full">
-                  <motion.div
-                    animate={{ scale: [1, 1.05, 1] }}
-                    transition={{
-                      duration: 1,
-                      repeat: Infinity,
-                      repeatDelay: 1,
-                    }}
-                    className="flex items-center gap-1.5"
-                  >
-                    <MousePointerClick className="h-3.5 w-3.5" />
-                    <span>Click on two colors to blend them together</span>
-                  </motion.div>
-                </div>
-              </motion.div>
-            )}
         </AnimatePresence>
 
         {/* Color Grid */}
@@ -921,29 +921,37 @@ export function PaletteManager() {
                         handMix={color.handMix}
                         index={index}
                         isSelected={
-                          (mixMode && selectedColors.includes(color.id)) ||
+                          (mixMode &&
+                            mixScope === "pair" &&
+                            selectedColors.includes(color.id)) ||
                           (deleteMode && deleteSelected.includes(color.id))
                         }
                         selectionOrder={
-                          mixMode && selectedColors.indexOf(color.id) >= 0
-                            ? selectedColors.indexOf(color.id) + 1
+                          mixMode &&
+                          mixScope === "pair" &&
+                          selectedColors.indexOf(color.id) >= 0
+                            ? selectedColors.indexOf(color.id) +
+                              PALETTE_WIDE_BLEND_CONFIG.nextColorOffset
                             : undefined
                         }
-                        onSelect={(e) =>
-                          deleteMode
-                            ? toggleDeleteSelection(
-                                index,
-                                !!e?.shiftKey
-                              )
-                            : mixMode
-                            ? toggleColorSelection(color.id)
-                            : handleEditColor(index)
-                        }
+                        onSelect={(e) => {
+                          if (deleteMode) {
+                            toggleDeleteSelection(index, !!e?.shiftKey);
+                          } else if (mixMode) {
+                            if (mixScope === "pair") {
+                              toggleColorSelection(color.id);
+                            }
+                          } else {
+                            handleEditColor(index);
+                          }
+                        }}
                         onRemove={() => removeCustomColor(index)}
                         onEdit={() => handleEditColor(index)}
                         onDuplicate={() => handleDuplicateColor(index)}
                         showBlendHint={
-                          mixMode && selectedColors.length === 1
+                          mixMode &&
+                          mixScope === "pair" &&
+                          selectedColors.length === 1
                         }
                       />
                     ))}
@@ -964,8 +972,10 @@ export function PaletteManager() {
                 {/* Mix toggle - color selection for blending is only
                     enabled while mix mode is active */}
                 {customPalette.length >= 2 && (
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    aria-pressed={mixMode}
                     onClick={toggleMixMode}
                     className={cn(
                       "h-16 min-w-0 flex-1 sm:h-80 sm:w-20 sm:flex-none rounded-lg",
@@ -973,7 +983,7 @@ export function PaletteManager() {
                       "cursor-pointer transition-colors duration-300 border-2",
                       mixMode
                         ? "bg-blue-600 hover:bg-blue-500 border-blue-400/60 text-white"
-                        : "bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/30 hover:border-blue-400/70 text-blue-300"
+                        : "bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/30 hover:border-blue-400/70 text-blue-300",
                     )}
                   >
                     <div
@@ -981,7 +991,7 @@ export function PaletteManager() {
                         "flex h-9 w-9 sm:h-12 sm:w-12 items-center justify-center rounded-full ring-1 transition-colors duration-300",
                         mixMode
                           ? "bg-white/15 ring-white/40"
-                          : "bg-white/5 ring-white/15"
+                          : "bg-white/5 ring-white/15",
                       )}
                     >
                       <Blend className="h-5 w-5 sm:h-6 sm:w-6" />
@@ -989,7 +999,7 @@ export function PaletteManager() {
                     <span className="text-xs font-medium tracking-wide">
                       {mixMode ? "Cancel Mix" : "Mix"}
                     </span>
-                  </button>
+                  </Button>
                 )}
               </div>
             </div>
@@ -997,111 +1007,17 @@ export function PaletteManager() {
         </DndContext>
       </div>
 
-      {/* Blend Controls - Only show when 2 colors are selected */}
-      {mixMode && selectedColors.length === 2 && (
-        <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2, ease: "easeOut" }}
-          className="rounded-xl border border-blue-400/30 bg-gradient-to-br from-blue-600/15 to-indigo-600/10 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.10),0_2px_8px_rgba(0,0,0,0.25)] backdrop-blur-sm sm:p-4"
-        >
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <motion.div
-              className="inline-flex items-center justify-center gap-1.5 px-[0.675rem] h-6 text-xs font-medium text-white rounded-[10px] bg-blue-600/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_1px_2px_rgba(0,0,0,0.10)] [text-shadow:_0_1px_2px_rgb(0_0_0_/_48%)]"
-              initial={{ scale: 1 }}
-              animate={{ scale: [1, 1.05, 1] }}
-              transition={{ duration: 0.5, delay: 0.3 }}
-            >
-              <Blend className="h-3.5 w-3.5" />
-              <span>Blend Colors</span>
-            </motion.div>
-
-            <div className="flex w-full flex-1 flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-              <div className="flex w-full max-w-xs items-center gap-4">
-                <span className="text-sm text-slate-400 whitespace-nowrap">
-                  Steps:
-                </span>
-                <Slider
-                  value={[blendCount]}
-                  min={1}
-                  max={10}
-                  step={1}
-                  onValueChange={(value) => setBlendCount(value[0])}
-                  className="flex-1"
-                  trackClassName="h-2 bg-blue-400/20"
-                  rangeClassName="bg-gradient-to-r from-blue-500 to-indigo-500"
-                  thumbClassName="h-5 w-9 rounded-[10px] border-transparent bg-blue-600/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_1px_3px_rgba(0,0,0,0.35)] focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
-                />
-                <span className="inline-flex items-center justify-center h-6 min-w-[1.75rem] px-2 text-xs font-medium text-white rounded-[10px] bg-blue-600/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_1px_2px_rgba(0,0,0,0.10)] [text-shadow:_0_1px_2px_rgb(0_0_0_/_48%)]">
-                  {blendCount}
-                </span>
-              </div>
-
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Button
-                  onClick={() => {
-                    setHasSeenBlendingGuide(true);
-                    addBlendedColors(blendCount);
-                    setMixMode(false);
-                  }}
-                  className="rounded-[10px] bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 ring-1 ring-blue-400/40 text-white whitespace-nowrap shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_1px_3px_rgba(0,0,0,0.25)] [text-shadow:_0_1px_2px_rgb(0_0_0_/_48%)] transition-all"
-                >
-                  <Blend className="mr-2 h-4 w-4" />
-                  Create Blend
-                </Button>
-              </motion.div>
-            </div>
-          </div>
-
-          {handMixPreview.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {handMixPreview.map((mix) => (
-                <TooltipProvider
-                  key={`${mix.recipe}-${mix.targetHex}-${mix.predictedHex}`}
-                  delayDuration={225}
-                >
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div
-                        className={cn(
-                          "flex min-w-0 items-center gap-1.5 rounded-[10px] border px-2 py-1 text-xs font-medium",
-                          HAND_MIX_PREVIEW_THEME[mix.decision]
-                        )}
-                      >
-                        <span
-                          className="h-4 w-5 rounded-sm ring-1 ring-white/25"
-                          style={{ backgroundColor: mix.targetHex }}
-                        />
-                        <span
-                          className="h-4 w-5 rounded-sm ring-1 ring-white/25"
-                          style={{ backgroundColor: mix.predictedHex }}
-                        />
-                        <span className="truncate">{mix.label}</span>
-                        <span className="shrink-0 tabular-nums opacity-80">
-                          · {handMixMatchPercent(mix.deltaE)}%
-                        </span>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="max-w-64">
-                      <div className="space-y-1 text-xs">
-                        <div className="font-medium">{mix.recipe}</div>
-                        <div>Target {mix.targetHex}</div>
-                        <div>Hand mix {mix.predictedHex}</div>
-                        <div>
-                          {handMixMatchPercent(mix.deltaE)}% match · ΔE{" "}
-                          {mix.deltaE}
-                        </div>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              ))}
-            </div>
-          )}
-        </motion.div>
+      {mixMode && (
+        <MixControls
+          scope={mixScope}
+          colorsBetween={blendCount}
+          paletteColorCount={customPalette.length}
+          selectedColorCount={selectedColors.length}
+          handMixPreview={handMixPreview}
+          onScopeChange={handleMixScopeChange}
+          onColorsBetweenChange={setBlendCount}
+          onCreate={handleCreateBlend}
+        />
       )}
 
       {/* Edit Color Modal */}
@@ -1117,9 +1033,7 @@ export function PaletteManager() {
             onClick={(e) => e.stopPropagation()}
             className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-lg border-2 border-white/10 bg-gray-900 p-4 shadow-2xl sm:p-6"
           >
-            <h3 className="text-xl font-bold text-white mb-4">
-              Edit Color
-            </h3>
+            <h3 className="text-xl font-bold text-white mb-4">Edit Color</h3>
 
             <div className="space-y-4">
               <div className="flex flex-col md:flex-row gap-4">
