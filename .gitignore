@@ -69,6 +69,7 @@ logs
 .temp
 .tmp
 .cache
+/.worktrees/
 
 # Generated files
 .contentlayer

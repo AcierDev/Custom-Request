@@ -979,16 +979,15 @@ export default function DesignPage() {
         </Canvas>
       </div>
 
-      {/* Action buttons. Bottom-anchored on desktop; on mobile the
-          page's `mt-14` offset would push `bottom-*` off-screen and it
-          would collide with the bottom-sheet controls, so it's fixed
-          top-right under the navbar instead. */}
+      {/* Always-visible action dock. It stays above the tall right options
+          stack on desktop and uses compact icon actions on mobile so it
+          cannot overflow the viewport. */}
       <div
         className={cn(
-          "flex items-center gap-3 select-none",
+          "fixed left-1/2 z-[60] flex -translate-x-1/2 items-center justify-center select-none rounded-full border border-white/10 bg-slate-950/45 p-1.5 shadow-xl backdrop-blur-xl",
           isMobile
-            ? "fixed top-[3.75rem] right-3 z-50 justify-end gap-2"
-            : "absolute bottom-6 right-6"
+            ? "top-[3.75rem] max-w-[calc(100vw-1.5rem)] gap-1.5"
+            : "bottom-6 gap-3"
         )}
       >
         <TooltipProvider>
@@ -996,10 +995,12 @@ export default function DesignPage() {
             <TooltipTrigger asChild>
               <Button
                 variant="ghost"
-                size={isMobile ? "sm" : "icon"}
+                size="icon"
+                aria-label={showUIControls ? "Hide viewer controls" : "Show viewer controls"}
                 className={cn(
                   "glass-surface hover:bg-gray-900/50 hover:border-white/30 transition-colors text-gray-300",
-                  isMobile ? "rounded-full ring-1 ring-white/15 text-xs font-medium" : "rounded-full w-9 h-9"
+                  "h-9 w-9 shrink-0 rounded-full",
+                  isMobile && "ring-1 ring-white/15"
                 )}
                 onClick={() => setShowUIControls(!showUIControls)}
               >
@@ -1008,7 +1009,6 @@ export default function DesignPage() {
                 ) : (
                   <Eye className="w-4 h-4 shrink-0" />
                 )}
-                {isMobile && <span>{showUIControls ? "Hide" : "Show"}</span>}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
@@ -1019,21 +1019,24 @@ export default function DesignPage() {
         {showUIControls && (
           <Button
             variant="outline"
-            size={isMobile ? "sm" : "default"}
+            size={isMobile ? "icon" : "default"}
             disabled={isSavingImage || !isImageCaptureReady}
             aria-busy={isSavingImage}
+            aria-label={isSavingImage ? "Saving image" : "Save image"}
+            title={
+              isImageCaptureReady
+                ? "Save image"
+                : "Image exporter is still preparing"
+            }
             className={cn(
               "glass-surface text-gray-200 hover:bg-gray-900/50 hover:border-white/30 hover:text-white",
-              isMobile && "rounded-full ring-1 ring-white/15 text-xs font-medium border-0"
+              isMobile &&
+                "h-9 w-9 shrink-0 rounded-full border-0 ring-1 ring-white/15"
             )}
             onClick={handleSaveImage}
           >
             <Download className="w-4 h-4 shrink-0" />
-            {isSavingImage
-              ? "Saving…"
-              : isMobile
-                ? "Save"
-                : "Save Image"}
+            {!isMobile && (isSavingImage ? "Saving…" : "Save Image")}
           </Button>
         )}
         {/* iOS-mobile-only — renders null elsewhere. Bakes a life-size,
@@ -1042,15 +1045,17 @@ export default function DesignPage() {
         {showUIControls && <ARButton variant="viewer" />}
         {showUIControls && (
           <Button
-            size={isMobile ? "sm" : "default"}
+            size={isMobile ? "icon" : "default"}
+            aria-label="Share design"
+            title="Share design"
             className={cn(
               "bg-indigo-600 hover:bg-indigo-500 ring-1 ring-indigo-400/40 text-white",
-              isMobile && "rounded-full text-xs font-medium"
+              isMobile && "h-9 w-9 shrink-0 rounded-full"
             )}
             onClick={() => setIsShareDialogOpen(true)}
           >
             <Share className="w-4 h-4 shrink-0" />
-            {(isMobile || !isMobile) && (isMobile ? "Share" : "Share Design")}
+            {!isMobile && "Share Design"}
           </Button>
         )}
       </div>
