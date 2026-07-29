@@ -15,6 +15,10 @@ import {
   getNormalizedWedgeCorners,
 } from "../wedgeGeometry.ts";
 import { STEP_EXPORT_CONFIG } from "./stepConfig.ts";
+import {
+  applyStepHeaderMetadata,
+  type StepExportMetadata,
+} from "./stepMetadata.ts";
 import type {
   StepExportResult,
   StepModelPlan,
@@ -238,12 +242,10 @@ const applyColor = (
   );
 };
 
-const makeFilename = (): string =>
-  `${STEP_EXPORT_CONFIG.filenamePrefix}-${Date.now()}${STEP_EXPORT_CONFIG.fileExtension}`;
-
 export function exportStepModel(
   openCascade: OpenCascadeInstance,
   plan: StepModelPlan,
+  metadata: StepExportMetadata,
 ): StepExportResult {
   const writer = new openCascade.STEPCAFControl_Writer_1();
   const documentFormat = makeExtendedString(
@@ -408,13 +410,14 @@ export function exportStepModel(
       throw new Error("STEP export could not write the artwork.");
     }
 
-    const output = openCascade.FS.readFile(
-      STEP_EXPORT_CONFIG.virtualOutputPath,
-      { encoding: "binary" },
+    const output = new Uint8Array(
+      openCascade.FS.readFile(STEP_EXPORT_CONFIG.virtualOutputPath, {
+        encoding: "binary",
+      }),
     );
     return {
-      bytes: new Uint8Array(output),
-      filename: makeFilename(),
+      bytes: applyStepHeaderMetadata(output, metadata),
+      filename: metadata.filename,
     };
   } finally {
     try {

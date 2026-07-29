@@ -3,6 +3,7 @@ import test from "node:test";
 import { loadOpenCascadeForTest } from "../../../scripts/step/load-open-cascade.mjs";
 import { buildStepModelPlan } from "./stepModel.ts";
 import { exportStepModel } from "./openCascadeExporter.ts";
+import { createStepExportMetadata } from "./stepMetadata.ts";
 
 const FULL_SQUARE_SCALE_SCENE_UNITS = 0.5;
 const MINI_SQUARE_SCALE_SCENE_UNITS = 0.45;
@@ -24,6 +25,10 @@ const AP242_SCHEMA_TOKEN = "AP242";
 const MILLIMETER_TOKEN = ".MILLI.";
 const ASSEMBLY_USAGE_TOKEN = "NEXT_ASSEMBLY_USAGE_OCCURRENCE";
 const COLOR_RECORD_PATTERN = /COLOUR_RGB\([^;]+;/g;
+const EXPORTED_AT = new Date(2026, 6, 28, 9, 7, 6);
+const EXPECTED_FILENAME = "everwood-art-2026-07-28-0907.step";
+const EXPECTED_DESCRIPTION =
+  "Editable Everwood Art model exported from the Viewer";
 
 const makeSquare = ({
   x,
@@ -113,11 +118,22 @@ const assertBoundsNearlyEqual = (actual, expected) => {
 test("writes one readable AP242 assembly with names, colors, and millimeter bounds", async () => {
   const openCascade = await loadOpenCascadeForTest();
   const plan = buildStepModelPlan(fixtureSnapshot);
-  const result = exportStepModel(openCascade, plan);
+  const metadata = createStepExportMetadata(EXPORTED_AT);
+  const result = exportStepModel(openCascade, plan, metadata);
   const stepText = new TextDecoder(UTF8_ENCODING).decode(result.bytes);
 
   assert.equal(result.bytes.byteLength > 0, true);
-  assert.equal(result.filename.endsWith(".step"), true);
+  assert.equal(result.filename, EXPECTED_FILENAME);
+  assert.equal(
+    stepText.includes(`FILE_DESCRIPTION(('${EXPECTED_DESCRIPTION}')`),
+    true,
+  );
+  assert.equal(
+    stepText.includes(
+      `FILE_NAME('${EXPECTED_FILENAME}','${EXPORTED_AT.toISOString()}'`,
+    ),
+    true,
+  );
   assert.equal(
     stepText.toUpperCase().includes(AP242_SCHEMA_TOKEN),
     true,
