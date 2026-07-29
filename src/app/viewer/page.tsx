@@ -60,6 +60,7 @@ import { DesignCard } from "@/components/cards/DesignCard";
 import { ShareDialog } from "@/components/ShareDialog";
 import { ARButton } from "@/components/ARButton";
 import { StepDownloadButton } from "@/components/StepDownloadButton";
+import { FusionPackageDownloadButton } from "@/components/FusionPackageDownloadButton";
 import { DraftSetControls } from "@/components/DraftSetControls";
 import { DesignTutorial } from "@/components/DesignTutorial";
 import { EmptyPaletteWarning } from "@/components/EmptyPaletteWarning";
@@ -1102,6 +1103,9 @@ export default function DesignPage() {
             so it can be hung on a real wall. */}
         {showUIControls && (
           <StepDownloadButton isMobile={isMobile} />
+        )}
+        {showUIControls && (
+          <FusionPackageDownloadButton isMobile={isMobile} />
         )}
         {showUIControls && (
           <ARButton

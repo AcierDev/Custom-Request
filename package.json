@@ -15,6 +15,7 @@
     "test:paint": "node --no-warnings --test scripts/paints/import-sherwin.test.mjs src/lib/paint.test.mjs src/lib/sherwinHistoricDataset.test.mjs",
     "test:step-geometry": "node --no-warnings --test src/lib/wedgeGeometry.test.mjs src/lib/backboardGeometry.test.mjs",
     "test:step": "npm run test:step-geometry && node --no-warnings --test src/lib/ar/artSnapshot.test.mjs src/lib/step/stepMetadata.test.mjs src/lib/step/stepModel.test.mjs src/lib/step/openCascadeExporter.test.mjs src/lib/step/exportStep.test.mjs",
+    "test:fusion": "node --no-warnings --test src/lib/fusion/*.test.mjs",
     "prepare:step-wasm": "node scripts/prepare-step-wasm.mjs",
     "paints:sherwin": "node scripts/paints/import-sherwin.mjs",
     "paints:behr": "node scripts/paints/import-behr.mjs",
