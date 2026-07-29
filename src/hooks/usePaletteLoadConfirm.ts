@@ -10,6 +10,36 @@ interface PaletteToLoad {
   design?: ItemDesigns; // For official palettes
 }
 
+type PaletteLoadColor = {
+  hex: string;
+  name?: string;
+  paintSourceHex?: string;
+  paintSourceName?: string;
+};
+
+export function paletteColorsMatchForLoad(
+  colors1: ReadonlyArray<PaletteLoadColor>,
+  colors2: ReadonlyArray<PaletteLoadColor>
+) {
+  if (colors1.length !== colors2.length) return false;
+
+  return colors1.every((color1, index) => {
+    const color2 = colors2[index];
+    const color1Hex = color1.paintSourceHex ?? color1.hex;
+    const color2Hex = color2.paintSourceHex ?? color2.hex;
+    const color1Name =
+      color1.paintSourceHex === undefined
+        ? color1.name
+        : color1.paintSourceName;
+    const color2Name =
+      color2.paintSourceHex === undefined
+        ? color2.name
+        : color2.paintSourceName;
+
+    return color1Hex === color2Hex && color1Name === color2Name;
+  });
+}
+
 export function usePaletteLoadConfirm() {
   const { customPalette, savedPalettes } = useCustomStore();
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
@@ -18,22 +48,9 @@ export function usePaletteLoadConfirm() {
   );
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 
-  // Helper function to compare two color arrays. Accepts any color-like
-  // shape (CustomColor, official ColorInfo) since only hex/name matter.
-  const colorsMatch = useCallback(
-    (
-      colors1: ReadonlyArray<{ hex: string; name?: string }>,
-      colors2: ReadonlyArray<{ hex: string; name?: string }>
-    ) => {
-      if (colors1.length !== colors2.length) return false;
-
-      return colors1.every((color1, index) => {
-        const color2 = colors2[index];
-        return color1.hex === color2.hex && color1.name === color2.name;
-      });
-    },
-    []
-  );
+  // Paint grounding is a derived representation, not an editor change.
+  // Compare its preserved source color so switching palettes stays quiet.
+  const colorsMatch = paletteColorsMatchForLoad;
 
   // Check if current palette matches any official palette
   const matchesOfficialPalette = useCallback(() => {
