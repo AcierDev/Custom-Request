@@ -73,5 +73,7 @@ logs
 
 # Generated files
 .contentlayer
+/public/wasm/replicad_with_exceptions.wasm
+/public/wasm/replicad_with_exceptions.js
  
 mongo-backup

@@ -59,6 +59,7 @@ import { SizeCard } from "@/components/cards/SizeCard";
 import { DesignCard } from "@/components/cards/DesignCard";
 import { ShareDialog } from "@/components/ShareDialog";
 import { ARButton } from "@/components/ARButton";
+import { StepDownloadButton } from "@/components/StepDownloadButton";
 import { DraftSetControls } from "@/components/DraftSetControls";
 import { DesignTutorial } from "@/components/DesignTutorial";
 import { EmptyPaletteWarning } from "@/components/EmptyPaletteWarning";
@@ -1099,6 +1100,9 @@ export default function DesignPage() {
         {/* iOS-mobile-only — renders null elsewhere. Bakes a life-size,
             grain-baked USDZ of the current design and launches AR Quick Look
             so it can be hung on a real wall. */}
+        {showUIControls && (
+          <StepDownloadButton isMobile={isMobile} />
+        )}
         {showUIControls && (
           <ARButton
             variant="viewer"
