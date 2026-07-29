@@ -1,6 +1,7 @@
 import { buildStepModelPlan } from "./stepModel.ts";
 import { exportStepModel } from "./openCascadeExporter.ts";
 import { STEP_EXPORT_CONFIG } from "./stepConfig.ts";
+import { createStepExportMetadata } from "./stepMetadata.ts";
 import type { OpenCascadeInstance } from "replicad-opencascadejs/src/replicad_with_exceptions";
 import type {
   StepWorkerRequest,
@@ -46,7 +47,10 @@ workerScope.addEventListener("message", async ({ data }) => {
           : path,
     });
     const plan = buildStepModelPlan(data.snapshot);
-    const result = exportStepModel(openCascade, plan);
+    const metadata = createStepExportMetadata(
+      new Date(data.exportedAtIso),
+    );
+    const result = exportStepModel(openCascade, plan, metadata);
     const buffer = result.bytes.slice().buffer as ArrayBuffer;
 
     workerScope.postMessage(
@@ -54,6 +58,9 @@ workerScope.addEventListener("message", async ({ data }) => {
         kind: "success",
         requestId: data.requestId,
         filename: result.filename,
+        filenameStamp: metadata.filenameStamp,
+        description: metadata.description,
+        exportedAtIso: metadata.exportedAtIso,
         buffer,
       },
       [buffer],

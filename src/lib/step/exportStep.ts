@@ -15,9 +15,18 @@ interface StepWorker {
 export interface StepDownloadOptions {
   workerFactory?: () => StepWorker;
   requestIdFactory?: () => string;
+  now?: () => Date;
   createObjectUrl?: (blob: Blob) => string;
   revokeObjectUrl?: (url: string) => void;
   download?: (url: string, filename: string) => void;
+}
+
+export interface GeneratedStepFile {
+  filename: string;
+  filenameStamp: string;
+  description: string;
+  exportedAtIso: string;
+  buffer: ArrayBuffer;
 }
 
 const WORKER_TYPE: WorkerOptions["type"] = "module";
@@ -45,27 +54,44 @@ export function generateStepDownload(
   snapshot: ArtSnapshot,
   options: StepDownloadOptions = {},
 ): Promise<void> {
+  return generateStepFile(snapshot, options).then((file) => {
+    const createObjectUrl =
+      options.createObjectUrl ?? URL.createObjectURL.bind(URL);
+    const revokeObjectUrl =
+      options.revokeObjectUrl ?? URL.revokeObjectURL.bind(URL);
+    const download = options.download ?? triggerDownload;
+    let objectUrl: string | null = null;
+
+    try {
+      const blob = new Blob([file.buffer], {
+        type: STEP_EXPORT_CONFIG.mediaType,
+      });
+      objectUrl = createObjectUrl(blob);
+      download(objectUrl, file.filename);
+    } finally {
+      if (objectUrl) revokeObjectUrl(objectUrl);
+    }
+  });
+}
+
+export function generateStepFile(
+  snapshot: ArtSnapshot,
+  options: StepDownloadOptions = {},
+): Promise<GeneratedStepFile> {
   const worker = (options.workerFactory ?? createStepWorker)();
   const requestId = (options.requestIdFactory ?? createRequestId)();
-  const createObjectUrl =
-    options.createObjectUrl ?? URL.createObjectURL.bind(URL);
-  const revokeObjectUrl =
-    options.revokeObjectUrl ?? URL.revokeObjectURL.bind(URL);
-  const download = options.download ?? triggerDownload;
+  const exportedAtIso = (options.now ?? (() => new Date()))().toISOString();
 
-  return new Promise<void>((resolve, reject) => {
+  return new Promise<GeneratedStepFile>((resolve, reject) => {
     let completed = false;
 
-    const finish = (
-      error: Error | null,
-      objectUrl: string | null = null,
-    ): void => {
+    const finish = (error: Error | null, file?: GeneratedStepFile): void => {
       if (completed) return;
       completed = true;
-      if (objectUrl) revokeObjectUrl(objectUrl);
       worker.terminate();
       if (error) reject(error);
-      else resolve();
+      else if (file) resolve(file);
+      else reject(new Error(STEP_EXPORT_CONFIG.defaultErrorMessage));
     };
 
     worker.onmessage = ({ data }) => {
@@ -75,22 +101,13 @@ export function generateStepDownload(
         return;
       }
 
-      let objectUrl: string | null = null;
-      try {
-        const blob = new Blob([data.buffer], {
-          type: STEP_EXPORT_CONFIG.mediaType,
-        });
-        objectUrl = createObjectUrl(blob);
-        download(objectUrl, data.filename);
-        finish(null, objectUrl);
-      } catch (error) {
-        finish(
-          error instanceof Error
-            ? error
-            : new Error(STEP_EXPORT_CONFIG.defaultErrorMessage),
-          objectUrl,
-        );
-      }
+      finish(null, {
+        filename: data.filename,
+        filenameStamp: data.filenameStamp,
+        description: data.description,
+        exportedAtIso: data.exportedAtIso,
+        buffer: data.buffer,
+      });
     };
 
     worker.onerror = (event) => {
@@ -104,6 +121,7 @@ export function generateStepDownload(
         kind: "generate",
         requestId,
         snapshot,
+        exportedAtIso,
       });
     } catch (error) {
       const message =

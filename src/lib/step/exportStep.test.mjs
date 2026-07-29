@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { STEP_EXPORT_CONFIG } from "./stepConfig.ts";
-import { generateStepDownload } from "./exportStep.ts";
+import {
+  generateStepDownload,
+  generateStepFile,
+} from "./exportStep.ts";
 
 const REQUEST_ID = "step-request-test";
 const MISMATCHED_REQUEST_ID = "different-request";
@@ -10,6 +13,11 @@ const OBJECT_URL = "blob:step-test";
 const STEP_CONTENT = "ISO-10303-21;END-ISO-10303-21;";
 const WORKER_ERROR_MESSAGE = "OpenCascade failed";
 const BROWSER_ERROR_MESSAGE = "Worker script failed";
+const EXPORTED_AT = new Date("2026-07-28T16:07:06.000Z");
+const EXPORTED_AT_ISO = EXPORTED_AT.toISOString();
+const FILENAME_STAMP = "2026-07-28-0907";
+const STEP_DESCRIPTION =
+  "Editable Everwood Art model exported from the Viewer";
 
 const snapshot = {
   instances: [],
@@ -61,6 +69,7 @@ const makeOptions = (worker, overrides = {}) => {
     options: {
       workerFactory: () => worker,
       requestIdFactory: () => REQUEST_ID,
+      now: () => EXPORTED_AT,
       createObjectUrl: (blob) => {
         createdBlobs.push(blob);
         return OBJECT_URL;
@@ -72,6 +81,41 @@ const makeOptions = (worker, overrides = {}) => {
   };
 };
 
+test("returns one reusable STEP file generated from the captured instant", async () => {
+  const worker = new FakeWorker();
+  const { options } = makeOptions(worker);
+  const generation = generateStepFile(snapshot, options);
+  const buffer = new TextEncoder().encode(STEP_CONTENT).buffer;
+
+  assert.deepEqual(worker.posted, [
+    {
+      kind: "generate",
+      requestId: REQUEST_ID,
+      snapshot,
+      exportedAtIso: EXPORTED_AT_ISO,
+    },
+  ]);
+
+  worker.emitMessage({
+    kind: "success",
+    requestId: REQUEST_ID,
+    filename: DOWNLOAD_FILENAME,
+    filenameStamp: FILENAME_STAMP,
+    description: STEP_DESCRIPTION,
+    exportedAtIso: EXPORTED_AT_ISO,
+    buffer,
+  });
+
+  assert.deepEqual(await generation, {
+    filename: DOWNLOAD_FILENAME,
+    filenameStamp: FILENAME_STAMP,
+    description: STEP_DESCRIPTION,
+    exportedAtIso: EXPORTED_AT_ISO,
+    buffer,
+  });
+  assert.equal(worker.terminateCount, 1);
+});
+
 test("downloads the matching STEP response and always cleans up", async () => {
   const worker = new FakeWorker();
   const { options, createdBlobs, revokedUrls, downloads } = makeOptions(worker);
@@ -82,18 +126,25 @@ test("downloads the matching STEP response and always cleans up", async () => {
     kind: "generate",
     requestId: REQUEST_ID,
     snapshot,
+    exportedAtIso: EXPORTED_AT_ISO,
   });
 
   worker.emitMessage({
     kind: "success",
     requestId: MISMATCHED_REQUEST_ID,
     filename: "ignored.step",
+    filenameStamp: FILENAME_STAMP,
+    description: STEP_DESCRIPTION,
+    exportedAtIso: EXPORTED_AT_ISO,
     buffer: new TextEncoder().encode("ignored").buffer,
   });
   worker.emitMessage({
     kind: "success",
     requestId: REQUEST_ID,
     filename: DOWNLOAD_FILENAME,
+    filenameStamp: FILENAME_STAMP,
+    description: STEP_DESCRIPTION,
+    exportedAtIso: EXPORTED_AT_ISO,
     buffer: new TextEncoder().encode(STEP_CONTENT).buffer,
   });
 

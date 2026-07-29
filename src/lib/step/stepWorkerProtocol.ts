@@ -4,6 +4,7 @@ export type StepWorkerRequest = {
   kind: "generate";
   requestId: string;
   snapshot: ArtSnapshot;
+  exportedAtIso: string;
 };
 
 export type StepWorkerResponse =
@@ -11,6 +12,9 @@ export type StepWorkerResponse =
       kind: "success";
       requestId: string;
       filename: string;
+      filenameStamp: string;
+      description: string;
+      exportedAtIso: string;
       buffer: ArrayBuffer;
     }
   | {
