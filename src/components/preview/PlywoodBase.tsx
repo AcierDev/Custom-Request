@@ -8,6 +8,11 @@ import { useEffect, useState, useMemo, memo } from "react";
 import * as THREE from "three";
 import { useFBX } from "@react-three/drei";
 import { useSpring, animated } from "@react-spring/three";
+import {
+  SQUARE_GAP_CONFIG,
+  getSquareGapSceneUnits,
+  getSquareGridSpanSceneUnits,
+} from "@/lib/squareGap";
 
 interface PlywoodBaseProps {
   width: number;
@@ -17,6 +22,7 @@ interface PlywoodBaseProps {
   adjustedModelWidth: number;
   adjustedModelHeight: number;
   useMini: boolean;
+  squareGapInches?: number;
 }
 
 const INCHES_PER_SCENE_UNIT = 6;
@@ -25,6 +31,9 @@ const BACKBOARD_INSET = BACKBOARD_INSET_INCHES / INCHES_PER_SCENE_UNIT;
 const HANGER_INCHES_FROM_TOP = 12;
 const HANGER_OFFSET_FROM_TOP =
   HANGER_INCHES_FROM_TOP / INCHES_PER_SCENE_UNIT;
+const SECTION_CENTER_DIVISOR = 2;
+const FIRST_SECTION_START = 0;
+const SECTION_INDEX_OFFSET = 1;
 
 // Component to handle the hanger model - memoized to prevent unnecessary rerenders
 const HangerModel = memo(
@@ -167,6 +176,7 @@ export function PlywoodBase({
   adjustedModelWidth,
   adjustedModelHeight,
   useMini,
+  squareGapInches = SQUARE_GAP_CONFIG.defaultInches,
 }: PlywoodBaseProps) {
   // Load unconditionally — hooks must run on every render (a conditional
   // useLoader breaks the rules of hooks and crashes when the wood-grain
@@ -185,10 +195,21 @@ export function PlywoodBase({
     // Use the same squareSpacing factor as in GeometricPattern
     const squareSpacing = useMini ? 0.9 : 1;
     const baseThickness = 0.07;
+    const squareWidth = squareSize * squareSpacing;
+    const squareStride =
+      squareWidth + getSquareGapSceneUnits(squareGapInches);
 
     // Compute accurate dimensions using the same calculation as the geometric pattern
-    const totalWidth = adjustedModelWidth * squareSize * squareSpacing;
-    const totalHeight = adjustedModelHeight * squareSize * squareSpacing;
+    const totalWidth = getSquareGridSpanSceneUnits(
+      adjustedModelWidth,
+      squareWidth,
+      squareGapInches
+    );
+    const totalHeight = getSquareGridSpanSceneUnits(
+      adjustedModelHeight,
+      squareWidth,
+      squareGapInches
+    );
 
     const offsetX = -totalWidth / 2 - 0.25 + (useMini ? 0.03 : 0);
     const offsetY = -totalHeight / 2 - 0.25 + (useMini ? 0.03 : 0);
@@ -197,11 +218,13 @@ export function PlywoodBase({
     const centerX =
       offsetX +
       squareSize / 2 +
-      ((adjustedModelWidth - 1) * squareSize * squareSpacing) / 2;
+      ((adjustedModelWidth - SECTION_INDEX_OFFSET) * squareStride) /
+        SECTION_CENTER_DIVISOR;
     const centerY =
       offsetY +
       squareSize / 2 +
-      ((adjustedModelHeight - 1) * squareSize * squareSpacing) / 2;
+      ((adjustedModelHeight - SECTION_INDEX_OFFSET) * squareStride) /
+        SECTION_CENTER_DIVISOR;
 
     // Calculate split points based on square positions like in GeometricPattern
     const oneThirdWidth = Math.floor(adjustedModelWidth / 3);
@@ -212,24 +235,41 @@ export function PlywoodBase({
     const centerSectionSquares = twoThirdsWidth - oneThirdWidth;
     const rightSectionSquares = adjustedModelWidth - twoThirdsWidth;
 
-    // Calculate widths based on square counts
-    const leftPanelWidth = leftSectionSquares * squareSize * squareSpacing;
-    const centerPanelWidth = centerSectionSquares * squareSize * squareSpacing;
-    const rightPanelWidth = rightSectionSquares * squareSize * squareSpacing;
-
-    // Calculate panel positions
-    const leftPanelX =
-      offsetX +
-      squareSize / 2 +
-      (leftSectionSquares * squareSize * squareSpacing) / 2;
-    const centerPanelX =
-      offsetX + squareSize / 2 + leftPanelWidth + centerPanelWidth / 2;
-    const rightPanelX =
-      offsetX +
-      squareSize / 2 +
-      leftPanelWidth +
-      centerPanelWidth +
-      rightPanelWidth / 2;
+    const firstSquareCenterX = offsetX + squareSize / 2;
+    const getSectionMetrics = (start: number, count: number) => {
+      const end = start + count;
+      const leftEdge =
+        start === FIRST_SECTION_START
+          ? firstSquareCenterX - squareWidth / SECTION_CENTER_DIVISOR
+          : firstSquareCenterX +
+            (start -
+              SECTION_INDEX_OFFSET / SECTION_CENTER_DIVISOR) *
+              squareStride;
+      const rightEdge =
+        end === adjustedModelWidth
+          ? firstSquareCenterX +
+            (adjustedModelWidth - SECTION_INDEX_OFFSET) * squareStride +
+            squareWidth / SECTION_CENTER_DIVISOR
+          : firstSquareCenterX +
+            (end - SECTION_INDEX_OFFSET / SECTION_CENTER_DIVISOR) *
+              squareStride;
+      return {
+        center: (leftEdge + rightEdge) / SECTION_CENTER_DIVISOR,
+        width: rightEdge - leftEdge,
+      };
+    };
+    const leftSection = getSectionMetrics(
+      FIRST_SECTION_START,
+      leftSectionSquares
+    );
+    const centerSection = getSectionMetrics(
+      leftSectionSquares,
+      centerSectionSquares
+    );
+    const rightSection = getSectionMetrics(
+      twoThirdsWidth,
+      rightSectionSquares
+    );
 
     const driftDistance = squareSize * 2; // Scale drift by square size to match geometric pattern
 
@@ -239,15 +279,21 @@ export function PlywoodBase({
       totalHeight,
       centerX,
       centerY,
-      leftPanelX,
-      centerPanelX,
-      rightPanelX,
-      leftPanelWidth,
-      centerPanelWidth,
-      rightPanelWidth,
+      leftPanelX: leftSection.center,
+      centerPanelX: centerSection.center,
+      rightPanelX: rightSection.center,
+      leftPanelWidth: leftSection.width,
+      centerPanelWidth: centerSection.width,
+      rightPanelWidth: rightSection.width,
       driftDistance,
     };
-  }, [adjustedModelWidth, adjustedModelHeight, squareSize, useMini]);
+  }, [
+    adjustedModelWidth,
+    adjustedModelHeight,
+    squareSize,
+    squareGapInches,
+    useMini,
+  ]);
 
   // Destructure memoized values
   const {

@@ -33,9 +33,11 @@ import {
   Circle,
   EyeOff,
   Trash2,
+  SlidersHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ItemDesigns } from "@/typings/types";
+import { SQUARE_GAP_OPTIONS } from "@/lib/squareGap";
 import { AiPatternPrompt } from "./AiPatternPrompt";
 import { PatternHistoryControls } from "./PatternHistoryControls";
 
@@ -75,6 +77,7 @@ const SINGULAR_SQUARE_COUNT = 1;
 const MINIMUM_REPLACE_COLOR_COUNT = 2;
 const MISSING_PALETTE_INDEX = -1;
 const PATTERN_EDITOR_CONTENT_ID = "viewer-pattern-editor-controls";
+const EXTRA_OPTIONS_CONTENT_ID = "viewer-pattern-editor-extra-options";
 const COMPACT_ACTION_BUTTON_CLASS = "h-7 px-2 text-xs";
 const COMPACT_ACTION_ICON_CLASS = "mr-1 h-3 w-3";
 const DIRECTION_HEADER_CLASS = "flex items-center justify-between gap-2";
@@ -115,6 +118,10 @@ export function PatternEditor({ className }: PatternEditorProps) {
   const patternHiddenOverride = useCustomStore(
     (s) => s.patternHiddenOverride
   );
+  const squareGapInches = useCustomStore(
+    (s) => s.viewSettings.squareGapInches
+  );
+  const setSquareGapInches = useCustomStore((s) => s.setSquareGapInches);
   const clearPatternDirectionOverride = useCustomStore(
     (s) => s.clearPatternDirectionOverride
   );
@@ -148,6 +155,7 @@ export function PatternEditor({ className }: PatternEditorProps) {
   const setPinnedColorInfo = useStore(hoverStore, (s) => s.setPinnedInfo);
 
   const [isCollapsed, setIsCollapsed] = useState(true);
+  const [isExtraOptionsOpen, setIsExtraOptionsOpen] = useState(false);
   const [isReplaceMode, setIsReplaceMode] = useState(false);
   const [replaceSourceIndex, setReplaceSourceIndex] = useState<number | null>(
     null
@@ -887,6 +895,70 @@ export function PatternEditor({ className }: PatternEditorProps) {
             </div>
 
             <PatternHistoryControls />
+
+            {/* Extra Options */}
+            <div className="overflow-hidden rounded-xl border border-white/10 bg-slate-950/30">
+              <button
+                type="button"
+                className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-sm text-slate-200 transition-colors hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-400/60"
+                onClick={() => setIsExtraOptionsOpen((isOpen) => !isOpen)}
+                aria-expanded={isExtraOptionsOpen}
+                aria-controls={EXTRA_OPTIONS_CONTENT_ID}
+              >
+                <span className="flex items-center gap-2 font-medium">
+                  <SlidersHorizontal className="h-3.5 w-3.5 text-indigo-300" />
+                  Extra Options
+                </span>
+                <ChevronDown
+                  className={cn(
+                    "h-4 w-4 text-slate-400 transition-transform",
+                    isExtraOptionsOpen && "rotate-180"
+                  )}
+                />
+              </button>
+
+              {isExtraOptionsOpen && (
+                <div
+                  id={EXTRA_OPTIONS_CONTENT_ID}
+                  className="space-y-2.5 border-t border-white/10 px-3 py-3"
+                >
+                  <div>
+                    <p className="text-xs font-medium text-slate-300">
+                      Square gaps
+                    </p>
+                    <p className="mt-0.5 text-[0.7rem] text-slate-500">
+                      Physical space between every square
+                    </p>
+                  </div>
+                  <div
+                    className="grid grid-cols-5 gap-1 rounded-full border border-white/10 bg-slate-950/70 p-1"
+                    role="group"
+                    aria-label="Square gap size"
+                  >
+                    {SQUARE_GAP_OPTIONS.map((option) => {
+                      const isSelected = squareGapInches === option.value;
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          className={cn(
+                            "rounded-full px-1.5 py-1.5 text-[0.68rem] font-medium transition-all",
+                            isSelected
+                              ? "bg-indigo-500 text-white shadow-md shadow-indigo-950/40"
+                              : "text-slate-400 hover:bg-white/5 hover:text-slate-200"
+                          )}
+                          onClick={() => setSquareGapInches(option.value)}
+                          aria-label={option.accessibleLabel}
+                          aria-pressed={isSelected}
+                        >
+                          {option.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Instructions */}
             {!isReplaceMode && (

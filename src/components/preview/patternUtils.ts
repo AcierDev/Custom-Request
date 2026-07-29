@@ -8,6 +8,10 @@ import type {
 import { DESIGN_COLORS } from "@/typings/color-maps";
 import { ItemDesigns } from "@/typings/types";
 import { GRAIN_ATLAS } from "./woodStyles";
+import {
+  SQUARE_GAP_CONFIG,
+  getSquareGridSpanSceneUnits,
+} from "@/lib/squareGap";
 
 /**
  * Shared types for pattern components
@@ -1143,7 +1147,8 @@ export function calculateSquareLayout(
   squareSize: number,
   squareSpacing: number,
   useMini: boolean = false,
-  exactCount: boolean = false
+  exactCount: boolean = false,
+  squareGapInches: number = SQUARE_GAP_CONFIG.defaultInches
 ) {
   // Calculate adjusted dimensions for mini mode
   const adjustedModelWidth =
@@ -1152,8 +1157,17 @@ export function calculateSquareLayout(
     useMini && !exactCount ? Math.ceil(modelHeight * 1.1) : modelHeight;
 
   // Calculate total dimensions based on actual square spacing
-  const totalWidth = adjustedModelWidth * squareSize * squareSpacing;
-  const totalHeight = adjustedModelHeight * squareSize * squareSpacing;
+  const squareWidth = squareSize * squareSpacing;
+  const totalWidth = getSquareGridSpanSceneUnits(
+    adjustedModelWidth,
+    squareWidth,
+    squareGapInches
+  );
+  const totalHeight = getSquareGridSpanSceneUnits(
+    adjustedModelHeight,
+    squareWidth,
+    squareGapInches
+  );
 
   // Calculate offsets with adjustment for mini mode
   const offsetX = -totalWidth / 2 - 0.25 + (useMini ? 0.03 : 0);

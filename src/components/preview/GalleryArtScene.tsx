@@ -34,6 +34,7 @@ import {
   PANEL_LAYOUT_CONFIG,
   getInstalledArtWidthSceneUnits,
 } from "@/lib/panelLayout";
+import { getSquareGapExpansionSceneUnits } from "@/lib/squareGap";
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ 🖼️ GALLERY ART SCENE — read-only gallery render of a fixed piece      ║
@@ -445,6 +446,9 @@ export function GalleryArtScene({
   const panelSpacingInches = useCustomStore(
     (s) => s.viewSettings.panelSpacingInches
   );
+  const squareGapInches = useCustomStore(
+    (s) => s.viewSettings.squareGapInches
+  );
 
   const currentWallColor = wallColor || WALL_COLOR;
   const sceneW = ROOM_REF_WIDTH;
@@ -453,10 +457,14 @@ export function GalleryArtScene({
     ? panelCount
     : PANEL_LAYOUT_CONFIG.singleCount;
   const installedArtWidth = getInstalledArtWidthSceneUnits(
-    dimensions.width * ART_SCENE_UNITS_PER_SQUARE,
+    dimensions.width * ART_SCENE_UNITS_PER_SQUARE +
+      getSquareGapExpansionSceneUnits(dimensions.width, squareGapInches),
     activePanelCount,
     panelSpacingInches
   );
+  const installedArtHeight =
+    dimensions.height * ART_SCENE_UNITS_PER_SQUARE +
+    getSquareGapExpansionSceneUnits(dimensions.height, squareGapInches);
 
   const { artCenterX, displayArtCenterX, bookcaseFill } = useMemo(
     () => computeArtLayout(dimensions.width, showRoom),
@@ -589,7 +597,7 @@ export function GalleryArtScene({
           {showRuler && (
             <Ruler3D
               width={installedArtWidth}
-              height={dimensions.height * 0.5}
+              height={installedArtHeight}
             />
           )}
         </group>
@@ -599,7 +607,9 @@ export function GalleryArtScene({
             artWidthSquares={
               installedArtWidth / ART_SCENE_UNITS_PER_SQUARE
             }
-            artHeightSquares={dimensions.height}
+            artHeightSquares={
+              installedArtHeight / ART_SCENE_UNITS_PER_SQUARE
+            }
             baseDistance={showRoom ? fitMaxDistance : undefined}
             bounds={showRoom ? camBounds : null}
             collisionInset={ROOM_COLLISION_INSET}

@@ -40,6 +40,11 @@ import {
   getPanelForColumn,
   normalizePanelSpacingInches,
 } from "@/lib/panelLayout";
+import {
+  SQUARE_GAP_CONFIG,
+  getSquareGapSceneUnits,
+  normalizeSquareGapInches,
+} from "@/lib/squareGap";
 
 // Shown when Custom is selected with no palette colors and no drawn
 // pattern: every square renders this single dark blue.
@@ -229,6 +234,9 @@ function GeometricPatternComponent({
   const panelSpacingInches = useCustomStore(
     (s) => s.viewSettings.panelSpacingInches
   );
+  const storeSquareGapInches = useCustomStore(
+    (s) => s.viewSettings.squareGapInches
+  );
   const drawnPatternGrid = useCustomStore((s) => s.drawnPatternGrid);
   const drawnPatternGridSize = useCustomStore((s) => s.drawnPatternGridSize);
   const activeCustomMode = useCustomStore((s) => s.activeCustomMode);
@@ -274,6 +282,9 @@ function GeometricPatternComponent({
   const isReversed = customDesign?.isReversed ?? storeIsReversed;
   const isRotated = customDesign?.isRotated ?? storeIsRotated;
   const useMini = customDesign?.useMini ?? storeUseMini;
+  const squareGapInches = normalizeSquareGapInches(
+    customDesign?.squareGapInches ?? storeSquareGapInches
+  );
   const customPalette = nothingToPreview
     ? EMPTY_FALLBACK_PALETTE
     : customPaletteSource;
@@ -364,10 +375,11 @@ function GeometricPatternComponent({
         squareSize,
         squareSpacing,
         useMini,
-        isExactMiniSize(modelWidth, modelHeight)
+        isExactMiniSize(modelWidth, modelHeight),
+        squareGapInches
       ),
     };
-  }, [useMini, modelWidth, modelHeight]);
+  }, [useMini, modelWidth, modelHeight, squareGapInches]);
 
   const {
     squareSize,
@@ -379,6 +391,8 @@ function GeometricPatternComponent({
     offsetX,
     offsetY,
   } = layoutDetails;
+  const squareStride =
+    squareSize * squareSpacing + getSquareGapSceneUnits(squareGapInches);
 
   const currentGridWidth =
     hasDrawnPattern && drawnPatternGridSize
@@ -654,8 +668,8 @@ function GeometricPatternComponent({
         }
 
         // Calculate base position without drift
-        const baseXPos = x * squareSpacing * squareSize + offsetX + squareSize / 2;
-        const yPos = y * squareSpacing * squareSize + offsetY + squareSize / 2;
+        const baseXPos = x * squareStride + offsetX + squareSize / 2;
+        const yPos = y * squareStride + offsetY + squareSize / 2;
         const zPos = squareSize / 2 - (useMini ? 0.41 : 0.401);
 
         const isHorizontal = shouldBeHorizontal(x, y);
@@ -692,7 +706,12 @@ function GeometricPatternComponent({
             baseX: baseXPos,
             driftDir: driftDirForColumn(x),
             rotationZ: rotation,
-            scaleXY: squareSize * sizeScale * (1 + SQUARE_EDGE_OVERLAP),
+            scaleXY:
+              squareSize *
+              sizeScale *
+              (squareGapInches > SQUARE_GAP_CONFIG.defaultInches
+                ? 1
+                : 1 + SQUARE_EDGE_OVERLAP),
             scaleZ: squareSize * sizeScale,
             grainIndex: textureVariation.textureIndex,
           });
@@ -713,7 +732,9 @@ function GeometricPatternComponent({
     isReversed,
     isRotated,
     squareSpacing,
+    squareStride,
     squareSize,
+    squareGapInches,
     offsetX,
     offsetY,
     useMini,
@@ -926,7 +947,7 @@ function GeometricPatternComponent({
           isRotated ? 1 : 0
         }-${useMini ? 1 : 0}-${scatterEase ?? 50}-${scatterWidth ?? 10}-${
           scatterAmount ?? 50
-        }-${effectivePanelCount}-${panelSpacingInches}`}
+        }-${effectivePanelCount}-${panelSpacingInches}-${squareGapInches}`}
         rotation={[NO_AXIS_ROTATION, NO_AXIS_ROTATION, patternRotationZ]}
         position={[0, 0, 0]}
         onClick={showColorInfo ? handleGroupClick : undefined}
@@ -943,6 +964,7 @@ function GeometricPatternComponent({
               showWoodGrain={showWoodGrain}
               panelCount={effectivePanelCount}
               panelSpacingInches={panelSpacingInches}
+              squareGapInches={squareGapInches}
             />
           ) : (
             <PlywoodBase
@@ -953,6 +975,7 @@ function GeometricPatternComponent({
               adjustedModelWidth={adjustedModelWidth}
               adjustedModelHeight={adjustedModelHeight}
               useMini={useMini}
+              squareGapInches={squareGapInches}
             />
           ))}
 

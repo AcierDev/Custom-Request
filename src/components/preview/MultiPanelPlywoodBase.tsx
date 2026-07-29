@@ -8,6 +8,10 @@ import {
   buildPanelColumnLayout,
   normalizePanelSpacingInches,
 } from "@/lib/panelLayout";
+import {
+  getSquareGapSceneUnits,
+  getSquareGridSpanSceneUnits,
+} from "@/lib/squareGap";
 
 interface MultiPanelPlywoodBaseProps {
   squareSize: number;
@@ -17,6 +21,7 @@ interface MultiPanelPlywoodBaseProps {
   showWoodGrain?: boolean;
   panelCount: number;
   panelSpacingInches: number;
+  squareGapInches: number;
 }
 
 const FULL_SQUARE_SPACING = 1;
@@ -39,14 +44,25 @@ export function MultiPanelPlywoodBase({
   showWoodGrain = true,
   panelCount,
   panelSpacingInches,
+  squareGapInches,
 }: MultiPanelPlywoodBaseProps) {
   const texture = useTexture("/textures/plywood.jpg");
   const squareSpacing = useMini
     ? MINI_SQUARE_SPACING
     : FULL_SQUARE_SPACING;
-  const columnStride = squareSize * squareSpacing;
-  const totalWidth = adjustedModelWidth * columnStride;
-  const totalHeight = adjustedModelHeight * columnStride;
+  const squareWidth = squareSize * squareSpacing;
+  const columnStride =
+    squareWidth + getSquareGapSceneUnits(squareGapInches);
+  const totalWidth = getSquareGridSpanSceneUnits(
+    adjustedModelWidth,
+    squareWidth,
+    squareGapInches
+  );
+  const totalHeight = getSquareGridSpanSceneUnits(
+    adjustedModelHeight,
+    squareWidth,
+    squareGapInches
+  );
   const offsetX =
     -totalWidth / 2 +
     GRID_ORIGIN_OFFSET +
@@ -81,7 +97,12 @@ export function MultiPanelPlywoodBase({
       {panels.map((panel) => {
         const panelWidth = Math.max(
           MIN_PANEL_DIMENSION,
-          panel.columnCount * columnStride - 2 * BACKBOARD_INSET
+          getSquareGridSpanSceneUnits(
+            panel.columnCount,
+            squareWidth,
+            squareGapInches
+          ) -
+            2 * BACKBOARD_INSET
         );
         const baseCenterX =
           firstSquareCenterX +

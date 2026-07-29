@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "next lint",
     "test:palette-blend": "node --no-warnings --test src/app/palette/components/PaletteManager/paletteWideBlend.test.mjs",
+    "test:square-gap": "node --no-warnings --test src/lib/squareGap.test.mjs src/lib/urlUtils.test.mjs",
     "paints:sherwin": "node scripts/paints/import-sherwin.mjs",
     "paints:behr": "node scripts/paints/import-behr.mjs",
     "paints:valspar": "node scripts/paints/import-valspar.mjs",

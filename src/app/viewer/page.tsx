@@ -82,6 +82,7 @@ import {
   PANEL_LAYOUT_CONFIG,
   getInstalledArtWidthSceneUnits,
 } from "@/lib/panelLayout";
+import { getSquareGapExpansionSceneUnits } from "@/lib/squareGap";
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ 🎥 ROOM COLLISION                                                     ║
@@ -498,6 +499,9 @@ export default function DesignPage() {
   const panelSpacingInches = useCustomStore(
     (s) => s.viewSettings.panelSpacingInches
   );
+  const squareGapInches = useCustomStore(
+    (s) => s.viewSettings.squareGapInches
+  );
   const showUIControls = useCustomStore((s) => s.viewSettings.showUIControls);
   const wallColor = useCustomStore((s) => s.viewSettings.wallColor);
   const setShowUIControls = useCustomStore((s) => s.setShowUIControls);
@@ -511,10 +515,14 @@ export default function DesignPage() {
     ? panelCount
     : PANEL_LAYOUT_CONFIG.singleCount;
   const installedArtWidth = getInstalledArtWidthSceneUnits(
-    dimensions.width * ART_SCENE_UNITS_PER_SQUARE,
+    dimensions.width * ART_SCENE_UNITS_PER_SQUARE +
+      getSquareGapExpansionSceneUnits(dimensions.width, squareGapInches),
     activePanelCount,
     panelSpacingInches
   );
+  const installedArtHeight =
+    dimensions.height * ART_SCENE_UNITS_PER_SQUARE +
+    getSquareGapExpansionSceneUnits(dimensions.height, squareGapInches);
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [mobileOptionsOpen, setMobileOptionsOpen] = useState(false);
   const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>("afternoon");
@@ -682,13 +690,23 @@ export default function DesignPage() {
         ROOM_REF_WIDTH,
         ROOM_REF_HEIGHT,
         getInstalledArtWidthSceneUnits(
-          roomDims.width * ART_SCENE_UNITS_PER_SQUARE,
+          roomDims.width * ART_SCENE_UNITS_PER_SQUARE +
+            getSquareGapExpansionSceneUnits(
+              roomDims.width,
+              squareGapInches
+            ),
           activePanelCount,
           panelSpacingInches
         ),
         artCenterX
       ),
-    [roomDims.width, activePanelCount, panelSpacingInches, artCenterX]
+    [
+      roomDims.width,
+      squareGapInches,
+      activePanelCount,
+      panelSpacingInches,
+      artCenterX,
+    ]
   );
   // Ceiling-downlight position above the art so the overhead shadow drops
   // straight down the piece wherever it hangs.
@@ -892,7 +910,11 @@ export default function DesignPage() {
               width={ROOM_REF_WIDTH}
               height={ROOM_REF_HEIGHT}
               artWidth={getInstalledArtWidthSceneUnits(
-                roomDims.width * ART_SCENE_UNITS_PER_SQUARE,
+                roomDims.width * ART_SCENE_UNITS_PER_SQUARE +
+                  getSquareGapExpansionSceneUnits(
+                    roomDims.width,
+                    squareGapInches
+                  ),
                 activePanelCount,
                 panelSpacingInches
               )}
@@ -925,7 +947,7 @@ export default function DesignPage() {
           {showRuler && (
             <Ruler3D
               width={installedArtWidth}
-              height={dimensions.height * 0.5}
+              height={installedArtHeight}
             />
           )}
           </animated.group>
@@ -935,7 +957,9 @@ export default function DesignPage() {
             artWidthSquares={
               installedArtWidth / ART_SCENE_UNITS_PER_SQUARE
             }
-            artHeightSquares={dimensions.height}
+            artHeightSquares={
+              installedArtHeight / ART_SCENE_UNITS_PER_SQUARE
+            }
             baseDistance={showRoom ? fitMaxDistance : undefined}
             bounds={showRoom ? camBounds : null}
             collisionInset={ROOM_COLLISION_INSET}

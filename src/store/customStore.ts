@@ -28,6 +28,10 @@ import {
   normalizePanelCount,
   normalizePanelSpacingInches,
 } from "@/lib/panelLayout";
+import {
+  SQUARE_GAP_CONFIG,
+  normalizeSquareGapInches,
+} from "@/lib/squareGap";
 
 const DEFAULT_DEBOUNCE_DELAY_MS = 1_000;
 const STORE_PERSISTENCE_DEBOUNCE_MS = 2_000;
@@ -326,6 +330,7 @@ interface CustomState {
     showSplitPanel: boolean;
     panelCount: number;
     panelSpacingInches: number;
+    squareGapInches: number;
     showFPS: boolean;
     showUIControls: boolean;
     showRoom: boolean;
@@ -397,6 +402,7 @@ interface CustomStore extends CustomState {
   setShowSplitPanel: (value: boolean) => void;
   setPanelCount: (value: number) => void;
   setPanelSpacingInches: (value: number) => void;
+  setSquareGapInches: (value: number) => void;
   setShowFPS: (value: boolean) => void;
   setShowUIControls: (value: boolean) => void;
   setShowRoom: (value: boolean) => void;
@@ -452,6 +458,7 @@ interface CustomStore extends CustomState {
     useMini: boolean;
     panelCount: number;
     panelSpacingInches: number;
+    squareGapInches: number;
   };
   createSharedDesign: (
     userId?: string,
@@ -754,6 +761,7 @@ export interface ShareableState {
   patternHiddenOverride?: PatternHiddenOverrides;
   panelCount?: number;
   panelSpacingInches?: number;
+  squareGapInches?: number;
 }
 
 const resolveStoredPanelSettings = (
@@ -762,6 +770,7 @@ const resolveStoredPanelSettings = (
         showSplitPanel?: boolean;
         panelCount?: number;
         panelSpacingInches?: number;
+        squareGapInches?: number;
       }
     | null
     | undefined
@@ -785,6 +794,9 @@ const resolveStoredPanelSettings = (
     showSplitPanel: panelCount > PANEL_LAYOUT_CONFIG.singleCount,
     panelCount,
     panelSpacingInches,
+    squareGapInches: normalizeSquareGapInches(
+      settings?.squareGapInches ?? SQUARE_GAP_CONFIG.defaultInches
+    ),
   };
 };
 
@@ -797,6 +809,9 @@ const resolveSharedPanelSettings = (state: ShareableState) => {
     panelCount,
     panelSpacingInches: normalizePanelSpacingInches(
       state.panelSpacingInches ?? PANEL_LAYOUT_CONFIG.defaultSpacingInches
+    ),
+    squareGapInches: normalizeSquareGapInches(
+      state.squareGapInches ?? SQUARE_GAP_CONFIG.defaultInches
     ),
   };
 };
@@ -843,6 +858,7 @@ interface PersistentState extends ShareableState {
     showSplitPanel: boolean;
     panelCount: number;
     panelSpacingInches: number;
+    squareGapInches: number;
     showFPS: boolean;
     showUIControls: boolean;
     showRoom: boolean;
@@ -1257,6 +1273,7 @@ export const useCustomStore = create<CustomStore>()(
       showSplitPanel: false,
       panelCount: PANEL_LAYOUT_CONFIG.singleCount,
       panelSpacingInches: PANEL_LAYOUT_CONFIG.defaultSpacingInches,
+      squareGapInches: SQUARE_GAP_CONFIG.defaultInches,
       showFPS: false,
       showUIControls: true,
       showRoom: true,
@@ -1716,6 +1733,13 @@ export const useCustomStore = create<CustomStore>()(
         viewSettings: {
           ...state.viewSettings,
           panelSpacingInches: normalizePanelSpacingInches(value),
+        },
+      })),
+    setSquareGapInches: (value) =>
+      set((state) => ({
+        viewSettings: {
+          ...state.viewSettings,
+          squareGapInches: normalizeSquareGapInches(value),
         },
       })),
     setShowFPS: (value) =>
@@ -2478,6 +2502,9 @@ export const useCustomStore = create<CustomStore>()(
         panelSpacingInches: normalizePanelSpacingInches(
           state.viewSettings.panelSpacingInches
         ),
+        squareGapInches: normalizeSquareGapInches(
+          state.viewSettings.squareGapInches
+        ),
       };
     },
     getShareableDesignData: () => {
@@ -2502,6 +2529,9 @@ export const useCustomStore = create<CustomStore>()(
           : PANEL_LAYOUT_CONFIG.singleCount,
         panelSpacingInches: normalizePanelSpacingInches(
           state.viewSettings.panelSpacingInches
+        ),
+        squareGapInches: normalizeSquareGapInches(
+          state.viewSettings.squareGapInches
         ),
       };
     },

@@ -1,7 +1,9 @@
-import {
+import LZString from "lz-string";
+
+const {
   compressToEncodedURIComponent,
   decompressFromEncodedURIComponent,
-} from "lz-string";
+} = LZString;
 
 const SHORT_PATTERN_COLOR_OVERRIDES_KEY = "po";
 const SHORT_PATTERN_DIRECTION_OVERRIDES_KEY = "pdo";
@@ -13,6 +15,7 @@ const SHORT_SCATTER_WIDTH_KEY = "sw";
 const SHORT_SCATTER_AMOUNT_KEY = "sa";
 const SHORT_DRAWN_PATTERN_GRID_KEY = "pg";
 const SHORT_DRAWN_PATTERN_SIZE_KEY = "pgs";
+const SHORT_SQUARE_GAP_KEY = "sqg";
 const SHORT_BOOLEAN_FALSE = 0;
 const SHORT_BOOLEAN_TRUE = 1;
 
@@ -187,6 +190,9 @@ export const generateShortShareableUrl = (stateData: any): string => {
   if (typeof stateData.scatterAmount === "number") {
     minimalState[SHORT_SCATTER_AMOUNT_KEY] = stateData.scatterAmount;
   }
+  if (typeof stateData.squareGapInches === "number") {
+    minimalState[SHORT_SQUARE_GAP_KEY] = stateData.squareGapInches;
+  }
   if (stateData.drawnPatternGrid && stateData.drawnPatternGridSize) {
     minimalState[SHORT_DRAWN_PATTERN_GRID_KEY] = stateData.drawnPatternGrid;
     minimalState[SHORT_DRAWN_PATTERN_SIZE_KEY] = [
@@ -316,6 +322,9 @@ export const extractStateFromShortUrl = <T>(compressedData: string): T => {
     }
     if (minimalState[SHORT_SCATTER_AMOUNT_KEY] !== undefined) {
       fullState.scatterAmount = minimalState[SHORT_SCATTER_AMOUNT_KEY];
+    }
+    if (minimalState[SHORT_SQUARE_GAP_KEY] !== undefined) {
+      fullState.squareGapInches = minimalState[SHORT_SQUARE_GAP_KEY];
     }
     if (
       minimalState[SHORT_DRAWN_PATTERN_GRID_KEY] &&
