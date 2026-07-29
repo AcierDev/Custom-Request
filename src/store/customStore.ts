@@ -35,6 +35,7 @@ import {
   PALETTE_BLEND_CONFIG,
   normalizePaletteBlendPercent,
 } from "@/lib/paletteBlend";
+import { markPaletteOpened } from "@/lib/paletteRecency";
 
 const DEFAULT_DEBOUNCE_DELAY_MS = 1_000;
 const STORE_PERSISTENCE_DEBOUNCE_MS = 2_000;
@@ -268,6 +269,7 @@ export interface SavedPalette {
   colors: CustomColor[];
   createdAt: string;
   updatedAt?: string;
+  lastOpenedAt?: string;
   folderId?: string;
   isPublic?: boolean;
   // Full version history. Optional for backward-compat with palettes
@@ -1997,12 +1999,18 @@ export const useCustomStore = create<CustomStore>()(
       set((state) => {
         const palette = state.savedPalettes.find((p) => p.id === paletteId);
         if (!palette) return state;
+        const openedAt = new Date().toISOString();
 
         return {
           customPalette: [...palette.colors],
           selectedDesign: ItemDesigns.Custom,
           currentColors: createColorMap(palette.colors),
           editingPaletteId: paletteId,
+          savedPalettes: markPaletteOpened(
+            state.savedPalettes,
+            paletteId,
+            openedAt,
+          ),
           patternOverride: { ...(palette.patternOverride ?? {}) },
           patternDirectionOverride: {
             ...(palette.patternDirectionOverride ?? {}),
@@ -2020,11 +2028,17 @@ export const useCustomStore = create<CustomStore>()(
         const palette = state.savedPalettes.find((p) => p.id === paletteId);
         const version = palette?.versions?.find((v) => v.id === versionId);
         if (!palette || !version) return state;
+        const openedAt = new Date().toISOString();
 
         return {
           customPalette: [...version.colors],
           selectedDesign: ItemDesigns.Custom,
           currentColors: createColorMap(version.colors),
+          savedPalettes: markPaletteOpened(
+            state.savedPalettes,
+            paletteId,
+            openedAt,
+          ),
           patternOverride: { ...(palette.patternOverride ?? {}) },
           patternDirectionOverride: {
             ...(palette.patternDirectionOverride ?? {}),
@@ -2106,6 +2120,7 @@ export const useCustomStore = create<CustomStore>()(
         if (!viewerVersion) return state;
 
         const colors = cloneCustomColors(viewerVersion.colors);
+        const openedAt = new Date().toISOString();
         return {
           customPalette: colors,
           selectedDesign: ItemDesigns.Custom,
@@ -2139,6 +2154,13 @@ export const useCustomStore = create<CustomStore>()(
           patternUndoStack: [],
           patternRedoStack: [],
           editingPaletteId: palette ? palette.id : state.editingPaletteId,
+          savedPalettes: palette
+            ? markPaletteOpened(
+                state.savedPalettes,
+                palette.id,
+                openedAt,
+              )
+            : state.savedPalettes,
           paletteHistory: [colors],
           paletteHistoryIndex: ARRAY_START_INDEX,
         };
@@ -2219,6 +2241,7 @@ export const useCustomStore = create<CustomStore>()(
       set((state) => {
         const palette = state.savedPalettes.find((p) => p.id === paletteId);
         if (!palette) return state;
+        const openedAt = new Date().toISOString();
 
         // Ensure all colors have IDs
         const colorsWithIds = palette.colors.map((c) => ({
@@ -2236,6 +2259,11 @@ export const useCustomStore = create<CustomStore>()(
           currentColors: createColorMap(colorsWithIds),
           selectedColors: [],
           editingPaletteId: paletteId,
+          savedPalettes: markPaletteOpened(
+            state.savedPalettes,
+            paletteId,
+            openedAt,
+          ),
           patternOverride: { ...(palette.patternOverride ?? {}) },
           patternDirectionOverride: {
             ...(palette.patternDirectionOverride ?? {}),
@@ -2249,7 +2277,17 @@ export const useCustomStore = create<CustomStore>()(
           paletteHistoryIndex: 0,
         };
       }),
-    setEditingPaletteId: (id) => set({ editingPaletteId: id }),
+    setEditingPaletteId: (id) =>
+      set((state) => ({
+        editingPaletteId: id,
+        savedPalettes: id
+          ? markPaletteOpened(
+              state.savedPalettes,
+              id,
+              new Date().toISOString(),
+            )
+          : state.savedPalettes,
+      })),
     updateColorName: (index, name) =>
       set((state) => {
         if (index < 0 || index >= state.customPalette.length) return state;

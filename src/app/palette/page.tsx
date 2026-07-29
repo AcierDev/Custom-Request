@@ -6,6 +6,7 @@ import { nanoid } from "nanoid";
 import { useCustomStore, type CustomColor } from "@/store/customStore";
 import { PaletteManager } from "./components/PaletteManager";
 import { PaletteList } from "./components/PaletteList";
+import { ExistingPalettePicker } from "./components/ExistingPalettePicker";
 import { OfficialPalettes } from "./components/OfficialPalettes";
 import { ImageColorExtractor } from "./components/ImageColorExtractor";
 import { Button } from "@/components/ui/button";
@@ -226,6 +227,14 @@ export default function PalettePage() {
   // in-progress palette to an existing one as its next version.
   const [saveMode, setSaveMode] = useState<"new" | "existing">("new");
   const [connectTargetId, setConnectTargetId] = useState("");
+  const [connectSearchQuery, setConnectSearchQuery] = useState("");
+  const connectSearchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isSaveDialogOpen && saveMode === "existing") {
+      connectSearchInputRef.current?.focus();
+    }
+  }, [isSaveDialogOpen, saveMode]);
 
   // On load, return to whichever tab the user last had open (persisted
   // per-browser). Only a genuinely fresh start — no remembered tab and no
@@ -1245,6 +1254,11 @@ export default function PalettePage() {
       // Switch to the saved palettes tab
       setActiveTab("saved");
     }
+  };
+
+  const handleConnectSearchQueryChange = (query: string) => {
+    setConnectSearchQuery(query);
+    setConnectTargetId("");
   };
 
   // "Create Palette" from the Saved tab = start a brand-new palette. Never
@@ -2351,6 +2365,7 @@ export default function PalettePage() {
                             // opts in to connecting to an existing palette.
                             setSaveMode("new");
                             setConnectTargetId("");
+                            setConnectSearchQuery("");
                           }
                         }}
                       >
@@ -2436,31 +2451,16 @@ export default function PalettePage() {
                             </div>
                           ) : (
                             <div className="space-y-2">
-                              <Label htmlFor="connect-target">
-                                Connect to palette
-                              </Label>
-                              <select
-                                id="connect-target"
-                                value={connectTargetId}
-                                onChange={(e) =>
-                                  setConnectTargetId(e.target.value)
+                              <ExistingPalettePicker
+                                palettes={savedPalettes}
+                                query={connectSearchQuery}
+                                selectedId={connectTargetId}
+                                searchInputRef={connectSearchInputRef}
+                                onQueryChange={
+                                  handleConnectSearchQueryChange
                                 }
-                                className="h-9 w-full rounded-md border border-slate-700 bg-slate-900 px-2 text-sm text-slate-200"
-                              >
-                                <option value="">
-                                  Select a saved palette…
-                                </option>
-                                {savedPalettes.map((p) => (
-                                  <option key={p.id} value={p.id}>
-                                    {p.name} (
-                                    {(p.versions?.length ?? 1)}{" "}
-                                    {(p.versions?.length ?? 1) === 1
-                                      ? "version"
-                                      : "versions"}
-                                    )
-                                  </option>
-                                ))}
-                              </select>
+                                onSelect={setConnectTargetId}
+                              />
                               <p className="text-xs text-slate-400">
                                 Saves these colors as the next version of
                                 the chosen palette.
