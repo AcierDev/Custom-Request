@@ -1,4 +1,5 @@
 import { Dimensions, ItemSizes } from "@/typings/types";
+import { PHYSICAL_SIZE_CONFIG } from "@/lib/sizeLabels";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -6,7 +7,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export const SQUARE_SIZE = 3; // inches
+export const SQUARE_SIZE = PHYSICAL_SIZE_CONFIG.inchesPerSquare;
 
 export const getDimensionsDetails = (dimensions: Dimensions | null) => {
   if (!dimensions) return null;

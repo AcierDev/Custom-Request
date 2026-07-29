@@ -28,6 +28,7 @@ import {
   SizeTilePrefix,
   parseSizeWh,
   sizePillFullClass,
+  sizeToFeetWideLabel,
   sizeToInchLabel,
 } from "@/lib/size-pills";
 import { SQUARE_SIZE } from "@/lib/utils";
@@ -35,19 +36,20 @@ import { SQUARE_SIZE } from "@/lib/utils";
 const sizeOptions = [...Object.values(ItemSizes), "custom"];
 
 type Unit = "squares" | "inches" | "feet";
+type SizeLabelMode = "squares" | "inches" | "feet-wide";
 
 interface SizeCardProps {
   compact?: boolean;
   /** Render only the trigger/popover without the surrounding glass Card. */
   bare?: boolean;
-  /** Show every size label in inches (height″ × width″) instead of squares. */
-  inchLabels?: boolean;
+  /** Controls the visible labels in the compact size picker. */
+  labelMode?: SizeLabelMode;
 }
 
 export function SizeCard({
   compact = false,
   bare = false,
-  inchLabels = false,
+  labelMode = "squares",
 }: SizeCardProps) {
   const { dimensions, setDimensions } = useCustomStore();
   const [customWidth, setCustomWidth] = useState(dimensions.width.toString());
@@ -136,7 +138,7 @@ export function SizeCard({
   };
 
   if (compact) {
-    return <CompactSizeCard bare={bare} inchLabels={inchLabels} />;
+    return <CompactSizeCard bare={bare} labelMode={labelMode} />;
   }
 
   return (
@@ -290,10 +292,10 @@ function groupSizesByHeight(sizes: ItemSizes[]) {
 
 function CompactSizeCard({
   bare = false,
-  inchLabels = false,
+  labelMode = "squares",
 }: {
   bare?: boolean;
-  inchLabels?: boolean;
+  labelMode?: SizeLabelMode;
 }) {
   const { dimensions, setDimensions } = useCustomStore();
   const [isOpen, setIsOpen] = useState(false);
@@ -309,12 +311,16 @@ function CompactSizeCard({
     }) as ItemSizes | undefined) ?? "custom";
 
   // The squares string drives the pill color + dot-grid prefix; only the
-  // visible text flips to inches so the colorful tiles stay intact.
+  // visible label changes so the colorful tiles stay intact.
   const triggerSize =
     currentSize === "custom"
       ? `${dimensions.width} x ${dimensions.height}`
       : currentSize;
-  const fmt = (size: string) => (inchLabels ? sizeToInchLabel(size) : size);
+  const fmt = (size: string) => {
+    if (labelMode === "inches") return sizeToInchLabel(size);
+    if (labelMode === "feet-wide") return sizeToFeetWideLabel(size);
+    return size;
+  };
   const triggerLabel = fmt(triggerSize);
 
   const grouped = groupSizesByHeight(Object.values(ItemSizes));
@@ -324,7 +330,7 @@ function CompactSizeCard({
   // In inch mode the typed numbers are inches; convert to the square counts
   // the model actually uses (SQUARE_SIZE″ per square).
   const customSquares = parsedCustom
-    ? inchLabels
+    ? labelMode === "inches"
       ? {
           w: Math.max(1, Math.round(parsedCustom.w / SQUARE_SIZE)),
           h: Math.max(1, Math.round(parsedCustom.h / SQUARE_SIZE)),
@@ -376,9 +382,9 @@ function CompactSizeCard({
                 }
               }}
               placeholder={
-                inchLabels
+                labelMode === "inches"
                   ? `Custom size in inches (e.g. 30" x 48")`
-                  : "Custom size (e.g. 30 x 14)"
+                  : "Custom size in squares (e.g. 30 x 14)"
               }
               className="box-border block w-full min-w-0 px-3 h-8 rounded-md text-sm bg-gray-800 text-gray-100 placeholder:text-gray-400 border border-white/10 focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
@@ -397,7 +403,9 @@ function CompactSizeCard({
             {grouped.map(([height, sizes]) => (
               <div key={height}>
                 <div className="text-[0.625rem] font-semibold uppercase tracking-wider text-slate-400 mb-1.5 px-0.5">
-                  {inchLabels ? `${height * SQUARE_SIZE}" Tall` : `${height} Tall`}
+                  {labelMode === "squares"
+                    ? `${height} Tall`
+                    : `${height * SQUARE_SIZE}" Tall`}
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {sizes.map((size) => {

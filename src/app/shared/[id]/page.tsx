@@ -8,7 +8,6 @@ import {
   Check,
   Eye,
   EyeOff,
-  ArrowRight,
   ImageOff,
   X,
   Info,
@@ -31,7 +30,7 @@ import { DESIGN_COLORS } from "@/typings/color-maps";
 import { ItemDesigns } from "@/typings/types";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { cn } from "@/lib/utils";
-import { sizeToInchLabel } from "@/lib/size-pills";
+import { sizeToFeetWideLabel } from "@/lib/size-pills";
 import { decompressJsonFromUrl } from "@/lib/urlUtils";
 import { ARButton } from "@/components/ARButton";
 import { useFourAngleImageDownload } from "@/hooks/useFourAngleImageDownload";
@@ -40,10 +39,6 @@ import { useFourAngleImageDownload } from "@/hooks/useFourAngleImageDownload";
 //║ 🔗 CONSTANTS                                                          ║
 //╚═══╝ ════════════════════════════════════════════════════════════════ ╚═══╝
 
-// Where "Design your own" sends a warm lead. The builder accepts no
-// share-id pre-seed today, so we drop them at the front door rather than
-// fabricate a link that wouldn't load this piece.
-const BUILDER_URL = "https://custom.everwood.shop";
 // Network requests that hang shouldn't strand the recipient on a loader.
 const FETCH_TIMEOUT_MS = 10000;
 const SHARED_IMAGE_EXPORT_FILENAME = "shared-art-four-angles.png";
@@ -505,11 +500,8 @@ export default function SharedDesignPage() {
 
 function BrandPill() {
   return (
-    <a
-      href={BUILDER_URL}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="group flex items-center gap-2.5 rounded-full glass-surface px-3.5 py-2 shadow-lg transition-colors hover:border-white/30"
+    <div
+      className="flex items-center gap-2.5 rounded-full glass-surface px-3.5 py-2 shadow-lg"
     >
       <span className="grid h-6 w-6 place-items-center rounded-full bg-gradient-to-br from-amber-300/90 to-amber-600/90 text-[11px] font-bold text-amber-950 shadow-inner">
         E
@@ -522,7 +514,7 @@ function BrandPill() {
           Shared with you
         </span>
       </span>
-    </a>
+    </div>
   );
 }
 
@@ -693,7 +685,7 @@ function ViewingControls({
     <div className="space-y-3">
       <div className="glass-surface rounded-[0.7rem] p-3 shadow-lg">
         <div className="mb-2 text-sm text-slate-300">See it at another size</div>
-        <SizeCard compact bare inchLabels />
+        <SizeCard compact bare labelMode="feet-wide" />
       </div>
       <PatternControls />
       <LightingControls value={timeOfDay} onChange={onTimeOfDay} />
@@ -722,38 +714,20 @@ function CtaBar({
   onCopy: () => void;
   onDetails: () => void;
 }) {
-  const designOwn = (
-    <a
-      href={BUILDER_URL}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={cn(
-        "group inline-flex items-center justify-center gap-2 rounded-full bg-indigo-600 font-medium text-white shadow-lg shadow-indigo-900/30 ring-1 ring-indigo-400/40 transition-colors hover:bg-indigo-500",
-        isMobile ? "h-11 flex-1 px-5 text-sm" : "h-10 px-5 text-sm"
-      )}
-    >
-      Design your own
-      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-    </a>
-  );
-
   if (isMobile) {
     return (
       <div className="flex flex-col gap-2">
         {/* iOS-mobile-only (renders null elsewhere): hang this exact piece,
             life-size, on the viewer's own wall via AR Quick Look. */}
         <ARButton variant="shared" className="w-full" />
-        <div className="flex items-center gap-2">
-          {designOwn}
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={onDetails}
-            className="h-11 rounded-full glass-surface px-4 text-sm text-slate-200 hover:bg-gray-900/50"
-          >
-            Details
-          </Button>
-        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={onDetails}
+          className="h-11 w-full rounded-full glass-surface px-4 text-sm text-slate-200 hover:bg-gray-900/50"
+        >
+          Details
+        </Button>
       </div>
     );
   }
@@ -841,25 +815,16 @@ function ErrorState({
             ? "The shared link may have expired or been removed."
             : "Check your connection and try again."}
         </p>
-        <div className="mt-6 flex flex-col gap-2.5">
-          {!notFound && (
+        {!notFound && (
+          <div className="mt-6 flex flex-col gap-2.5">
             <Button
               onClick={onRetry}
               className="bg-white/10 text-white hover:bg-white/15"
             >
               Try again
             </Button>
-          )}
-          <a
-            href={BUILDER_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group inline-flex h-10 items-center justify-center gap-2 rounded-md bg-indigo-600 px-5 text-sm font-medium text-white ring-1 ring-indigo-400/40 transition-colors hover:bg-indigo-500"
-          >
-            Design your own
-            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-          </a>
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -884,12 +849,11 @@ function designName(selectedDesign: string): string {
 }
 
 /**
- * Real-world size label, always in inches. `dimensions` are SQUARE COUNTS
- * (3″ per square), shown height-first to match the catalog convention
- * (e.g. 16×10 squares → `30" × 48"`).
+ * Customer-facing width label. `dimensions` are square counts; the shared
+ * viewer intentionally presents physical width in feet.
  */
 function sizeLabel(width: number, height: number): string {
-  return sizeToInchLabel(`${width} x ${height}`);
+  return sizeToFeetWideLabel(`${width} x ${height}`);
 }
 
 /** Build the placard palette for both custom palettes and official designs. */

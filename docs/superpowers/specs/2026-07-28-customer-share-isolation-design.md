@@ -12,7 +12,7 @@ Keep a customer who opens a shared-art URL inside the standalone art viewer and 
 - Keep customer-only actions: copy link, save image, AR, details, pattern, lighting, and wall color.
 - Show the current artwork size and every size-selector option as width only:
   - `16 x 10` → `4 ft wide`
-  - `14 x 7` → `3.5 ft wide`
+  - `14 x 7` mini panel → `3 ft wide`
   - `40 x 16` → `10 ft wide`
 - The shared selector does not show inch-pair labels or height-group inch labels.
 - Editor size controls retain their existing labels and custom-size behavior.

@@ -1,7 +1,17 @@
 "use client";
 
 import { ItemSizes } from "@/typings/types";
-import { SQUARE_SIZE } from "@/lib/utils";
+import {
+  parseSizeWh,
+  sizeToFeetWideLabel,
+  sizeToInchLabel,
+} from "@/lib/sizeLabels";
+
+export {
+  parseSizeWh,
+  sizeToFeetWideLabel,
+  sizeToInchLabel,
+} from "@/lib/sizeLabels";
 
 const SIZE_TONE_BASE =
   "shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_1px_2px_rgba(0,0,0,0.10)] [text-shadow:_0_1px_2px_rgb(0_0_0_/_48%)] text-white";
@@ -19,28 +29,6 @@ const SIZE_BG_INCH = "bg-[#4a2e1b]";
 
 const KNOWN_HEIGHTS = [6, 7, 10, 12, 16] as const;
 const KNOWN_SIZES = new Set<string>(Object.values(ItemSizes));
-
-export function parseSizeWh(
-  size: string | undefined | null,
-): { w: number; h: number } | null {
-  const m = size?.trim().match(/^(\d+)\s*[x×X]\s*(\d+)$/);
-  if (!m) return null;
-  const w = parseInt(m[1] ?? "", 10);
-  const h = parseInt(m[2] ?? "", 10);
-  if (!w || !h) return null;
-  return { w, h };
-}
-
-/**
- * Convert a `"<w> x <h>"` squares label into an inches label, height-first to
- * match the catalog convention (e.g. `16 x 10` squares → `30" × 48"`: height
- * 10×3″ then width 16×3″). Non-parseable input is returned unchanged.
- */
-export function sizeToInchLabel(size: string | undefined | null): string {
-  const parsed = parseSizeWh(size);
-  if (!parsed) return size?.toString() ?? "";
-  return `${parsed.h * SQUARE_SIZE}" × ${parsed.w * SQUARE_SIZE}"`;
-}
 
 function nearestKnownHeight(h: number): number {
   let best: number = KNOWN_HEIGHTS[0];

@@ -31,7 +31,7 @@
 
 - [ ] **Step 1: Write the failing test**
 
-Test that `16 x 10` formats as `4 ft wide`, `14 x 7` as `3.5 ft wide`, `40 x 16` as `10 ft wide`, and invalid input is returned unchanged.
+Test that `16 x 10` formats as `4 ft wide`, fractional widths are preserved, the `14 x 7` mini panel uses its physical `3 ft wide` override, and invalid input is returned unchanged.
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -63,9 +63,9 @@ Expected: four passing assertions.
 
 Add `SizeLabelMode`, default it to `"squares"`, and choose the visible formatter from the mode. Keep custom input conversion in inches only when mode is `"inches"`.
 
-- [ ] **Step 2: Make feet-wide groups width-focused**
+- [ ] **Step 2: Keep height groups for similarly wide options**
 
-For `"feet-wide"`, omit the height heading because all options already state their physical width. Keep the existing grouping and tile geometry.
+For `"feet-wide"`, keep the inch-tall group heading so repeated physical widths remain distinguishable. Keep the existing grouping and tile geometry.
 
 - [ ] **Step 3: Update the shared page**
 
