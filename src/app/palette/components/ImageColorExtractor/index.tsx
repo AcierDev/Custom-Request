@@ -13,7 +13,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { ImageUploader, loadImageFile } from "./ImageUploader";
+import { ImageUploader } from "./ImageUploader";
+import { loadExtractableFile } from "./fileUpload";
 import { ImageColorPicker } from "./ImageColorPicker";
 import { ExtractedColorsList } from "./ExtractedColorsList";
 import { DominantColorsPicker } from "./DominantColorsPicker";
@@ -148,15 +149,17 @@ export function ImageColorExtractor() {
     setIsExtracting(true);
     extractDominantColors(image)
       .then((colors) => {
-        if (!cancelled) setImageExtractorResult(image, colors);
+        if (cancelled) return;
+        // This store update changes `extractedFrom`, which cleans up this
+        // effect. Clear the local loading state before triggering that cleanup.
+        setIsExtracting(false);
+        setImageExtractorResult(image, colors);
       })
       .catch((error) => {
         if (cancelled) return;
+        setIsExtracting(false);
         console.error("Error extracting colors:", error);
         toast.error("Couldn't read colors from that image.");
-      })
-      .finally(() => {
-        if (!cancelled) setIsExtracting(false);
       });
 
     return () => {
@@ -178,8 +181,18 @@ export function ImageColorExtractor() {
           const file = item.getAsFile();
           if (file) {
             e.preventDefault();
-            if (loadImageFile(file, setImageExtractorImage))
-              toast.success("Image pasted!");
+            void loadExtractableFile(file)
+              .then((imageDataUrl) => {
+                setImageExtractorImage(imageDataUrl);
+                toast.success("Image pasted!");
+              })
+              .catch((error) => {
+                toast.error(
+                  error instanceof Error
+                    ? error.message
+                    : "Could not read that image.",
+                );
+              });
           }
           return;
         }
@@ -290,11 +303,11 @@ export function ImageColorExtractor() {
     <Card className="glass-surface rounded-2xl shadow-lg">
       <CardHeader className="pb-3">
         <CardTitle className="text-lg font-bold text-white sm:text-xl">
-          Extract Colors from Image
+          Extract Colors from Image or PDF
         </CardTitle>
         <CardDescription>
           Pick an exact pixel or average a selected area, then add colors to
-          your palette
+          your palette. PDFs use the first page.
         </CardDescription>
       </CardHeader>
 
@@ -426,7 +439,7 @@ export function ImageColorExtractor() {
                 className="border-white/10"
               >
                 <Upload className="mr-2 h-4 w-4" />
-                Upload New Image
+                Upload New File
               </Button>
 
               {extractedColors.length > 0 && (
