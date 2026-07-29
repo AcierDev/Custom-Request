@@ -29,6 +29,8 @@ export interface PaintColor {
   available?: boolean;
   /** Light Reflectance Value (0–100), if the source provides it. */
   lrv?: number;
+  /** Official manufacturer collection names, when provided by the source. */
+  collections?: string[];
   /** Transient: ΔE distance from a queried color. Not persisted. */
   distance?: number;
 }
@@ -37,6 +39,8 @@ export interface PaintColor {
 // two lines of its own: Valspar (house brand) and HGTV Home by Sherwin-
 // Williams (Lowe's-exclusive).
 export const LOWES_RETAILER = "Lowe's";
+export const SHERWIN_HISTORIC_INTERIOR_COLLECTION =
+  "Historic Interior Color Wall";
 
 // Which store actually sells each brand. Behr is Home Depot–exclusive,
 // Valspar + HGTV Home are Lowe's–exclusive, Sherwin-Williams sells its
@@ -51,11 +55,9 @@ export const BRAND_RETAILER: Record<Brand, string> = {
   "Benjamin Moore": "Benjamin Moore",
 };
 
-// Special grounding pool: every color you can actually walk out of a
-// Lowe's with — Valspar + HGTV Home by Sherwin-Williams. Not a brand;
-// a retailer filter (see isLowesColor). Sourced from Sherwin-Williams'
-// own "lowes" color-wall feed, so a match here is never "cooked" at the
-// counter.
+// Special grounding pool: Lowe's-native Valspar + HGTV Home colors,
+// plus the approved Sherwin-Williams Historic Interior collection.
+// This is a matching filter, not a brand.
 export const LOWES_MATCHES = "Lowe's matches";
 
 // Options for the brand selector used by the palette grounding flow.
@@ -90,15 +92,18 @@ export function retailerFor(c: Pick<PaintColor, "brand" | "retailer">): string {
 }
 
 /**
- * True when this color can be bought/mixed at a Lowe's paint desk —
- * i.e. it's Valspar or HGTV Home by Sherwin-Williams. Used by the
- * "Lowe's matches" grounding pool so every suggestion is genuinely
- * orderable at the counter.
+ * True when this color belongs in the approved Lowe's matching pool:
+ * Lowe's-native Valspar/HGTV Home colors, or an exact member of the
+ * Sherwin-Williams Historic Interior collection.
  */
-export function isLowesColor(
-  c: Pick<PaintColor, "brand" | "retailer">
+export function isLowesMatchColor(
+  color: Pick<PaintColor, "brand" | "retailer" | "collections">
 ): boolean {
-  return retailerFor(c) === LOWES_RETAILER;
+  const isHistoricInterior =
+    color.brand === "Sherwin-Williams" &&
+    color.collections?.includes(SHERWIN_HISTORIC_INTERIOR_COLLECTION) === true;
+
+  return retailerFor(color) === LOWES_RETAILER || isHistoricInterior;
 }
 
 // Shorter, friendlier brand text for display. HGTV Home is a Sherwin-

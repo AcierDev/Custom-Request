@@ -2,9 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import type { CaptureFourAngleImage } from "@/components/preview/FourAngleImageCapture";
+import {
+  DEFAULT_IMAGE_EXPORT_ANGLE_COUNT,
+  type CaptureFourAngleImage,
+  type ImageExportAngleCount,
+} from "@/components/preview/FourAngleImageCapture";
 
 const DEFAULT_EXPORT_FILENAME = "custom-art-four-angles.png";
+const DEFAULT_EXPORT_FILENAME_PREFIX = "custom-art";
+const SINGLE_ANGLE_COUNT: ImageExportAngleCount = 1;
 const DOWNLOAD_URL_REVOKE_DELAY_MS = 1000;
 
 export function useFourAngleImageDownload(
@@ -12,6 +18,8 @@ export function useFourAngleImageDownload(
 ) {
   const [isSavingImage, setIsSavingImage] = useState(false);
   const [isImageCaptureReady, setIsImageCaptureReady] = useState(false);
+  const [imageAngleCount, setImageAngleCount] =
+    useState<ImageExportAngleCount>(DEFAULT_IMAGE_EXPORT_ANGLE_COUNT);
   const isMountedRef = useRef(true);
   const captureRef = useRef<CaptureFourAngleImage | null>(null);
 
@@ -31,13 +39,18 @@ export function useFourAngleImageDownload(
 
     setIsSavingImage(true);
     try {
-      const blob = await capture();
+      const blob = await capture(imageAngleCount);
       if (!isMountedRef.current) return;
 
       const downloadUrl = URL.createObjectURL(blob);
       const downloadLink = document.createElement("a");
       downloadLink.href = downloadUrl;
-      downloadLink.download = filename;
+      downloadLink.download =
+        filename === DEFAULT_EXPORT_FILENAME
+          ? `${DEFAULT_EXPORT_FILENAME_PREFIX}-${imageAngleCount}-angle${
+              imageAngleCount === SINGLE_ANGLE_COUNT ? "" : "s"
+            }.png`
+          : filename;
       document.body.appendChild(downloadLink);
       downloadLink.click();
       downloadLink.remove();
@@ -45,7 +58,9 @@ export function useFourAngleImageDownload(
         () => URL.revokeObjectURL(downloadUrl),
         DOWNLOAD_URL_REVOKE_DELAY_MS
       );
-      toast.success("Four-angle image downloaded.");
+      toast.success(
+        `${imageAngleCount}-angle image downloaded.`
+      );
     } catch (error) {
       if (!isMountedRef.current) return;
       console.error("Failed to export the four-angle image", error);
@@ -55,7 +70,7 @@ export function useFourAngleImageDownload(
         setIsSavingImage(false);
       }
     }
-  }, [filename]);
+  }, [filename, imageAngleCount]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -67,6 +82,8 @@ export function useFourAngleImageDownload(
   return {
     isSavingImage,
     isImageCaptureReady,
+    imageAngleCount,
+    setImageAngleCount,
     setCapture,
     saveImage,
   };

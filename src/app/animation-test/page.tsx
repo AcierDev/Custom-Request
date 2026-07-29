@@ -80,6 +80,7 @@ function buildCoastalGrid(): SquareInstance[] {
         rotationZ: getRotation(x, y, isHorizontal, seeds),
         scaleXY: SQUARE_SIZE,
         scaleZ: SQUARE_SIZE,
+        physicalScale: SQUARE_SIZE,
         grainIndex: tv.textureIndex,
       });
     }

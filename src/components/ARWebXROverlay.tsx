@@ -35,10 +35,6 @@ import {
   DESIGN_PILL_SELECTED_RING,
 } from "@/lib/design-pills";
 
-// 14x7 is a mini-square panel by definition, so picking it switches to mini
-// squares — mirrors SizeCard so AR matches the on-screen editor.
-const MINI_DEFAULT_SIZE = ItemSizes.Fourteen_By_Seven;
-
 type Panel = "none" | "size" | "design";
 
 interface ARWebXROverlayProps {
@@ -54,7 +50,6 @@ export function ARWebXROverlay({ placed, onReset, onExit }: ARWebXROverlayProps)
   const dimensions = useCustomStore((s) => s.dimensions);
   const selectedDesign = useCustomStore((s) => s.selectedDesign);
   const setDimensions = useCustomStore((s) => s.setDimensions);
-  const setUseMini = useCustomStore((s) => s.setUseMini);
   const setSelectedDesign = useCustomStore((s) => s.setSelectedDesign);
   const [panel, setPanel] = useState<Panel>("none");
 
@@ -102,7 +97,6 @@ export function ARWebXROverlay({ placed, onReset, onExit }: ARWebXROverlayProps)
                       type="button"
                       onClick={() => {
                         setDimensions(sizeToDimensions(size));
-                        if (size === MINI_DEFAULT_SIZE) setUseMini(true);
                       }}
                       className={cn(
                         sizePillFullClass(size),

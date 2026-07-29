@@ -13,8 +13,11 @@ const SHORT_CUSTOM_MODE_KEY = "cm";
 const SHORT_SCATTER_EASE_KEY = "se";
 const SHORT_SCATTER_WIDTH_KEY = "sw";
 const SHORT_SCATTER_AMOUNT_KEY = "sa";
+const SHORT_PALETTE_BLEND_KEY = "pb";
 const SHORT_DRAWN_PATTERN_GRID_KEY = "pg";
 const SHORT_DRAWN_PATTERN_SIZE_KEY = "pgs";
+const SHORT_PANEL_COUNT_KEY = "pc";
+const SHORT_PANEL_SPACING_KEY = "psg";
 const SHORT_SQUARE_GAP_KEY = "sqg";
 const SHORT_BOOLEAN_FALSE = 0;
 const SHORT_BOOLEAN_TRUE = 1;
@@ -190,6 +193,15 @@ export const generateShortShareableUrl = (stateData: any): string => {
   if (typeof stateData.scatterAmount === "number") {
     minimalState[SHORT_SCATTER_AMOUNT_KEY] = stateData.scatterAmount;
   }
+  if (typeof stateData.paletteBlend === "number") {
+    minimalState[SHORT_PALETTE_BLEND_KEY] = stateData.paletteBlend;
+  }
+  if (typeof stateData.panelCount === "number") {
+    minimalState[SHORT_PANEL_COUNT_KEY] = stateData.panelCount;
+  }
+  if (typeof stateData.panelSpacingInches === "number") {
+    minimalState[SHORT_PANEL_SPACING_KEY] = stateData.panelSpacingInches;
+  }
   if (typeof stateData.squareGapInches === "number") {
     minimalState[SHORT_SQUARE_GAP_KEY] = stateData.squareGapInches;
   }
@@ -202,8 +214,7 @@ export const generateShortShareableUrl = (stateData: any): string => {
   }
 
   if (Object.keys(stateData.patternOverride ?? {}).length) {
-    minimalState[SHORT_PATTERN_COLOR_OVERRIDES_KEY] =
-      stateData.patternOverride;
+    minimalState[SHORT_PATTERN_COLOR_OVERRIDES_KEY] = stateData.patternOverride;
   }
   if (Object.keys(stateData.patternDirectionOverride ?? {}).length) {
     minimalState[SHORT_PATTERN_DIRECTION_OVERRIDES_KEY] =
@@ -323,6 +334,15 @@ export const extractStateFromShortUrl = <T>(compressedData: string): T => {
     if (minimalState[SHORT_SCATTER_AMOUNT_KEY] !== undefined) {
       fullState.scatterAmount = minimalState[SHORT_SCATTER_AMOUNT_KEY];
     }
+    if (minimalState[SHORT_PALETTE_BLEND_KEY] !== undefined) {
+      fullState.paletteBlend = minimalState[SHORT_PALETTE_BLEND_KEY];
+    }
+    if (minimalState[SHORT_PANEL_COUNT_KEY] !== undefined) {
+      fullState.panelCount = minimalState[SHORT_PANEL_COUNT_KEY];
+    }
+    if (minimalState[SHORT_PANEL_SPACING_KEY] !== undefined) {
+      fullState.panelSpacingInches = minimalState[SHORT_PANEL_SPACING_KEY];
+    }
     if (minimalState[SHORT_SQUARE_GAP_KEY] !== undefined) {
       fullState.squareGapInches = minimalState[SHORT_SQUARE_GAP_KEY];
     }
@@ -330,8 +350,7 @@ export const extractStateFromShortUrl = <T>(compressedData: string): T => {
       minimalState[SHORT_DRAWN_PATTERN_GRID_KEY] &&
       minimalState[SHORT_DRAWN_PATTERN_SIZE_KEY]
     ) {
-      fullState.drawnPatternGrid =
-        minimalState[SHORT_DRAWN_PATTERN_GRID_KEY];
+      fullState.drawnPatternGrid = minimalState[SHORT_DRAWN_PATTERN_GRID_KEY];
       fullState.drawnPatternGridSize = {
         width: minimalState[SHORT_DRAWN_PATTERN_SIZE_KEY][0],
         height: minimalState[SHORT_DRAWN_PATTERN_SIZE_KEY][1],

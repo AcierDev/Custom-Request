@@ -64,7 +64,7 @@ import {
   type PaintColor,
   VERIFIED_BRANDS,
   LOWES_MATCHES,
-  isLowesColor,
+  isLowesMatchColor,
   purchaseLabel,
 } from "@/lib/paint";
 import { findBestPaintMix, type PaintMixRecipe } from "@/lib/paintMixOptimizer";
@@ -105,6 +105,7 @@ const PRIMARY_PAINT_MATCH_INDEX = 0;
 const BACKUP_PAINT_MATCH_INDEX = 1;
 const PAINT_MATCH_COUNT_WITH_BACKUP = 2;
 const PAINT_MATCH_CANDIDATE_COUNT = 12;
+const LIGHTNESS_DIRECTION_TOLERANCE = 0.25;
 
 // Remember which studio tab the user was on so a refresh returns to it
 // instead of snapping back to the "official" default.
@@ -120,10 +121,18 @@ const SINGLE_COMPONENT_COUNT = 1;
 // When mixing to get closer, which paints the recipe may draw from:
 //  - "palette":  only paints the palette itself resolves to, plus white
 //    and black (the pool's lightness anchors) which are always allowed.
+//  - "black-white": the nearest paint for this swatch, adjusted only with
+//    the pool's white and black anchors.
 //  - "purchase": any nearby purchasable paint, even ones not in the
 //    palette — buys the closest possible match at the cost of extra cans.
-type MixSource = "palette" | "purchase";
+type MixSource = "palette" | "black-white" | "purchase";
 const DEFAULT_MIX_SOURCE: MixSource = "palette";
+// Independent keeps today's nearest-match behavior. The other modes keep
+// every swatch on the same side of its source lightness so a gradient cannot
+// split into one unexpectedly lighter paint and one unexpectedly darker one.
+type PaintLightnessMode = "independent" | "auto" | "lighter" | "darker";
+type ResolvedPaintLightnessMode = Exclude<PaintLightnessMode, "auto">;
+const DEFAULT_PAINT_LIGHTNESS_MODE: PaintLightnessMode = "independent";
 // Digitally-mixed palette colors (a `mix` blend of two swatches) aren't a
 // can the user buys, so by default their nearest-can approximation is NOT
 // offered as a "palette" mix ingredient. Opt in to let blends contribute.
@@ -137,6 +146,7 @@ type GroundSelection = {
   mix: boolean;
   mixSource: MixSource;
   useMixedColors: boolean;
+  lightnessMode: PaintLightnessMode;
 };
 // Let React paint the grounding spinner between colors (the spectral mix
 // search is heavy enough to drop a frame per color otherwise).
@@ -152,6 +162,11 @@ const paintMatchPercent = (deltaE: number) =>
 type PaintMatch = {
   paintColor: PaintColor;
   distance: number;
+};
+
+type PaintLab = {
+  paintColor: PaintColor;
+  lab: [number, number, number];
 };
 
 const paintMatchKey = (match: PaintMatch) => purchaseLabel(match.paintColor);
@@ -205,6 +220,7 @@ export default function PalettePage() {
 
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   const [paletteName, setPaletteName] = useState("");
+  const paletteNameInputRef = useRef<HTMLInputElement>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
   // "Save Palette" dialog: create a brand-new palette, or attach this
   // in-progress palette to an existing one as its next version.
@@ -248,6 +264,10 @@ export default function PalettePage() {
   // When on, ground only to brands with verified current color codes
   // (skips Behr/PPG), so every match is genuinely orderable.
   const [verifiedOnly, setVerifiedOnly] = useState(false);
+  // Keep neighboring swatches from snapping in opposite lightness
+  // directions. Auto chooses the lower-error shared direction per pass.
+  const [paintLightnessMode, setPaintLightnessMode] =
+    useState<PaintLightnessMode>(DEFAULT_PAINT_LIGHTNESS_MODE);
   // Default off: just buy the single nearest can. When on, also compute a
   // 2–3 paint mix recipe that lands even closer to each source color (the
   // heavier spectral search). Off keeps grounding fast + one-can-simple.
@@ -495,17 +515,56 @@ export default function PalettePage() {
 
   const findClosestPaintMatches = (
     hex: string,
-    paintLabs: Array<{ paintColor: PaintColor; lab: [number, number, number] }>,
-    matchCount = PAINT_MATCH_COUNT_WITH_BACKUP
+    paintLabs: PaintLab[],
+    matchCount = PAINT_MATCH_COUNT_WITH_BACKUP,
+    lightnessMode: ResolvedPaintLightnessMode = "independent"
   ): PaintMatch[] => {
     const targetLab = hexToLab(hex);
-    return paintLabs
+    const directionalPaints = paintLabs.filter(({ lab }) => {
+      if (lightnessMode === "independent") return true;
+      const targetLightness = targetLab[LAB_LIGHTNESS_INDEX];
+      const paintLightness = lab[LAB_LIGHTNESS_INDEX];
+      return lightnessMode === "lighter"
+        ? paintLightness >= targetLightness - LIGHTNESS_DIRECTION_TOLERANCE
+        : paintLightness <= targetLightness + LIGHTNESS_DIRECTION_TOLERANCE;
+    });
+
+    // Near pure white/black, a brand may have no paint on the requested
+    // side. Fall back to its closest edge color instead of dropping the
+    // swatch from the converted palette.
+    const candidates =
+      directionalPaints.length > 0 ? directionalPaints : paintLabs;
+
+    return candidates
       .map(({ paintColor, lab }) => ({
         paintColor,
         distance: deltaE2000(targetLab, lab),
       }))
       .sort((a, b) => a.distance - b.distance)
       .slice(MATCH_LIST_START_INDEX, matchCount);
+  };
+
+  const resolvePaintLightnessMode = (
+    requestedMode: PaintLightnessMode,
+    palette: CustomColor[],
+    paintLabs: PaintLab[]
+  ): ResolvedPaintLightnessMode => {
+    if (requestedMode !== "auto") return requestedMode;
+
+    const totalDistance = (mode: "lighter" | "darker") =>
+      palette.reduce((sum, color) => {
+        const match = findClosestPaintMatches(
+          sourceHexOf(color),
+          paintLabs,
+          PAINT_MATCH_COUNT_WITH_BACKUP,
+          mode
+        )[PRIMARY_PAINT_MATCH_INDEX];
+        return sum + (match?.distance ?? Number.POSITIVE_INFINITY);
+      }, 0);
+
+    return totalDistance("lighter") <= totalDistance("darker")
+      ? "lighter"
+      : "darker";
   };
 
   const getGroundablePaintColors = (
@@ -515,9 +574,9 @@ export default function PalettePage() {
     allPaintColors.filter((c) => {
       if (c.available === false) return false;
       // "Lowe's matches": ignore the single-brand + verified filters and
-      // keep anything on the Lowe's wall (Valspar + HGTV Home), which is
-      // already all verified/orderable.
-      if (brand === LOWES_MATCHES) return isLowesColor(c);
+      // keep approved Lowe's matches: Valspar, HGTV Home, and the
+      // Sherwin-Williams Historic Interior collection.
+      if (brand === LOWES_MATCHES) return isLowesMatchColor(c);
       if (verified && !VERIFIED_BRANDS.has(c.brand)) return false;
       if (brand === "Any") return true;
       return c.brand === brand;
@@ -542,6 +601,7 @@ export default function PalettePage() {
       mix,
       mixSource: mixSrc,
       useMixedColors: useMixed,
+      lightnessMode,
     } = selection;
     // A pass is already running — park this request and let the running
     // pass replay it when it finishes, so the last selection wins.
@@ -595,6 +655,11 @@ export default function PalettePage() {
         paintColor,
         lab: hexToLab(paintColor.hex),
       }));
+      const resolvedLightnessMode = resolvePaintLightnessMode(
+        lightnessMode,
+        palette,
+        paintLabs
+      );
 
       // Pool extremes by lightness — handed to the mix optimizer as
       // anchors so it always has a way to push a match darker or lighter,
@@ -625,7 +690,8 @@ export default function PalettePage() {
           const nearest = findClosestPaintMatches(
             sourceHexOf(customColor),
             paintLabs,
-            PAINT_MATCH_COUNT_WITH_BACKUP
+            PAINT_MATCH_COUNT_WITH_BACKUP,
+            resolvedLightnessMode
           )[PRIMARY_PAINT_MATCH_INDEX];
           if (!nearest) continue;
           const key = paintMatchKey(nearest);
@@ -641,11 +707,11 @@ export default function PalettePage() {
         const matches = findClosestPaintMatches(
           sourceHex,
           paintLabs,
-          PAINT_MATCH_CANDIDATE_COUNT
+          PAINT_MATCH_CANDIDATE_COUNT,
+          resolvedLightnessMode
         );
-        // Always ground to the single nearest paint (smallest ΔE2000).
-        // Match accuracy is the priority: never skip the closest color to
-        // preserve a light→dark gradient across the palette.
+        // Ground to the nearest paint allowed by the shared lightness rule.
+        // Independent mode keeps the original smallest-ΔE behavior.
         const primaryMatch = matches[PRIMARY_PAINT_MATCH_INDEX];
         if (!primaryMatch) {
           groundedColors.push(customColor);
@@ -663,18 +729,23 @@ export default function PalettePage() {
         // the nearest can. Kept only when it beats a single component.
         let paintMixRecipe: PaintMixRecipe | undefined;
         if (mix) {
-          // "palette" mode mixes only from paints the palette already uses
-          // (ordered nearest-first so the most useful land in the search
-          // window); "purchase" mode is free to buy any nearby paint.
+          // "palette" mode mixes only from paints the palette already uses;
+          // "black-white" starts with this swatch's nearest paint and may
+          // adjust it only with the two lightness anchors; "purchase" mode
+          // is free to buy any nearby paint.
           const sourceLab = hexToLab(sourceHex);
-          const mixCandidates =
-            mixSrc === "palette"
-              ? [...palettePaintPool].sort(
-                  (a, b) =>
-                    deltaE2000(sourceLab, hexToLab(a.hex)) -
-                    deltaE2000(sourceLab, hexToLab(b.hex))
-                )
-              : matches.map((m) => m.paintColor);
+          let mixCandidates: PaintColor[];
+          if (mixSrc === "palette") {
+            mixCandidates = [...palettePaintPool].sort(
+              (a, b) =>
+                deltaE2000(sourceLab, hexToLab(a.hex)) -
+                deltaE2000(sourceLab, hexToLab(b.hex))
+            );
+          } else if (mixSrc === "black-white") {
+            mixCandidates = [primaryMatch.paintColor];
+          } else {
+            mixCandidates = matches.map((match) => match.paintColor);
+          }
           const mixRecipe = findBestPaintMix(sourceHex, {
             candidates: mixCandidates,
             anchors: mixAnchors,
@@ -711,8 +782,12 @@ export default function PalettePage() {
       setCustomPalette(groundedColors);
       lastGroundedSelectionRef.current = selection;
       const where = brand === "Any" ? "" : ` (${brand})`;
+      const lightnessNote =
+        resolvedLightnessMode === "independent"
+          ? ""
+          : ` · all ${resolvedLightnessMode}`;
       toast.success(
-        `Grounded ${groundedColors.length} colors to nearest paint matches${where}`
+        `Grounded ${groundedColors.length} colors to paint matches${where}${lightnessNote}`
       );
     } finally {
       groundingInFlightRef.current = false;
@@ -733,14 +808,15 @@ export default function PalettePage() {
     mix: mixToMatch,
     mixSource,
     useMixedColors,
+    lightnessMode: paintLightnessMode,
   });
 
   const groundPalette = () => {
     void runGrounding(currentGroundSelection());
   };
 
-  // Re-ground automatically when the brand, "verified only", or mixing
-  // options change while the palette is already converted — without this,
+  // Re-ground automatically when the brand, lightness, or mixing options
+  // change while the palette is already converted — without this,
   // the controls silently do nothing after the first conversion (the source
   // of the "I unchecked verified but it still shows Behr" confusion).
   const skipInitialReGroundRef = useRef(true);
@@ -759,7 +835,14 @@ export default function PalettePage() {
     // runGrounding reads the live palette from the store and is stable
     // enough for this filter-change trigger; depending on it would loop.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groundBrand, verifiedOnly, mixToMatch, mixSource, useMixedColors]);
+  }, [
+    groundBrand,
+    verifiedOnly,
+    paintLightnessMode,
+    mixToMatch,
+    mixSource,
+    useMixedColors,
+  ]);
 
   const convertPaintPaletteToHex = () => {
     const restoredColors = customPalette.map((color) => {
@@ -1912,6 +1995,35 @@ export default function PalettePage() {
                       />
                       Verified only
                     </label>
+                    <Select
+                      value={paintLightnessMode}
+                      disabled={!paintColorsLoaded || isGrounding}
+                      onValueChange={(value) =>
+                        setPaintLightnessMode(value as PaintLightnessMode)
+                      }
+                    >
+                      <SelectTrigger
+                        aria-label="How paint matches may shift in lightness"
+                        className="h-9 w-auto min-w-56 rounded-[10px] border-white/10 bg-gray-900/80 text-slate-200 focus:ring-blue-500"
+                        title="Keep blended colors from matching in opposite lighter/darker directions"
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="border-white/10 bg-gray-950 text-slate-100">
+                        <SelectItem value="independent">
+                          Lightness: independent
+                        </SelectItem>
+                        <SelectItem value="auto">
+                          Lightness: same direction (auto)
+                        </SelectItem>
+                        <SelectItem value="lighter">
+                          Lightness: all lighter
+                        </SelectItem>
+                        <SelectItem value="darker">
+                          Lightness: all darker
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                     {/* Mixing opt-in + its ingredient source, grouped so the
                         dropdown always reads as "part of" the checkbox and the
                         two wrap together rather than drifting onto separate
@@ -1958,6 +2070,13 @@ export default function PalettePage() {
                               className="focus:bg-violet-500/15 focus:text-white"
                             >
                               Using palette + white/black
+                            </SelectItem>
+                            <SelectItem
+                              value="black-white"
+                              textValue="Adding only white/black"
+                              className="focus:bg-violet-500/15 focus:text-white"
+                            >
+                              Adding only white/black
                             </SelectItem>
                             <SelectItem
                               value="purchase"
@@ -2244,7 +2363,13 @@ export default function PalettePage() {
                           Save Palette
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="sm:max-w-md">
+                      <DialogContent
+                        className="sm:max-w-md"
+                        onOpenAutoFocus={(event) => {
+                          event.preventDefault();
+                          paletteNameInputRef.current?.focus();
+                        }}
+                      >
                         <DialogHeader>
                           <DialogTitle>Save Palette</DialogTitle>
                           <DialogDescription>
@@ -2291,6 +2416,7 @@ export default function PalettePage() {
                                 Palette Name
                               </Label>
                               <Input
+                                ref={paletteNameInputRef}
                                 id="palette-name"
                                 placeholder="My Awesome Palette"
                                 value={paletteName}

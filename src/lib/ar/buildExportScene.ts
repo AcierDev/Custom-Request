@@ -18,6 +18,7 @@
 // intact, and relights correctly because the normals are real.
 
 import * as THREE from "three";
+import { DEFAULT_AR_BACKBOARD_COLOR } from "@/lib/backboardColor";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { createWedgeGeometry } from "@/components/preview/InstancedSquares";
 import { GRAIN_ATLAS } from "@/components/preview/woodStyles";
@@ -43,7 +44,6 @@ const FRONT_FACE_FIRST_VERT = 8;
 // PlywoodBase so it reads the same against a wall.
 const BOARD_THICKNESS = 0.07; // scene units (PlywoodBase baseThickness)
 const BOARD_INSET = 0.5 / INCHES_PER_SCENE_UNIT; // PlywoodBase BACKBOARD_INSET (0.5")
-const BOARD_COLOR = 0x6b4f34; // plywood brown
 
 export interface PreblendedAtlas {
   texture: THREE.CanvasTexture;
@@ -260,7 +260,9 @@ export function buildExportScene(
       BOARD_THICKNESS
     ),
     new THREE.MeshPhysicalMaterial({
-      color: BOARD_COLOR,
+      color: new THREE.Color(
+        snapshot.backboardColor ?? DEFAULT_AR_BACKBOARD_COLOR
+      ),
       roughness: 1, // matte — no AR sheen on the backing board
       metalness: 0,
       ior: 1.0, // zero dielectric specular (see tile material note)

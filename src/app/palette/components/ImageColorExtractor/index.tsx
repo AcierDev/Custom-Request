@@ -293,8 +293,8 @@ export function ImageColorExtractor() {
           Extract Colors from Image
         </CardTitle>
         <CardDescription>
-          Click the image to pick exact colors, or add from the recommended
-          colors below
+          Pick an exact pixel or average a selected area, then add colors to
+          your palette
         </CardDescription>
       </CardHeader>
 
@@ -303,7 +303,7 @@ export function ImageColorExtractor() {
           <ImageUploader onImageUpload={handleImageUpload} />
         ) : (
           <div className="space-y-8">
-            {/* Manual eyedropper — pick exact colors off the image */}
+            {/* Manual picker — sample a pixel or an averaged image area. */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <Pipette className="h-4 w-4 text-blue-300" />
@@ -457,7 +457,7 @@ export function ImageColorExtractor() {
       {image && (
         <CardFooter className="flex flex-col gap-2 border-t border-white/10 pt-4 text-sm sm:flex-row sm:justify-between">
           <div className="text-sm text-slate-400">
-            Click the image to pick colors, or add from recommended below
+            Choose Pixel or Area average, then click the image
           </div>
           <div className="text-sm text-slate-400">
             {extractedColors.length} picked · {selectedAutoColors.length}/

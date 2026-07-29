@@ -9,8 +9,6 @@ import {
   Save,
   PencilRuler,
   LogIn,
-  Pencil,
-  Paintbrush,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -69,23 +67,6 @@ const mainNavItems: NavItem[] = [
     label: "Viewer",
     railLabel: "Viewer",
     hotkey: "1",
-  },
-];
-
-const bottomNavItems: NavItem[] = [
-  {
-    href: "/draw-pattern",
-    icon: Pencil,
-    label: "Draw Pattern",
-    railLabel: "Draw",
-    hotkey: "6",
-  },
-  {
-    href: "/paint-selector",
-    icon: Paintbrush,
-    label: "Paint Colors",
-    railLabel: "Paint",
-    hotkey: "7",
   },
 ];
 
@@ -246,30 +227,6 @@ export function Navbar() {
                     label={"label" in item ? item.label : ""}
                     railLabel={"railLabel" in item ? item.railLabel : ""}
                     isCollapsed
-                  />
-                )
-              )}
-            </nav>
-          </div>
-          <div className="mx-4 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-          <div className="px-1.5 pt-2 pb-2">
-            <nav aria-label="Creative tools" className="flex flex-col space-y-2">
-              {bottomNavItems.map((item, index) =>
-                item.type === "divider" ? (
-                  <Separator
-                    key={index}
-                    className="my-2 bg-white/10"
-                    decorative
-                  />
-                ) : (
-                  <NavLink
-                    key={"href" in item ? item.href : index}
-                    href={"href" in item ? item.href : ""}
-                    icon={"icon" in item ? item.icon : Menu}
-                    label={"label" in item ? item.label : ""}
-                    railLabel={"railLabel" in item ? item.railLabel : ""}
-                    isCollapsed
-                    outlined
                   />
                 )
               )}
@@ -546,29 +503,6 @@ export function Navbar() {
                       />
                     )
                   )}
-                </div>
-                <div className="mx-4 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-                <div className="px-3 pt-2 pb-2">
-                  <div className="flex flex-col space-y-2">
-                    {bottomNavItems.map((item, index) =>
-                      item.type === "divider" ? (
-                        <Separator
-                          key={index}
-                          className="my-2 bg-white/10"
-                        />
-                      ) : (
-                        <NavLink
-                          key={"href" in item ? item.href : index}
-                          href={"href" in item ? item.href : ""}
-                          icon={"icon" in item ? item.icon : Menu}
-                          label={"label" in item ? item.label : ""}
-                          railLabel={"railLabel" in item ? item.railLabel : ""}
-                          isCollapsed={false}
-                          outlined
-                        />
-                      )
-                    )}
-                  </div>
                 </div>
               </div>
             </SheetContent>

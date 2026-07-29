@@ -11,6 +11,12 @@ export const PANEL_LAYOUT_CONFIG = {
   inchesPerSceneUnit: 6,
 } as const;
 
+export const PANEL_LAYOUT_ANIMATION_CONFIG = {
+  mass: 1,
+  tension: 170,
+  friction: 26,
+} as const;
+
 export interface PanelColumnLayout {
   index: number;
   startColumn: number;
@@ -27,7 +33,7 @@ export function normalizePanelCount(value: unknown): number {
   return clamp(
     Math.round(parsed),
     PANEL_LAYOUT_CONFIG.minCount,
-    PANEL_LAYOUT_CONFIG.maxCount
+    PANEL_LAYOUT_CONFIG.maxCount,
   );
 }
 
@@ -42,7 +48,7 @@ export function normalizePanelSpacingInches(value: unknown): number {
   return clamp(
     stepped,
     PANEL_LAYOUT_CONFIG.minSpacingInches,
-    PANEL_LAYOUT_CONFIG.maxSpacingInches
+    PANEL_LAYOUT_CONFIG.maxSpacingInches,
   );
 }
 
@@ -52,16 +58,13 @@ export function normalizePanelSpacingInches(value: unknown): number {
  */
 export function buildPanelColumnLayout(
   totalColumns: number,
-  requestedCount: number
+  requestedCount: number,
 ): PanelColumnLayout[] {
   const safeColumns = Math.max(0, Math.floor(totalColumns));
-  const availableCount = Math.max(
-    PANEL_LAYOUT_CONFIG.singleCount,
-    safeColumns
-  );
+  const availableCount = Math.max(PANEL_LAYOUT_CONFIG.singleCount, safeColumns);
   const panelCount = Math.min(
     normalizePanelCount(requestedCount),
-    availableCount
+    availableCount,
   );
   const baseColumns = Math.floor(safeColumns / panelCount);
   const remainder = safeColumns % panelCount;
@@ -69,8 +72,7 @@ export function buildPanelColumnLayout(
   let startColumn = 0;
 
   return Array.from({ length: panelCount }, (_, index) => {
-    const columnCount =
-      baseColumns + (index === centerIndex ? remainder : 0);
+    const columnCount = baseColumns + (index === centerIndex ? remainder : 0);
     const panel = {
       index,
       startColumn,
@@ -84,13 +86,13 @@ export function buildPanelColumnLayout(
 
 export function getPanelForColumn(
   panels: readonly PanelColumnLayout[],
-  column: number
+  column: number,
 ): PanelColumnLayout | undefined {
   return (
     panels.find(
       (panel) =>
         column >= panel.startColumn &&
-        column < panel.startColumn + panel.columnCount
+        column < panel.startColumn + panel.columnCount,
     ) ?? panels[panels.length - 1]
   );
 }
@@ -98,12 +100,12 @@ export function getPanelForColumn(
 export function getInstalledArtWidthSceneUnits(
   baseWidthSceneUnits: number,
   panelCount: number,
-  spacingInches: number
+  spacingInches: number,
 ): number {
   const effectiveCount = normalizePanelCount(panelCount);
   const gapCount = Math.max(
     0,
-    effectiveCount - PANEL_LAYOUT_CONFIG.singleCount
+    effectiveCount - PANEL_LAYOUT_CONFIG.singleCount,
   );
   return (
     baseWidthSceneUnits +

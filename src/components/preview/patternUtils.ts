@@ -12,6 +12,10 @@ import {
   SQUARE_GAP_CONFIG,
   getSquareGridSpanSceneUnits,
 } from "@/lib/squareGap";
+import {
+  PALETTE_BLEND_CONFIG,
+  normalizePaletteBlendPercent,
+} from "@/lib/paletteBlend";
 
 /**
  * Shared types for pattern components
@@ -32,6 +36,7 @@ export interface ColorMapRef extends Array<Array<number>> {
   scatterEase?: number;
   scatterWidth?: number;
   scatterAmount?: number;
+  paletteBlend?: number;
   /** Cache key for weighted proportions; invalidates when extraPercent changes */
   extraPercentKey?: string;
 }
@@ -41,109 +46,65 @@ export interface TextureVariation {
   textureIndex: number;
 }
 
-/**
- * Fraction of squares swapped between two adjacent solid lines (columns/rows)
- * in the fade pattern. The fade fill already builds solid lines for any color
- * with enough squares; this only softens the seam between them, so a small
- * value keeps lines mostly solid while still avoiding a hard edge.
- */
-const SOLID_LINE_BLEND_FRACTION = 0.08;
-
-/**
- * Minimum seam-blend density: at least one swap per this many squares along the
- * border, regardless of SOLID_LINE_BLEND_FRACTION. Without this, a tall/wide
- * border (e.g. 16 squares → floor(16 * 0.08) = 1) rounds down to a single stray
- * swap; this scales the dither to the border length so the seam always reads as
- * blended.
- */
-const SOLID_LINE_MIN_SWAP_SPACING = 5;
-
-/**
- * Hard cap on how many consecutive squares along a seam may lack a swapped-in
- * ("mixed") square. Mixes are spread one-per-bucket so the boundary never shows
- * a clean run longer than this.
- */
-const MAX_RUN_WITHOUT_MIX = 7;
 const DETERMINISTIC_HASH_X_FACTOR = 127.1;
 const DETERMINISTIC_HASH_Y_FACTOR = 311.7;
 const DETERMINISTIC_HASH_SCALE = 43758.5453;
 const ROTATION_HASH_SALT = 17.23;
 const SEAM_BLEND_HASH_SALT = 53.79;
 const FALLBACK_COLOR_HASH_SALT = 91.41;
+const PALETTE_BLEND_HASH_SALT = 113.27;
 const ROTATION_SEED_THRESHOLD = 0.5;
 const PALETTE_POSITION_OFFSET = 1;
+const BLEND_PERCENT_DIVISOR = 100;
+const BLEND_NOISE_CENTER = 0.5;
+const MIN_BLEND_DEPTH = 1;
+const MIN_BLEND_SWAP_COUNT = 1;
+const BLEND_POSITION_COUNT_MULTIPLIER = 2;
 
 /** Stable pseudo-random value in [0, 1) for a grid coordinate and purpose. */
-function deterministicGridValue(
-  x: number,
-  y: number,
-  salt: number
-): number {
+function deterministicGridValue(x: number, y: number, salt: number): number {
   return (
     Math.abs(
       Math.sin(
         x * DETERMINISTIC_HASH_X_FACTOR +
           y * DETERMINISTIC_HASH_Y_FACTOR +
-          salt
-      ) * DETERMINISTIC_HASH_SCALE
+          salt,
+      ) * DETERMINISTIC_HASH_SCALE,
     ) % 1
   );
 }
 
 /**
- * Number of squares to swap across a solid-color seam of `borderLength` squares.
- * Takes the larger of the fraction-based count and the minimum-density floor,
- * then caps at half the border (each swap consumes two distinct positions).
- */
-function solidLineSwapCount(borderLength: number): number {
-  const target = Math.max(
-    Math.floor(borderLength * SOLID_LINE_BLEND_FRACTION),
-    Math.ceil(borderLength / SOLID_LINE_MIN_SWAP_SPACING)
-  );
-  return Math.min(target, Math.floor(borderLength / 2));
-}
-
-/**
  * Swap squares between the two solid lines straddling a seam to stipple the
- * boundary. Mixed squares are spread one-per-bucket along the seam (rather than
- * placed at random) so the boundary never shows a run longer than
- * MAX_RUN_WITHOUT_MIX squares without a mix. `read`/`write` abstract over column
- * vs row orientation.
+ * boundary. Mixed squares are spread one-per-bucket along the seam, and every
+ * swap conserves the number of squares assigned to each color.
  */
 function swapAcrossSeam(
   lineA: number,
   lineB: number,
   lineLength: number,
+  swapFraction: number,
   read: (line: number, pos: number) => number,
-  write: (line: number, pos: number, color: number) => void
+  write: (line: number, pos: number, color: number) => void,
 ): void {
-  // Largest bucket whose worst-case internal run (a mix at one bucket's start
-  // and the next at the following bucket's end leaves 2*size - 2 empty squares)
-  // stays within MAX_RUN_WITHOUT_MIX.
-  const maxBucketSize = Math.max(1, Math.floor((MAX_RUN_WITHOUT_MIX + 2) / 2));
-
-  // Total mixed rows across both columns: the denser of the swap-count density
-  // and the spacing floor, made even so each column gets an equal share.
-  let mixedRows = Math.max(
-    solidLineSwapCount(lineLength) * 2,
-    Math.ceil(lineLength / maxBucketSize)
+  const pairs = Math.min(
+    Math.max(MIN_BLEND_SWAP_COUNT, Math.round(lineLength * swapFraction)),
+    Math.floor(lineLength / BLEND_POSITION_COUNT_MULTIPLIER),
   );
-  mixedRows = Math.min(mixedRows, lineLength);
-  mixedRows -= mixedRows % 2;
-  const pairs = mixedRows / 2;
   if (pairs <= 0) return;
+  const positionCount = pairs * BLEND_POSITION_COUNT_MULTIPLIER;
 
   // One mixed row per evenly sized bucket. The coordinate hash keeps the
   // organic-looking placement identical in the builder and every shared view.
   const positions: number[] = [];
-  for (let i = 0; i < mixedRows; i++) {
-    const start = Math.floor((i * lineLength) / mixedRows);
-    const end = Math.floor(((i + 1) * lineLength) / mixedRows);
+  for (let i = 0; i < positionCount; i++) {
+    const start = Math.floor((i * lineLength) / positionCount);
+    const end = Math.floor(((i + 1) * lineLength) / positionCount);
     const span = Math.max(1, end - start);
     const bucketValue = deterministicGridValue(
       lineA,
       lineB,
-      SEAM_BLEND_HASH_SALT + i
+      SEAM_BLEND_HASH_SALT + i,
     );
     positions.push(start + Math.floor(bucketValue * span));
   }
@@ -174,8 +135,22 @@ function blendSolidSeams(
   colorMap: number[][],
   modelWidth: number,
   modelHeight: number,
-  orientation: "horizontal" | "vertical"
+  orientation: "horizontal" | "vertical",
+  blendPercent: number,
 ): void {
+  const normalizedBlendPercent = normalizePaletteBlendPercent(blendPercent);
+  if (normalizedBlendPercent <= PALETTE_BLEND_CONFIG.minPercent) return;
+
+  const blendStrength = normalizedBlendPercent / BLEND_PERCENT_DIVISOR;
+  const targetDepth = Math.max(
+    MIN_BLEND_DEPTH,
+    Math.ceil(blendStrength * PALETTE_BLEND_CONFIG.maxDepthSquares),
+  );
+  const edgeSwapFraction =
+    PALETTE_BLEND_CONFIG.minSwapFraction +
+    (PALETTE_BLEND_CONFIG.maxSwapFraction -
+      PALETTE_BLEND_CONFIG.minSwapFraction) *
+      blendStrength;
   const horizontal = orientation === "horizontal";
   const lineCount = horizontal ? modelWidth : modelHeight;
   const lineLength = horizontal ? modelHeight : modelWidth;
@@ -202,7 +177,7 @@ function blendSolidSeams(
 
   // Group consecutive solid lines of the same color into bands.
   const bands: { start: number; end: number; width: number }[] = [];
-  for (let line = 0; line < lineCount; ) {
+  for (let line = 0; line < lineCount;) {
     if (lineColor[line] === null) {
       line++;
       continue;
@@ -225,15 +200,106 @@ function blendSolidSeams(
 
     // Blend unless it would erase a band's last solid line — allowed only when
     // the band is one line wide and can't keep one anyway.
-    const haveFresh = solidRemaining[k] >= 1 && solidRemaining[k + 1] >= 1;
-    const canBlendLeft = left.width === 1 || solidRemaining[k] >= 2;
-    const canBlendRight = right.width === 1 || solidRemaining[k + 1] >= 2;
+    const haveFresh =
+      solidRemaining[k] >= MIN_BLEND_DEPTH &&
+      solidRemaining[k + 1] >= MIN_BLEND_DEPTH;
+    const canBlendLeft =
+      left.width === MIN_BLEND_DEPTH || solidRemaining[k] > MIN_BLEND_DEPTH;
+    const canBlendRight =
+      right.width === MIN_BLEND_DEPTH ||
+      solidRemaining[k + 1] > MIN_BLEND_DEPTH;
     if (!haveFresh || !canBlendLeft || !canBlendRight) continue;
 
-    swapAcrossSeam(left.end, right.start, lineLength, read, write);
-    solidRemaining[k] -= 1;
-    solidRemaining[k + 1] -= 1;
+    for (let depth = 0; depth < targetDepth; depth++) {
+      const lineA = left.end - depth;
+      const lineB = right.start + depth;
+      if (lineA < left.start || lineB > right.end) break;
+
+      const haveSolidLines =
+        solidRemaining[k] >= MIN_BLEND_DEPTH &&
+        solidRemaining[k + 1] >= MIN_BLEND_DEPTH;
+      const canBlendLeft =
+        left.width === MIN_BLEND_DEPTH || solidRemaining[k] > MIN_BLEND_DEPTH;
+      const canBlendRight =
+        right.width === MIN_BLEND_DEPTH ||
+        solidRemaining[k + 1] > MIN_BLEND_DEPTH;
+      if (!haveSolidLines || !canBlendLeft || !canBlendRight) break;
+
+      const depthProgress =
+        targetDepth === MIN_BLEND_DEPTH
+          ? 0
+          : depth / (targetDepth - MIN_BLEND_DEPTH);
+      const depthStrength =
+        1 - depthProgress * (1 - PALETTE_BLEND_CONFIG.minDepthStrengthFactor);
+      swapAcrossSeam(
+        lineA,
+        lineB,
+        lineLength,
+        edgeSwapFraction * depthStrength,
+        read,
+        write,
+      );
+      solidRemaining[k] -= MIN_BLEND_DEPTH;
+      solidRemaining[k + 1] -= MIN_BLEND_DEPTH;
+    }
   }
+}
+
+/**
+ * Reorder the fixed color supply by a noisy position along the progression
+ * axis. At 0% every square stays in a hard ordered band. Increasing the blend
+ * widens the deterministic dither zone while preserving exact color counts.
+ */
+function distributePaletteBlend(
+  colorMap: number[][],
+  modelWidth: number,
+  modelHeight: number,
+  orientation: "horizontal" | "vertical",
+  isReversed: boolean,
+  sequentialColors: readonly number[],
+  blendPercent: number,
+): void {
+  const blendStrength =
+    normalizePaletteBlendPercent(blendPercent) / BLEND_PERCENT_DIVISOR;
+  const transitionWidth =
+    blendStrength * PALETTE_BLEND_CONFIG.maxTransitionWidthSquares;
+  const horizontal = orientation === "horizontal";
+  const axisLength = horizontal ? modelWidth : modelHeight;
+  const positions: Array<{
+    x: number;
+    y: number;
+    score: number;
+    tieBreaker: number;
+  }> = [];
+
+  for (let x = 0; x < modelWidth; x++) {
+    for (let y = 0; y < modelHeight; y++) {
+      const axisPosition = horizontal ? x : y;
+      const progressionPosition = isReversed
+        ? axisLength - PALETTE_POSITION_OFFSET - axisPosition
+        : axisPosition;
+      const noiseValue = deterministicGridValue(x, y, PALETTE_BLEND_HASH_SALT);
+      positions.push({
+        x,
+        y,
+        score:
+          progressionPosition +
+          (noiseValue - BLEND_NOISE_CENTER) * transitionWidth,
+        tieBreaker: noiseValue,
+      });
+    }
+  }
+
+  positions.sort(
+    (left, right) =>
+      left.score - right.score || left.tieBreaker - right.tieBreaker,
+  );
+  positions.forEach(({ x, y }, index) => {
+    colorMap[x][y] =
+      sequentialColors[index] ??
+      sequentialColors[sequentialColors.length - PALETTE_POSITION_OFFSET] ??
+      0;
+  });
 }
 
 /**
@@ -247,8 +313,7 @@ export function getColorEntries(selectedDesign: string, customPalette: any[]) {
       i.toString(),
       {
         hex: color.hex,
-        name:
-          color.name?.trim() || `Color ${i + PALETTE_POSITION_OFFSET}`,
+        name: color.name?.trim() || `Color ${i + PALETTE_POSITION_OFFSET}`,
       },
     ]);
   } else {
@@ -293,7 +358,7 @@ export function getPatternSquareKey(x: number, y: number): string {
 }
 
 export function getPatternOrientationRotation(
-  orientation: PatternOrientation
+  orientation: PatternOrientation,
 ): number {
   return orientation === "vertical"
     ? QUARTER_TURN_RADIANS
@@ -307,7 +372,7 @@ export function getPatternOrientationRotation(
  */
 export function getSquareDirectionRotation(
   direction: SquareDirection,
-  patternRotationZ: number
+  patternRotationZ: number,
 ): number {
   return SQUARE_DIRECTION_ROTATION_Z[direction] - patternRotationZ;
 }
@@ -323,7 +388,7 @@ export function getPatternBrushKeys(
   size: number,
   gridWidth: number,
   gridHeight: number,
-  orientation: PatternOrientation
+  orientation: PatternOrientation,
 ): string[] {
   const keys: string[] = [];
   const addKey = (x: number, y: number) => {
@@ -352,11 +417,7 @@ export function getPatternBrushKeys(
         addKey(originX, y);
       }
     } else {
-      for (
-        let x = GRID_INDEX_START;
-        x < gridWidth;
-        x += GRID_INDEX_INCREMENT
-      ) {
+      for (let x = GRID_INDEX_START; x < gridWidth; x += GRID_INDEX_INCREMENT) {
         addKey(x, originY);
       }
     }
@@ -365,11 +426,7 @@ export function getPatternBrushKeys(
 
   if (shape === "column") {
     if (orientation === "vertical") {
-      for (
-        let x = GRID_INDEX_START;
-        x < gridWidth;
-        x += GRID_INDEX_INCREMENT
-      ) {
+      for (let x = GRID_INDEX_START; x < gridWidth; x += GRID_INDEX_INCREMENT) {
         addKey(x, originY);
       }
     } else {
@@ -411,7 +468,7 @@ export function getRotation(
   x: number,
   y: number,
   isHorizontal: boolean,
-  rotationSeeds: boolean[][]
+  rotationSeeds: boolean[][],
 ): number {
   const seed = rotationSeeds[x][y];
 
@@ -427,7 +484,7 @@ export function getRotation(
  */
 export function initializeRotationSeeds(
   width: number,
-  height: number
+  height: number,
 ): boolean[][] {
   return Array(width)
     .fill(0)
@@ -437,8 +494,8 @@ export function initializeRotationSeeds(
         .map(
           (_, y) =>
             deterministicGridValue(x, y, ROTATION_HASH_SALT) <
-            ROTATION_SEED_THRESHOLD
-        )
+            ROTATION_SEED_THRESHOLD,
+        ),
     );
 }
 
@@ -447,7 +504,7 @@ export function initializeRotationSeeds(
  */
 export function initializeTextureVariations(
   width: number,
-  height: number
+  height: number,
 ): TextureVariation[][] {
   return Array(width)
     .fill(0)
@@ -460,9 +517,9 @@ export function initializeTextureVariations(
           // doesn't reshuffle on every re-render).
           textureIndex: Math.floor(
             deterministicGridValue(x, y, NO_ROTATION_RADIANS) *
-              GRAIN_ATLAS.count
+              GRAIN_ATLAS.count,
           ),
-        }))
+        })),
     );
 }
 
@@ -473,7 +530,7 @@ export function initializeTextureVariations(
 export function getWeightedSquareCounts(
   totalSquares: number,
   numColors: number,
-  extraPercentByIndex?: number[]
+  extraPercentByIndex?: number[],
 ): number[] {
   const n = numColors;
   if (n <= 0) return [];
@@ -482,7 +539,7 @@ export function getWeightedSquareCounts(
     extraPercentByIndex &&
     extraPercentByIndex.length === n &&
     extraPercentByIndex.some(
-      (p) => typeof p === "number" && !Number.isNaN(p) && p > 0
+      (p) => typeof p === "number" && !Number.isNaN(p) && p > 0,
     );
 
   if (!hasWeights) {
@@ -490,12 +547,12 @@ export function getWeightedSquareCounts(
     const extraSquares = totalSquares % n;
     return Array.from(
       { length: n },
-      (_, i) => squaresPerColor + (i < extraSquares ? 1 : 0)
+      (_, i) => squaresPerColor + (i < extraSquares ? 1 : 0),
     );
   }
 
   const weights = (extraPercentByIndex as number[]).map(
-    (p) => 1 + (typeof p === "number" && !Number.isNaN(p) ? p : 0) / 100
+    (p) => 1 + (typeof p === "number" && !Number.isNaN(p) ? p : 0) / 100,
   );
   const totalWeight = weights.reduce((a, b) => a + b, 0);
   if (totalWeight <= 0) {
@@ -503,7 +560,7 @@ export function getWeightedSquareCounts(
     const extraSquares = totalSquares % n;
     return Array.from(
       { length: n },
-      (_, i) => squaresPerColor + (i < extraSquares ? 1 : 0)
+      (_, i) => squaresPerColor + (i < extraSquares ? 1 : 0),
     );
   }
 
@@ -563,7 +620,8 @@ export function generateColorMap(
   scatterEase: number = 50,
   scatterWidth: number = 10,
   scatterAmount: number = 50,
-  extraPercentByIndex?: number[]
+  extraPercentByIndex?: number[],
+  paletteBlend: number = PALETTE_BLEND_CONFIG.defaultPercent,
 ): ColorMapRef {
   // Total number of squares
   const totalSquares = adjustedModelWidth * adjustedModelHeight;
@@ -581,18 +639,23 @@ export function generateColorMap(
     : orientation;
 
   if (colorPattern === "fade") {
-    // For fade patterns, use the new column-based distribution approach
-    const totalSquares = adjustedModelWidth * adjustedModelHeight;
-
-    const squareCounts = getWeightedSquareCounts(
-      totalSquares,
+    const progressionLineCount =
+      effectiveOrientation === "horizontal"
+        ? adjustedModelWidth
+        : adjustedModelHeight;
+    const progressionLineLength =
+      effectiveOrientation === "horizontal"
+        ? adjustedModelHeight
+        : adjustedModelWidth;
+    const lineCounts = getWeightedSquareCounts(
+      progressionLineCount,
       colorEntries.length,
-      extraPercentByIndex
+      extraPercentByIndex,
     );
 
     const allColorIndices: number[] = [];
     for (let i = 0; i < colorEntries.length; i++) {
-      const squareCount = squareCounts[i] ?? 0;
+      const squareCount = (lineCounts[i] ?? 0) * progressionLineLength;
       for (let j = 0; j < squareCount; j++) {
         allColorIndices.push(i);
       }
@@ -618,7 +681,7 @@ export function generateColorMap(
       const columnOrder = shouldReverse
         ? Array.from(
             { length: adjustedModelWidth },
-            (_, i) => adjustedModelWidth - 1 - i
+            (_, i) => adjustedModelWidth - 1 - i,
           )
         : Array.from({ length: adjustedModelWidth }, (_, i) => i);
 
@@ -626,7 +689,7 @@ export function generateColorMap(
         // Fill this column with the next available colors
         const columnPositions = Array.from(
           { length: adjustedModelHeight },
-          (_, i) => i
+          (_, i) => i,
         );
 
         for (let y = 0; y < adjustedModelHeight; y++) {
@@ -669,7 +732,7 @@ export function generateColorMap(
       const rowOrder = shouldReverse
         ? Array.from(
             { length: adjustedModelHeight },
-            (_, i) => adjustedModelHeight - 1 - i
+            (_, i) => adjustedModelHeight - 1 - i,
           )
         : Array.from({ length: adjustedModelHeight }, (_, i) => i);
 
@@ -677,7 +740,7 @@ export function generateColorMap(
         // Fill this row with the next available colors
         const rowPositions = Array.from(
           { length: adjustedModelWidth },
-          (_, i) => i
+          (_, i) => i,
         );
 
         for (let x = 0; x < adjustedModelWidth; x++) {
@@ -717,13 +780,14 @@ export function generateColorMap(
       }
     }
 
-    // After distributing all colors, soften the seams between adjacent solid
-    // color bands while keeping at least one solid line per band where possible.
-    blendSolidSeams(
+    distributePaletteBlend(
       colorMap,
       adjustedModelWidth,
       adjustedModelHeight,
-      effectiveOrientation
+      effectiveOrientation,
+      shouldReverse,
+      sequentialColors,
+      paletteBlend,
     );
   } else if (colorPattern === "center-fade") {
     // For center-fade patterns, create a mirrored color array
@@ -763,14 +827,12 @@ export function generateColorMap(
     const totalColors = mirroredColorIndices.length;
     const extraPercentForMirrored =
       extraPercentByIndex && extraPercentByIndex.length === colorEntries.length
-        ? mirroredColorIndices.map(
-            (idx) => extraPercentByIndex[idx] ?? 0
-          )
+        ? mirroredColorIndices.map((idx) => extraPercentByIndex[idx] ?? 0)
         : undefined;
     const squareCounts = getWeightedSquareCounts(
       totalSquares,
       totalColors,
-      extraPercentForMirrored
+      extraPercentForMirrored,
     );
 
     const allColorIndices: number[] = [];
@@ -801,7 +863,7 @@ export function generateColorMap(
       const columnOrder = shouldReverse
         ? Array.from(
             { length: adjustedModelWidth },
-            (_, i) => adjustedModelWidth - 1 - i
+            (_, i) => adjustedModelWidth - 1 - i,
           )
         : Array.from({ length: adjustedModelWidth }, (_, i) => i);
 
@@ -809,7 +871,7 @@ export function generateColorMap(
         // Fill this column with the next available colors
         const columnPositions = Array.from(
           { length: adjustedModelHeight },
-          (_, i) => i
+          (_, i) => i,
         );
 
         for (let y = 0; y < adjustedModelHeight; y++) {
@@ -852,7 +914,7 @@ export function generateColorMap(
       const rowOrder = shouldReverse
         ? Array.from(
             { length: adjustedModelHeight },
-            (_, i) => adjustedModelHeight - 1 - i
+            (_, i) => adjustedModelHeight - 1 - i,
           )
         : Array.from({ length: adjustedModelHeight }, (_, i) => i);
 
@@ -860,7 +922,7 @@ export function generateColorMap(
         // Fill this row with the next available colors
         const rowPositions = Array.from(
           { length: adjustedModelWidth },
-          (_, i) => i
+          (_, i) => i,
         );
 
         for (let x = 0; x < adjustedModelWidth; x++) {
@@ -906,7 +968,8 @@ export function generateColorMap(
       colorMap,
       adjustedModelWidth,
       adjustedModelHeight,
-      effectiveOrientation
+      effectiveOrientation,
+      PALETTE_BLEND_CONFIG.defaultPercent,
     );
   } else if (colorPattern === "scatter") {
     // Scatter pattern with mass conservation (1-to-1 swaps)
@@ -918,7 +981,7 @@ export function generateColorMap(
     const squareCounts = getWeightedSquareCounts(
       totalSquares,
       colorEntries.length,
-      extraPercentByIndex
+      extraPercentByIndex,
     );
 
     const supplyColors: number[] = [];
@@ -932,7 +995,7 @@ export function generateColorMap(
     // 2. Create a list of all positions with a "Score"
     // Base score is position along the gradient axis.
     // Noise is added based on scatterWidth and scatterAmount.
-    
+
     interface SquareScore {
       x: number;
       y: number;
@@ -941,7 +1004,7 @@ export function generateColorMap(
 
     const squareScores: SquareScore[] = [];
     const amount = scatterAmount / 100;
-    
+
     // Seeded random helper
     const random = (seed: number) => {
       const x = Math.sin(seed) * 10000;
@@ -955,7 +1018,7 @@ export function generateColorMap(
         if (effectiveOrientation === "horizontal") {
           basePos = x;
           // Add tiny y offset to ensure stable sort for equal x
-          basePos += y * 0.001; 
+          basePos += y * 0.001;
         } else {
           basePos = y;
           basePos += x * 0.001;
@@ -963,35 +1026,38 @@ export function generateColorMap(
 
         // Handle reversal (invert base score)
         if (isReversed) {
-           const maxPos = effectiveOrientation === "horizontal" ? adjustedModelWidth : adjustedModelHeight;
-           basePos = maxPos - basePos;
+          const maxPos =
+            effectiveOrientation === "horizontal"
+              ? adjustedModelWidth
+              : adjustedModelHeight;
+          basePos = maxPos - basePos;
         }
 
         // Calculate Noise
         // ScatterWidth is in squares.
         // We want noise to be able to shift a square by +/- scatterWidth/2 roughly.
         // If scatterAmount < 100%, we only apply noise to some squares.
-        
+
         let noise = 0;
-        
+
         // Use seeded random
         const seed1 = x * adjustedModelHeight + y + (isReversed ? 1000 : 0);
         const randTrigger = random(seed1);
-        
+
         // Decide whether to scatter this square
         if (randTrigger < amount) {
-            // Apply noise
-            const seed2 = seed1 + 100000; // different seed for value
-            // Noise should be centered around 0. Range: [-scatterWidth/2, +scatterWidth/2]
-            // We use a bit wider range to ensure smooth tails if desired, 
-            // but scatterWidth usually implies the transition width.
-            noise = (random(seed2) - 0.5) * scatterWidth;
+          // Apply noise
+          const seed2 = seed1 + 100000; // different seed for value
+          // Noise should be centered around 0. Range: [-scatterWidth/2, +scatterWidth/2]
+          // We use a bit wider range to ensure smooth tails if desired,
+          // but scatterWidth usually implies the transition width.
+          noise = (random(seed2) - 0.5) * scatterWidth;
         }
 
         squareScores.push({
-            x,
-            y,
-            score: basePos + noise
+          x,
+          y,
+          score: basePos + noise,
         });
       }
     }
@@ -1001,18 +1067,20 @@ export function generateColorMap(
 
     // 4. Assign colors from supply to the sorted positions
     for (let i = 0; i < totalSquares; i++) {
-        const { x, y } = squareScores[i];
-        // Safety check if supply mismatch (shouldn't happen)
-        const colorIdx = i < supplyColors.length ? supplyColors[i] : supplyColors[supplyColors.length - 1];
-        colorMap[x][y] = colorIdx;
+      const { x, y } = squareScores[i];
+      // Safety check if supply mismatch (shouldn't happen)
+      const colorIdx =
+        i < supplyColors.length
+          ? supplyColors[i]
+          : supplyColors[supplyColors.length - 1];
+      colorMap[x][y] = colorIdx;
     }
-
   } else if (colorPattern === "random") {
     // For random pattern, distribute colors by weight but randomly
     const squareCounts = getWeightedSquareCounts(
       totalSquares,
       colorEntries.length,
-      extraPercentByIndex
+      extraPercentByIndex,
     );
 
     const allColorIndices: number[] = [];
@@ -1060,7 +1128,7 @@ export function generateColorMap(
               ? 1 - gradientProgress
               : gradientProgress;
             colorIndex = Math.floor(
-              adjustedGradientProgress * colorEntries.length
+              adjustedGradientProgress * colorEntries.length,
             );
             break;
 
@@ -1072,7 +1140,7 @@ export function generateColorMap(
           default:
             colorIndex = Math.floor(
               deterministicGridValue(x, y, FALLBACK_COLOR_HASH_SALT) *
-                colorEntries.length
+                colorEntries.length,
             );
         }
 
@@ -1133,7 +1201,7 @@ export const EXACT_MINI_HEIGHT = 7;
 
 export function isExactMiniSize(
   modelWidth: number,
-  modelHeight: number
+  modelHeight: number,
 ): boolean {
   return modelWidth === EXACT_MINI_WIDTH && modelHeight === EXACT_MINI_HEIGHT;
 }
@@ -1148,7 +1216,7 @@ export function calculateSquareLayout(
   squareSpacing: number,
   useMini: boolean = false,
   exactCount: boolean = false,
-  squareGapInches: number = SQUARE_GAP_CONFIG.defaultInches
+  squareGapInches: number = SQUARE_GAP_CONFIG.defaultInches,
 ) {
   // Calculate adjusted dimensions for mini mode
   const adjustedModelWidth =
@@ -1161,12 +1229,12 @@ export function calculateSquareLayout(
   const totalWidth = getSquareGridSpanSceneUnits(
     adjustedModelWidth,
     squareWidth,
-    squareGapInches
+    squareGapInches,
   );
   const totalHeight = getSquareGridSpanSceneUnits(
     adjustedModelHeight,
     squareWidth,
-    squareGapInches
+    squareGapInches,
   );
 
   // Calculate offsets with adjustment for mini mode

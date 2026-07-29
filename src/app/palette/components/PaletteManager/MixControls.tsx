@@ -66,6 +66,7 @@ const MIX_SECTION_TRANSITION = {
 } as const;
 const MIX_CREATE_HOVER = { scale: MIX_CONTROLS_MOTION.hoverScale } as const;
 const MIX_CREATE_TAP = { scale: MIX_CONTROLS_MOTION.tapScale } as const;
+const MIX_QUANTITY_SLIDER_WIDTH = "w-28 flex-none sm:w-36";
 
 const HAND_MIX_PREVIEW_THEME = {
   mix: "border-emerald-400/35 bg-emerald-500/15 text-emerald-100",
@@ -165,31 +166,33 @@ export function MixControls({
             )}
           </div>
 
-          <div className="flex items-center gap-3">
-            <span className="whitespace-nowrap text-xs font-medium text-slate-300">
+          <fieldset className="w-fit max-w-full rounded-xl border border-white/15 bg-black/20 px-3 pb-3 pt-1">
+            <legend className="px-1 text-xs font-medium text-slate-300">
               Colors between each
-            </span>
-            <Slider
-              value={[colorsBetween]}
-              min={PALETTE_WIDE_BLEND_CONFIG.minColorsBetween}
-              max={PALETTE_WIDE_BLEND_CONFIG.maxColorsBetween}
-              step={PALETTE_WIDE_BLEND_CONFIG.firstBlendStep}
-              onValueChange={(value) => {
-                const [nextCount] = value;
-                if (nextCount !== undefined) {
-                  onColorsBetweenChange(nextCount);
-                }
-              }}
-              aria-label="Colors between each pair"
-              className="min-w-24 flex-1"
-              trackClassName="h-2 bg-blue-400/20"
-              rangeClassName="bg-gradient-to-r from-blue-500 to-indigo-500"
-              thumbClassName="h-5 w-9 rounded-[10px] border-transparent bg-blue-600 shadow-md focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
-            />
-            <span className="inline-flex h-7 min-w-8 items-center justify-center rounded-lg bg-blue-600 px-2 text-xs font-semibold tabular-nums text-white shadow-sm">
-              {colorsBetween}
-            </span>
-          </div>
+            </legend>
+            <div className="flex items-center gap-3">
+              <Slider
+                value={[colorsBetween]}
+                min={PALETTE_WIDE_BLEND_CONFIG.minColorsBetween}
+                max={PALETTE_WIDE_BLEND_CONFIG.maxColorsBetween}
+                step={PALETTE_WIDE_BLEND_CONFIG.firstBlendStep}
+                onValueChange={(value) => {
+                  const [nextCount] = value;
+                  if (nextCount !== undefined) {
+                    onColorsBetweenChange(nextCount);
+                  }
+                }}
+                aria-label="Colors between each pair"
+                className={MIX_QUANTITY_SLIDER_WIDTH}
+                trackClassName="h-2 bg-blue-400/20"
+                rangeClassName="bg-gradient-to-r from-blue-500 to-indigo-500"
+                thumbClassName="h-5 w-9 rounded-[10px] border-transparent bg-blue-600 shadow-md focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+              />
+              <output className="inline-flex h-7 min-w-8 items-center justify-center rounded-lg bg-blue-600 px-2 text-xs font-semibold tabular-nums text-white shadow-sm">
+                {colorsBetween}
+              </output>
+            </div>
+          </fieldset>
         </div>
 
         <motion.div

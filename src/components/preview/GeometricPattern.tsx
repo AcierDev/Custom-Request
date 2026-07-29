@@ -14,7 +14,15 @@ import { useStore } from "zustand";
 import { InstancedSquares, SquareInstance } from "./InstancedSquares";
 import { PlywoodBase } from "./PlywoodBase";
 import { MultiPanelPlywoodBase } from "./MultiPanelPlywoodBase";
-import { publishArtSnapshot } from "@/lib/ar/artSnapshot";
+import {
+  publishArtSnapshot,
+  resolveFinalSquareInstances,
+} from "@/lib/ar/artSnapshot";
+import {
+  BACKBOARD_GEOMETRY_CONFIG,
+  buildBackboardBodyGeometry,
+  resolveBackboardBodies,
+} from "@/lib/backboardGeometry";
 import { ItemDesigns } from "@/typings/types";
 import {
   PatternProps,
@@ -35,6 +43,7 @@ import {
 } from "./patternUtils";
 import { useSpring } from "@react-spring/three";
 import {
+  PANEL_LAYOUT_ANIMATION_CONFIG,
   PANEL_LAYOUT_CONFIG,
   buildPanelColumnLayout,
   getPanelForColumn,
@@ -232,59 +241,64 @@ function GeometricPatternComponent({
   const showSplitPanel = useCustomStore((s) => s.viewSettings.showSplitPanel);
   const panelCount = useCustomStore((s) => s.viewSettings.panelCount);
   const panelSpacingInches = useCustomStore(
-    (s) => s.viewSettings.panelSpacingInches
+    (s) => s.viewSettings.panelSpacingInches,
   );
   const storeSquareGapInches = useCustomStore(
-    (s) => s.viewSettings.squareGapInches
+    (s) => s.viewSettings.squareGapInches,
+  );
+  const storeBackboardColor = useCustomStore(
+    (s) => s.viewSettings.backboardColor,
   );
   const drawnPatternGrid = useCustomStore((s) => s.drawnPatternGrid);
   const drawnPatternGridSize = useCustomStore((s) => s.drawnPatternGridSize);
   const activeCustomMode = useCustomStore((s) => s.activeCustomMode);
   const patternOverride = useCustomStore((s) => s.patternOverride);
   const patternDirectionOverride = useCustomStore(
-    (s) => s.patternDirectionOverride
+    (s) => s.patternDirectionOverride,
   );
-  const patternHiddenOverride = useCustomStore(
-    (s) => s.patternHiddenOverride
-  );
+  const patternHiddenOverride = useCustomStore((s) => s.patternHiddenOverride);
   const patternBrush = useCustomStore((s) => s.patternBrush);
   const applyPatternSquareEdit = useCustomStore(
-    (s) => s.applyPatternSquareEdit
+    (s) => s.applyPatternSquareEdit,
   );
   const setRenderedPatternColorIndexes = useCustomStore(
-    (s) => s.setRenderedPatternColorIndexes
+    (s) => s.setRenderedPatternColorIndexes,
   );
   const isPatternEditorActive = useCustomStore((s) => s.isPatternEditorActive);
   const isPatternColorReplaceActive = useCustomStore(
-    (s) => s.isPatternColorReplaceActive
+    (s) => s.isPatternColorReplaceActive,
   );
   const patternEditingMode = useCustomStore((s) => s.patternEditingMode);
   const scatterEase = useCustomStore((s) => s.scatterEase);
   const scatterWidth = useCustomStore((s) => s.scatterWidth);
   const scatterAmount = useCustomStore((s) => s.scatterAmount);
+  const storePaletteBlend = useCustomStore((s) => s.paletteBlend);
 
   // Use values from customDesign when provided, otherwise use store values
   const dimensions = customDesign?.dimensions ?? storeDimensions;
-  const selectedDesign =
-    customDesign?.selectedDesign ?? storeSelectedDesign;
+  const selectedDesign = customDesign?.selectedDesign ?? storeSelectedDesign;
   // When Custom is selected but there's nothing to preview (no palette
   // colors and no drawn pattern), render every square a single dark
   // blue instead of an empty / white screen.
-  const customPaletteSource =
-    customDesign?.customPalette ?? storeCustomPalette;
+  const customPaletteSource = customDesign?.customPalette ?? storeCustomPalette;
   const nothingToPreview =
     selectedDesign === ItemDesigns.Custom &&
     customPaletteSource.length === 0 &&
     (!drawnPatternGrid || !drawnPatternGridSize);
   const colorPattern = customDesign?.colorPattern ?? storeColorPattern;
+  const paletteBlend = customDesign?.paletteBlend ?? storePaletteBlend;
   const orientation = customDesign?.orientation ?? storeOrientation;
   const patternRotationZ = getPatternOrientationRotation(orientation);
   const isReversed = customDesign?.isReversed ?? storeIsReversed;
   const isRotated = customDesign?.isRotated ?? storeIsRotated;
   const useMini = customDesign?.useMini ?? storeUseMini;
   const squareGapInches = normalizeSquareGapInches(
-    customDesign?.squareGapInches ?? storeSquareGapInches
+    customDesign?.squareGapInches ?? storeSquareGapInches,
   );
+  const backboardColor =
+    customDesign && "backboardColor" in customDesign
+      ? customDesign.backboardColor
+      : storeBackboardColor;
   const customPalette = nothingToPreview
     ? EMPTY_FALLBACK_PALETTE
     : customPaletteSource;
@@ -292,7 +306,7 @@ function GeometricPatternComponent({
   const details = useMemo(() => getDimensionsDetails(dimensions), [dimensions]);
   const colorEntries = useMemo(
     () => getColorEntries(selectedDesign, customPalette),
-    [selectedDesign, customPalette]
+    [selectedDesign, customPalette],
   );
   const colorIndexByHex = useMemo(() => {
     const indexes = new Map<string, number>();
@@ -310,7 +324,7 @@ function GeometricPatternComponent({
   const rotationSeedsRef = useRef<boolean[][] | undefined>(undefined);
   // Create refs for texture variations
   const textureVariationsRef = useRef<TextureVariation[][] | undefined>(
-    undefined
+    undefined,
   );
 
   // While the squares are revealing (size-change bloom) the plywood
@@ -376,7 +390,7 @@ function GeometricPatternComponent({
         squareSpacing,
         useMini,
         isExactMiniSize(modelWidth, modelHeight),
-        squareGapInches
+        squareGapInches,
       ),
     };
   }, [useMini, modelWidth, modelHeight, squareGapInches]);
@@ -411,7 +425,7 @@ function GeometricPatternComponent({
   ) {
     rotationSeedsRef.current = initializeRotationSeeds(
       adjustedModelWidth,
-      adjustedModelHeight
+      adjustedModelHeight,
     );
   }
 
@@ -422,7 +436,7 @@ function GeometricPatternComponent({
   ) {
     textureVariationsRef.current = initializeTextureVariations(
       adjustedModelWidth,
-      adjustedModelHeight
+      adjustedModelHeight,
     );
   }
 
@@ -446,12 +460,13 @@ function GeometricPatternComponent({
             .join(",")) ||
       colorMapRef.current.scatterEase !== (scatterEase ?? 50) ||
       colorMapRef.current.scatterWidth !== (scatterWidth ?? 10) ||
-      colorMapRef.current.scatterAmount !== (scatterAmount ?? 50)
+      colorMapRef.current.scatterAmount !== (scatterAmount ?? 50) ||
+      colorMapRef.current.paletteBlend !== paletteBlend
     ) {
       const extraPercentByIndex =
         selectedDesign === ItemDesigns.Custom && customPalette?.length
           ? customPalette.map(
-              (c: { extraPercent?: number }) => c.extraPercent ?? 0
+              (c: { extraPercent?: number }) => c.extraPercent ?? 0,
             )
           : undefined;
       colorMapRef.current = generateColorMap(
@@ -467,7 +482,8 @@ function GeometricPatternComponent({
         scatterEase ?? 50,
         scatterWidth ?? 10,
         scatterAmount ?? 50,
-        extraPercentByIndex
+        extraPercentByIndex,
+        paletteBlend,
       );
       // Store the parameters used to generate this color map
       colorMapRef.current.orientation = orientation;
@@ -479,10 +495,10 @@ function GeometricPatternComponent({
       colorMapRef.current.scatterEase = scatterEase ?? 50;
       colorMapRef.current.scatterWidth = scatterWidth ?? 10;
       colorMapRef.current.scatterAmount = scatterAmount ?? 50;
+      colorMapRef.current.paletteBlend = paletteBlend;
       colorMapRef.current.extraPercentKey =
         extraPercentByIndex?.join(",") ?? "";
     }
-
   }, [
     adjustedModelWidth,
     adjustedModelHeight,
@@ -497,6 +513,7 @@ function GeometricPatternComponent({
     scatterEase,
     scatterWidth,
     scatterAmount,
+    paletteBlend,
   ]);
 
   const effectivePanelCount = showSplitPanel
@@ -504,7 +521,7 @@ function GeometricPatternComponent({
     : PANEL_LAYOUT_CONFIG.singleCount;
   const panelLayout = useMemo(
     () => buildPanelColumnLayout(currentGridWidth, effectivePanelCount),
-    [currentGridWidth, effectivePanelCount]
+    [currentGridWidth, effectivePanelCount],
   );
   const driftAmount =
     normalizePanelSpacingInches(panelSpacingInches) /
@@ -513,11 +530,10 @@ function GeometricPatternComponent({
   // Memoize the drift factor spring to prevent recreation
   const driftFactorSpring = useSpring({
     driftFactor:
-      showSplitPanel &&
-      effectivePanelCount > PANEL_LAYOUT_CONFIG.singleCount
+      showSplitPanel && effectivePanelCount > PANEL_LAYOUT_CONFIG.singleCount
         ? 1
         : 0,
-    config: { mass: 1, tension: 170, friction: 26 },
+    config: PANEL_LAYOUT_ANIMATION_CONFIG,
   });
   const { driftFactor } = driftFactorSpring;
 
@@ -527,13 +543,10 @@ function GeometricPatternComponent({
   const driftDirForColumn = useCallback(
     (xIndex: number) =>
       getPanelForColumn(panelLayout, xIndex)?.offsetMultiplier ?? 0,
-    [panelLayout]
+    [panelLayout],
   );
 
-  const getDriftFactor = useCallback(
-    () => driftFactor.get(),
-    [driftFactor]
-  );
+  const getDriftFactor = useCallback(() => driftFactor.get(), [driftFactor]);
 
   // Memoize the getColorIndex function to prevent recreation on every render
   const getColorIndexDebug = useCallback((x: number, y: number) => {
@@ -556,7 +569,7 @@ function GeometricPatternComponent({
       name: string | undefined,
       worldX: number,
       worldY: number,
-      worldZ: number
+      worldZ: number,
     ) => {
       setHoverInfo({
         position: [x, y],
@@ -565,7 +578,7 @@ function GeometricPatternComponent({
         colorName: name,
       });
     },
-    [setHoverInfo]
+    [setHoverInfo],
   );
 
   const handleSquareUnhover = useCallback(() => {
@@ -586,9 +599,7 @@ function GeometricPatternComponent({
 
     // If there are too many squares, skip rendering some in a grid pattern
     const skipFactor = shouldLimitSquares
-      ? Math.ceil(
-          Math.sqrt(totalSquares / MAX_RENDERED_SQUARE_COUNT)
-        ) // Use Math.sqrt for more even skipping
+      ? Math.ceil(Math.sqrt(totalSquares / MAX_RENDERED_SQUARE_COUNT)) // Use Math.sqrt for more even skipping
       : 1;
 
     for (let x = 0; x < currentGridWidth; x++) {
@@ -615,7 +626,7 @@ function GeometricPatternComponent({
             color = cell.color || "#FFFFFF00"; // Use transparent if no color
             colorName = cell.colorName;
             const drawnColorIndex = colorIndexByHex.get(
-              normalizePatternColorHex(color)
+              normalizePatternColorHex(color),
             );
             if (drawnColorIndex !== undefined) {
               colorIndex = drawnColorIndex;
@@ -677,14 +688,13 @@ function GeometricPatternComponent({
           x,
           y,
           isHorizontal,
-          rotationSeedsRef.current!
+          rotationSeedsRef.current!,
         );
-        const directionOverride =
-          patternDirectionOverride[patternKey];
+        const directionOverride = patternDirectionOverride[patternKey];
         if (directionOverride !== undefined) {
           rotation = getSquareDirectionRotation(
             directionOverride,
-            patternRotationZ
+            patternRotationZ,
           );
         }
         const textureVariation = textureVariationsRef.current![x][y];
@@ -713,6 +723,7 @@ function GeometricPatternComponent({
                 ? 1
                 : 1 + SQUARE_EDGE_OVERLAP),
             scaleZ: squareSize * sizeScale,
+            physicalScale: squareSize * sizeScale,
             grainIndex: textureVariation.textureIndex,
           });
         }
@@ -748,6 +759,7 @@ function GeometricPatternComponent({
     scatterEase,
     scatterWidth,
     scatterAmount,
+    paletteBlend,
     patternOverride,
     patternDirectionOverride,
     patternHiddenOverride,
@@ -771,11 +783,8 @@ function GeometricPatternComponent({
   }, [customDesign, setRenderedPatternColorIndexes]);
 
   const renderedPatternKeys = useMemo(
-    () =>
-      new Set(
-        instances.map(({ x, y }) => getPatternSquareKey(x, y))
-      ),
-    [instances]
+    () => new Set(instances.map(({ x, y }) => getPatternSquareKey(x, y))),
+    [instances],
   );
 
   const [patternBrushPreviewOrigin, setPatternBrushPreviewOrigin] = useState<{
@@ -787,7 +796,7 @@ function GeometricPatternComponent({
     setPatternBrushPreviewOrigin((currentOrigin) =>
       currentOrigin?.x === x && currentOrigin.y === y
         ? currentOrigin
-        : { x, y }
+        : { x, y },
     );
   }, []);
 
@@ -826,8 +835,8 @@ function GeometricPatternComponent({
         brushSize,
         currentGridWidth,
         currentGridHeight,
-        orientation
-      )
+        orientation,
+      ),
     );
 
     return instances.reduce<number[]>((instanceIds, square, instanceId) => {
@@ -855,7 +864,7 @@ function GeometricPatternComponent({
       name: string | undefined,
       worldX: number,
       worldY: number,
-      worldZ: number
+      worldZ: number,
     ) => {
       if (isPatternEditorActive && patternEditingMode.tool !== "none") {
         const brushSize =
@@ -869,7 +878,7 @@ function GeometricPatternComponent({
           brushSize,
           currentGridWidth,
           currentGridHeight,
-          orientation
+          orientation,
         ).filter((key) => renderedPatternKeys.has(key));
 
         if (brushKeys.length) {
@@ -900,32 +909,72 @@ function GeometricPatternComponent({
       patternEditingMode,
       renderedPatternKeys,
       setPinnedInfo,
-    ]
+    ],
   );
 
   // Publish the EXACT computed art to the AR snapshot so "View in your room"
   // (USDZ export) is pixel-faithful to what's on screen — on the viewer AND the
-  // shared page (both mount this component). We hand off the live array so the
-  // export uses the exact computed transforms and grain cells.
+  // shared page (both mount this component). Resolve the spring-driven panel
+  // drift to its settled physical layout before publishing.
+  const finalSnapshotInstances = useMemo(
+    () => resolveFinalSquareInstances(instances, driftAmount),
+    [driftAmount, instances],
+  );
+  const finalBackboardBodies = useMemo(() => {
+    const bodies = buildBackboardBodyGeometry({
+      columnCount: adjustedModelWidth,
+      rowCount: adjustedModelHeight,
+      squareSizeSceneUnits: squareSize,
+      squareSpacingScale: squareSpacing,
+      useMini,
+      squareGapInches,
+      panelCount: effectivePanelCount,
+    });
+    return resolveBackboardBodies(
+      bodies,
+      driftAmount,
+      BACKBOARD_GEOMETRY_CONFIG.settledDriftFactor,
+    );
+  }, [
+    adjustedModelHeight,
+    adjustedModelWidth,
+    driftAmount,
+    effectivePanelCount,
+    squareGapInches,
+    squareSize,
+    squareSpacing,
+    useMini,
+  ]);
+
   useEffect(() => {
     publishArtSnapshot({
-      instances: instances.filter((instance) => !instance.hidden),
+      instances: finalSnapshotInstances,
+      backboardBodies: finalBackboardBodies,
+      squareGapInches,
+      panelCount: effectivePanelCount,
+      panelSpacingInches,
       orientationRotationZ: orientation === "vertical" ? Math.PI / 2 : 0,
       totalWidth,
       totalHeight,
       squareSize,
       useMini,
       showWoodGrain,
+      backboardColor,
       updatedAt: Date.now(),
     });
   }, [
-    instances,
+    effectivePanelCount,
+    finalBackboardBodies,
+    finalSnapshotInstances,
     orientation,
+    panelSpacingInches,
+    squareGapInches,
     totalWidth,
     totalHeight,
     squareSize,
     useMini,
     showWoodGrain,
+    backboardColor,
   ]);
 
   // Handle group click outside of render to prevent unnecessary recreations
@@ -935,7 +984,7 @@ function GeometricPatternComponent({
         setPinnedInfo(null);
       }
     },
-    [setPinnedInfo]
+    [setPinnedInfo],
   );
 
   return (
@@ -947,7 +996,7 @@ function GeometricPatternComponent({
           isRotated ? 1 : 0
         }-${useMini ? 1 : 0}-${scatterEase ?? 50}-${scatterWidth ?? 10}-${
           scatterAmount ?? 50
-        }-${effectivePanelCount}-${panelSpacingInches}-${squareGapInches}`}
+        }-${paletteBlend}-${effectivePanelCount}-${panelSpacingInches}-${squareGapInches}`}
         rotation={[NO_AXIS_ROTATION, NO_AXIS_ROTATION, patternRotationZ]}
         position={[0, 0, 0]}
         onClick={showColorInfo ? handleGroupClick : undefined}
@@ -963,8 +1012,10 @@ function GeometricPatternComponent({
               useMini={useMini}
               showWoodGrain={showWoodGrain}
               panelCount={effectivePanelCount}
-              panelSpacingInches={panelSpacingInches}
+              driftAmount={driftAmount}
+              driftFactor={driftFactor}
               squareGapInches={squareGapInches}
+              backboardColor={backboardColor}
             />
           ) : (
             <PlywoodBase
@@ -976,6 +1027,7 @@ function GeometricPatternComponent({
               adjustedModelHeight={adjustedModelHeight}
               useMini={useMini}
               squareGapInches={squareGapInches}
+              backboardColor={backboardColor}
             />
           ))}
 

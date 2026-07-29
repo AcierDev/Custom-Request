@@ -11,8 +11,14 @@ import { useSpring, animated } from "@react-spring/three";
 import {
   SQUARE_GAP_CONFIG,
   getSquareGapSceneUnits,
-  getSquareGridSpanSceneUnits,
 } from "@/lib/squareGap";
+import { NATURAL_BACKBOARD_TINT_COLOR } from "@/lib/backboardColor";
+import {
+  BACKBOARD_GEOMETRY_CONFIG,
+  buildBackboardBodyGeometry,
+} from "@/lib/backboardGeometry";
+import { WEDGE_GEOMETRY_CONFIG } from "@/lib/wedgeGeometry";
+import { PANEL_LAYOUT_CONFIG } from "@/lib/panelLayout";
 
 interface PlywoodBaseProps {
   width: number;
@@ -23,14 +29,14 @@ interface PlywoodBaseProps {
   adjustedModelHeight: number;
   useMini: boolean;
   squareGapInches?: number;
+  backboardColor?: string | null;
 }
 
-const INCHES_PER_SCENE_UNIT = 6;
-const BACKBOARD_INSET_INCHES = 0.5;
-const BACKBOARD_INSET = BACKBOARD_INSET_INCHES / INCHES_PER_SCENE_UNIT;
 const HANGER_INCHES_FROM_TOP = 12;
 const HANGER_OFFSET_FROM_TOP =
-  HANGER_INCHES_FROM_TOP / INCHES_PER_SCENE_UNIT;
+  HANGER_INCHES_FROM_TOP /
+  BACKBOARD_GEOMETRY_CONFIG.inchesPerSceneUnit;
+const BACKBOARD_INSET = BACKBOARD_GEOMETRY_CONFIG.insetSceneUnits;
 const SECTION_CENTER_DIVISOR = 2;
 const FIRST_SECTION_START = 0;
 const SECTION_INDEX_OFFSET = 1;
@@ -177,6 +183,7 @@ export function PlywoodBase({
   adjustedModelHeight,
   useMini,
   squareGapInches = SQUARE_GAP_CONFIG.defaultInches,
+  backboardColor = null,
 }: PlywoodBaseProps) {
   // Load unconditionally — hooks must run on every render (a conditional
   // useLoader breaks the rules of hooks and crashes when the wood-grain
@@ -193,38 +200,37 @@ export function PlywoodBase({
   // Memoize all calculations to prevent recalculation on every render
   const dimensions = useMemo(() => {
     // Use the same squareSpacing factor as in GeometricPattern
-    const squareSpacing = useMini ? 0.9 : 1;
-    const baseThickness = 0.07;
+    const squareSpacing = useMini
+      ? WEDGE_GEOMETRY_CONFIG.miniScale
+      : WEDGE_GEOMETRY_CONFIG.normalizedEdge;
+    const [backboardBody] = buildBackboardBodyGeometry({
+      columnCount: adjustedModelWidth,
+      rowCount: adjustedModelHeight,
+      squareSizeSceneUnits: squareSize,
+      squareSpacingScale: squareSpacing,
+      useMini,
+      squareGapInches,
+      panelCount: PANEL_LAYOUT_CONFIG.singleCount,
+    });
+    const baseThickness = backboardBody.size[2];
     const squareWidth = squareSize * squareSpacing;
     const squareStride =
       squareWidth + getSquareGapSceneUnits(squareGapInches);
 
     // Compute accurate dimensions using the same calculation as the geometric pattern
-    const totalWidth = getSquareGridSpanSceneUnits(
-      adjustedModelWidth,
-      squareWidth,
-      squareGapInches
-    );
-    const totalHeight = getSquareGridSpanSceneUnits(
-      adjustedModelHeight,
-      squareWidth,
-      squareGapInches
-    );
+    const totalWidth = backboardBody.size[0] + 2 * BACKBOARD_INSET;
+    const totalHeight = backboardBody.size[1] + 2 * BACKBOARD_INSET;
 
-    const offsetX = -totalWidth / 2 - 0.25 + (useMini ? 0.03 : 0);
-    const offsetY = -totalHeight / 2 - 0.25 + (useMini ? 0.03 : 0);
+    const offsetX =
+      -totalWidth / SECTION_CENTER_DIVISOR +
+      BACKBOARD_GEOMETRY_CONFIG.gridOriginOffsetSceneUnits +
+      (useMini
+        ? BACKBOARD_GEOMETRY_CONFIG.miniGridCorrectionSceneUnits
+        : 0);
 
     // Compute center position to align with the squares grid
-    const centerX =
-      offsetX +
-      squareSize / 2 +
-      ((adjustedModelWidth - SECTION_INDEX_OFFSET) * squareStride) /
-        SECTION_CENTER_DIVISOR;
-    const centerY =
-      offsetY +
-      squareSize / 2 +
-      ((adjustedModelHeight - SECTION_INDEX_OFFSET) * squareStride) /
-        SECTION_CENTER_DIVISOR;
+    const centerX = backboardBody.baseCenter[0];
+    const centerY = backboardBody.baseCenter[1];
 
     // Calculate split points based on square positions like in GeometricPattern
     const oneThirdWidth = Math.floor(adjustedModelWidth / 3);
@@ -344,6 +350,8 @@ export function PlywoodBase({
   }, [selectedDesign, customPalette, isReversed, colorPattern]);
 
   const { leftColor, rightColor } = colors;
+  const leftBackboardEdgeColor = backboardColor ?? leftColor;
+  const rightBackboardEdgeColor = backboardColor ?? rightColor;
 
   // Memoize the animation spring
   const driftFactorSpring = useSpring({
@@ -357,7 +365,7 @@ export function PlywoodBase({
   const leftPanelPosition = useMemo(
     () => (d: number) =>
       [
-        leftPanelX - driftDistance * d - 0.249 + BACKBOARD_INSET / 2,
+        leftPanelX - driftDistance * d + BACKBOARD_INSET / 2,
         centerY,
         -baseThickness / 2,
       ],
@@ -367,7 +375,7 @@ export function PlywoodBase({
   const rightPanelPosition = useMemo(
     () => (d: number) =>
       [
-        rightPanelX + driftDistance * d - 0.25 - BACKBOARD_INSET / 2,
+        rightPanelX + driftDistance * d - BACKBOARD_INSET / 2,
         centerY,
         -baseThickness / 2,
       ],
@@ -430,11 +438,12 @@ export function PlywoodBase({
           ]}
           texture={texture}
           showWoodGrain={showWoodGrain}
+          color={backboardColor ?? NATURAL_BACKBOARD_TINT_COLOR}
         />
 
         {/* Center panel */}
         <PlywoodPanel
-          position={[centerPanelX - 0.249, centerY, -baseThickness / 2]}
+          position={[centerPanelX, centerY, -baseThickness / 2]}
           args={[
             centerPanelWidth,
             totalHeight - 2 * BACKBOARD_INSET,
@@ -442,6 +451,7 @@ export function PlywoodBase({
           ]}
           texture={texture}
           showWoodGrain={showWoodGrain}
+          color={backboardColor ?? NATURAL_BACKBOARD_TINT_COLOR}
         />
 
         {/* Right panel */}
@@ -454,6 +464,7 @@ export function PlywoodBase({
           ]}
           texture={texture}
           showWoodGrain={showWoodGrain}
+          color={backboardColor ?? NATURAL_BACKBOARD_TINT_COLOR}
         />
       </>
 
@@ -467,7 +478,7 @@ export function PlywoodBase({
         ]}
         texture={null}
         showWoodGrain={false}
-        color={leftColor}
+        color={leftBackboardEdgeColor}
         rotation={[0, Math.PI / 2, 0]}
       />
 
@@ -481,7 +492,7 @@ export function PlywoodBase({
         ]}
         texture={null}
         showWoodGrain={false}
-        color={rightColor}
+        color={rightBackboardEdgeColor}
         rotation={[0, Math.PI / 2, 0]}
       />
 
@@ -498,7 +509,7 @@ export function PlywoodBase({
         args={[totalWidth - 2 * BACKBOARD_INSET, baseThickness + 0.001, 0.005]}
         texture={null}
         showWoodGrain={false}
-        color={leftColor}
+        color={leftBackboardEdgeColor}
         rotation={[Math.PI / 2, 0, 0]}
       />
 
@@ -512,7 +523,7 @@ export function PlywoodBase({
         args={[totalWidth - 2 * BACKBOARD_INSET, baseThickness + 0.001, 0.005]}
         texture={null}
         showWoodGrain={false}
-        color={rightColor}
+        color={rightBackboardEdgeColor}
         rotation={[Math.PI / 2, 0, 0]}
       />
     </>

@@ -11,10 +11,21 @@
 // GeometricPattern).
 
 import type { SquareInstance } from "@/components/preview/InstancedSquares";
+import type { ResolvedBackboardBodyGeometry } from "@/lib/backboardGeometry";
+
+const NO_PANEL_DRIFT_DIRECTION = 0;
 
 export interface ArtSnapshot {
-  /** The exact per-square instances the viewer rendered. */
+  /** Visible instances with their final split-panel positions resolved. */
   instances: SquareInstance[];
+  /** Final physical backboard bodies, including settled panel spacing. */
+  backboardBodies: ResolvedBackboardBodyGeometry[];
+  /** Physical gap between adjacent squares, in inches. */
+  squareGapInches: number;
+  /** Number of physical backboard panels in the current layout. */
+  panelCount: number;
+  /** Physical spacing between adjacent panels, in inches. */
+  panelSpacingInches: number;
   /** Group-level Z rotation applied to the whole art (PI/2 when vertical). */
   orientationRotationZ: number;
   /** Backing-board / grid extent in SCENE UNITS (1 unit = 6 inches). */
@@ -25,12 +36,30 @@ export interface ArtSnapshot {
   useMini: boolean;
   /** Whether the live view is showing wood grain — drives the grain bake. */
   showWoodGrain: boolean;
+  /** Saved tint for the backing board; null preserves natural plywood. */
+  backboardColor?: string | null;
   /** Changes whenever the art changes; used to cache the prepared USDZ. */
   updatedAt: number;
 }
 
 let latest: ArtSnapshot | null = null;
 const subscribers = new Set<(snapshot: ArtSnapshot) => void>();
+
+export function resolveFinalSquareInstances(
+  instances: readonly SquareInstance[],
+  panelDriftSceneUnits: number,
+): SquareInstance[] {
+  return instances
+    .filter((instance) => !instance.hidden)
+    .map((instance) => ({
+      ...instance,
+      px:
+        instance.driftDir === NO_PANEL_DRIFT_DIRECTION
+          ? instance.px
+          : instance.baseX +
+            instance.driftDir * panelDriftSceneUnits,
+    }));
+}
 
 /** Called by GeometricPattern each time it recomputes the art. */
 export function publishArtSnapshot(snapshot: ArtSnapshot): void {

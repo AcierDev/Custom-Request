@@ -4,8 +4,50 @@ import type React from "react";
 
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Crosshair, ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
+import { Crosshair, Scan, ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
+
+const MIN_ZOOM_LEVEL = 0.5;
+const MAX_ZOOM_LEVEL = 5;
+const ZOOM_MULTIPLIER = 1.5;
+const PICKER_HEIGHT_PX = 400;
+const MAGNIFIER_SOURCE_SIZE_PX = 21;
+const MAGNIFIER_DISPLAY_SIZE_PX = 140;
+const MAGNIFIER_CROSSHAIR_HALF_LENGTH_PX = 10;
+const MAGNIFIER_CROSSHAIR_LINE_WIDTH_PX = 2;
+const AREA_SAMPLE_MIN_PERCENT = 1;
+const AREA_SAMPLE_MAX_PERCENT = 25;
+const AREA_SAMPLE_STEP_PERCENT = 1;
+const DEFAULT_AREA_SAMPLE_PERCENT = 6;
+const AREA_AVERAGE_MAX_DIMENSION_PX = 96;
+const PERCENT_SCALE = 100;
+const SINGLE_PIXEL_SIZE_PX = 1;
+const COLOR_CHANNEL_COUNT = 4;
+const RED_CHANNEL_OFFSET = 0;
+const GREEN_CHANNEL_OFFSET = 1;
+const BLUE_CHANNEL_OFFSET = 2;
+const ALPHA_CHANNEL_OFFSET = 3;
+const MAX_ALPHA_VALUE = 255;
+const HEX_COLOR_BASE = 1 << 24;
+const RED_HEX_SHIFT = 16;
+const GREEN_HEX_SHIFT = 8;
+
+type SamplingMode = "pixel" | "area";
+
+interface SampleBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+interface SelectionBox {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
 
 interface ImageColorPickerProps {
   imageUrl: string;
@@ -19,17 +61,23 @@ export function ImageColorPicker({
   selectedColor,
 }: ImageColorPickerProps) {
   const [position, setPosition] = useState<{ x: number; y: number } | null>(
-    null
+    null,
   );
   const [hoveredColor, setHoveredColor] = useState<string | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [samplingMode, setSamplingMode] = useState<SamplingMode>("pixel");
+  const [areaSamplePercent, setAreaSamplePercent] = useState(
+    DEFAULT_AREA_SAMPLE_PERCENT,
+  );
+  const [selectionBox, setSelectionBox] = useState<SelectionBox | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [magnifierPixels, setMagnifierPixels] = useState<ImageData | null>(
-    null
+    null,
   );
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const averageCanvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const magnifierCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -65,23 +113,130 @@ export function ImageColorPicker({
   useEffect(() => {
     setZoomLevel(1);
     setPanOffset({ x: 0, y: 0 });
+    setPosition(null);
+    setHoveredColor(null);
+    setSelectionBox(null);
   }, [imageUrl]);
 
-  const getColorAtPosition = (x: number, y: number) => {
+  useEffect(() => {
+    setPosition(null);
+    setHoveredColor(null);
+    setMagnifierPixels(null);
+    setSelectionBox(null);
+  }, [samplingMode, areaSamplePercent]);
+
+  const getSampleBounds = (
+    centerX: number,
+    centerY: number,
+    canvasWidth: number,
+    canvasHeight: number,
+  ): SampleBounds => {
+    if (samplingMode === "pixel") {
+      return {
+        x: centerX,
+        y: centerY,
+        width: SINGLE_PIXEL_SIZE_PX,
+        height: SINGLE_PIXEL_SIZE_PX,
+      };
+    }
+
+    const sampleSize = Math.max(
+      SINGLE_PIXEL_SIZE_PX,
+      Math.round(
+        Math.min(canvasWidth, canvasHeight) *
+          (areaSamplePercent / PERCENT_SCALE),
+      ),
+    );
+    const halfSampleSize = Math.floor(sampleSize / 2);
+    const x = Math.max(0, centerX - halfSampleSize);
+    const y = Math.max(0, centerY - halfSampleSize);
+
+    return {
+      x,
+      y,
+      width: Math.min(sampleSize, canvasWidth - x),
+      height: Math.min(sampleSize, canvasHeight - y),
+    };
+  };
+
+  const getColorAtPosition = (bounds: SampleBounds) => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
 
     if (!ctx || !canvas) return null;
 
-    // Get the pixel data at the clicked position
-    const pixelData = ctx.getImageData(x, y, 1, 1).data;
+    let pixelData: Uint8ClampedArray;
 
-    // Convert RGB to hex
+    if (samplingMode === "area") {
+      const averageCanvas = averageCanvasRef.current;
+      const averageContext = averageCanvas?.getContext("2d");
+      if (!averageCanvas || !averageContext) return null;
+
+      averageCanvas.width = Math.min(
+        bounds.width,
+        AREA_AVERAGE_MAX_DIMENSION_PX,
+      );
+      averageCanvas.height = Math.min(
+        bounds.height,
+        AREA_AVERAGE_MAX_DIMENSION_PX,
+      );
+      averageContext.imageSmoothingEnabled = true;
+      averageContext.imageSmoothingQuality = "high";
+      averageContext.drawImage(
+        canvas,
+        bounds.x,
+        bounds.y,
+        bounds.width,
+        bounds.height,
+        0,
+        0,
+        averageCanvas.width,
+        averageCanvas.height,
+      );
+      pixelData = averageContext.getImageData(
+        0,
+        0,
+        averageCanvas.width,
+        averageCanvas.height,
+      ).data;
+    } else {
+      pixelData = ctx.getImageData(
+        bounds.x,
+        bounds.y,
+        SINGLE_PIXEL_SIZE_PX,
+        SINGLE_PIXEL_SIZE_PX,
+      ).data;
+    }
+    let redTotal = 0;
+    let greenTotal = 0;
+    let blueTotal = 0;
+    let alphaTotal = 0;
+
+    for (
+      let index = 0;
+      index < pixelData.length;
+      index += COLOR_CHANNEL_COUNT
+    ) {
+      const alpha = pixelData[index + ALPHA_CHANNEL_OFFSET] / MAX_ALPHA_VALUE;
+      if (alpha === 0) continue;
+
+      redTotal += pixelData[index + RED_CHANNEL_OFFSET] * alpha;
+      greenTotal += pixelData[index + GREEN_CHANNEL_OFFSET] * alpha;
+      blueTotal += pixelData[index + BLUE_CHANNEL_OFFSET] * alpha;
+      alphaTotal += alpha;
+    }
+
+    if (alphaTotal === 0) return null;
+
+    const red = Math.round(redTotal / alphaTotal);
+    const green = Math.round(greenTotal / alphaTotal);
+    const blue = Math.round(blueTotal / alphaTotal);
+
     const hex = `#${(
-      (1 << 24) +
-      (pixelData[0] << 16) +
-      (pixelData[1] << 8) +
-      pixelData[2]
+      HEX_COLOR_BASE +
+      (red << RED_HEX_SHIFT) +
+      (green << GREEN_HEX_SHIFT) +
+      blue
     )
       .toString(16)
       .slice(1)}`;
@@ -95,7 +250,7 @@ export function ImageColorPicker({
 
     if (!ctx || !canvas) return null;
 
-    const magnifierSize = 21; // 21x21 grid for magnifier
+    const magnifierSize = MAGNIFIER_SOURCE_SIZE_PX;
     const halfSize = Math.floor(magnifierSize / 2);
 
     // Get pixel data around the center point
@@ -143,10 +298,10 @@ export function ImageColorPicker({
 
     // Container dimensions
     const containerWidth = container.clientWidth;
-    const maxContainerHeight = 400;
+    const maxContainerHeight = PICKER_HEIGHT_PX;
     const containerHeight = Math.min(
       container.clientHeight,
-      maxContainerHeight
+      maxContainerHeight,
     );
 
     // Image natural dimensions
@@ -193,6 +348,7 @@ export function ImageColorPicker({
       setPosition(null);
       setHoveredColor(null);
       setMagnifierPixels(null);
+      setSelectionBox(null);
       return;
     }
 
@@ -211,11 +367,25 @@ export function ImageColorPicker({
     // Set the visual indicator position (relative to container)
     setPosition({ x: mouseX, y: mouseY });
 
-    // Get color from the calculated original coordinates
-    const color = getColorAtPosition(clampedX, clampedY);
-    if (color) {
-      setHoveredColor(color);
-    }
+    const sampleBounds = getSampleBounds(
+      clampedX,
+      clampedY,
+      naturalWidth,
+      naturalHeight,
+    );
+    const color = getColorAtPosition(sampleBounds);
+    setHoveredColor(color);
+
+    setSelectionBox(
+      samplingMode === "area"
+        ? {
+            left: offsetX + sampleBounds.x / scaleX,
+            top: offsetY + sampleBounds.y / scaleY,
+            width: sampleBounds.width / scaleX,
+            height: sampleBounds.height / scaleY,
+          }
+        : null,
+    );
 
     // Get magnifier pixels
     const magnifierData = getMagnifierPixels(clampedX, clampedY);
@@ -244,15 +414,16 @@ export function ImageColorPicker({
     setPosition(null);
     setHoveredColor(null);
     setMagnifierPixels(null);
+    setSelectionBox(null);
     setIsDragging(false);
   };
 
   const handleZoomIn = () => {
-    setZoomLevel((prev) => Math.min(prev * 1.5, 5));
+    setZoomLevel((prev) => Math.min(prev * ZOOM_MULTIPLIER, MAX_ZOOM_LEVEL));
   };
 
   const handleZoomOut = () => {
-    setZoomLevel((prev) => Math.max(prev / 1.5, 0.5));
+    setZoomLevel((prev) => Math.max(prev / ZOOM_MULTIPLIER, MIN_ZOOM_LEVEL));
   };
 
   const handleResetView = () => {
@@ -268,7 +439,7 @@ export function ImageColorPicker({
     const ctx = magnifierCanvas.getContext("2d");
     if (!ctx) return;
 
-    const magnifierSize = 140; // Size of the magnifier display
+    const magnifierSize = MAGNIFIER_DISPLAY_SIZE_PX;
     magnifierCanvas.width = magnifierSize;
     magnifierCanvas.height = magnifierSize;
 
@@ -276,7 +447,7 @@ export function ImageColorPicker({
     ctx.clearRect(0, 0, magnifierSize, magnifierSize);
 
     // Calculate pixel size in magnifier
-    const pixelSize = magnifierSize / 21; // 21x21 grid
+    const pixelSize = magnifierSize / MAGNIFIER_SOURCE_SIZE_PX;
 
     // Draw each pixel as a larger square
     const data = magnifierPixels.data;
@@ -285,11 +456,11 @@ export function ImageColorPicker({
 
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
-        const index = (y * width + x) * 4;
-        const r = data[index];
-        const g = data[index + 1];
-        const b = data[index + 2];
-        const a = data[index + 3];
+        const index = (y * width + x) * COLOR_CHANNEL_COUNT;
+        const r = data[index + RED_CHANNEL_OFFSET];
+        const g = data[index + GREEN_CHANNEL_OFFSET];
+        const b = data[index + BLUE_CHANNEL_OFFSET];
+        const a = data[index + ALPHA_CHANNEL_OFFSET];
 
         if (a > 0) {
           ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
@@ -303,20 +474,20 @@ export function ImageColorPicker({
     const centerY = magnifierSize / 2;
 
     ctx.strokeStyle = "white";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = MAGNIFIER_CROSSHAIR_LINE_WIDTH_PX;
     ctx.shadowColor = "black";
     ctx.shadowBlur = 2;
 
     // Horizontal line
     ctx.beginPath();
-    ctx.moveTo(centerX - 10, centerY);
-    ctx.lineTo(centerX + 10, centerY);
+    ctx.moveTo(centerX - MAGNIFIER_CROSSHAIR_HALF_LENGTH_PX, centerY);
+    ctx.lineTo(centerX + MAGNIFIER_CROSSHAIR_HALF_LENGTH_PX, centerY);
     ctx.stroke();
 
     // Vertical line
     ctx.beginPath();
-    ctx.moveTo(centerX, centerY - 10);
-    ctx.lineTo(centerX, centerY + 10);
+    ctx.moveTo(centerX, centerY - MAGNIFIER_CROSSHAIR_HALF_LENGTH_PX);
+    ctx.lineTo(centerX, centerY + MAGNIFIER_CROSSHAIR_HALF_LENGTH_PX);
     ctx.stroke();
 
     ctx.shadowBlur = 0;
@@ -324,35 +495,98 @@ export function ImageColorPicker({
 
   return (
     <div className="space-y-4">
-      {/* Zoom Controls */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={handleZoomOut}
-            disabled={zoomLevel <= 0.5}
+            disabled={zoomLevel <= MIN_ZOOM_LEVEL}
+            aria-label="Zoom out"
           >
             <ZoomOut className="h-4 w-4" />
           </Button>
-          <span className="text-sm font-medium min-w-[60px] text-center">
-            {Math.round(zoomLevel * 100)}%
+          <span className="min-w-[60px] text-center text-sm font-medium">
+            {Math.round(zoomLevel * PERCENT_SCALE)}%
           </span>
           <Button
             variant="outline"
             size="sm"
             onClick={handleZoomIn}
-            disabled={zoomLevel >= 5}
+            disabled={zoomLevel >= MAX_ZOOM_LEVEL}
+            aria-label="Zoom in"
           >
             <ZoomIn className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="sm" onClick={handleResetView}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleResetView}
+            aria-label="Reset zoom and pan"
+          >
             <RotateCcw className="h-4 w-4" />
           </Button>
         </div>
-        <div className="text-xs text-slate-400">
-          Shift + drag to pan
+        <div className="text-xs text-slate-400">Shift + drag to pan</div>
+      </div>
+
+      <div className="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3 sm:flex-row sm:items-center">
+        <div
+          className="grid shrink-0 grid-cols-2 rounded-lg bg-black/20 p-1"
+          role="group"
+          aria-label="Color sampling mode"
+        >
+          <button
+            type="button"
+            aria-pressed={samplingMode === "pixel"}
+            onClick={() => setSamplingMode("pixel")}
+            className={`flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+              samplingMode === "pixel"
+                ? "bg-blue-500 text-white shadow-sm"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <Crosshair className="h-3.5 w-3.5" />
+            Pixel
+          </button>
+          <button
+            type="button"
+            aria-pressed={samplingMode === "area"}
+            onClick={() => setSamplingMode("area")}
+            className={`flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+              samplingMode === "area"
+                ? "bg-blue-500 text-white shadow-sm"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <Scan className="h-3.5 w-3.5" />
+            Area average
+          </button>
         </div>
+
+        {samplingMode === "area" ? (
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <span className="whitespace-nowrap text-xs text-slate-400">
+              Area size
+            </span>
+            <Slider
+              value={[areaSamplePercent]}
+              min={AREA_SAMPLE_MIN_PERCENT}
+              max={AREA_SAMPLE_MAX_PERCENT}
+              step={AREA_SAMPLE_STEP_PERCENT}
+              onValueChange={([value]) => setAreaSamplePercent(value)}
+              aria-label="Area sample size"
+              className="min-w-24 flex-1"
+            />
+            <span className="w-9 text-right font-mono text-xs text-slate-300">
+              {areaSamplePercent}%
+            </span>
+          </div>
+        ) : (
+          <p className="text-xs text-slate-400">
+            Picks the exact pixel beneath the cursor.
+          </p>
+        )}
       </div>
 
       <div className="flex gap-4">
@@ -364,14 +598,14 @@ export function ImageColorPicker({
               isDragging
                 ? "cursor-grabbing"
                 : zoomLevel > 1
-                ? "cursor-grab"
-                : "cursor-crosshair"
+                  ? "cursor-grab"
+                  : "cursor-crosshair"
             }`}
             onMouseMove={handleMouseMove}
             onMouseDown={handleMouseDown}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseLeave}
-            style={{ height: "400px" }}
+            style={{ height: PICKER_HEIGHT_PX }}
           >
             <img
               ref={imageRef}
@@ -388,6 +622,22 @@ export function ImageColorPicker({
             />
 
             <canvas ref={canvasRef} className="hidden" />
+            <canvas ref={averageCanvasRef} className="hidden" />
+
+            {selectionBox && samplingMode === "area" && !isDragging && (
+              <motion.div
+                className="pointer-events-none absolute z-10 overflow-hidden rounded-md border-2 border-white shadow-[0_0_0_1px_rgba(0,0,0,0.5),0_2px_10px_rgba(0,0,0,0.35)]"
+                style={selectionBox}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.1 }}
+              >
+                <div
+                  className="absolute inset-0 opacity-20"
+                  style={{ backgroundColor: hoveredColor ?? "transparent" }}
+                />
+              </motion.div>
+            )}
 
             {position && !isDragging && (
               <motion.div
@@ -415,6 +665,7 @@ export function ImageColorPicker({
                       className="w-3 h-3 rounded-sm border border-gray-400/50"
                       style={{ backgroundColor: hoveredColor }}
                     />
+                    {samplingMode === "area" ? "Avg " : ""}
                     {hoveredColor}
                   </div>
                 )}
@@ -453,7 +704,9 @@ export function ImageColorPicker({
           />
           <span className="text-sm font-mono">{selectedColor}</span>
           <span className="text-xs text-slate-400 ml-auto">
-            Click to add more colors
+            {samplingMode === "area"
+              ? "Click an area to add its average"
+              : "Click to add more colors"}
           </span>
         </div>
       )}

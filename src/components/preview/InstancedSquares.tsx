@@ -6,7 +6,9 @@ import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { memo, useCallback, useEffect, useMemo, useRef } from "react";
 import { useCustomStore } from "@/store/customStore";
-import { GRAIN_ATLAS, METALLIC_PAINT, WOOD_STYLE } from "./woodStyles";
+import { getNormalizedWedgeCorners } from "@/lib/wedgeGeometry";
+import { GRAIN_ATLAS } from "./woodStyles";
+import { createArtMaterial } from "./artMaterial";
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ 🧱 INSTANCED SQUARES                                                  ║
@@ -40,6 +42,8 @@ export interface SquareInstance {
   rotationZ: number;
   scaleXY: number;
   scaleZ: number;
+  /** Uniform physical scale without the renderer-only edge overlap. */
+  physicalScale: number;
   /** Which grain-atlas cell (0..GRAIN_ATLAS.count-1) this square samples. */
   grainIndex: number;
 }
@@ -90,33 +94,13 @@ interface InstancedSquaresProps {
   onPatternUnhover?: () => void;
 }
 
-// ── Wedge tile geometry config ───────────────────────────────────────────
-// Physical scale: 1 scene unit = 6 inches (Room SCENE_UNITS_PER_INCH = 1/6),
-// and each square is `squareSize` = 0.5 scene units wide (GeometricPattern).
-// The wedge below is built in NORMALIZED space (edge = 1.0), so one geometry
-// unit == 0.5 × 6 = 3 inches.
-const INCHES_PER_SCENE_UNIT = 6;
-const SQUARE_SIZE_SCENE_UNITS = 0.5;
-const INCHES_PER_GEOMETRY_UNIT =
-  SQUARE_SIZE_SCENE_UNITS * INCHES_PER_SCENE_UNIT; // 3"
-// Tilt of the relief (front) face.
-const WEDGE_ANGLE_DEG = 21.5;
-// Lip added on the backboard side: the relief face used to taper down to a
-// zero-thickness knife edge where it met the backboard. This recesses the back
-// face so every tile keeps at least this much thickness at that edge — a small
-// lip between the backboard and the square, same physical piece.
-const BACKBOARD_LIP_INCHES = 3 / 16;
-const BACKBOARD_LIP = BACKBOARD_LIP_INCHES / INCHES_PER_GEOMETRY_UNIT; // ≈0.0625
-
 // Wedge geometry — built fresh here so we can attach instanced attributes
 // without mutating shared geometry.
 // Exported so the AR/USDZ exporter (src/lib/ar) can bake the IDENTICAL wedge
 // into a flattened, grain-baked model — keeping the relief + grain parity.
 export function createWedgeGeometry(): THREE.BufferGeometry {
   const geometry = new THREE.BufferGeometry();
-  const angleInRadians = (WEDGE_ANGLE_DEG * Math.PI) / 180;
-  const h = Math.tan(angleInRadians);
-  const lip = BACKBOARD_LIP;
+  const corners = getNormalizedWedgeCorners();
 
   // Verts 0..7 build the back face + the four sides. The angled (front)
   // face gets its OWN copies of the raised edge — verts 8..11 — so a
@@ -124,13 +108,8 @@ export function createWedgeGeometry(): THREE.BufferGeometry {
   // face, while the back + sides stay flat color (verts can't be shared
   // or the mask would interpolate across the shared edges).
   const positions = [
-    // 0..3 — back face, recessed by `lip` toward the backboard so the thin
-    // edge (verts 6/7) keeps a 3/16" lip instead of tapering to a knife edge.
-    -0.5, -0.5, -lip, 0.5, -0.5, -lip, 0.5, 0.5, -lip, -0.5, 0.5, -lip,
-    // 4..7 — raised front edge, shared by the side faces
-    -0.5, -0.5, h, 0.5, -0.5, h, 0.5, 0.5, 0, -0.5, 0.5, 0,
-    // 8..11 — dedicated angled-face verts (copies of 4,5,6,7)
-    -0.5, -0.5, h, 0.5, -0.5, h, 0.5, 0.5, 0, -0.5, 0.5, 0,
+    ...corners.flatMap(({ x, y, z }) => [x, y, z]),
+    ...corners.slice(4).flatMap(({ x, y, z }) => [x, y, z]),
   ];
   const indices = [
     0, 2, 1, 0, 3, 2, // back
@@ -159,11 +138,6 @@ export function createWedgeGeometry(): THREE.BufferGeometry {
   );
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
-  geometry.center();
-  // center() splits the added `lip` evenly across both faces; shift back by
-  // half so the relief (front) face stays exactly where it was and the full
-  // lip extends only toward the backboard.
-  geometry.translate(0, 0, -lip / 2);
   return geometry;
 }
 
@@ -402,7 +376,6 @@ function InstancedSquaresComponent({
   onBloomStartRef.current = onBloomStart;
   onBloomCompleteRef.current = onBloomComplete;
 
-  const woodStyle = WOOD_STYLE;
   const metallic = useCustomStore((s) => s.viewSettings.metallic);
 
   // Metalness is pure black with nothing to reflect, so a metallic finish
@@ -501,21 +474,12 @@ function InstancedSquaresComponent({
     // as a bright white rim at grazing angles (the "white highlight on the
     // sides"). MeshPhongMaterial with black specular is pure diffuse, so the
     // sides read as a flat solid colour with no sheen.
-    const mat = metallic
-      ? new THREE.MeshStandardMaterial({
-          map: showWoodGrain ? tex ?? null : null,
-          color: 0xffffff,
-          roughness: METALLIC_PAINT.roughness,
-          metalness: METALLIC_PAINT.metalness,
-          envMap,
-          envMapIntensity: METALLIC_PAINT.envMapIntensity,
-        })
-      : new THREE.MeshPhongMaterial({
-          map: showWoodGrain ? tex ?? null : null,
-          color: 0xffffff,
-          specular: 0x000000,
-          shininess: 0,
-        });
+    const mat = createArtMaterial({
+      metallic,
+      texture: tex ?? null,
+      showWoodGrain,
+      environmentMap: envMap,
+    });
 
     // Only inject the grain sampler when there's a map; without USE_MAP the
     // `uv` attribute isn't declared by three's chunks.
@@ -566,7 +530,7 @@ function InstancedSquaresComponent({
 
     return mat;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [grainAtlas, showWoodGrain, woodStyle, metallic, envMap]);
+  }, [grainAtlas, showWoodGrain, metallic, envMap]);
   // The material (and its compiled shader program) is recreated on grain /
   // style / metallic toggles; dispose the previous one to avoid a GPU leak.
   useEffect(() => () => material.dispose(), [material]);

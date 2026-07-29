@@ -76,7 +76,10 @@ import { PaletteVersionSwitcher } from "./components/PaletteVersionSwitcher";
 import { WallColorPicker } from "@/components/preview/WallColorPicker";
 import { PatternControls } from "@/components/preview/PatternControls";
 import { PanelLayoutControls } from "@/components/preview/PanelLayoutControls";
-import { FourAngleImageCapture } from "@/components/preview/FourAngleImageCapture";
+import {
+  FourAngleImageCapture,
+  IMAGE_EXPORT_ANGLE_COUNTS,
+} from "@/components/preview/FourAngleImageCapture";
 import { useFourAngleImageDownload } from "@/hooks/useFourAngleImageDownload";
 import {
   PANEL_LAYOUT_CONFIG,
@@ -529,6 +532,8 @@ export default function DesignPage() {
   const {
     isSavingImage,
     isImageCaptureReady,
+    imageAngleCount,
+    setImageAngleCount,
     setCapture: setCaptureFourAngleImage,
     saveImage: handleSaveImage,
   } = useFourAngleImageDownload();
@@ -1003,16 +1008,15 @@ export default function DesignPage() {
         </Canvas>
       </div>
 
-      {/* Action buttons. Bottom-anchored on desktop; on mobile the
-          page's `mt-14` offset would push `bottom-*` off-screen and it
-          would collide with the bottom-sheet controls, so it's fixed
-          top-right under the navbar instead. */}
+      {/* Always-visible action dock. It stays above the tall right options
+          stack on desktop and uses compact icon actions on mobile so it
+          cannot overflow the viewport. */}
       <div
         className={cn(
-          "flex items-center gap-3 select-none",
+          "fixed left-1/2 z-[60] flex -translate-x-1/2 items-center justify-center select-none rounded-full border border-white/10 bg-slate-950/45 p-1.5 shadow-xl backdrop-blur-xl",
           isMobile
-            ? "fixed top-[3.75rem] right-3 z-50 justify-end gap-2"
-            : "absolute bottom-6 right-6"
+            ? "top-[3.75rem] max-w-[calc(100vw-1.5rem)] gap-1.5"
+            : "bottom-6 gap-3"
         )}
       >
         <TooltipProvider>
@@ -1020,10 +1024,12 @@ export default function DesignPage() {
             <TooltipTrigger asChild>
               <Button
                 variant="ghost"
-                size={isMobile ? "sm" : "icon"}
+                size="icon"
+                aria-label={showUIControls ? "Hide viewer controls" : "Show viewer controls"}
                 className={cn(
                   "glass-surface hover:bg-gray-900/50 hover:border-white/30 transition-colors text-gray-300",
-                  isMobile ? "rounded-full ring-1 ring-white/15 text-xs font-medium" : "rounded-full w-9 h-9"
+                  "h-9 w-9 shrink-0 rounded-full",
+                  isMobile && "ring-1 ring-white/15"
                 )}
                 onClick={() => setShowUIControls(!showUIControls)}
               >
@@ -1032,7 +1038,6 @@ export default function DesignPage() {
                 ) : (
                   <Eye className="w-4 h-4 shrink-0" />
                 )}
-                {isMobile && <span>{showUIControls ? "Hide" : "Show"}</span>}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
@@ -1041,40 +1046,78 @@ export default function DesignPage() {
           </Tooltip>
         </TooltipProvider>
         {showUIControls && (
+          <div
+            role="group"
+            aria-label="Number of image angles"
+            className="flex h-9 shrink-0 items-center gap-0.5 rounded-full border border-white/10 bg-gray-950/70 p-1"
+          >
+            {IMAGE_EXPORT_ANGLE_COUNTS.map((angleCount) => (
+              <button
+                key={angleCount}
+                type="button"
+                aria-pressed={imageAngleCount === angleCount}
+                title={`${angleCount} image angle${
+                  angleCount === IMAGE_EXPORT_ANGLE_COUNTS[0] ? "" : "s"
+                }`}
+                disabled={isSavingImage}
+                onClick={() => setImageAngleCount(angleCount)}
+                className={cn(
+                  "grid h-7 min-w-7 place-items-center rounded-full px-1.5 text-xs font-semibold transition-colors disabled:opacity-50",
+                  imageAngleCount === angleCount
+                    ? "bg-indigo-500 text-white shadow-sm"
+                    : "text-slate-400 hover:bg-white/10 hover:text-white"
+                )}
+              >
+                {angleCount}
+              </button>
+            ))}
+          </div>
+        )}
+        {showUIControls && (
           <Button
             variant="outline"
-            size={isMobile ? "sm" : "default"}
+            size={isMobile ? "icon" : "default"}
             disabled={isSavingImage || !isImageCaptureReady}
             aria-busy={isSavingImage}
+            aria-label={isSavingImage ? "Saving image" : "Save image"}
+            title={
+              isImageCaptureReady
+                ? "Save image"
+                : "Image exporter is still preparing"
+            }
             className={cn(
               "glass-surface text-gray-200 hover:bg-gray-900/50 hover:border-white/30 hover:text-white",
-              isMobile && "rounded-full ring-1 ring-white/15 text-xs font-medium border-0"
+              isMobile &&
+                "h-9 w-9 shrink-0 rounded-full border-0 ring-1 ring-white/15"
             )}
             onClick={handleSaveImage}
           >
             <Download className="w-4 h-4 shrink-0" />
-            {isSavingImage
-              ? "Saving…"
-              : isMobile
-                ? "Save"
-                : "Save Image"}
+            {!isMobile && (isSavingImage ? "Saving…" : "Save Image")}
           </Button>
         )}
         {/* iOS-mobile-only — renders null elsewhere. Bakes a life-size,
             grain-baked USDZ of the current design and launches AR Quick Look
             so it can be hung on a real wall. */}
-        {showUIControls && <ARButton variant="viewer" />}
+        {showUIControls && (
+          <ARButton
+            variant="viewer"
+            className="h-9 w-9 justify-center p-0 [&>span]:hidden"
+          />
+        )}
         {showUIControls && (
           <Button
-            size={isMobile ? "sm" : "default"}
+            size={isMobile ? "icon" : "default"}
+            aria-label="Share design"
+            title="Share design"
             className={cn(
               "bg-indigo-600 hover:bg-indigo-500 ring-1 ring-indigo-400/40 text-white",
-              isMobile && "rounded-full text-xs font-medium"
+              isMobile && "h-9 w-9 shrink-0 rounded-full"
             )}
             onClick={() => setIsShareDialogOpen(true)}
           >
             <Share className="w-4 h-4 shrink-0" />
-            {(isMobile || !isMobile) && (isMobile ? "Share" : "Share Design")}
+            {!isMobile && "Share Design"}
           </Button>
         )}
       </div>

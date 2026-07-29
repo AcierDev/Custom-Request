@@ -44,16 +44,12 @@ interface SizeCardProps {
   inchLabels?: boolean;
 }
 
-// 14x7 is a mini-square panel by definition (14x7 mini squares ≈ 36" x 18").
-// Picking it should switch the model into mini squares automatically.
-const MINI_DEFAULT_SIZE = ItemSizes.Fourteen_By_Seven;
-
 export function SizeCard({
   compact = false,
   bare = false,
   inchLabels = false,
 }: SizeCardProps) {
-  const { dimensions, setDimensions, setUseMini } = useCustomStore();
+  const { dimensions, setDimensions } = useCustomStore();
   const [customWidth, setCustomWidth] = useState(dimensions.width.toString());
   const [customHeight, setCustomHeight] = useState(
     dimensions.height.toString()
@@ -156,7 +152,6 @@ export function SizeCard({
           value={currentSize}
           onValueChange={(value) => {
             setDimensions(sizeToDimensions(value as ItemSizes));
-            if (value === MINI_DEFAULT_SIZE) setUseMini(true);
           }}
         >
           <SelectTrigger className="w-full bg-gray-900 border-white/10">
@@ -300,7 +295,7 @@ function CompactSizeCard({
   bare?: boolean;
   inchLabels?: boolean;
 }) {
-  const { dimensions, setDimensions, setUseMini } = useCustomStore();
+  const { dimensions, setDimensions } = useCustomStore();
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
 
@@ -413,7 +408,6 @@ function CompactSizeCard({
                         type="button"
                         onClick={() => {
                           setDimensions(sizeToDimensions(size));
-                          if (size === MINI_DEFAULT_SIZE) setUseMini(true);
                           setIsOpen(false);
                         }}
                         className={`${sizePillFullClass(size)} ${PILL_INTERACTIVE} ${

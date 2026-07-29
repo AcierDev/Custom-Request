@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import {
   BRAND_OPTIONS,
   LOWES_MATCHES,
-  isLowesColor,
+  isLowesMatchColor,
   brandDisplayName,
   type PaintColor,
 } from "@/lib/paint";
@@ -116,7 +116,7 @@ export function PaintColorPicker({
     // the first 48 of one brand, which reads as noise.
     if (!q && brand === "Any") return [];
     let list = colors;
-    if (brand === LOWES_MATCHES) list = list.filter(isLowesColor);
+    if (brand === LOWES_MATCHES) list = list.filter(isLowesMatchColor);
     else if (brand !== "Any") list = list.filter((c) => c.brand === brand);
     if (q) {
       list = list.filter(

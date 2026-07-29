@@ -138,6 +138,7 @@ const FIRST_SELECTED_INDEX = 0;
 const SECOND_SELECTED_INDEX = 1;
 const MISSING_COLOR_INDEX = -1;
 const DEFAULT_MIX_SCOPE: MixScope = "pair";
+const FULL_HEX_COLOR_PATTERN = /^#[0-9A-Fa-f]{6}$/;
 
 export function PaletteManager() {
   const {
@@ -150,6 +151,7 @@ export function PaletteManager() {
     clearSelectedColors,
     addBlendedColors,
     updateColor,
+    updateColorLive,
     reorderPalette,
     commitPaletteToHistory,
     editingPaletteId,
@@ -327,7 +329,7 @@ export function PaletteManager() {
     if (editingColor === null) return;
 
     // Validate hex color
-    if (!/^#[0-9A-Fa-f]{6}$/.test(editColorHex)) {
+    if (!FULL_HEX_COLOR_PATTERN.test(editColorHex)) {
       // Could add error handling here
       return;
     }
@@ -337,6 +339,18 @@ export function PaletteManager() {
 
     // Close the edit modal
     setEditingColor(null);
+  };
+
+  const handleLiveColorChange = (hex: string) => {
+    const normalizedHex = hex.toUpperCase();
+    setEditColorHex(normalizedHex);
+
+    if (
+      editingColor !== null &&
+      FULL_HEX_COLOR_PATTERN.test(normalizedHex)
+    ) {
+      updateColorLive(editingColor, { hex: normalizedHex });
+    }
   };
 
   const handleResetEditor = () => {
@@ -652,7 +666,7 @@ export function PaletteManager() {
                         className={ACTION_RESET}
                       >
                         <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
-                        Reset Palette
+                        New Palette
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom">
@@ -669,7 +683,7 @@ export function PaletteManager() {
                           className={ACTION_RESET}
                         >
                           <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
-                          Reset Palette
+                          New Palette
                         </Button>
                       </AlertDialogTrigger>
                       <TooltipContent side="bottom">
@@ -1044,7 +1058,7 @@ export function PaletteManager() {
                 <div className="w-full md:w-2/3">
                   <HexColorPicker
                     color={editColorHex}
-                    onChange={setEditColorHex}
+                    onChange={handleLiveColorChange}
                     style={{ width: "100%" }}
                   />
                 </div>
@@ -1056,10 +1070,7 @@ export function PaletteManager() {
                   <Input
                     id="edit-hex"
                     value={editColorHex}
-                    onChange={(e) => {
-                      const value = e.target.value.toUpperCase();
-                      setEditColorHex(value);
-                    }}
+                    onChange={(e) => handleLiveColorChange(e.target.value)}
                     maxLength={7}
                     className="pl-8"
                   />

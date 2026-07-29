@@ -13,10 +13,10 @@ import {
 //║ 📸 FOUR-ANGLE IMAGE EXPORT                                          ║
 //╚═══╝ ════════════════════════════════════════════════════════════════ ╚═══╝
 
-const EXPORT_GRID_COLUMN_COUNT = 2;
-const EXPORT_GRID_ROW_COUNT = 2;
 const EXPORT_CANVAS_WIDTH_PX = 3840;
 const EXPORT_CANVAS_HEIGHT_PX = 2160;
+const EXPORT_GRID_COLUMN_COUNT = 2;
+const EXPORT_GRID_ROW_COUNT = 2;
 const EXPORT_TILE_WIDTH_PX =
   EXPORT_CANVAS_WIDTH_PX / EXPORT_GRID_COLUMN_COUNT;
 const EXPORT_TILE_HEIGHT_PX =
@@ -25,12 +25,15 @@ const EXPORT_TILE_ASPECT_RATIO = EXPORT_TILE_WIDTH_PX / EXPORT_TILE_HEIGHT_PX;
 const EXPORT_IMAGE_MIME_TYPE = "image/png";
 const EXPORT_BACKGROUND_COLOR = "#020617";
 const EXPORT_VIEW_LIMIT_FRACTION = 0.5;
+const EXPORT_CAMERA_BASE_DISTANCE_SCALE = 0.95;
+const EXPORT_CAMERA_CLOSER_SCALE = 0.75;
 // Ease farther back as the art fills more of a tile, then move every size
 // uniformly closer by the configured distance scale.
 const EXPORT_CAMERA_DISTANCE_CONFIG = {
   closestScale: 0.75,
   farthestScale: 1,
-  allSizesDistanceScale: 0.95,
+  allSizesDistanceScale:
+    EXPORT_CAMERA_BASE_DISTANCE_SCALE * EXPORT_CAMERA_CLOSER_SCALE,
   smallestArtWidthSquares: 14,
   smallestArtHeightSquares: 7,
   largestArtWidthSquares: 40,
@@ -64,6 +67,39 @@ const EXPORT_LOWER_POLAR =
   (ORBIT_MAX_POLAR - EXPORT_FRONT_POLAR_ANGLE) *
     EXPORT_VIEW_LIMIT_FRACTION;
 
+export const IMAGE_EXPORT_ANGLE_COUNTS = [1, 2, 4] as const;
+export type ImageExportAngleCount =
+  (typeof IMAGE_EXPORT_ANGLE_COUNTS)[number];
+export const DEFAULT_IMAGE_EXPORT_ANGLE_COUNT: ImageExportAngleCount = 4;
+
+type ExportLayout = {
+  canvasWidth: number;
+  canvasHeight: number;
+  tileWidth: number;
+  tileHeight: number;
+};
+
+const EXPORT_LAYOUTS: Record<ImageExportAngleCount, ExportLayout> = {
+  1: {
+    canvasWidth: EXPORT_CANVAS_WIDTH_PX,
+    canvasHeight: EXPORT_CANVAS_HEIGHT_PX,
+    tileWidth: EXPORT_CANVAS_WIDTH_PX,
+    tileHeight: EXPORT_CANVAS_HEIGHT_PX,
+  },
+  2: {
+    canvasWidth: EXPORT_CANVAS_WIDTH_PX,
+    canvasHeight: EXPORT_TILE_HEIGHT_PX,
+    tileWidth: EXPORT_TILE_WIDTH_PX,
+    tileHeight: EXPORT_TILE_HEIGHT_PX,
+  },
+  4: {
+    canvasWidth: EXPORT_CANVAS_WIDTH_PX,
+    canvasHeight: EXPORT_CANVAS_HEIGHT_PX,
+    tileWidth: EXPORT_TILE_WIDTH_PX,
+    tileHeight: EXPORT_TILE_HEIGHT_PX,
+  },
+};
+
 const EXPORT_VIEWS = [
   {
     column: 0,
@@ -90,6 +126,7 @@ const EXPORT_VIEWS = [
     polar: EXPORT_LOWER_POLAR,
   },
 ] as const;
+type ExportView = (typeof EXPORT_VIEWS)[number];
 
 type OrbitControlsApi = {
   enabled: boolean;
@@ -102,7 +139,9 @@ export type RoomCaptureBounds = {
   ceilingY: number;
 };
 
-export type CaptureFourAngleImage = () => Promise<Blob>;
+export type CaptureFourAngleImage = (
+  angleCount?: ImageExportAngleCount
+) => Promise<Blob>;
 
 type FourAngleImageCaptureProps = {
   artWidthSquares: number;
@@ -143,7 +182,8 @@ function getBoundedCaptureDistance(
   target: THREE.Vector3,
   bounds: RoomCaptureBounds | null,
   collisionInset: number,
-  minimumDistance: number
+  minimumDistance: number,
+  views: readonly ExportView[]
 ) {
   if (!bounds) return requestedDistance;
 
@@ -151,7 +191,7 @@ function getBoundedCaptureDistance(
   const ceilingY = bounds.ceilingY - collisionInset;
   const floorY = bounds.floorY + collisionInset;
 
-  return EXPORT_VIEWS.reduce((safeDistance, view) => {
+  return views.reduce((safeDistance, view) => {
     const direction = new THREE.Vector3().setFromSpherical(
       new THREE.Spherical(1, view.polar, view.azimuth)
     );
@@ -212,19 +252,23 @@ export function FourAngleImageCapture({
       return;
     }
 
-    const capture: CaptureFourAngleImage = async () => {
+    const capture: CaptureFourAngleImage = async (
+      angleCount = DEFAULT_IMAGE_EXPORT_ANGLE_COUNT
+    ) => {
       const sourceWidth = gl.domElement.width;
       const sourceHeight = gl.domElement.height;
       if (sourceWidth <= 0 || sourceHeight <= 0) {
         throw new Error("The viewer is not ready to export an image.");
       }
 
+      const layout = EXPORT_LAYOUTS[angleCount];
+      const activeViews = EXPORT_VIEWS.slice(0, angleCount);
       const exportCanvas = document.createElement("canvas");
-      exportCanvas.width = EXPORT_CANVAS_WIDTH_PX;
-      exportCanvas.height = EXPORT_CANVAS_HEIGHT_PX;
+      exportCanvas.width = layout.canvasWidth;
+      exportCanvas.height = layout.canvasHeight;
       const tileCanvas = document.createElement("canvas");
-      tileCanvas.width = EXPORT_TILE_WIDTH_PX;
-      tileCanvas.height = EXPORT_TILE_HEIGHT_PX;
+      tileCanvas.width = layout.tileWidth;
+      tileCanvas.height = layout.tileHeight;
 
       const context = exportCanvas.getContext("2d");
       const tileContext = tileCanvas.getContext("2d");
@@ -252,7 +296,8 @@ export function FourAngleImageCapture({
         target,
         bounds,
         collisionInset,
-        minimumDistance
+        minimumDistance,
+        activeViews
       );
       const cameraDistanceScale = getArtSizeCameraDistanceScale(
         artWidthSquares,
@@ -265,27 +310,24 @@ export function FourAngleImageCapture({
       const offset = new THREE.Vector3();
       const webGlContext = gl.getContext();
       const pixelBuffer = new Uint8Array(
-        EXPORT_TILE_WIDTH_PX *
-          EXPORT_TILE_HEIGHT_PX *
-          EXPORT_COLOR_CHANNEL_COUNT
+        layout.tileWidth * layout.tileHeight * EXPORT_COLOR_CHANNEL_COUNT
       );
       const flippedPixelBuffer = new Uint8ClampedArray(pixelBuffer.length);
-      const rowByteLength =
-        EXPORT_TILE_WIDTH_PX * EXPORT_COLOR_CHANNEL_COUNT;
+      const rowByteLength = layout.tileWidth * EXPORT_COLOR_CHANNEL_COUNT;
 
       controls.enabled = false;
 
       try {
         gl.setRenderTarget(null);
         gl.setPixelRatio(1);
-        gl.setSize(EXPORT_TILE_WIDTH_PX, EXPORT_TILE_HEIGHT_PX, false);
+        gl.setSize(layout.tileWidth, layout.tileHeight, false);
 
         if (isPerspectiveCamera) {
           perspectiveCamera.aspect = EXPORT_TILE_ASPECT_RATIO;
           perspectiveCamera.updateProjectionMatrix();
         }
 
-        for (const view of EXPORT_VIEWS) {
+        for (const view of activeViews) {
           offset.setFromSpherical(
             new THREE.Spherical(captureDistance, view.polar, view.azimuth)
           );
@@ -296,8 +338,8 @@ export function FourAngleImageCapture({
           webGlContext.readPixels(
             0,
             0,
-            EXPORT_TILE_WIDTH_PX,
-            EXPORT_TILE_HEIGHT_PX,
+            layout.tileWidth,
+            layout.tileHeight,
             webGlContext.RGBA,
             webGlContext.UNSIGNED_BYTE,
             pixelBuffer
@@ -305,10 +347,10 @@ export function FourAngleImageCapture({
 
           for (
             let outputRow = 0;
-            outputRow < EXPORT_TILE_HEIGHT_PX;
+            outputRow < layout.tileHeight;
             outputRow += 1
           ) {
-            const sourceRow = EXPORT_TILE_HEIGHT_PX - outputRow - 1;
+            const sourceRow = layout.tileHeight - outputRow - 1;
             const sourceStart = sourceRow * rowByteLength;
             const outputStart = outputRow * rowByteLength;
             flippedPixelBuffer.set(
@@ -367,15 +409,15 @@ export function FourAngleImageCapture({
           tileContext.putImageData(
             new ImageData(
               flippedPixelBuffer,
-              EXPORT_TILE_WIDTH_PX,
-              EXPORT_TILE_HEIGHT_PX
+              layout.tileWidth,
+              layout.tileHeight
             ),
             0,
             0
           );
 
-          const tileLeft = EXPORT_TILE_WIDTH_PX * view.column;
-          const tileTop = EXPORT_TILE_HEIGHT_PX * view.row;
+          const tileLeft = layout.tileWidth * view.column;
+          const tileTop = layout.tileHeight * view.row;
 
           context.drawImage(
             tileCanvas,
