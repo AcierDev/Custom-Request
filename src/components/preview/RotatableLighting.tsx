@@ -11,11 +11,14 @@ import {
 } from "./LightingSetups";
 import { blendHexColors } from "@/lib/colorUtils";
 import { frameAlpha } from "./animationUtils";
+import { DEFAULT_LAMP_ON } from "./lampInteraction";
 
 export type TimeOfDay = "morning" | "afternoon" | "night";
 
 interface RotatableLightingProps {
   timeOfDay: TimeOfDay;
+  /** Whether the floor lamp is switched on when night lighting is active. */
+  lampOn?: boolean;
   style: "geometric" | "tiled" | "striped";
   // Real world positions of the room light sources (overhead ceiling
   // downlights, right-wall window, left-side floor lamp) and the art's
@@ -91,6 +94,7 @@ function sampleAtPhase<T>(
 
 function RotatableLightingComponent({
   timeOfDay,
+  lampOn = DEFAULT_LAMP_ON,
   style,
   downlightPos,
   windowPos,
@@ -106,7 +110,7 @@ function RotatableLightingComponent({
 
   useEffect(() => {
     invalidate();
-  }, [invalidate, target]);
+  }, [invalidate, lampOn, target]);
 
   // Ease the phase toward the target every frame. Rotation is written
   // straight to the group (cheap, no re-render); brightness/colour need
@@ -155,7 +159,7 @@ function RotatableLightingComponent({
   // cross-fade across the afternoon→night leg so neither shadow snaps.
   const nightFrac = Math.max(0, Math.min(1, phase - 1));
   const dayAmount = 1 - nightFrac;
-  const lampAmount = nightFrac;
+  const lampAmount = lampOn ? nightFrac : 0;
 
   return (
     <>

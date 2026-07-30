@@ -4,12 +4,14 @@ import { ItemSizes } from "@/typings/types";
 import {
   parseSizeWh,
   sizeToFeetWideLabel,
+  sizeToHeightInchesWidthFeetLabel,
   sizeToInchLabel,
 } from "@/lib/sizeLabels";
 
 export {
   parseSizeWh,
   sizeToFeetWideLabel,
+  sizeToHeightInchesWidthFeetLabel,
   sizeToInchLabel,
 } from "@/lib/sizeLabels";
 

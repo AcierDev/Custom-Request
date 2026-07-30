@@ -3,11 +3,8 @@ export const PALETTE_BLEND_CONFIG = {
   maxPercent: 100,
   stepPercent: 5,
   defaultPercent: 25,
-  maxTransitionWidthSquares: 14,
-  maxDepthSquares: 4,
   minSwapFraction: 0.1,
   maxSwapFraction: 0.45,
-  minDepthStrengthFactor: 0.25,
 } as const;
 
 export const normalizePaletteBlendPercent = (

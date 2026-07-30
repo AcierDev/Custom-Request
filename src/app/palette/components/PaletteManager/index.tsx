@@ -54,6 +54,7 @@ import {
   ListChecks,
   PaintBucket,
   ChevronDown,
+  ArrowLeftRight,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -68,6 +69,10 @@ import {
   getPaletteWideBlendColorCount,
   insertBlendsBetweenAll,
 } from "./paletteWideBlend";
+import {
+  MINIMUM_REVERSIBLE_COLOR_COUNT,
+  reversePaletteOrder,
+} from "./paletteOrder";
 import { computePaintTotals, hasSharedParts } from "./mixTotals";
 import {
   paintAmountForSquares,
@@ -307,6 +312,11 @@ export function PaletteManager() {
 
   const handleAddColor = (hex: string) => {
     addCustomColor(hex);
+  };
+
+  const handleReversePalette = () => {
+    if (customPalette.length < MINIMUM_REVERSIBLE_COLOR_COUNT) return;
+    setCustomPalette(reversePaletteOrder(customPalette));
   };
 
   const handleEditColor = (index: number) => {
@@ -607,6 +617,28 @@ export function PaletteManager() {
                   </TooltipTrigger>
                   <TooltipContent side="bottom">
                     <p>Generate color harmonies</p>
+                  </TooltipContent>
+                </Tooltip>
+
+                {/* Reverse the complete color order as one undoable edit */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="sm"
+                      onClick={handleReversePalette}
+                      disabled={
+                        customPalette.length <
+                        MINIMUM_REVERSIBLE_COLOR_COUNT
+                      }
+                      aria-label="Reverse palette order"
+                      className={ACTION_SLATE}
+                    >
+                      <ArrowLeftRight className="mr-1.5 h-3.5 w-3.5" />
+                      Reverse
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p>Reverse all palette colors</p>
                   </TooltipContent>
                 </Tooltip>
 

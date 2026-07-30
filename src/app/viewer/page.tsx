@@ -2,6 +2,7 @@
 
 import {
   Suspense,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -53,6 +54,10 @@ import { ViewControls } from "@/components/preview/ViewControls";
 import { ColorInfoHint } from "@/components/preview/ColorInfoHint";
 import { Ruler3D } from "@/components/preview/Ruler3D";
 import { frameAlpha } from "@/components/preview/animationUtils";
+import {
+  DEFAULT_LAMP_ON,
+  toggleLampAtTimeOfDay,
+} from "@/components/preview/lampInteraction";
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { SizeCard } from "@/components/cards/SizeCard";
@@ -531,6 +536,10 @@ export default function DesignPage() {
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [mobileOptionsOpen, setMobileOptionsOpen] = useState(false);
   const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>("afternoon");
+  const [lampOn, setLampOn] = useState(DEFAULT_LAMP_ON);
+  const handleLampToggle = useCallback(() => {
+    setLampOn((current) => toggleLampAtTimeOfDay(timeOfDay, current));
+  }, [timeOfDay]);
   const {
     isSavingImage,
     isImageCaptureReady,
@@ -902,6 +911,7 @@ export default function DesignPage() {
           {/* Rotatable lighting driven by time-of-day */}
           <RotatableLighting
             timeOfDay={timeOfDay}
+            lampOn={lampOn}
             style={style}
             downlightPos={downlightPos}
             windowPos={windowPos}
@@ -928,6 +938,8 @@ export default function DesignPage() {
               artCenterX={artCenterX}
               fillFactor={bookcaseFill}
               timeOfDay={timeOfDay}
+              lampOn={lampOn}
+              onLampToggle={handleLampToggle}
               wallColor={currentWallColor}
             />
           )}

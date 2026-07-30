@@ -35,6 +35,7 @@ import {
   getInstalledArtWidthSceneUnits,
 } from "@/lib/panelLayout";
 import { getSquareGapExpansionSceneUnits } from "@/lib/squareGap";
+import { DEFAULT_LAMP_ON } from "./lampInteraction";
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ 🖼️ GALLERY ART SCENE — read-only gallery render of a fixed piece      ║
@@ -397,6 +398,10 @@ function ResizeInvalidator({
 
 interface GalleryArtSceneProps {
   timeOfDay: TimeOfDay;
+  /** Whether the floor lamp is switched on while night lighting is active. */
+  lampOn?: boolean;
+  /** Called when the floor lamp is clicked during night lighting. */
+  onLampToggle?: () => void;
   /** Back/side wall paint. Defaults to the gallery greige. */
   wallColor?: string;
   /** Render the furnished gallery room behind the art. Defaults to true. */
@@ -425,6 +430,8 @@ interface GalleryArtSceneProps {
  */
 export function GalleryArtScene({
   timeOfDay,
+  lampOn = DEFAULT_LAMP_ON,
+  onLampToggle,
   wallColor,
   showRoom = true,
   showRuler = false,
@@ -564,6 +571,7 @@ export function GalleryArtScene({
       <Suspense fallback={null}>
         <RotatableLighting
           timeOfDay={timeOfDay}
+          lampOn={lampOn}
           style={style}
           downlightPos={downlightPos}
           windowPos={windowPos}
@@ -579,6 +587,8 @@ export function GalleryArtScene({
             artCenterX={artCenterX}
             fillFactor={bookcaseFill}
             timeOfDay={timeOfDay}
+            lampOn={lampOn}
+            onLampToggle={onLampToggle}
             wallColor={currentWallColor}
           />
         )}

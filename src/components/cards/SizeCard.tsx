@@ -29,6 +29,7 @@ import {
   parseSizeWh,
   sizePillFullClass,
   sizeToFeetWideLabel,
+  sizeToHeightInchesWidthFeetLabel,
   sizeToInchLabel,
 } from "@/lib/size-pills";
 import { SQUARE_SIZE } from "@/lib/utils";
@@ -36,7 +37,11 @@ import { SQUARE_SIZE } from "@/lib/utils";
 const sizeOptions = [...Object.values(ItemSizes), "custom"];
 
 type Unit = "squares" | "inches" | "feet";
-type SizeLabelMode = "squares" | "inches" | "feet-wide";
+type SizeLabelMode =
+  | "squares"
+  | "inches"
+  | "feet-wide"
+  | "physical";
 
 interface SizeCardProps {
   compact?: boolean;
@@ -319,6 +324,9 @@ function CompactSizeCard({
   const fmt = (size: string) => {
     if (labelMode === "inches") return sizeToInchLabel(size);
     if (labelMode === "feet-wide") return sizeToFeetWideLabel(size);
+    if (labelMode === "physical") {
+      return sizeToHeightInchesWidthFeetLabel(size);
+    }
     return size;
   };
   const triggerLabel = fmt(triggerSize);

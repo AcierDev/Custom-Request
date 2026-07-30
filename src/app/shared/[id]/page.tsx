@@ -30,10 +30,14 @@ import { DESIGN_COLORS } from "@/typings/color-maps";
 import { ItemDesigns } from "@/typings/types";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { cn } from "@/lib/utils";
-import { sizeToFeetWideLabel } from "@/lib/size-pills";
+import { sizeToHeightInchesWidthFeetLabel } from "@/lib/size-pills";
 import { decompressJsonFromUrl } from "@/lib/urlUtils";
 import { ARButton } from "@/components/ARButton";
 import { useFourAngleImageDownload } from "@/hooks/useFourAngleImageDownload";
+import {
+  DEFAULT_LAMP_ON,
+  toggleLampAtTimeOfDay,
+} from "@/components/preview/lampInteraction";
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ 🔗 CONSTANTS                                                          ║
@@ -97,6 +101,10 @@ export default function SharedDesignPage() {
   // viewSettings — so a recipient trying a wall color can't have it
   // autosaved into their own account (see autosave disable below).
   const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>("afternoon");
+  const [lampOn, setLampOn] = useState(DEFAULT_LAMP_ON);
+  const handleLampToggle = useCallback(() => {
+    setLampOn((current) => toggleLampAtTimeOfDay(timeOfDay, current));
+  }, [timeOfDay]);
   const [wallColor, setWallColor] = useState<string>(DEFAULT_WALL_COLOR);
 
   const dimensions = useCustomStore((s) => s.dimensions);
@@ -256,6 +264,8 @@ export default function SharedDesignPage() {
       <div className="fixed inset-0 z-0">
         <GalleryArtScene
           timeOfDay={timeOfDay}
+          lampOn={lampOn}
+          onLampToggle={handleLampToggle}
           wallColor={wallColor}
           showRoom
           showColorInfo={false}
@@ -685,7 +695,7 @@ function ViewingControls({
     <div className="space-y-3">
       <div className="glass-surface rounded-[0.7rem] p-3 shadow-lg">
         <div className="mb-2 text-sm text-slate-300">See it at another size</div>
-        <SizeCard compact bare labelMode="feet-wide" />
+        <SizeCard compact bare labelMode="physical" />
       </div>
       <PatternControls />
       <LightingControls value={timeOfDay} onChange={onTimeOfDay} />
@@ -849,11 +859,11 @@ function designName(selectedDesign: string): string {
 }
 
 /**
- * Customer-facing width label. `dimensions` are square counts; the shared
- * viewer intentionally presents physical width in feet.
+ * Customer-facing physical size. Height is shown first in inches, followed
+ * by width in feet.
  */
 function sizeLabel(width: number, height: number): string {
-  return sizeToFeetWideLabel(`${width} x ${height}`);
+  return sizeToHeightInchesWidthFeetLabel(`${width} x ${height}`);
 }
 
 /** Build the placard palette for both custom palettes and official designs. */

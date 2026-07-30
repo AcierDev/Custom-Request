@@ -3,11 +3,15 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
-import { RoundedBox } from "@react-three/drei";
+import { RoundedBox, useCursor } from "@react-three/drei";
 import { useSpring, animated } from "@react-spring/three";
 import type { TimeOfDay } from "./RotatableLighting";
 import { frameAlpha } from "./animationUtils";
 import { DEFAULT_WALL_COLOR } from "./wallColors";
+import {
+  DEFAULT_LAMP_ON,
+  isLampEffectivelyOn,
+} from "./lampInteraction";
 
 // Per-frame easing for the time-of-day cross-fade (windows dimming, the
 // lamp coming on). Matches the lighting rig's feel so they move
@@ -1252,6 +1256,12 @@ const LAMP_GLOW_COLOR = "#ffdca8"; // warm incandescent
 const LAMP_LIGHT_INTENSITY = 34;
 const LAMP_LIGHT_DECAY = 1.6;
 const LAMP_LIGHT_DISTANCE = 48;
+const LAMP_HITBOX_PADDING = 0.5;
+const LAMP_HITBOX_WIDTH = LAMP_SHADE_R * 2 + LAMP_HITBOX_PADDING;
+const LAMP_HITBOX_HEIGHT = LAMP_H + LAMP_HITBOX_PADDING;
+const LAMP_HITBOX_DEPTH = LAMP_SHADE_R * 2 + LAMP_HITBOX_PADDING;
+const LAMP_HITBOX_Y = LAMP_H / 2;
+const LAMP_HITBOX_OPACITY = 0;
 
 /** A matted, framed print. Faces local +Z; parent positions/orients it. */
 function FramedArt({
@@ -2271,6 +2281,10 @@ interface RoomProps {
    * floor lamp switches on. Defaults to "morning".
    */
   timeOfDay?: TimeOfDay;
+  /** Whether the floor lamp is switched on while night lighting is active. */
+  lampOn?: boolean;
+  /** Called when the floor lamp is clicked during night lighting. */
+  onLampToggle?: () => void;
   /** Paint color used for the back and side walls. */
   wallColor?: string;
 }
@@ -2288,17 +2302,29 @@ function RoomComponent({
   artCenterX = 0,
   fillFactor = 0,
   timeOfDay = "morning",
+  lampOn = DEFAULT_LAMP_ON,
+  onLampToggle,
   wallColor = WALL_COLOR,
 }: RoomProps) {
   // 0 by day → 1 at night, eased so the windows dim gradually instead
   // of snapping when the time of day changes.
   const isNight = timeOfDay === "night";
+  const lampInteractive = isNight && Boolean(onLampToggle);
+  const [lampHovered, setLampHovered] = useState(false);
+  useCursor(lampInteractive && lampHovered);
+
+  useEffect(() => {
+    if (!lampInteractive) setLampHovered(false);
+  }, [lampInteractive]);
+
   const nightAmount = useEasedValue(isNight ? 1 : 0);
   // The lamp glow rides the same easing but only after a short delay,
   // so the room dims first and the lamp clicks on a beat later. Leaving
   // night switches it off instantly (no fade-out).
-  const easedLamp = useEasedValue(useDelayedNight(isNight) ? 1 : 0);
-  const lampGlow = isNight ? easedLamp : 0;
+  const delayedNight = useDelayedNight(isNight);
+  const lampActive = isLampEffectivelyOn(timeOfDay, lampOn);
+  const easedLamp = useEasedValue(delayedNight && lampOn ? 1 : 0);
+  const lampGlow = lampActive ? easedLamp : 0;
   // Weight of the overhead furniture cast shadow, dimmed a touch after
   // dark so it stays "slight" once the lamp takes over from the cans.
   const roomShadowIntensity =
@@ -3113,6 +3139,36 @@ function RoomComponent({
         position-y={floorY - LAMP_FLOOR_SETTLE}
         position-z={backZ + PLANT_BACK_INSET}
       >
+        <mesh
+          visible={lampInteractive}
+          position-y={LAMP_HITBOX_Y}
+          onClick={(event) => {
+            event.stopPropagation();
+            onLampToggle?.();
+          }}
+          onPointerOver={(event) => {
+            event.stopPropagation();
+            setLampHovered(true);
+          }}
+          onPointerOut={(event) => {
+            event.stopPropagation();
+            setLampHovered(false);
+          }}
+        >
+          <boxGeometry
+            args={[
+              LAMP_HITBOX_WIDTH,
+              LAMP_HITBOX_HEIGHT,
+              LAMP_HITBOX_DEPTH,
+            ]}
+          />
+          <meshBasicMaterial
+            transparent
+            opacity={LAMP_HITBOX_OPACITY}
+            depthWrite={false}
+            colorWrite={false}
+          />
+        </mesh>
         <FloorLamp glow={lampGlow} />
       </animated.group>
 

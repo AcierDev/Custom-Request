@@ -52,11 +52,9 @@ const DETERMINISTIC_HASH_SCALE = 43758.5453;
 const ROTATION_HASH_SALT = 17.23;
 const SEAM_BLEND_HASH_SALT = 53.79;
 const FALLBACK_COLOR_HASH_SALT = 91.41;
-const PALETTE_BLEND_HASH_SALT = 113.27;
 const ROTATION_SEED_THRESHOLD = 0.5;
 const PALETTE_POSITION_OFFSET = 1;
 const BLEND_PERCENT_DIVISOR = 100;
-const BLEND_NOISE_CENTER = 0.5;
 const MIN_BLEND_DEPTH = 1;
 const MIN_BLEND_SWAP_COUNT = 1;
 const BLEND_POSITION_COUNT_MULTIPLIER = 2;
@@ -142,10 +140,6 @@ function blendSolidSeams(
   if (normalizedBlendPercent <= PALETTE_BLEND_CONFIG.minPercent) return;
 
   const blendStrength = normalizedBlendPercent / BLEND_PERCENT_DIVISOR;
-  const targetDepth = Math.max(
-    MIN_BLEND_DEPTH,
-    Math.ceil(blendStrength * PALETTE_BLEND_CONFIG.maxDepthSquares),
-  );
   const edgeSwapFraction =
     PALETTE_BLEND_CONFIG.minSwapFraction +
     (PALETTE_BLEND_CONFIG.maxSwapFraction -
@@ -210,96 +204,17 @@ function blendSolidSeams(
       solidRemaining[k + 1] > MIN_BLEND_DEPTH;
     if (!haveFresh || !canBlendLeft || !canBlendRight) continue;
 
-    for (let depth = 0; depth < targetDepth; depth++) {
-      const lineA = left.end - depth;
-      const lineB = right.start + depth;
-      if (lineA < left.start || lineB > right.end) break;
-
-      const haveSolidLines =
-        solidRemaining[k] >= MIN_BLEND_DEPTH &&
-        solidRemaining[k + 1] >= MIN_BLEND_DEPTH;
-      const canBlendLeft =
-        left.width === MIN_BLEND_DEPTH || solidRemaining[k] > MIN_BLEND_DEPTH;
-      const canBlendRight =
-        right.width === MIN_BLEND_DEPTH ||
-        solidRemaining[k + 1] > MIN_BLEND_DEPTH;
-      if (!haveSolidLines || !canBlendLeft || !canBlendRight) break;
-
-      const depthProgress =
-        targetDepth === MIN_BLEND_DEPTH
-          ? 0
-          : depth / (targetDepth - MIN_BLEND_DEPTH);
-      const depthStrength =
-        1 - depthProgress * (1 - PALETTE_BLEND_CONFIG.minDepthStrengthFactor);
-      swapAcrossSeam(
-        lineA,
-        lineB,
-        lineLength,
-        edgeSwapFraction * depthStrength,
-        read,
-        write,
-      );
-      solidRemaining[k] -= MIN_BLEND_DEPTH;
-      solidRemaining[k + 1] -= MIN_BLEND_DEPTH;
-    }
+    swapAcrossSeam(
+      left.end,
+      right.start,
+      lineLength,
+      edgeSwapFraction,
+      read,
+      write,
+    );
+    solidRemaining[k] -= MIN_BLEND_DEPTH;
+    solidRemaining[k + 1] -= MIN_BLEND_DEPTH;
   }
-}
-
-/**
- * Reorder the fixed color supply by a noisy position along the progression
- * axis. At 0% every square stays in a hard ordered band. Increasing the blend
- * widens the deterministic dither zone while preserving exact color counts.
- */
-function distributePaletteBlend(
-  colorMap: number[][],
-  modelWidth: number,
-  modelHeight: number,
-  orientation: "horizontal" | "vertical",
-  isReversed: boolean,
-  sequentialColors: readonly number[],
-  blendPercent: number,
-): void {
-  const blendStrength =
-    normalizePaletteBlendPercent(blendPercent) / BLEND_PERCENT_DIVISOR;
-  const transitionWidth =
-    blendStrength * PALETTE_BLEND_CONFIG.maxTransitionWidthSquares;
-  const horizontal = orientation === "horizontal";
-  const axisLength = horizontal ? modelWidth : modelHeight;
-  const positions: Array<{
-    x: number;
-    y: number;
-    score: number;
-    tieBreaker: number;
-  }> = [];
-
-  for (let x = 0; x < modelWidth; x++) {
-    for (let y = 0; y < modelHeight; y++) {
-      const axisPosition = horizontal ? x : y;
-      const progressionPosition = isReversed
-        ? axisLength - PALETTE_POSITION_OFFSET - axisPosition
-        : axisPosition;
-      const noiseValue = deterministicGridValue(x, y, PALETTE_BLEND_HASH_SALT);
-      positions.push({
-        x,
-        y,
-        score:
-          progressionPosition +
-          (noiseValue - BLEND_NOISE_CENTER) * transitionWidth,
-        tieBreaker: noiseValue,
-      });
-    }
-  }
-
-  positions.sort(
-    (left, right) =>
-      left.score - right.score || left.tieBreaker - right.tieBreaker,
-  );
-  positions.forEach(({ x, y }, index) => {
-    colorMap[x][y] =
-      sequentialColors[index] ??
-      sequentialColors[sequentialColors.length - PALETTE_POSITION_OFFSET] ??
-      0;
-  });
 }
 
 /**
@@ -780,13 +695,11 @@ export function generateColorMap(
       }
     }
 
-    distributePaletteBlend(
+    blendSolidSeams(
       colorMap,
       adjustedModelWidth,
       adjustedModelHeight,
       effectiveOrientation,
-      shouldReverse,
-      sequentialColors,
       paletteBlend,
     );
   } else if (colorPattern === "center-fade") {
