@@ -25,6 +25,9 @@ import {
 } from "./Room";
 import { Ruler3D } from "./Ruler3D";
 import { frameAlpha } from "./animationUtils";
+import { RESPONSIVE_ORBIT_SETTINGS } from "./orbitResponse";
+import { OrbitPivotDrag } from "./OrbitPivotDrag";
+import { getOrbitPivotWorldX } from "./orbitPivot";
 import { useCustomStore } from "@/store/customStore";
 import {
   FourAngleImageCapture,
@@ -147,7 +150,15 @@ function computeArtLayout(widthSquares: number, showRoom: boolean) {
 //║ 🎥 ART CAMERA FOLLOW — eases the orbit target onto the art center     ║
 //╚═══╝ ════════════════════════════════════════════════════════════════ ╚═══╝
 
-function ArtCameraFollow({ target }: { target: [number, number, number] }) {
+function ArtCameraFollow({
+  target,
+  artWidth,
+  pivotRatioRef,
+}: {
+  target: [number, number, number];
+  artWidth: number;
+  pivotRatioRef: { current: number };
+}) {
   const camera = useThree((s) => s.camera);
   const invalidate = useThree((s) => s.invalidate);
   const controls = useThree((s) => s.controls) as
@@ -159,12 +170,17 @@ function ArtCameraFollow({ target }: { target: [number, number, number] }) {
 
   useEffect(() => {
     invalidate();
-  }, [invalidate, target]);
+  }, [artWidth, invalidate, target]);
 
   useFrame((_, delta) => {
     if (!controls) return;
 
-    const [targetX, targetY, targetZ] = target;
+    const [artCenterX, targetY, targetZ] = target;
+    const targetX = getOrbitPivotWorldX(
+      artCenterX,
+      artWidth,
+      pivotRatioRef.current
+    );
     const diffX = targetX - controls.target.x;
     const diffY = targetY - controls.target.y;
     const diffZ = targetZ - controls.target.z;
@@ -531,6 +547,7 @@ export function GalleryArtScene({
   );
   // The orbit target/camera start centered on the art, fully zoomed out.
   const initialCameraTarget = useRef<[number, number, number]>(artCenter);
+  const orbitPivotRatio = useRef(0);
 
   return (
     <Canvas
@@ -633,6 +650,8 @@ export function GalleryArtScene({
           suspends the scene, and if controls were inside they'd unmount
           and the camera would freeze. */}
       <OrbitControls
+        enableDamping={RESPONSIVE_ORBIT_SETTINGS.enableDamping}
+        dampingFactor={RESPONSIVE_ORBIT_SETTINGS.dampingFactor}
         enablePan={false}
         touches={TOUCH_GESTURES}
         zoomSpeed={ZOOM_SPEED}
@@ -645,7 +664,17 @@ export function GalleryArtScene({
         target={initialCameraTarget.current}
         makeDefault
       />
-      <ArtCameraFollow target={artCenter} />
+      <OrbitPivotDrag
+        artCenter={artCenter}
+        artWidth={installedArtWidth}
+        pivotRatioRef={orbitPivotRatio}
+        showHint={!isMobile}
+      />
+      <ArtCameraFollow
+        target={artCenter}
+        artWidth={installedArtWidth}
+        pivotRatioRef={orbitPivotRatio}
+      />
       {/* With the room hidden the art is free-floating, so skip collision —
           otherwise the invisible walls cap how far back you can circle. */}
       {showRoom && (

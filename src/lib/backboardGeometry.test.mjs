@@ -14,6 +14,8 @@ const SINGLE_PANEL_COUNT = 1;
 const THREE_PANEL_COUNT = 3;
 const EVEN_COLUMN_COUNT = 6;
 const UNEVEN_COLUMN_COUNT = 7;
+const FABRICATION_COLUMN_COUNT = 10;
+const RIGHT_TO_LEFT_REMAINDER_MODE = "right-to-left";
 const ROW_COUNT = 4;
 const EXPECTED_THREE_BODY_COUNT = 3;
 const FINAL_DRIFT_FACTOR = 1;
@@ -66,6 +68,21 @@ test("keeps multi-panel bodies separate and assigns uneven columns centrally", (
   assert.deepEqual(
     bodies.map(({ panelOffsetMultiplier }) => panelOffsetMultiplier),
     [-1, 0, 1],
+  );
+});
+
+test("matches right-to-left fabrication splits in backboard geometry", () => {
+  const bodies = buildBackboardBodyGeometry(
+    makeInput({
+      columnCount: FABRICATION_COLUMN_COUNT,
+      panelCount: THREE_PANEL_COUNT,
+      panelRemainderMode: RIGHT_TO_LEFT_REMAINDER_MODE,
+    }),
+  );
+
+  assert.deepEqual(
+    bodies.map(({ columnCount }) => columnCount),
+    [3, 3, 4],
   );
 });
 

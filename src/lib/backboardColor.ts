@@ -8,3 +8,8 @@ export const normalizeBackboardColor = (
   const normalized = value?.trim().toUpperCase() ?? "";
   return /^#[\dA-F]{6}$/.test(normalized) ? normalized : null;
 };
+
+export const shouldUseBackboardTexture = (
+  backboardColor: string | null | undefined,
+  showWoodGrain: boolean,
+): boolean => backboardColor == null && showWoodGrain;

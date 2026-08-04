@@ -56,7 +56,7 @@ import {
   ChevronDown,
   ArrowLeftRight,
 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 // Import sub-components
 import { ColorSwatch } from "./ColorSwatch";

@@ -1,8 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { useCustomStore } from "@/store/customStore";
+import {
+  ART_SHADOW_CAMERA_CONFIG,
+  configureArtContactShadow,
+} from "./artLighting";
 
 // Shared props for the rotating fill rigs: a brightness multiplier and a
 // tint, both driven by the time-of-day phase.
@@ -38,9 +42,6 @@ const SQUARE_WORLD_SIZE = 0.5;
 const SHADOW_FRUSTUM_PADDING = 1.7;
 // Lower bound so small pieces still get a sensible shadow box.
 const SHADOW_FRUSTUM_MIN = 8;
-const SHADOW_CAMERA_NEAR = 0.5;
-const SHADOW_CAMERA_FAR = 400;
-const SHADOW_MAP_SIZE = 2048;
 // Pull each light's lateral offset toward center so light hits the
 // piece more head-on — much shorter, softer (less sideways) shadows.
 // 0.5 reduction, then the remaining angle cut another 25% (0.5 * 0.75).
@@ -48,12 +49,11 @@ const SHADOW_ANGLE_REDUCTION = 0.625;
 
 // ── Geometric ART RIG — ported from the original viewer.everwoodus.com
 // (AcierDev/Custom-Request-Viewer). Five directional lights at their FULL
-// (un-angled) positions, each casting its own shadow, throw the raked,
-// relief-revealing self-shadows the old viewer had — the look this repo's
-// later "head-on + single source-anchored key" rework had flattened. The
-// art is relit with these while the gallery room + time-of-day are kept
-// (time of day still scales brightness and tints colour below). Positions
-// and intensities are the old viewer's store defaults.
+// (un-angled) positions. The dominant key also casts one art-sized contact
+// shadow, restoring the relief depth the old viewer got from its multi-shadow
+// rig without adding another light. Time of day still scales brightness and
+// tints colour below. Positions and intensities are the old viewer's store
+// defaults.
 const ART_RIG_AMBIENT_INTENSITY = 1;
 // Positions are the old viewer's rig MIRRORED in X — the dominant key now
 // rakes from the LEFT, so highlights sit on the left and the relief shading
@@ -142,10 +142,10 @@ function useShadowFrustum() {
 function shadowProps(half: number) {
   return {
     castShadow: true,
-    "shadow-mapSize-width": SHADOW_MAP_SIZE,
-    "shadow-mapSize-height": SHADOW_MAP_SIZE,
-    "shadow-camera-near": SHADOW_CAMERA_NEAR,
-    "shadow-camera-far": SHADOW_CAMERA_FAR,
+    "shadow-mapSize-width": ART_SHADOW_CAMERA_CONFIG.mapSize,
+    "shadow-mapSize-height": ART_SHADOW_CAMERA_CONFIG.mapSize,
+    "shadow-camera-near": ART_SHADOW_CAMERA_CONFIG.near,
+    "shadow-camera-far": ART_SHADOW_CAMERA_CONFIG.far,
     "shadow-camera-left": -half,
     "shadow-camera-right": half,
     "shadow-camera-top": half,
@@ -347,18 +347,21 @@ export function GeometricLighting({
   lightColor = "#ffffff",
 }: RigLightingProps) {
   const lightGroupRef = useRef<THREE.Group>(null);
+  const half = useShadowFrustum();
   useDisposeLightsOnUnmount(lightGroupRef);
+  const contactShadowKeyRef = useCallback(
+    (light: THREE.DirectionalLight | null) => {
+      if (light) configureArtContactShadow(light, half);
+    },
+    [half]
+  );
 
-  // Old-viewer art rig, but SHADOWLESS. The cast shadows belong to the
-  // lights that physically exist in the room — the ceiling cans, the
-  // window, the floor lamp — thrown by <ArtShadowKeys/>, so a shadow only
-  // appears where there's a real light to throw it (one clean shadow on
-  // the wall + relief, not five from abstract keys). These five lights
-  // only SHAPE the relief: at their full, un-angled positions they rake
-  // across the tiles so the surface reads 3D (the head-on angled() rig
-  // looked flat). Intensities are the old viewer's defaults; time of day
-  // scales them (intensityScale) and tints them (lightColor), and the
-  // group rotates with the time-of-day sweep.
+  // Old-viewer art rig. The dominant key now restores one close relief
+  // shadow through the existing art-sized frustum. The remaining four lights
+  // stay shadowless, and the room's source-anchored keys continue to own its
+  // broad environmental shadows. No light direction or intensity changes:
+  // this group still rotates, scales and tints with the current time-of-day
+  // sweep.
   return (
     <group ref={lightGroupRef}>
       <ambientLight
@@ -367,6 +370,7 @@ export function GeometricLighting({
       />
       {/* Key — top right */}
       <directionalLight
+        ref={contactShadowKeyRef}
         position={ART_RIG_KEY_POS}
         color={lightColor}
         intensity={ART_RIG_KEY_INTENSITY * intensityScale}

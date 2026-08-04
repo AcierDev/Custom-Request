@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { PaletteCard } from "./PaletteCard";
 import { FolderSection } from "./FolderSection";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useRouter } from "next/navigation";
 import { usePaletteLoadConfirm } from "@/hooks/usePaletteLoadConfirm";
 import { PaletteLoadConfirmDialog } from "@/components/PaletteLoadConfirmDialog";

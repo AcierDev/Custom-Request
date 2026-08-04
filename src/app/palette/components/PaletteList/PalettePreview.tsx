@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Copy } from "lucide-react";
 import { PalettePreviewProps } from "./types";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 export const PalettePreview = ({ colors }: PalettePreviewProps) => {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);

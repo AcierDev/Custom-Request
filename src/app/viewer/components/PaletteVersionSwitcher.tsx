@@ -2,7 +2,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown, ChevronUp, Save } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {

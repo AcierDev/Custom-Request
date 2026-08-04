@@ -31,7 +31,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import {
   Dialog,
   DialogContent,

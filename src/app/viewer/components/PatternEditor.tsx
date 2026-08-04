@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useStore } from "zustand";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";

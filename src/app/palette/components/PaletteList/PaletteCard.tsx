@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/card";
 import { PaletteCardProps } from "./types";
 import { PalettePreview } from "./PalettePreview";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useCustomStore } from "@/store/customStore";
 
 export const PaletteCard = ({

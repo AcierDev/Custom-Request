@@ -35,7 +35,10 @@ export function PatternControls() {
   const orientation = useCustomStore((s) => s.orientation);
   const setOrientation = useCustomStore((s) => s.setOrientation);
   const isRotated = useCustomStore((s) => s.isRotated);
-  const setIsRotated = useCustomStore((s) => s.setIsRotated);
+  const isReversed = useCustomStore((s) => s.isReversed);
+  const rotateColorsQuarterTurn = useCustomStore(
+    (s) => s.rotateColorsQuarterTurn,
+  );
   const selectedDesign = useCustomStore((s) => s.selectedDesign);
   const customPalette = useCustomStore((s) => s.customPalette);
   const drawnPatternGrid = useCustomStore((s) => s.drawnPatternGrid);
@@ -94,6 +97,7 @@ export function PatternControls() {
     0,
     patterns.findIndex(({ value }) => value === colorPattern),
   );
+  const hasColorRotation = isRotated || isReversed;
 
   return (
     <div className="space-y-3">
@@ -258,11 +262,11 @@ export function PatternControls() {
                 variant="outline"
                 className={cn(
                   "w-full border",
-                  isRotated
+                  hasColorRotation
                     ? "bg-indigo-600 hover:bg-indigo-500 border-indigo-400/40 text-white"
                     : "border-white/15 bg-gray-900/40 text-gray-300 hover:bg-gray-900/60",
                 )}
-                onClick={() => setIsRotated(!isRotated)}
+                onClick={rotateColorsQuarterTurn}
               >
                 <RotateCcw className="w-4 h-4 mr-1" />
                 <span className="text-xs">Rotate Colors</span>

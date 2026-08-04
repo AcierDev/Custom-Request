@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LoaderCircle, Sparkles, Undo2 } from "lucide-react";
 import { nanoid } from "nanoid";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import {
   Conversation,
   ConversationContent,

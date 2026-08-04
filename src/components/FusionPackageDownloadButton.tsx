@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2, PackageOpen } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
 import { getArtSnapshot } from "@/lib/ar/artSnapshot";
 import { generateFusionPackageDownload } from "@/lib/fusion/exportFusionPackage";

@@ -1,4 +1,5 @@
 import LZString from "lz-string";
+import { PANEL_REMAINDER_MODES } from "./panelLayout.ts";
 
 const {
   compressToEncodedURIComponent,
@@ -18,6 +19,7 @@ const SHORT_DRAWN_PATTERN_GRID_KEY = "pg";
 const SHORT_DRAWN_PATTERN_SIZE_KEY = "pgs";
 const SHORT_PANEL_COUNT_KEY = "pc";
 const SHORT_PANEL_SPACING_KEY = "psg";
+const SHORT_PANEL_REMAINDER_MODE_KEY = "prm";
 const SHORT_SQUARE_GAP_KEY = "sqg";
 const SHORT_BOOLEAN_FALSE = 0;
 const SHORT_BOOLEAN_TRUE = 1;
@@ -202,6 +204,12 @@ export const generateShortShareableUrl = (stateData: any): string => {
   if (typeof stateData.panelSpacingInches === "number") {
     minimalState[SHORT_PANEL_SPACING_KEY] = stateData.panelSpacingInches;
   }
+  if (typeof stateData.panelRemainderMode === "string") {
+    minimalState[SHORT_PANEL_REMAINDER_MODE_KEY] =
+      stateData.panelRemainderMode === PANEL_REMAINDER_MODES.rightToLeft
+        ? SHORT_BOOLEAN_TRUE
+        : SHORT_BOOLEAN_FALSE;
+  }
   if (typeof stateData.squareGapInches === "number") {
     minimalState[SHORT_SQUARE_GAP_KEY] = stateData.squareGapInches;
   }
@@ -342,6 +350,12 @@ export const extractStateFromShortUrl = <T>(compressedData: string): T => {
     }
     if (minimalState[SHORT_PANEL_SPACING_KEY] !== undefined) {
       fullState.panelSpacingInches = minimalState[SHORT_PANEL_SPACING_KEY];
+    }
+    if (minimalState[SHORT_PANEL_REMAINDER_MODE_KEY] !== undefined) {
+      fullState.panelRemainderMode =
+        minimalState[SHORT_PANEL_REMAINDER_MODE_KEY] === SHORT_BOOLEAN_TRUE
+          ? PANEL_REMAINDER_MODES.rightToLeft
+          : PANEL_REMAINDER_MODES.triptych;
     }
     if (minimalState[SHORT_SQUARE_GAP_KEY] !== undefined) {
       fullState.squareGapInches = minimalState[SHORT_SQUARE_GAP_KEY];

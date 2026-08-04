@@ -77,6 +77,22 @@ def appearance_name(mapping, exported_at):
     )
 
 
+def attach_current_texture(appearance, texture_path):
+    try:
+        appearance.colorTexture = str(texture_path)
+        return bool(appearance.colorTexture)
+    except Exception:
+        return False
+
+
+def delete_unused_appearance(appearance):
+    try:
+        if appearance and not appearance.isUsed:
+            appearance.deleteMe()
+    except Exception:
+        pass
+
+
 def ensure_textured_appearance(design, body, mapping, exported_at):
     texture_path = SCRIPT_DIRECTORY / mapping["textureFilename"]
     if not texture_path.is_file():
@@ -84,32 +100,39 @@ def ensure_textured_appearance(design, body, mapping, exported_at):
 
     name = appearance_name(mapping, exported_at)
     appearance = design.appearances.itemByName(name)
-    if not appearance:
-        appearance = design.appearances.addByCopy(body.appearance, name)
-    if not appearance:
-        raise RuntimeError(
-            "Could not create an appearance for {}".format(
-                mapping["componentName"]
-            )
-        )
+    if appearance:
+        if attach_current_texture(appearance, texture_path):
+            return appearance
+        delete_unused_appearance(appearance)
 
-    color_property = find_color_property(appearance)
-    if not color_property:
-        raise RuntimeError(
-            "No editable color property for {}".format(
-                mapping["componentName"]
-            )
-        )
+    add_appearance = getattr(design.appearances, "add", None)
+    if callable(add_appearance):
+        try:
+            appearance = add_appearance(name)
+            if appearance and attach_current_texture(
+                appearance,
+                texture_path,
+            ):
+                return appearance
+            delete_unused_appearance(appearance)
+        except Exception:
+            appearance = None
 
-    color_property.hasConnectedTexture = True
-    texture = color_property.connectedTexture
-    if not texture or not texture.changeTextureImage(str(texture_path)):
-        raise RuntimeError(
-            "Could not attach texture for {}".format(
-                mapping["componentName"]
-            )
+    appearance = design.appearances.addByCopy(body.appearance, name)
+    if appearance:
+        color_property = find_color_property(appearance)
+        if color_property:
+            color_property.hasConnectedTexture = True
+            texture = color_property.connectedTexture
+            if texture and texture.changeTextureImage(str(texture_path)):
+                return appearance
+
+    delete_unused_appearance(appearance)
+    raise RuntimeError(
+        "Could not attach texture for {}".format(
+            mapping["componentName"]
         )
-    return appearance
+    )
 
 
 def apply_mapping(design, components, mapping, exported_at):

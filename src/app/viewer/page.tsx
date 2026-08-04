@@ -54,6 +54,10 @@ import { ViewControls } from "@/components/preview/ViewControls";
 import { ColorInfoHint } from "@/components/preview/ColorInfoHint";
 import { Ruler3D } from "@/components/preview/Ruler3D";
 import { frameAlpha } from "@/components/preview/animationUtils";
+import { RESPONSIVE_ORBIT_SETTINGS } from "@/components/preview/orbitResponse";
+import { getDampedZoomDistance } from "@/components/preview/zoomResponse";
+import { OrbitPivotDrag } from "@/components/preview/OrbitPivotDrag";
+import { getOrbitPivotWorldX } from "@/components/preview/orbitPivot";
 import {
   DEFAULT_LAMP_ON,
   toggleLampAtTimeOfDay,
@@ -118,10 +122,8 @@ const isEditableKeyboardTarget = (target: EventTarget | null): boolean =>
 // handled by SmoothWheelZoom instead; zoomSpeed remains for touch pinch.
 const TOUCH_ZOOM_SPEED = 1.875;
 const TRACKPAD_ZOOM_SENSITIVITY = 0.0045;
-const TRACKPAD_ZOOM_EASE = 0.22;
 const TRACKPAD_ZOOM_MAX_DELTA_PX = 60;
 const MOUSE_WHEEL_ZOOM_STEP = 1.1;
-const MOUSE_WHEEL_ZOOM_EASE = 0.3;
 const MOUSE_WHEEL_DELTA_THRESHOLD_PX = 50;
 const WHEEL_INPUT_GESTURE_GAP_MS = 160;
 const WHEEL_ZOOM_SETTLE_DISTANCE = 0.001;
@@ -185,7 +187,15 @@ const ROOM_COLLISION_MIN_DISTANCE = 1.2;
 //║ 🎯 ART CAMERA FOLLOW                                                  ║
 //╚═══╝ ════════════════════════════════════════════════════════════════ ╚═══╝
 
-function ArtCameraFollow({ target }: { target: [number, number, number] }) {
+function ArtCameraFollow({
+  target,
+  artWidth,
+  pivotRatioRef,
+}: {
+  target: [number, number, number];
+  artWidth: number;
+  pivotRatioRef: { current: number };
+}) {
   const camera = useThree((s) => s.camera);
   const invalidate = useThree((s) => s.invalidate);
   const controls = useThree((s) => s.controls) as
@@ -197,12 +207,17 @@ function ArtCameraFollow({ target }: { target: [number, number, number] }) {
 
   useEffect(() => {
     invalidate();
-  }, [invalidate, target]);
+  }, [artWidth, invalidate, target]);
 
   useFrame((_, delta) => {
     if (!controls) return;
 
-    const [targetX, targetY, targetZ] = target;
+    const [artCenterX, targetY, targetZ] = target;
+    const targetX = getOrbitPivotWorldX(
+      artCenterX,
+      artWidth,
+      pivotRatioRef.current
+    );
     const diffX = targetX - controls.target.x;
     const diffY = targetY - controls.target.y;
     const diffZ = targetZ - controls.target.z;
@@ -255,7 +270,6 @@ function SmoothWheelZoom() {
   const gl = useThree((s) => s.gl);
   const invalidate = useThree((s) => s.invalidate);
   const targetDistance = useRef(Number.NaN);
-  const zoomEase = useRef(TRACKPAD_ZOOM_EASE);
   const inputMode = useRef<WheelZoomInput | null>(null);
   const lastWheelEventAt = useRef(Number.NEGATIVE_INFINITY);
   const isAnimating = useRef(false);
@@ -303,10 +317,6 @@ function SmoothWheelZoom() {
           : startingDistance / MOUSE_WHEEL_ZOOM_STEP
         : startingDistance *
           Math.exp(trackpadDelta * TRACKPAD_ZOOM_SENSITIVITY);
-      zoomEase.current = isMouseWheel
-        ? MOUSE_WHEEL_ZOOM_EASE
-        : TRACKPAD_ZOOM_EASE;
-
       targetDistance.current = Math.max(
         controls.minDistance,
         Math.min(controls.maxDistance, requestedDistance)
@@ -348,7 +358,7 @@ function SmoothWheelZoom() {
     const nextDistance =
       Math.abs(remaining) <= WHEEL_ZOOM_SETTLE_DISTANCE
         ? clampedTarget
-        : currentDistance + remaining * frameAlpha(zoomEase.current, delta);
+        : getDampedZoomDistance(currentDistance, clampedTarget, delta);
     const distanceScale = nextDistance / currentDistance;
 
     camera.position.set(
@@ -735,6 +745,7 @@ export default function DesignPage() {
     [displayArtCenterX]
   );
   const initialCameraTarget = useRef<[number, number, number]>(artCenter);
+  const orbitPivotRatio = useRef(0);
 
   if (!mounted) return null;
 
@@ -994,6 +1005,8 @@ export default function DesignPage() {
               around"). They load nothing async, so keeping them mounted
               regardless is safe. */}
           <OrbitControls
+            enableDamping={RESPONSIVE_ORBIT_SETTINGS.enableDamping}
+            dampingFactor={RESPONSIVE_ORBIT_SETTINGS.dampingFactor}
             enablePan={false}
             touches={TOUCH_GESTURES}
             zoomSpeed={TOUCH_ZOOM_SPEED}
@@ -1006,8 +1019,18 @@ export default function DesignPage() {
             target={initialCameraTarget.current}
             makeDefault
           />
+          <OrbitPivotDrag
+            artCenter={artCenter}
+            artWidth={installedArtWidth}
+            pivotRatioRef={orbitPivotRatio}
+            showHint={!isMobile}
+          />
           <SmoothWheelZoom />
-          <ArtCameraFollow target={artCenter} />
+          <ArtCameraFollow
+            target={artCenter}
+            artWidth={installedArtWidth}
+            pivotRatioRef={orbitPivotRatio}
+          />
           {/* Collision keeps the camera inside the room walls. With the room
               hidden the art is free-floating, so skip it — otherwise the
               invisible walls would cap how far back you can circle around. */}

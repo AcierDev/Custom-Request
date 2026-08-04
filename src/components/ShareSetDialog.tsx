@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { nanoid } from "nanoid";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { motion } from "framer-motion";
 import { Check, Copy, ExternalLink, LinkIcon, Loader2 } from "lucide-react";
 

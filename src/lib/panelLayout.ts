@@ -1,6 +1,14 @@
+export const PANEL_REMAINDER_MODES = {
+  triptych: "triptych",
+  rightToLeft: "right-to-left",
+} as const;
+
+export type PanelRemainderMode =
+  (typeof PANEL_REMAINDER_MODES)[keyof typeof PANEL_REMAINDER_MODES];
+
 export const PANEL_LAYOUT_CONFIG = {
   minCount: 1,
-  maxCount: 5,
+  maxCount: 10,
   defaultCount: 3,
   singleCount: 1,
   minSpacingInches: 0,
@@ -9,6 +17,7 @@ export const PANEL_LAYOUT_CONFIG = {
   defaultSpacingInches: 3,
   legacySpacingInches: 6,
   inchesPerSceneUnit: 6,
+  defaultRemainderMode: PANEL_REMAINDER_MODES.triptych,
 } as const;
 
 export const PANEL_LAYOUT_ANIMATION_CONFIG = {
@@ -52,6 +61,14 @@ export function normalizePanelSpacingInches(value: unknown): number {
   );
 }
 
+export function normalizePanelRemainderMode(
+  value: unknown,
+): PanelRemainderMode {
+  return value === PANEL_REMAINDER_MODES.rightToLeft
+    ? PANEL_REMAINDER_MODES.rightToLeft
+    : PANEL_LAYOUT_CONFIG.defaultRemainderMode;
+}
+
 /**
  * Split columns into panels. Any remainder is assigned to the center-most
  * panel so an uneven split keeps the visual weight in the middle.
@@ -59,6 +76,7 @@ export function normalizePanelSpacingInches(value: unknown): number {
 export function buildPanelColumnLayout(
   totalColumns: number,
   requestedCount: number,
+  remainderMode: PanelRemainderMode = PANEL_LAYOUT_CONFIG.defaultRemainderMode,
 ): PanelColumnLayout[] {
   const safeColumns = Math.max(0, Math.floor(totalColumns));
   const availableCount = Math.max(PANEL_LAYOUT_CONFIG.singleCount, safeColumns);
@@ -69,10 +87,20 @@ export function buildPanelColumnLayout(
   const baseColumns = Math.floor(safeColumns / panelCount);
   const remainder = safeColumns % panelCount;
   const centerIndex = Math.floor((panelCount - 1) / 2);
+  const rightRemainderStartIndex = panelCount - remainder;
+  const normalizedRemainderMode = normalizePanelRemainderMode(remainderMode);
   let startColumn = 0;
 
   return Array.from({ length: panelCount }, (_, index) => {
-    const columnCount = baseColumns + (index === centerIndex ? remainder : 0);
+    const extraColumns =
+      normalizedRemainderMode === PANEL_REMAINDER_MODES.rightToLeft
+        ? index >= rightRemainderStartIndex
+          ? PANEL_LAYOUT_CONFIG.singleCount
+          : 0
+        : index === centerIndex
+          ? remainder
+          : 0;
+    const columnCount = baseColumns + extraColumns;
     const panel = {
       index,
       startColumn,

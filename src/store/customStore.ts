@@ -3,6 +3,7 @@ import { ItemDesigns, Dimensions, ItemSizes } from "@/typings/types";
 import { sizeToDimensions } from "@/lib/utils";
 import { calculatePrice, PriceBreakdown } from "@/lib/pricing";
 import { blendHexColors } from "@/lib/colorUtils";
+import { getNextColorRotationState } from "@/lib/colorRotation";
 import {
   simulatePaintLikeMix,
   type HandMixSimulation,
@@ -28,7 +29,9 @@ import type { AiPaletteResponse } from "@/lib/aiPalette";
 import {
   PANEL_LAYOUT_CONFIG,
   normalizePanelCount,
+  normalizePanelRemainderMode,
   normalizePanelSpacingInches,
+  type PanelRemainderMode,
 } from "@/lib/panelLayout";
 import { SQUARE_GAP_CONFIG, normalizeSquareGapInches } from "@/lib/squareGap";
 import {
@@ -368,6 +371,7 @@ interface CustomState {
     showSplitPanel: boolean;
     panelCount: number;
     panelSpacingInches: number;
+    panelRemainderMode: PanelRemainderMode;
     squareGapInches: number;
     showFPS: boolean;
     showUIControls: boolean;
@@ -431,6 +435,7 @@ interface CustomStore extends CustomState {
   reorderPalette: (newOrder: CustomColor[]) => void;
   commitPaletteToHistory: () => void;
   setIsRotated: (value: boolean) => void;
+  rotateColorsQuarterTurn: () => void;
   setStyle: (style: StyleType) => void;
   setUseMini: (value: boolean) => void;
   setShowRuler: (value: boolean) => void;
@@ -442,6 +447,7 @@ interface CustomStore extends CustomState {
   setShowSplitPanel: (value: boolean) => void;
   setPanelCount: (value: number) => void;
   setPanelSpacingInches: (value: number) => void;
+  setPanelRemainderMode: (value: PanelRemainderMode) => void;
   setSquareGapInches: (value: number) => void;
   setShowFPS: (value: boolean) => void;
   setShowUIControls: (value: boolean) => void;
@@ -515,6 +521,7 @@ interface CustomStore extends CustomState {
     paletteBlend: number;
     panelCount: number;
     panelSpacingInches: number;
+    panelRemainderMode: PanelRemainderMode;
     squareGapInches: number;
     backboardColor: string | null;
   };
@@ -810,6 +817,7 @@ export interface ShareableState {
   patternHiddenOverride?: PatternHiddenOverrides;
   panelCount?: number;
   panelSpacingInches?: number;
+  panelRemainderMode?: PanelRemainderMode;
   squareGapInches?: number;
   backboardColor?: string | null;
 }
@@ -820,6 +828,7 @@ const resolveStoredPanelSettings = (
         showSplitPanel?: boolean;
         panelCount?: number;
         panelSpacingInches?: number;
+        panelRemainderMode?: PanelRemainderMode;
         squareGapInches?: number;
         backboardColor?: string | null;
       }
@@ -845,6 +854,9 @@ const resolveStoredPanelSettings = (
     showSplitPanel: panelCount > PANEL_LAYOUT_CONFIG.singleCount,
     panelCount,
     panelSpacingInches,
+    panelRemainderMode: normalizePanelRemainderMode(
+      settings?.panelRemainderMode,
+    ),
     squareGapInches: normalizeSquareGapInches(
       settings?.squareGapInches ?? SQUARE_GAP_CONFIG.defaultInches,
     ),
@@ -861,6 +873,9 @@ const resolveSharedPanelSettings = (state: ShareableState) => {
     panelCount,
     panelSpacingInches: normalizePanelSpacingInches(
       state.panelSpacingInches ?? PANEL_LAYOUT_CONFIG.defaultSpacingInches,
+    ),
+    panelRemainderMode: normalizePanelRemainderMode(
+      state.panelRemainderMode,
     ),
     squareGapInches: normalizeSquareGapInches(
       state.squareGapInches ?? SQUARE_GAP_CONFIG.defaultInches,
@@ -944,6 +959,7 @@ interface PersistentState extends ShareableState {
     showSplitPanel: boolean;
     panelCount: number;
     panelSpacingInches: number;
+    panelRemainderMode: PanelRemainderMode;
     squareGapInches: number;
     showFPS: boolean;
     showUIControls: boolean;
@@ -1373,6 +1389,7 @@ export const useCustomStore = create<CustomStore>()(
       showSplitPanel: false,
       panelCount: PANEL_LAYOUT_CONFIG.singleCount,
       panelSpacingInches: PANEL_LAYOUT_CONFIG.defaultSpacingInches,
+      panelRemainderMode: PANEL_LAYOUT_CONFIG.defaultRemainderMode,
       squareGapInches: SQUARE_GAP_CONFIG.defaultInches,
       showFPS: false,
       showUIControls: true,
@@ -1787,6 +1804,8 @@ export const useCustomStore = create<CustomStore>()(
         };
       }),
     setIsRotated: (value) => set({ isRotated: value }),
+    rotateColorsQuarterTurn: () =>
+      set((state) => getNextColorRotationState(state)),
     setStyle: (style) => set({ style }),
     setShowRuler: (value) =>
       set((state) => ({
@@ -1841,6 +1860,13 @@ export const useCustomStore = create<CustomStore>()(
         viewSettings: {
           ...state.viewSettings,
           panelSpacingInches: normalizePanelSpacingInches(value),
+        },
+      })),
+    setPanelRemainderMode: (value) =>
+      set((state) => ({
+        viewSettings: {
+          ...state.viewSettings,
+          panelRemainderMode: normalizePanelRemainderMode(value),
         },
       })),
     setSquareGapInches: (value) =>
@@ -2913,6 +2939,9 @@ export const useCustomStore = create<CustomStore>()(
         panelSpacingInches: normalizePanelSpacingInches(
           state.viewSettings.panelSpacingInches,
         ),
+        panelRemainderMode: normalizePanelRemainderMode(
+          state.viewSettings.panelRemainderMode,
+        ),
         squareGapInches: normalizeSquareGapInches(
           state.viewSettings.squareGapInches,
         ),
@@ -2942,6 +2971,9 @@ export const useCustomStore = create<CustomStore>()(
           : PANEL_LAYOUT_CONFIG.singleCount,
         panelSpacingInches: normalizePanelSpacingInches(
           state.viewSettings.panelSpacingInches,
+        ),
+        panelRemainderMode: normalizePanelRemainderMode(
+          state.viewSettings.panelRemainderMode,
         ),
         squareGapInches: normalizeSquareGapInches(
           state.viewSettings.squareGapInches,

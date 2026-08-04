@@ -44,12 +44,25 @@ export const GRAIN_ATLAS = {
   /** Fraction of the cell kept clear of the border so mip filtering can't
    *  bleed one grain image into its neighbour. */
   cellInset: 0.94,
-  /** Grain zoom — higher = larger / less-tight grain (samples a smaller,
-   *  centered region of each cell). 1.1 = zoomed in 10% vs. the base inset. */
-  zoom: 1.1,
-  /** Overall square brightness multiplier applied after the grain blend.
-   *  <1 darkens the squares (0.9 = 10% darker). */
+  /** Preserve the original full-image grain scale. */
+  zoom: 1,
+  /** Export pipelines retain their established brightness treatment. The
+   *  default web material intentionally does not apply this multiplier. */
   brightness: 0.9,
+} as const;
+
+export const GRAIN_RELIEF = {
+  /** Negative inverts the pale earlywood bands into shallow recesses. */
+  bumpScale: -0.16,
+} as const;
+
+export const SIDE_GRAIN = {
+  /** Original production texture used on the wedge sides. */
+  texture: "/textures/wood-side-grain.jpg",
+  /** Original texture repeat on both axes. */
+  repeat: [0.2, 0.2] as const,
+  /** Keep the raking-angle grain crisp. */
+  anisotropy: 8,
 } as const;
 
 // Identifier for the single shipped wood look. The picker that swapped
@@ -77,4 +90,6 @@ export const METALLIC_PAINT = {
    * just darker); tuned for a subtle, paint-like sheen.
    */
   envMapIntensity: 0.85,
+  /** Preserve the existing metallic-path darkening. */
+  grainBrightness: 0.9,
 } as const;

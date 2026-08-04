@@ -15,7 +15,6 @@ const FILE_NAME_PATTERN =
   /FILE_NAME\s*\([\s\S]*?\)\s*;(?=\s*FILE_SCHEMA)/;
 const STEP_STRING_DELIMITER_PATTERN = /'/g;
 const STEP_ESCAPED_STRING_DELIMITER = "''";
-const TIME_COMPONENT_SEPARATOR = "";
 
 const padDateComponent = (value: number, width: number): string =>
   String(value).padStart(width, "0");
@@ -36,10 +35,6 @@ export function createStepExportMetadata(
   const separator = STEP_EXPORT_CONFIG.filenameDateSeparator;
   const dateStamp = [
     padDateComponent(
-      exportedAt.getFullYear(),
-      STEP_EXPORT_CONFIG.yearComponentWidth,
-    ),
-    padDateComponent(
       exportedAt.getMonth() + STEP_EXPORT_CONFIG.firstComponentNumber,
       STEP_EXPORT_CONFIG.dateComponentWidth,
     ),
@@ -47,23 +42,17 @@ export function createStepExportMetadata(
       exportedAt.getDate(),
       STEP_EXPORT_CONFIG.dateComponentWidth,
     ),
+    padDateComponent(
+      exportedAt.getFullYear() % STEP_EXPORT_CONFIG.shortYearModulo,
+      STEP_EXPORT_CONFIG.yearComponentWidth,
+    ),
   ].join(separator);
-  const timeStamp = [
-    padDateComponent(
-      exportedAt.getHours(),
-      STEP_EXPORT_CONFIG.dateComponentWidth,
-    ),
-    padDateComponent(
-      exportedAt.getMinutes(),
-      STEP_EXPORT_CONFIG.dateComponentWidth,
-    ),
-  ].join(TIME_COMPONENT_SEPARATOR);
-  const filenameStamp = `${dateStamp}${separator}${timeStamp}`;
+  const filenameStamp = dateStamp;
 
   return {
     description: STEP_EXPORT_CONFIG.description,
     exportedAtIso: exportedAt.toISOString(),
-    filename: `${STEP_EXPORT_CONFIG.filenamePrefix}-${filenameStamp}${STEP_EXPORT_CONFIG.fileExtension}`,
+    filename: `${STEP_EXPORT_CONFIG.filenamePrefix}${STEP_EXPORT_CONFIG.filenamePrefixSeparator}${filenameStamp}${STEP_EXPORT_CONFIG.fileExtension}`,
     filenameStamp,
   };
 }

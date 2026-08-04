@@ -21,7 +21,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { handMixMatchPercent } from "@/lib/paintMixSimulator";
 import { ColorSwatchProps } from "./types";
 import { swatchParts } from "./mixTotals";

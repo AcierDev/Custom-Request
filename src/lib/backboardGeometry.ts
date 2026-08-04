@@ -1,6 +1,7 @@
 import {
   PANEL_LAYOUT_CONFIG,
   buildPanelColumnLayout,
+  type PanelRemainderMode,
 } from "./panelLayout.ts";
 import {
   getSquareGapSceneUnits,
@@ -42,6 +43,7 @@ export interface BackboardLayoutInput {
   useMini: boolean;
   squareGapInches: number;
   panelCount: number;
+  panelRemainderMode?: PanelRemainderMode;
 }
 
 const makeBodyId = (index: number): string =>
@@ -90,6 +92,7 @@ export function buildBackboardBodyGeometry(
   const panels = buildPanelColumnLayout(
     input.columnCount,
     input.panelCount,
+    input.panelRemainderMode,
   );
 
   return panels.map((panel) => {

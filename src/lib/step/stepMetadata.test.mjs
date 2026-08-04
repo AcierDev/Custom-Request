@@ -29,9 +29,9 @@ test("uses one local export date for the STEP filename and metadata", () => {
   );
   assert.equal(
     metadata.filename,
-    "everwood-art-2026-07-28-0907.step",
+    "Art Step 07-28-26.step",
   );
-  assert.equal(metadata.filenameStamp, "2026-07-28-0907");
+  assert.equal(metadata.filenameStamp, "07-28-26");
   assert.equal(metadata.exportedAtIso, EXPORTED_AT.toISOString());
 });
 
@@ -53,7 +53,7 @@ test("replaces generic STEP headers and safely escapes metadata text", () => {
   );
   assert.match(
     rewritten,
-    /FILE_NAME\('everwood-art-2026-07-28-0907\.step','2026-07-28T16:07:06\.000Z'/,
+    /FILE_NAME\('Art Step 07-28-26\.step','2026-07-28T16:07:06\.000Z'/,
   );
   assert.equal(rewritten.includes("Open CASCADE Model"), false);
   assert.equal(rewritten.includes("Open CASCADE Shape Model"), false);

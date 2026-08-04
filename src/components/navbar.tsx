@@ -32,7 +32,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useCustomStore } from "@/store/customStore";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
 type NavItemBase = {

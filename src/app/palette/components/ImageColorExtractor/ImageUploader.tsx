@@ -6,7 +6,7 @@ import { useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ImageIcon, Loader2, Upload } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import {
   FILE_UPLOAD_CONFIG,
   loadExtractableFile,

@@ -56,7 +56,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { ImportCard } from "./components/PaletteList/ImportCard";
 import { useRouter, useSearchParams } from "next/navigation";
 import {

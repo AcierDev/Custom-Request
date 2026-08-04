@@ -12,7 +12,10 @@ import {
   SQUARE_GAP_CONFIG,
   getSquareGapSceneUnits,
 } from "@/lib/squareGap";
-import { NATURAL_BACKBOARD_TINT_COLOR } from "@/lib/backboardColor";
+import {
+  NATURAL_BACKBOARD_TINT_COLOR,
+  shouldUseBackboardTexture,
+} from "@/lib/backboardColor";
 import {
   BACKBOARD_GEOMETRY_CONFIG,
   buildBackboardBodyGeometry,
@@ -189,6 +192,10 @@ export function PlywoodBase({
   // useLoader breaks the rules of hooks and crashes when the wood-grain
   // toggle flips). Each panel still applies it only when showWoodGrain.
   const texture = useLoader(TextureLoader, "/textures/plywood.jpg");
+  const showBackboardTexture = shouldUseBackboardTexture(
+    backboardColor,
+    showWoodGrain,
+  );
 
   const selectedDesign = useCustomStore((s) => s.selectedDesign);
   const customPalette = useCustomStore((s) => s.customPalette);
@@ -437,7 +444,7 @@ export function PlywoodBase({
             baseThickness,
           ]}
           texture={texture}
-          showWoodGrain={showWoodGrain}
+          showWoodGrain={showBackboardTexture}
           color={backboardColor ?? NATURAL_BACKBOARD_TINT_COLOR}
         />
 
@@ -450,7 +457,7 @@ export function PlywoodBase({
             baseThickness,
           ]}
           texture={texture}
-          showWoodGrain={showWoodGrain}
+          showWoodGrain={showBackboardTexture}
           color={backboardColor ?? NATURAL_BACKBOARD_TINT_COLOR}
         />
 
@@ -463,7 +470,7 @@ export function PlywoodBase({
             baseThickness,
           ]}
           texture={texture}
-          showWoodGrain={showWoodGrain}
+          showWoodGrain={showBackboardTexture}
           color={backboardColor ?? NATURAL_BACKBOARD_TINT_COLOR}
         />
       </>

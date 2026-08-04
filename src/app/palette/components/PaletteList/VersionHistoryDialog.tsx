@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { nanoid } from "nanoid";
 import { GitBranch, PenLine, Trash2, X } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useCustomStore, type PaletteVersion } from "@/store/customStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

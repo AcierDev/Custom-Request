@@ -243,6 +243,9 @@ function GeometricPatternComponent({
   const panelSpacingInches = useCustomStore(
     (s) => s.viewSettings.panelSpacingInches,
   );
+  const panelRemainderMode = useCustomStore(
+    (s) => s.viewSettings.panelRemainderMode,
+  );
   const storeSquareGapInches = useCustomStore(
     (s) => s.viewSettings.squareGapInches,
   );
@@ -520,8 +523,13 @@ function GeometricPatternComponent({
     ? panelCount
     : PANEL_LAYOUT_CONFIG.singleCount;
   const panelLayout = useMemo(
-    () => buildPanelColumnLayout(currentGridWidth, effectivePanelCount),
-    [currentGridWidth, effectivePanelCount],
+    () =>
+      buildPanelColumnLayout(
+        currentGridWidth,
+        effectivePanelCount,
+        panelRemainderMode,
+      ),
+    [currentGridWidth, effectivePanelCount, panelRemainderMode],
   );
   const driftAmount =
     normalizePanelSpacingInches(panelSpacingInches) /
@@ -929,6 +937,7 @@ function GeometricPatternComponent({
       useMini,
       squareGapInches,
       panelCount: effectivePanelCount,
+      panelRemainderMode,
     });
     return resolveBackboardBodies(
       bodies,
@@ -940,6 +949,7 @@ function GeometricPatternComponent({
     adjustedModelWidth,
     driftAmount,
     effectivePanelCount,
+    panelRemainderMode,
     squareGapInches,
     squareSize,
     squareSpacing,
@@ -996,7 +1006,7 @@ function GeometricPatternComponent({
           isRotated ? 1 : 0
         }-${useMini ? 1 : 0}-${scatterEase ?? 50}-${scatterWidth ?? 10}-${
           scatterAmount ?? 50
-        }-${paletteBlend}-${effectivePanelCount}-${panelSpacingInches}-${squareGapInches}`}
+        }-${paletteBlend}-${effectivePanelCount}-${panelSpacingInches}-${panelRemainderMode}-${squareGapInches}`}
         rotation={[NO_AXIS_ROTATION, NO_AXIS_ROTATION, patternRotationZ]}
         position={[0, 0, 0]}
         onClick={showColorInfo ? handleGroupClick : undefined}
@@ -1012,6 +1022,7 @@ function GeometricPatternComponent({
               useMini={useMini}
               showWoodGrain={showWoodGrain}
               panelCount={effectivePanelCount}
+              panelRemainderMode={panelRemainderMode}
               driftAmount={driftAmount}
               driftFactor={driftFactor}
               squareGapInches={squareGapInches}

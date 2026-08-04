@@ -4,11 +4,23 @@ import { useTexture } from "@react-three/drei";
 import { ThreeEvent, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
-import { memo, useCallback, useEffect, useMemo, useRef } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useCustomStore } from "@/store/customStore";
 import { getNormalizedWedgeCorners } from "@/lib/wedgeGeometry";
-import { GRAIN_ATLAS } from "./woodStyles";
-import { createArtMaterial } from "./artMaterial";
+import { GRAIN_ATLAS, SIDE_GRAIN } from "./woodStyles";
+import {
+  ART_MATERIAL_CONFIG,
+  applyArtGrainShader,
+  bakeArtEnvironment,
+  createArtMaterial,
+} from "./artMaterial";
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ 🧱 INSTANCED SQUARES                                                  ║
@@ -147,7 +159,6 @@ const tmpPos = new THREE.Vector3();
 const tmpScale = new THREE.Vector3();
 const tmpEuler = new THREE.Euler();
 const tmpColor = new THREE.Color();
-const METALLIC_ENV_BLUR = 0.04;
 const WOOD_TEXTURE_ANISOTROPY = 8;
 const HIGHLIGHT_SCALE = 1.06;
 const EMPTY_HIGHLIGHT_COUNT = 0;
@@ -378,9 +389,9 @@ function InstancedSquaresComponent({
 
   const metallic = useCustomStore((s) => s.viewSettings.metallic);
 
-  // Metalness is pure black with nothing to reflect, so a metallic finish
-  // needs an environment map. Bake a neutral room into a PMREM cube once
-  // per renderer and reflect only that (it isn't shown as the background).
+  // Metalness is black without something to reflect, so the optional metallic
+  // finish gets a softly blurred neutral room. The legacy wood finish uses the
+  // current viewer's direct lighting only, matching the original viewer.
   const gl = useThree((s) => s.gl);
   const invalidate = useThree((s) => s.invalidate);
   const controls = useThree((s) => s.controls) as unknown as
@@ -414,21 +425,32 @@ function InstancedSquaresComponent({
   useEffect(() => {
     if (!enablePatternEditing) endPatternDrag();
   }, [enablePatternEditing, endPatternDrag]);
-  const envMap = useMemo(() => {
-    if (!metallic) return null;
-    const pmrem = new THREE.PMREMGenerator(gl);
-    const tex = pmrem.fromScene(
+  const [environmentTarget, setEnvironmentTarget] =
+    useState<THREE.WebGLRenderTarget | null>(null);
+  useEffect(() => {
+    if (!metallic) {
+      setEnvironmentTarget(null);
+      return;
+    }
+
+    const target = bakeArtEnvironment(
+      new THREE.PMREMGenerator(gl),
       new RoomEnvironment(),
-      METALLIC_ENV_BLUR
-    ).texture;
-    pmrem.dispose();
-    return tex;
-  }, [gl, metallic]);
-  useEffect(() => () => envMap?.dispose(), [envMap]);
+      ART_MATERIAL_CONFIG.environmentBlur
+    );
+    setEnvironmentTarget(target);
+    invalidate();
+
+    return () => target.dispose();
+  }, [gl, invalidate, metallic]);
+  const envMap = environmentTarget?.texture ?? null;
 
   // The squares' grain is a 4×4 atlas of 14 distinct grain images; each
   // square samples ONE cell (its grainIndex), exactly like production.
-  const grainAtlas = useTexture(GRAIN_ATLAS.texture);
+  const [grainAtlas, sideGrain] = useTexture([
+    GRAIN_ATLAS.texture,
+    SIDE_GRAIN.texture,
+  ]);
 
   // Shared, instanced-attribute geometry. Rebuilt only when the instance
   // count changes (palette / pattern / size edits), not on orbit or hover.
@@ -451,6 +473,7 @@ function InstancedSquaresComponent({
   // .opacity — mirroring production's `diffuse *= mix(white, grain, 0.4)`.
   const material = useMemo(() => {
     const tex = grainAtlas as THREE.Texture | undefined;
+    const sideTex = sideGrain as THREE.Texture | undefined;
     if (tex) {
       // Clamp (not repeat) so a cell never wraps into its neighbour.
       tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
@@ -466,14 +489,16 @@ function InstancedSquaresComponent({
       tex.flipY = false;
       tex.needsUpdate = true;
     }
+    if (sideTex) {
+      sideTex.wrapS = sideTex.wrapT = THREE.RepeatWrapping;
+      sideTex.repeat.set(...SIDE_GRAIN.repeat);
+      sideTex.colorSpace = THREE.SRGBColorSpace;
+      sideTex.anisotropy = SIDE_GRAIN.anisotropy;
+      sideTex.needsUpdate = true;
+    }
 
-    // "Metallic" is a paint finish layered over the wood grain — a glossy
-    // PBR sheen (MeshStandardMaterial + room env reflection), so its highlights
-    // are intended. The DEFAULT wood is matte: MeshStandardMaterial gives
-    // dielectrics a white Fresnel specular that lights the wedge bevels/sides
-    // as a bright white rim at grazing angles (the "white highlight on the
-    // sides"). MeshPhongMaterial with black specular is pure diffuse, so the
-    // sides read as a flat solid colour with no sheen.
+    // The default finish restores the original viewer's standard wood response.
+    // Metallic remains the separate finish selected by the existing toggle.
     const mat = createArtMaterial({
       metallic,
       texture: tex ?? null,
@@ -485,52 +510,17 @@ function InstancedSquaresComponent({
     // `uv` attribute isn't declared by three's chunks.
     if (showWoodGrain && tex)
       mat.onBeforeCompile = (shader) => {
-        shader.uniforms.uGrid = { value: GRAIN_ATLAS.grid };
-        shader.uniforms.uGrainOpacity = { value: GRAIN_ATLAS.opacity };
-        shader.uniforms.uBrightness = { value: GRAIN_ATLAS.brightness };
-        // Fraction of the cell sampled: the border inset, zoomed in further so
-        // the grain reads larger (less tight). Lower value = bigger grain.
-        shader.uniforms.uCellSample = {
-          value: GRAIN_ATLAS.cellInset / GRAIN_ATLAS.zoom,
-        };
-        shader.vertexShader =
-          `attribute float aGrainIndex;\nattribute float aGrainMask;\nuniform float uGrid;\nuniform float uCellSample;\nvarying vec2 vGrainUv;\nvarying float vGrainMask;\n` +
-          shader.vertexShader.replace(
-            "#include <uv_vertex>",
-            `#include <uv_vertex>
-          {
-            // Map this square's [0,1] face UV into its atlas cell. Sampling a
-            // centered sub-region (uCellSample) both keeps mip filtering from
-            // bleeding across cell borders and zooms the grain in.
-            float col = mod(aGrainIndex, uGrid);
-            float row = floor(aGrainIndex / uGrid);
-            vec2 inset = (clamp(uv, 0.0, 1.0) - 0.5) * uCellSample + 0.5;
-            vGrainUv = (vec2(col, row) + inset) / uGrid;
-            // 1 on the angled face, 0 on the back + sides.
-            vGrainMask = aGrainMask;
-          }`
-          );
-        shader.fragmentShader =
-          `uniform float uGrainOpacity;\nuniform float uBrightness;\nvarying vec2 vGrainUv;\nvarying float vGrainMask;\n` +
-          shader.fragmentShader.replace(
-            "#include <map_fragment>",
-            `#ifdef USE_MAP
-             vec4 grainTexel = texture2D( map, vGrainUv );
-             // Grain ONLY on the angled face (vGrainMask = 1). The back and
-             // side faces keep the flat square color — no wood texture.
-             float grainAmt = uGrainOpacity * vGrainMask;
-             diffuseColor *= mix( vec4( 1.0 ), grainTexel, grainAmt );
-           #endif
-           // Overall darken/brighten applied after the grain blend.
-           diffuseColor.rgb *= uBrightness;`
-          );
+        applyArtGrainShader(shader, {
+          metallic,
+          sideTexture: sideTex ?? null,
+        });
         (mat as unknown as { userData: { shader?: unknown } }).userData.shader =
           shader;
       };
 
     return mat;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [grainAtlas, showWoodGrain, metallic, envMap]);
+  }, [grainAtlas, sideGrain, showWoodGrain, metallic, envMap]);
   // The material (and its compiled shader program) is recreated on grain /
   // style / metallic toggles; dispose the previous one to avoid a GPU leak.
   useEffect(() => () => material.dispose(), [material]);

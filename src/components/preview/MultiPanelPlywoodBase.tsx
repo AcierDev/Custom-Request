@@ -7,8 +7,12 @@ import { useTexture } from "@react-three/drei";
 import {
   buildBackboardBodyGeometry,
 } from "@/lib/backboardGeometry";
-import { NATURAL_BACKBOARD_TINT_COLOR } from "@/lib/backboardColor";
+import {
+  NATURAL_BACKBOARD_TINT_COLOR,
+  shouldUseBackboardTexture,
+} from "@/lib/backboardColor";
 import { WEDGE_GEOMETRY_CONFIG } from "@/lib/wedgeGeometry";
+import type { PanelRemainderMode } from "@/lib/panelLayout";
 
 interface MultiPanelPlywoodBaseProps {
   squareSize: number;
@@ -17,6 +21,7 @@ interface MultiPanelPlywoodBaseProps {
   useMini: boolean;
   showWoodGrain?: boolean;
   panelCount: number;
+  panelRemainderMode: PanelRemainderMode;
   driftAmount: number;
   driftFactor: SpringValue<number>;
   squareGapInches: number;
@@ -33,12 +38,17 @@ export function MultiPanelPlywoodBase({
   useMini,
   showWoodGrain = true,
   panelCount,
+  panelRemainderMode,
   driftAmount,
   driftFactor,
   squareGapInches,
   backboardColor = null,
 }: MultiPanelPlywoodBaseProps) {
   const texture = useTexture("/textures/plywood.jpg");
+  const showBackboardTexture = shouldUseBackboardTexture(
+    backboardColor,
+    showWoodGrain,
+  );
   const bodies = useMemo(
     () =>
       buildBackboardBodyGeometry({
@@ -51,11 +61,13 @@ export function MultiPanelPlywoodBase({
         useMini,
         squareGapInches,
         panelCount,
+        panelRemainderMode,
       }),
     [
       adjustedModelHeight,
       adjustedModelWidth,
       panelCount,
+      panelRemainderMode,
       squareGapInches,
       squareSize,
       useMini,
@@ -77,7 +89,7 @@ export function MultiPanelPlywoodBase({
             <mesh position={[0, body.baseCenter[1], body.baseCenter[2]]} receiveShadow>
               <boxGeometry args={[...body.size]} />
               <meshStandardMaterial
-                map={showWoodGrain ? texture : null}
+                map={showBackboardTexture ? texture : null}
                 color={backboardColor ?? NATURAL_BACKBOARD_TINT_COLOR}
                 roughness={PANEL_ROUGHNESS}
                 metalness={PANEL_METALNESS}

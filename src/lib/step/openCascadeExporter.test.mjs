@@ -26,7 +26,7 @@ const MILLIMETER_TOKEN = ".MILLI.";
 const ASSEMBLY_USAGE_TOKEN = "NEXT_ASSEMBLY_USAGE_OCCURRENCE";
 const COLOR_RECORD_PATTERN = /COLOUR_RGB\([^;]+;/g;
 const EXPORTED_AT = new Date(2026, 6, 28, 9, 7, 6);
-const EXPECTED_FILENAME = "everwood-art-2026-07-28-0907.step";
+const EXPECTED_FILENAME = "Art Step 07-28-26.step";
 const EXPECTED_DESCRIPTION =
   "Editable Everwood Art model exported from the Viewer";
 
