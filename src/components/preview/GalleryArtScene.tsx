@@ -28,6 +28,7 @@ import { frameAlpha } from "./animationUtils";
 import { RESPONSIVE_ORBIT_SETTINGS } from "./orbitResponse";
 import { OrbitPivotDrag } from "./OrbitPivotDrag";
 import { getOrbitPivotWorldX } from "./orbitPivot";
+import { SmoothWheelZoom, TOUCH_ZOOM_SPEED } from "./SmoothWheelZoom";
 import { useCustomStore } from "@/store/customStore";
 import {
   FourAngleImageCapture,
@@ -67,10 +68,6 @@ const ROOM_REF_HEIGHT = 16 * 0.5;
 const CAMERA_FOV = 40;
 const CAMERA_ZOOM = 1;
 const ART_SCENE_UNITS_PER_SQUARE = 0.5;
-// Wheel / trackpad scroll-to-zoom speed. 87.5% faster than OrbitControls'
-// default (1.0) so laptop trackpad + mouse-wheel zoom feels snappier. Touch
-// pinch-zoom is unaffected (OrbitControls' pinch path ignores zoomSpeed).
-const ZOOM_SPEED = 1.875;
 // One finger orbits, two fingers pinch-zoom (dolly). Pan is disabled
 // (enablePan={false}) so the two-finger gesture only moves the camera in/out.
 // Matches the main viewer's controls so mobile zoom behaves the same way.
@@ -654,7 +651,7 @@ export function GalleryArtScene({
         dampingFactor={RESPONSIVE_ORBIT_SETTINGS.dampingFactor}
         enablePan={false}
         touches={TOUCH_GESTURES}
-        zoomSpeed={ZOOM_SPEED}
+        zoomSpeed={TOUCH_ZOOM_SPEED}
         minDistance={ROOM_COLLISION_MIN_DISTANCE}
         maxDistance={fitMaxDistance}
         minAzimuthAngle={showRoom ? -ORBIT_MAX_AZIMUTH : -ORBIT_FREE_MAX_AZIMUTH}
@@ -669,6 +666,9 @@ export function GalleryArtScene({
         artWidth={installedArtWidth}
         pivotRatioRef={orbitPivotRatio}
         showHint={!isMobile}
+      />
+      <SmoothWheelZoom
+        minimumDistanceEpsilon={ROOM_COLLISION_MIN_OFFSET}
       />
       <ArtCameraFollow
         target={artCenter}

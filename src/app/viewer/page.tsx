@@ -55,9 +55,12 @@ import { ColorInfoHint } from "@/components/preview/ColorInfoHint";
 import { Ruler3D } from "@/components/preview/Ruler3D";
 import { frameAlpha } from "@/components/preview/animationUtils";
 import { RESPONSIVE_ORBIT_SETTINGS } from "@/components/preview/orbitResponse";
-import { getDampedZoomDistance } from "@/components/preview/zoomResponse";
 import { OrbitPivotDrag } from "@/components/preview/OrbitPivotDrag";
 import { getOrbitPivotWorldX } from "@/components/preview/orbitPivot";
+import {
+  SmoothWheelZoom,
+  TOUCH_ZOOM_SPEED,
+} from "@/components/preview/SmoothWheelZoom";
 import {
   DEFAULT_LAMP_ON,
   toggleLampAtTimeOfDay,
@@ -117,17 +120,6 @@ const isEditableKeyboardTarget = (target: EventTarget | null): boolean =>
   target instanceof HTMLSelectElement ||
   (target instanceof HTMLElement && target.isContentEditable);
 
-// OrbitControls treats every wheel event as the same fixed dolly step, which
-// makes a trackpad's stream of tiny deltas feel jumpy. Desktop wheel input is
-// handled by SmoothWheelZoom instead; zoomSpeed remains for touch pinch.
-const TOUCH_ZOOM_SPEED = 1.875;
-const TRACKPAD_ZOOM_SENSITIVITY = 0.0045;
-const TRACKPAD_ZOOM_MAX_DELTA_PX = 60;
-const MOUSE_WHEEL_ZOOM_STEP = 1.1;
-const MOUSE_WHEEL_DELTA_THRESHOLD_PX = 50;
-const WHEEL_INPUT_GESTURE_GAP_MS = 160;
-const WHEEL_ZOOM_SETTLE_DISTANCE = 0.001;
-type WheelZoomInput = "mouse-wheel" | "trackpad";
 // Touch gesture map: one finger orbits, two fingers pinch-zoom (dolly). Pan is
 // disabled (enablePan={false}) so the two-finger gesture only moves the camera
 // in/out — it does NOT resize the art (size is still changed via the Size
@@ -248,130 +240,6 @@ function ArtCameraFollow({
     camera.position.y += moveY;
     camera.position.z += moveZ;
     controls.update?.();
-    invalidate();
-  });
-
-  return null;
-}
-
-/** Accumulates high-resolution trackpad deltas into a target distance, then
- * eases the camera toward it instead of applying one fixed jump per event. */
-function SmoothWheelZoom() {
-  const camera = useThree((s) => s.camera);
-  const controls = useThree((s) => s.controls) as
-    | {
-        enabled?: boolean;
-        target: { x: number; y: number; z: number };
-        minDistance: number;
-        maxDistance: number;
-        update?: () => void;
-      }
-    | null;
-  const gl = useThree((s) => s.gl);
-  const invalidate = useThree((s) => s.invalidate);
-  const targetDistance = useRef(Number.NaN);
-  const inputMode = useRef<WheelZoomInput | null>(null);
-  const lastWheelEventAt = useRef(Number.NEGATIVE_INFINITY);
-  const isAnimating = useRef(false);
-
-  useEffect(() => {
-    if (!controls) return;
-
-    const element = gl.domElement;
-    const handleWheel = (event: WheelEvent) => {
-      if (controls.enabled === false || event.deltaY === 0) return;
-
-      // Block OrbitControls' direction-only wheel handler while preserving its
-      // pointer and touch handlers for orbiting and pinch zoom.
-      event.preventDefault();
-      event.stopImmediatePropagation();
-
-      const beginsNewGesture =
-        event.timeStamp - lastWheelEventAt.current >
-        WHEEL_INPUT_GESTURE_GAP_MS;
-      if (beginsNewGesture || inputMode.current === null) {
-        inputMode.current =
-          event.deltaMode !== WheelEvent.DOM_DELTA_PIXEL ||
-          Math.abs(event.deltaY) >= MOUSE_WHEEL_DELTA_THRESHOLD_PX
-            ? "mouse-wheel"
-            : "trackpad";
-      }
-      lastWheelEventAt.current = event.timeStamp;
-
-      const currentDistance = Math.hypot(
-        camera.position.x - controls.target.x,
-        camera.position.y - controls.target.y,
-        camera.position.z - controls.target.z
-      );
-      const startingDistance = isAnimating.current
-        ? targetDistance.current
-        : currentDistance;
-      const isMouseWheel = inputMode.current === "mouse-wheel";
-      const trackpadDelta = Math.max(
-        -TRACKPAD_ZOOM_MAX_DELTA_PX,
-        Math.min(TRACKPAD_ZOOM_MAX_DELTA_PX, event.deltaY)
-      );
-      const requestedDistance = isMouseWheel
-        ? event.deltaY > 0
-          ? startingDistance * MOUSE_WHEEL_ZOOM_STEP
-          : startingDistance / MOUSE_WHEEL_ZOOM_STEP
-        : startingDistance *
-          Math.exp(trackpadDelta * TRACKPAD_ZOOM_SENSITIVITY);
-      targetDistance.current = Math.max(
-        controls.minDistance,
-        Math.min(controls.maxDistance, requestedDistance)
-      );
-      isAnimating.current =
-        Math.abs(targetDistance.current - currentDistance) >
-        WHEEL_ZOOM_SETTLE_DISTANCE;
-      invalidate();
-    };
-
-    element.addEventListener("wheel", handleWheel, {
-      capture: true,
-      passive: false,
-    });
-    return () => {
-      element.removeEventListener("wheel", handleWheel, { capture: true });
-    };
-  }, [camera, controls, gl, invalidate]);
-
-  useFrame((_, delta) => {
-    if (!controls || !isAnimating.current) return;
-
-    const t = controls.target;
-    const offsetX = camera.position.x - t.x;
-    const offsetY = camera.position.y - t.y;
-    const offsetZ = camera.position.z - t.z;
-    const currentDistance = Math.hypot(offsetX, offsetY, offsetZ);
-    if (currentDistance < ROOM_COLLISION_MIN_OFFSET) {
-      isAnimating.current = false;
-      return;
-    }
-
-    const clampedTarget = Math.max(
-      controls.minDistance,
-      Math.min(controls.maxDistance, targetDistance.current)
-    );
-    targetDistance.current = clampedTarget;
-    const remaining = clampedTarget - currentDistance;
-    const nextDistance =
-      Math.abs(remaining) <= WHEEL_ZOOM_SETTLE_DISTANCE
-        ? clampedTarget
-        : getDampedZoomDistance(currentDistance, clampedTarget, delta);
-    const distanceScale = nextDistance / currentDistance;
-
-    camera.position.set(
-      t.x + offsetX * distanceScale,
-      t.y + offsetY * distanceScale,
-      t.z + offsetZ * distanceScale
-    );
-    controls.update?.();
-
-    if (nextDistance === clampedTarget) {
-      isAnimating.current = false;
-      return;
-    }
     invalidate();
   });
 
@@ -1025,7 +893,9 @@ export default function DesignPage() {
             pivotRatioRef={orbitPivotRatio}
             showHint={!isMobile}
           />
-          <SmoothWheelZoom />
+          <SmoothWheelZoom
+            minimumDistanceEpsilon={ROOM_COLLISION_MIN_OFFSET}
+          />
           <ArtCameraFollow
             target={artCenter}
             artWidth={installedArtWidth}
