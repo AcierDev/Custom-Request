@@ -1,5 +1,5 @@
 import { Color, mix as spectralMix } from "spectral.js";
-import { blendHexColors } from "@/lib/colorUtils";
+import { blendHexColors } from "./colorUtils.ts";
 
 export type HandMixDecision = "mix" | "test" | "buy";
 export type HandMixConfidence = "high" | "medium" | "low";

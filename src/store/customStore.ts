@@ -47,6 +47,15 @@ const DEFAULT_SCATTER_EASE = 50;
 const DEFAULT_SCATTER_WIDTH = 10;
 const DEFAULT_SCATTER_AMOUNT = 50;
 const DEFAULT_USE_MINI = false;
+const DEFAULT_DESIGN_WIDTH = 24;
+const DEFAULT_DESIGN_HEIGHT = 12;
+const DEFAULT_DIMENSIONS: Dimensions = {
+  width: DEFAULT_DESIGN_WIDTH,
+  height: DEFAULT_DESIGN_HEIGHT,
+};
+const DEFAULT_COLOR_PATTERN = "fade" as const;
+const DEFAULT_ORIENTATION = "horizontal" as const;
+const DEFAULT_STYLE = "geometric" as const;
 const MINI_PRESET_DIMENSIONS = sizeToDimensions(ItemSizes.Fourteen_By_Seven);
 const DEFAULT_SHOW_RULER = false;
 const DEFAULT_SHOW_HANGER = false;
@@ -412,6 +421,88 @@ interface CustomState {
   paletteHistoryIndex: number;
   draftSet: DraftSetItem[];
 }
+
+type PaletteViewerState = Pick<
+  CustomState,
+  | "dimensions"
+  | "colorPattern"
+  | "orientation"
+  | "isReversed"
+  | "isRotated"
+  | "style"
+  | "useMini"
+  | "viewSettings"
+  | "scatterEase"
+  | "scatterWidth"
+  | "scatterAmount"
+  | "paletteBlend"
+  | "drawnPatternGrid"
+  | "drawnPatternGridSize"
+  | "activeCustomMode"
+  | "patternOverride"
+  | "patternDirectionOverride"
+  | "patternHiddenOverride"
+  | "patternEditingMode"
+  | "patternBrush"
+  | "isPatternEditorActive"
+  | "isPatternColorReplaceActive"
+  | "renderedPatternColorIndexes"
+  | "patternUndoStack"
+  | "patternRedoStack"
+>;
+
+const createDefaultViewSettings = (): CustomState["viewSettings"] => ({
+  showRuler: DEFAULT_SHOW_RULER,
+  showWoodGrain: true,
+  showColorInfo: false,
+  showHanger: DEFAULT_SHOW_HANGER,
+  showSplitPanel: false,
+  panelCount: PANEL_LAYOUT_CONFIG.singleCount,
+  panelSpacingInches: PANEL_LAYOUT_CONFIG.defaultSpacingInches,
+  panelRemainderMode: PANEL_LAYOUT_CONFIG.defaultRemainderMode,
+  squareGapInches: SQUARE_GAP_CONFIG.defaultInches,
+  showFPS: false,
+  showUIControls: true,
+  showRoom: true,
+  wallColor: DEFAULT_WALL_COLOR,
+  backboardColor: null,
+  woodStyle: DEFAULT_WOOD_STYLE_ID,
+  metallic: false,
+});
+
+const createDefaultViewerState = (): PaletteViewerState => ({
+  dimensions: { ...DEFAULT_DIMENSIONS },
+  colorPattern: DEFAULT_COLOR_PATTERN,
+  orientation: DEFAULT_ORIENTATION,
+  isReversed: false,
+  isRotated: false,
+  style: DEFAULT_STYLE,
+  useMini: DEFAULT_USE_MINI,
+  viewSettings: createDefaultViewSettings(),
+  scatterEase: DEFAULT_SCATTER_EASE,
+  scatterWidth: DEFAULT_SCATTER_WIDTH,
+  scatterAmount: DEFAULT_SCATTER_AMOUNT,
+  paletteBlend: PALETTE_BLEND_CONFIG.defaultPercent,
+  drawnPatternGrid: null,
+  drawnPatternGridSize: null,
+  activeCustomMode: "palette",
+  patternOverride: {},
+  patternDirectionOverride: {},
+  patternHiddenOverride: {},
+  patternEditingMode: { tool: "none" },
+  patternBrush: {
+    shape: "single",
+    sizes: {
+      square: PATTERN_BRUSH_SIZE_CONFIG.default,
+      circle: PATTERN_BRUSH_SIZE_CONFIG.default,
+    },
+  },
+  isPatternEditorActive: false,
+  isPatternColorReplaceActive: false,
+  renderedPatternColorIndexes: {},
+  patternUndoStack: [],
+  patternRedoStack: [],
+});
 
 interface CustomStore extends CustomState {
   setDimensions: (dimensions: Dimensions) => void;
@@ -1343,7 +1434,7 @@ const AUTO_SAVE_TRACKED_PROPERTIES: (keyof CustomState)[] = [
 // Create the store with the subscribeWithSelector middleware
 export const useCustomStore = create<CustomStore>()(
   subscribeWithSelector((set, get) => ({
-    dimensions: { width: 24, height: 12 },
+    ...createDefaultViewerState(),
     selectedDesign: ItemDesigns.Coastal,
     shippingSpeed: "standard",
     pricing: {
@@ -1357,16 +1448,10 @@ export const useCustomStore = create<CustomStore>()(
         squares: { height: 0, width: 0, total: 0 },
       },
     },
-    colorPattern: "fade",
-    orientation: "horizontal",
     currentColors: null,
     customPalette: [],
     pieceSize: DEFAULT_PIECE_SIZE,
     selectedColors: [],
-    isRotated: false,
-    style: "geometric",
-    useMini: false,
-    isReversed: false,
     savedPalettes: [],
     viewerVersions: [],
     folders: [],
@@ -1381,53 +1466,12 @@ export const useCustomStore = create<CustomStore>()(
       pickedColors: [],
       selectedAutoColors: [],
     },
-    viewSettings: {
-      showRuler: DEFAULT_SHOW_RULER,
-      showWoodGrain: true,
-      showColorInfo: false,
-      showHanger: DEFAULT_SHOW_HANGER,
-      showSplitPanel: false,
-      panelCount: PANEL_LAYOUT_CONFIG.singleCount,
-      panelSpacingInches: PANEL_LAYOUT_CONFIG.defaultSpacingInches,
-      panelRemainderMode: PANEL_LAYOUT_CONFIG.defaultRemainderMode,
-      squareGapInches: SQUARE_GAP_CONFIG.defaultInches,
-      showFPS: false,
-      showUIControls: true,
-      showRoom: true,
-      wallColor: DEFAULT_WALL_COLOR,
-      backboardColor: null,
-      woodStyle: DEFAULT_WOOD_STYLE_ID,
-      metallic: false,
-    },
     lastSaved: 0,
     autoSaveEnabled: true,
     dataSyncVersion: 1,
-    scatterEase: DEFAULT_SCATTER_EASE,
-    scatterWidth: DEFAULT_SCATTER_WIDTH,
-    scatterAmount: DEFAULT_SCATTER_AMOUNT,
-    paletteBlend: PALETTE_BLEND_CONFIG.defaultPercent,
-    drawnPatternGrid: null,
-    drawnPatternGridSize: null,
     paletteHistory: [],
     paletteHistoryIndex: -1,
-    activeCustomMode: "palette",
     draftSet: [],
-    patternOverride: {},
-    patternDirectionOverride: {},
-    patternHiddenOverride: {},
-    patternEditingMode: { tool: "none" },
-    patternBrush: {
-      shape: "single",
-      sizes: {
-        square: PATTERN_BRUSH_SIZE_CONFIG.default,
-        circle: PATTERN_BRUSH_SIZE_CONFIG.default,
-      },
-    },
-    isPatternEditorActive: false,
-    isPatternColorReplaceActive: false,
-    renderedPatternColorIndexes: {},
-    patternUndoStack: [],
-    patternRedoStack: [],
     init: () => {
       if (typeof window !== "undefined") {
         const localState = localStorage.getItem("everwood-custom-design");
@@ -1545,18 +1589,20 @@ export const useCustomStore = create<CustomStore>()(
     },
     setUseMini: (value: boolean) => set({ useMini: value }),
     setSelectedDesign: (design: ItemDesigns) => {
-      const designName = design;
-      set((state) => ({
-        selectedDesign: design,
-        viewerVersions:
-          design === state.selectedDesign ? state.viewerVersions : [],
-        editingPaletteId:
-          design === ItemDesigns.Custom ? state.editingPaletteId : null,
-        currentColors:
-          design === ItemDesigns.Custom && state.customPalette.length > 0
-            ? createColorMap(state.customPalette)
-            : DESIGN_COLORS[design],
-      }));
+      set((state) => {
+        const isDifferentPalette = design !== state.selectedDesign;
+        return {
+          ...(isDifferentPalette ? createDefaultViewerState() : {}),
+          selectedDesign: design,
+          viewerVersions: isDifferentPalette ? [] : state.viewerVersions,
+          editingPaletteId:
+            design === ItemDesigns.Custom ? state.editingPaletteId : null,
+          currentColors:
+            design === ItemDesigns.Custom && state.customPalette.length > 0
+              ? createColorMap(state.customPalette)
+              : DESIGN_COLORS[design],
+        };
+      });
     },
     previousDesign: () => {
       const designKeys = Object.values(ItemDesigns);
@@ -1998,7 +2044,7 @@ export const useCustomStore = create<CustomStore>()(
         };
         set((state) => ({
           savedPalettes: [...state.savedPalettes, newPalette],
-          editingPaletteId: null,
+          editingPaletteId: newPalette.id,
           lastSaved: Date.now(),
         }));
       }
@@ -2028,6 +2074,7 @@ export const useCustomStore = create<CustomStore>()(
         const openedAt = new Date().toISOString();
 
         return {
+          ...createDefaultViewerState(),
           customPalette: [...palette.colors],
           selectedDesign: ItemDesigns.Custom,
           currentColors: createColorMap(palette.colors),
@@ -2057,6 +2104,7 @@ export const useCustomStore = create<CustomStore>()(
         const openedAt = new Date().toISOString();
 
         return {
+          ...createDefaultViewerState(),
           customPalette: [...version.colors],
           selectedDesign: ItemDesigns.Custom,
           currentColors: createColorMap(version.colors),
@@ -2279,6 +2327,7 @@ export const useCustomStore = create<CustomStore>()(
         const newHistory = [[...colorsWithIds]];
 
         return {
+          ...createDefaultViewerState(),
           customPalette: [...colorsWithIds],
           pieceSize: { ...DEFAULT_PIECE_SIZE, ...palette.pieceSize },
           selectedDesign: ItemDesigns.Custom,
@@ -2506,6 +2555,7 @@ export const useCustomStore = create<CustomStore>()(
       })),
     resetPaletteEditor: () =>
       set({
+        ...createDefaultViewerState(),
         customPalette: [],
         pieceSize: DEFAULT_PIECE_SIZE,
         selectedColors: [],
@@ -2533,6 +2583,7 @@ export const useCustomStore = create<CustomStore>()(
         const newHistory = [...state.paletteHistory, customColors];
 
         return {
+          ...createDefaultViewerState(),
           customPalette: customColors,
           selectedDesign: ItemDesigns.Custom,
           currentColors: createColorMap(customColors),

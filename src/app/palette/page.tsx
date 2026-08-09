@@ -65,9 +65,18 @@ import {
   type PaintColor,
   VERIFIED_BRANDS,
   LOWES_MATCHES,
-  isLowesMatchColor,
   purchaseLabel,
 } from "@/lib/paint";
+import {
+  DEFAULT_PAINT_MATCH_BRAND,
+  LAB_LIGHTNESS_INDEX,
+  findClosestPaintMatches,
+  getGroundablePaintColors,
+  type PaintLab,
+  type PaintMatch,
+  type ResolvedPaintLightnessMode,
+} from "@/lib/paintMatch";
+import { deltaE2000, hexToLab } from "@/lib/paintMixSimulator";
 import { findBestPaintMix, type PaintMixRecipe } from "@/lib/paintMixOptimizer";
 import { cn } from "@/lib/utils";
 
@@ -106,7 +115,6 @@ const PRIMARY_PAINT_MATCH_INDEX = 0;
 const BACKUP_PAINT_MATCH_INDEX = 1;
 const PAINT_MATCH_COUNT_WITH_BACKUP = 2;
 const PAINT_MATCH_CANDIDATE_COUNT = 12;
-const LIGHTNESS_DIRECTION_TOLERANCE = 0.25;
 
 // Remember which studio tab the user was on so a refresh returns to it
 // instead of snapping back to the "official" default.
@@ -115,8 +123,6 @@ const PALETTE_TABS = ["create", "saved", "official", "extract"] as const;
 type PaletteTab = (typeof PALETTE_TABS)[number];
 const isPaletteTab = (v: unknown): v is PaletteTab =>
   typeof v === "string" && (PALETTE_TABS as readonly string[]).includes(v);
-// L* is the first element of a [L, a, b] triple.
-const LAB_LIGHTNESS_INDEX = 0;
 // A recipe of one paint is just "buy the can" — no mixing to show.
 const SINGLE_COMPONENT_COUNT = 1;
 // When mixing to get closer, which paints the recipe may draw from:
@@ -132,7 +138,6 @@ const DEFAULT_MIX_SOURCE: MixSource = "palette";
 // every swatch on the same side of its source lightness so a gradient cannot
 // split into one unexpectedly lighter paint and one unexpectedly darker one.
 type PaintLightnessMode = "independent" | "auto" | "lighter" | "darker";
-type ResolvedPaintLightnessMode = Exclude<PaintLightnessMode, "auto">;
 const DEFAULT_PAINT_LIGHTNESS_MODE: PaintLightnessMode = "independent";
 // Digitally-mixed palette colors (a `mix` blend of two swatches) aren't a
 // can the user buys, so by default their nearest-can approximation is NOT
@@ -159,16 +164,6 @@ const paintMatchPercent = (deltaE: number) =>
   Math.round(
     Math.max(0, Math.min(100, 100 - deltaE * PAINT_MATCH_DE_FALLOFF))
   );
-
-type PaintMatch = {
-  paintColor: PaintColor;
-  distance: number;
-};
-
-type PaintLab = {
-  paintColor: PaintColor;
-  lab: [number, number, number];
-};
 
 const paintMatchKey = (match: PaintMatch) => purchaseLabel(match.paintColor);
 const paintBrandPickerLabel = (brand: BrandOption) =>
@@ -263,13 +258,11 @@ export default function PalettePage() {
   // Paint color grounding
   const [allPaintColors, setAllPaintColors] = useState<PaintColor[]>([]);
   const [paintColorsLoaded, setPaintColorsLoaded] = useState(false);
-  // Which paint brand to ground to. Grounding only matches that brand
-  // (and skips discontinued colors) so suggestions are purchasable.
-  // Default to the Lowe's wall (Valspar + HGTV Home) so every match is
-  // guaranteed orderable in-store at Lowe's. "Any"/single-brand pools can
-  // surface SW-store fandeck, Behr, PPG or Benjamin Moore colors that a
-  // Lowe's paint desk cannot mix, so they're opt-in only.
-  const [groundBrand, setGroundBrand] = useState<BrandOption>(LOWES_MATCHES);
+  // Normal matching analyzes every available catalog paint. Choosing a
+  // brand or retailer explicitly narrows that pool.
+  const [groundBrand, setGroundBrand] = useState<BrandOption>(
+    DEFAULT_PAINT_MATCH_BRAND
+  );
   // When on, ground only to brands with verified current color codes
   // (skips Behr/PPG), so every match is genuinely orderable.
   const [verifiedOnly, setVerifiedOnly] = useState(false);
@@ -392,167 +385,6 @@ export default function PalettePage() {
     loadPaintColors();
   }, []);
 
-  // Color distance calculation using Delta E (CIE76)
-  const hexToLab = (hex: string): [number, number, number] => {
-    // Convert hex to RGB
-    const r = parseInt(hex.slice(1, 3), 16) / 255;
-    const g = parseInt(hex.slice(3, 5), 16) / 255;
-    const b = parseInt(hex.slice(5, 7), 16) / 255;
-
-    // Convert RGB to XYZ
-    const toXYZ = (c: number) => {
-      c = c > 0.04045 ? Math.pow((c + 0.055) / 1.055, 2.4) : c / 12.92;
-      return c * 100;
-    };
-
-    const x = toXYZ(r) * 0.4124 + toXYZ(g) * 0.3576 + toXYZ(b) * 0.1805;
-    const y = toXYZ(r) * 0.2126 + toXYZ(g) * 0.7152 + toXYZ(b) * 0.0722;
-    const z = toXYZ(r) * 0.0193 + toXYZ(g) * 0.1192 + toXYZ(b) * 0.9505;
-
-    // Convert XYZ to LAB
-    const xn = 95.047;
-    const yn = 100.0;
-    const zn = 108.883;
-
-    const fx =
-      x / xn > 0.008856 ? Math.pow(x / xn, 1 / 3) : (7.787 * x) / xn + 16 / 116;
-    const fy =
-      y / yn > 0.008856 ? Math.pow(y / yn, 1 / 3) : (7.787 * y) / yn + 16 / 116;
-    const fz =
-      z / zn > 0.008856 ? Math.pow(z / zn, 1 / 3) : (7.787 * z) / zn + 16 / 116;
-
-    const L = 116 * fy - 16;
-    const a = 500 * (fx - fy);
-    const b_lab = 200 * (fy - fz);
-
-    return [L, a, b_lab];
-  };
-
-  // Calculate color distance using Delta E
-  //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
-  //║ 🎨 PERCEPTUAL COLOR DISTANCE (CIEDE2000)                             ║
-  //╚═══╝ ════════════════════════════════════════════════════════════════ ╚═══╝
-
-  // Tunable channel weights — the only knobs that aren't fixed by the
-  // CIEDE2000 standard. All 1 = reference conditions.
-  const DELTA_E_KL = 1; // lightness weighting
-  const DELTA_E_KC = 1; // chroma weighting
-  const DELTA_E_KH = 1; // hue weighting
-
-  // CIEDE2000 ΔE00 between two LAB triples. Far better perceptual
-  // ranking than plain LAB Euclidean (ΔE76): it corrects LAB's
-  // non-uniformity in hue/chroma so "nearest" matches what the eye
-  // picks. The bare numeric constants below are fixed by the CIEDE2000
-  // formula itself, not arbitrary tuning values.
-  const deltaE2000 = (
-    lab1: [number, number, number],
-    lab2: [number, number, number]
-  ): number => {
-    const [L1, a1, b1] = lab1;
-    const [L2, a2, b2] = lab2;
-    const d2r = Math.PI / 180;
-    const r2d = 180 / Math.PI;
-    const pow25_7 = Math.pow(25, 7);
-
-    const C1 = Math.hypot(a1, b1);
-    const C2 = Math.hypot(a2, b2);
-    const cBar7 = Math.pow((C1 + C2) / 2, 7);
-    const G = 0.5 * (1 - Math.sqrt(cBar7 / (cBar7 + pow25_7)));
-
-    const a1p = (1 + G) * a1;
-    const a2p = (1 + G) * a2;
-    const C1p = Math.hypot(a1p, b1);
-    const C2p = Math.hypot(a2p, b2);
-
-    const hp = (b: number, ap: number): number => {
-      if (ap === 0 && b === 0) return 0;
-      const h = Math.atan2(b, ap) * r2d;
-      return h >= 0 ? h : h + 360;
-    };
-    const h1p = hp(b1, a1p);
-    const h2p = hp(b2, a2p);
-
-    const dLp = L2 - L1;
-    const dCp = C2p - C1p;
-
-    let dhp = 0;
-    if (C1p * C2p !== 0) {
-      const diff = h2p - h1p;
-      if (Math.abs(diff) <= 180) dhp = diff;
-      else dhp = diff > 180 ? diff - 360 : diff + 360;
-    }
-    const dHp = 2 * Math.sqrt(C1p * C2p) * Math.sin((dhp * d2r) / 2);
-
-    const LBarp = (L1 + L2) / 2;
-    const CBarp = (C1p + C2p) / 2;
-
-    let hBarp = h1p + h2p;
-    if (C1p * C2p !== 0) {
-      if (Math.abs(h1p - h2p) <= 180) hBarp = (h1p + h2p) / 2;
-      else hBarp = (h1p + h2p + (h1p + h2p < 360 ? 360 : -360)) / 2;
-    }
-
-    const T =
-      1 -
-      0.17 * Math.cos((hBarp - 30) * d2r) +
-      0.24 * Math.cos(2 * hBarp * d2r) +
-      0.32 * Math.cos((3 * hBarp + 6) * d2r) -
-      0.2 * Math.cos((4 * hBarp - 63) * d2r);
-
-    const dTheta = 30 * Math.exp(-Math.pow((hBarp - 275) / 25, 2));
-    const CBarp7 = Math.pow(CBarp, 7);
-    const Rc = 2 * Math.sqrt(CBarp7 / (CBarp7 + pow25_7));
-    const Sl =
-      1 +
-      (0.015 * Math.pow(LBarp - 50, 2)) /
-        Math.sqrt(20 + Math.pow(LBarp - 50, 2));
-    const Sc = 1 + 0.045 * CBarp;
-    const Sh = 1 + 0.015 * CBarp * T;
-    const Rt = -Math.sin(2 * dTheta * d2r) * Rc;
-
-    const lTerm = dLp / (DELTA_E_KL * Sl);
-    const cTerm = dCp / (DELTA_E_KC * Sc);
-    const hTerm = dHp / (DELTA_E_KH * Sh);
-
-    return Math.sqrt(
-      lTerm * lTerm +
-        cTerm * cTerm +
-        hTerm * hTerm +
-        Rt * cTerm * hTerm
-    );
-  };
-
-  const findClosestPaintMatches = (
-    hex: string,
-    paintLabs: PaintLab[],
-    matchCount = PAINT_MATCH_COUNT_WITH_BACKUP,
-    lightnessMode: ResolvedPaintLightnessMode = "independent"
-  ): PaintMatch[] => {
-    const targetLab = hexToLab(hex);
-    const directionalPaints = paintLabs.filter(({ lab }) => {
-      if (lightnessMode === "independent") return true;
-      const targetLightness = targetLab[LAB_LIGHTNESS_INDEX];
-      const paintLightness = lab[LAB_LIGHTNESS_INDEX];
-      return lightnessMode === "lighter"
-        ? paintLightness >= targetLightness - LIGHTNESS_DIRECTION_TOLERANCE
-        : paintLightness <= targetLightness + LIGHTNESS_DIRECTION_TOLERANCE;
-    });
-
-    // Near pure white/black, a brand may have no paint on the requested
-    // side. Fall back to its closest edge color instead of dropping the
-    // swatch from the converted palette.
-    const candidates =
-      directionalPaints.length > 0 ? directionalPaints : paintLabs;
-
-    return candidates
-      .map(({ paintColor, lab }) => ({
-        paintColor,
-        distance: deltaE2000(targetLab, lab),
-      }))
-      .sort((a, b) => a.distance - b.distance)
-      .slice(MATCH_LIST_START_INDEX, matchCount);
-  };
-
   const resolvePaintLightnessMode = (
     requestedMode: PaintLightnessMode,
     palette: CustomColor[],
@@ -566,7 +398,8 @@ export default function PalettePage() {
           sourceHexOf(color),
           paintLabs,
           PAINT_MATCH_COUNT_WITH_BACKUP,
-          mode
+          mode,
+          sourceNameOf(color)
         )[PRIMARY_PAINT_MATCH_INDEX];
         return sum + (match?.distance ?? Number.POSITIVE_INFINITY);
       }, 0);
@@ -575,21 +408,6 @@ export default function PalettePage() {
       ? "lighter"
       : "darker";
   };
-
-  const getGroundablePaintColors = (
-    brand: BrandOption,
-    verified: boolean
-  ): PaintColor[] =>
-    allPaintColors.filter((c) => {
-      if (c.available === false) return false;
-      // "Lowe's matches": ignore the single-brand + verified filters and
-      // keep approved Lowe's matches: Valspar, HGTV Home, and the
-      // Sherwin-Williams Historic Interior collection.
-      if (brand === LOWES_MATCHES) return isLowesMatchColor(c);
-      if (verified && !VERIFIED_BRANDS.has(c.brand)) return false;
-      if (brand === "Any") return true;
-      return c.brand === brand;
-    });
 
   // The color a grounded swatch came from — so re-grounding (e.g. after
   // switching brand) always matches against the user's ORIGINAL color,
@@ -633,7 +451,7 @@ export default function PalettePage() {
     // ground onto a discontinued color (available === false). Records
     // without an `available` flag (brands whose importer isn't built
     // yet) are kept so those brands still work.
-    const pool = getGroundablePaintColors(brand, verified);
+    const pool = getGroundablePaintColors(allPaintColors, brand, verified);
     if (pool.length === 0) {
       toast.error(
         verified
@@ -700,7 +518,8 @@ export default function PalettePage() {
             sourceHexOf(customColor),
             paintLabs,
             PAINT_MATCH_COUNT_WITH_BACKUP,
-            resolvedLightnessMode
+            resolvedLightnessMode,
+            sourceNameOf(customColor)
           )[PRIMARY_PAINT_MATCH_INDEX];
           if (!nearest) continue;
           const key = paintMatchKey(nearest);
@@ -717,7 +536,8 @@ export default function PalettePage() {
           sourceHex,
           paintLabs,
           PAINT_MATCH_CANDIDATE_COUNT,
-          resolvedLightnessMode
+          resolvedLightnessMode,
+          sourceNameOf(customColor)
         );
         // Ground to the nearest paint allowed by the shared lightness rule.
         // Independent mode keeps the original smallest-ΔE behavior.
@@ -911,6 +731,7 @@ export default function PalettePage() {
         .filter(Boolean)
         .join(" · ");
     const printPaintLabs = getGroundablePaintColors(
+      allPaintColors,
       groundBrand,
       verifiedOnly
     ).map((paintColor) => ({
@@ -927,9 +748,11 @@ export default function PalettePage() {
         const printBackupMatch = c.paintBackup
           ? { label: c.paintBackup, match: c.paintBackupMatch }
           : (() => {
-              const backupMatch = findClosestPaintMatches(c.hex, printPaintLabs)[
-                BACKUP_PAINT_MATCH_INDEX
-              ];
+              const backupMatch = findClosestPaintMatches(
+                c.hex,
+                printPaintLabs,
+                PAINT_MATCH_COUNT_WITH_BACKUP
+              )[BACKUP_PAINT_MATCH_INDEX];
               return backupMatch
                 ? {
                     label: purchaseLabel(backupMatch.paintColor),
@@ -1245,14 +1068,11 @@ export default function PalettePage() {
       );
       setTimeout(() => setSaveSuccess(false), 1500);
     } else {
-      // Otherwise create a new palette
+      // Create the palette and keep it open so subsequent saves append
+      // versions without making the user reload it from Saved Palettes.
       savePalette(paletteName);
       setIsSaveDialogOpen(false);
-      setPaletteName("");
-      // Reset the palette editor
-      resetPaletteEditor();
-      // Switch to the saved palettes tab
-      setActiveTab("saved");
+      toast.success(`Saved "${paletteName}"`);
     }
   };
 

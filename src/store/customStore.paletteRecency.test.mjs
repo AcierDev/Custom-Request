@@ -84,6 +84,7 @@ const OTHER_PALETTE_ID = "other";
 const TARGET_VERSION_ID = "target-version";
 const TARGET_CREATED_AT = "2026-07-20T00:00:00.000Z";
 const OTHER_CREATED_AT = "2026-07-21T00:00:00.000Z";
+const NEW_PALETTE_NAME = "New palette";
 const BASE_COLOR = {
   id: "color",
   hex: "#334455",
@@ -133,6 +134,8 @@ const assertTargetWasOpened = (startedAt) => {
 test.beforeEach(() => {
   useCustomStore.setState({
     savedPalettes: createSavedPalettes(),
+    customPalette: [],
+    activeTab: "create",
     editingPaletteId: null,
   });
 });
@@ -173,4 +176,19 @@ test("records an open when attaching work to an existing palette", () => {
   useCustomStore.getState().setEditingPaletteId(TARGET_PALETTE_ID);
 
   assertTargetWasOpened(startedAt);
+});
+
+test("keeps a newly saved palette open in the editor", () => {
+  useCustomStore.setState({
+    savedPalettes: [],
+    customPalette: [{ ...BASE_COLOR }],
+  });
+
+  useCustomStore.getState().savePalette(NEW_PALETTE_NAME);
+
+  const state = useCustomStore.getState();
+  assert.equal(state.savedPalettes.length, 1);
+  assert.equal(state.editingPaletteId, state.savedPalettes[0].id);
+  assert.deepEqual(state.customPalette, [{ ...BASE_COLOR }]);
+  assert.equal(state.activeTab, "create");
 });

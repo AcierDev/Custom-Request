@@ -14,7 +14,6 @@ import { Button } from "@/components/ui/button";
 import {
   ArrowLeft,
   Download,
-  Share,
   Minimize2,
   Maximize2,
   Eye,
@@ -73,6 +72,7 @@ import { ShareDialog } from "@/components/ShareDialog";
 import { ARButton } from "@/components/ARButton";
 import { StepDownloadButton } from "@/components/StepDownloadButton";
 import { FusionPackageDownloadButton } from "@/components/FusionPackageDownloadButton";
+import { ShareDesignButton } from "@/components/ShareDesignButton";
 import { DraftSetControls } from "@/components/DraftSetControls";
 import { DesignTutorial } from "@/components/DesignTutorial";
 import { EmptyPaletteWarning } from "@/components/EmptyPaletteWarning";
@@ -1019,19 +1019,10 @@ export default function DesignPage() {
           />
         )}
         {showUIControls && (
-          <Button
-            size={isMobile ? "icon" : "default"}
-            aria-label="Share design"
-            title="Share design"
-            className={cn(
-              "bg-indigo-600 hover:bg-indigo-500 ring-1 ring-indigo-400/40 text-white",
-              isMobile && "h-9 w-9 shrink-0 rounded-full"
-            )}
+          <ShareDesignButton
+            isMobile={isMobile}
             onClick={() => setIsShareDialogOpen(true)}
-          >
-            <Share className="w-4 h-4 shrink-0" />
-            {!isMobile && "Share Design"}
-          </Button>
+          />
         )}
       </div>
 
