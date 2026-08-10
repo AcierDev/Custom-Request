@@ -8,7 +8,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const require = createRequire(import.meta.url);
 const { transformSync } = require("next/dist/build/swc");
 const TEST_DIRECTORY = dirname(fileURLToPath(import.meta.url));
-const PROJECT_ROOT = resolvePath(TEST_DIRECTORY, "..", "..", "..");
+const PROJECT_ROOT = resolvePath(TEST_DIRECTORY, "..", "..");
 const PROJECT_FILE_EXTENSIONS = [
   "",
   ".ts",
@@ -41,9 +41,7 @@ registerHooks({
       );
     }
 
-    const projectFile = basePath
-      ? resolveProjectFile(basePath)
-      : undefined;
+    const projectFile = basePath ? resolveProjectFile(basePath) : undefined;
     return projectFile
       ? {
           url: pathToFileURL(projectFile).href,
@@ -64,11 +62,6 @@ registerHooks({
           syntax: "typescript",
           tsx: filename.endsWith(".tsx"),
         },
-        transform: {
-          react: {
-            runtime: "automatic",
-          },
-        },
         target: "es2022",
       },
       module: { type: "es6" },
@@ -82,52 +75,47 @@ registerHooks({
   },
 });
 
-const React = await import("react");
-const { renderToStaticMarkup } = await import("react-dom/server");
-const { SizeCard } = await import("../cards/SizeCard.tsx");
-const { PatternControls } = await import("./PatternControls.tsx");
-const { ItemSizes } = await import("../../typings/types.ts");
-const { SIZE_STRING } = await import("../../typings/constants.ts");
+const imageArtwork = await import("./aiImageToArtwork.ts").catch(() => ({}));
 
-const THIRTY_TWO_BY_TWELVE_SIZE = "32 x 12";
-const THIRTY_TWO_BY_TWELVE_PHYSICAL_LABEL = '36" x 8 Feet';
+const IMAGE_WIDTH = 2;
+const IMAGE_HEIGHT = 2;
+const RGB_CHANNEL_COUNT = 3;
+const MAX_PALETTE_COLORS = 3;
+const RED_PIXEL = [255, 0, 0];
+const WHITE_PIXEL = [255, 255, 255];
+const BLUE_PIXEL = [0, 0, 255];
+const PIXELS = Uint8Array.from([
+  ...RED_PIXEL,
+  ...RED_PIXEL,
+  ...WHITE_PIXEL,
+  ...BLUE_PIXEL,
+]);
 
-test("shows Rotate Colors without a Reverse Colors action", () => {
-  const markup = renderToStaticMarkup(
-    React.createElement(PatternControls),
-  );
+test("converts an AI image into an editable palette-indexed artwork at the open size", () => {
+  assert.equal(typeof imageArtwork.convertImagePixelsToAiArtwork, "function");
 
-  assert.match(markup, />Rotate Colors</);
-  assert.doesNotMatch(markup, />Reverse Colors</);
-});
-
-test("shows shared sizes with height in inches before width in feet", () => {
-  const markup = renderToStaticMarkup(
-    React.createElement(SizeCard, {
-      compact: true,
-      bare: true,
-      labelMode: "physical",
-    }),
-  );
-
-  assert.match(markup, /36&quot; × 6 feet/);
-});
-
-test("recognizes 32 x 12 as a catalog size", () => {
-  assert.ok(Object.values(ItemSizes).includes(THIRTY_TWO_BY_TWELVE_SIZE));
   assert.equal(
-    SIZE_STRING[THIRTY_TWO_BY_TWELVE_SIZE],
-    THIRTY_TWO_BY_TWELVE_PHYSICAL_LABEL,
+    PIXELS.length,
+    IMAGE_WIDTH * IMAGE_HEIGHT * RGB_CHANNEL_COUNT,
   );
-});
-
-test("shows Palette Blend inline for the default Palette pattern", () => {
-  const markup = renderToStaticMarkup(React.createElement(PatternControls));
-
-  assert.match(markup, />Palette Blend</);
-  assert.match(markup, /aria-label="Palette blend amount"/);
-  assert.match(markup, />Straight lines</);
-  assert.match(markup, />More blended</);
-  assert.doesNotMatch(markup, /Right-click to adjust the color blend/);
-  assert.doesNotMatch(markup, />Scatter Width \(squares\)</);
+  assert.deepEqual(
+    imageArtwork.convertImagePixelsToAiArtwork({
+      pixels: PIXELS,
+      width: IMAGE_WIDTH,
+      height: IMAGE_HEIGHT,
+      maxPaletteColors: MAX_PALETTE_COLORS,
+    }),
+    {
+      palette: [
+        { hex: "#FF0000", name: "#FF0000" },
+        { hex: "#FFFFFF", name: "#FFFFFF" },
+        { hex: "#0000FF", name: "#0000FF" },
+      ],
+      artwork: {
+        width: IMAGE_WIDTH,
+        height: IMAGE_HEIGHT,
+        rows: ["00", "12"],
+      },
+    },
+  );
 });

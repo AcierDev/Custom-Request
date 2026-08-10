@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { LoaderCircle, Sparkles, Undo2 } from "lucide-react";
+import { LoaderCircle, Sparkles, Square, Undo2 } from "lucide-react";
 import { nanoid } from "nanoid";
 import { toast } from "@/lib/toast";
 import {
@@ -35,6 +35,10 @@ import {
   AI_PALETTE_ORIENTATIONS,
   AI_SQUARE_DIRECTIONS,
   HEX_COLOR_PATTERN,
+  cancelAiRequest,
+  getAiConversationWindow,
+  getAiRequestActionState,
+  isAiArtwork,
   type AiPaletteColor,
   type AiPaletteAdjustment,
   type AiPaletteColorPattern,
@@ -80,6 +84,11 @@ const AI_EDIT_ERROR_MESSAGE = "Could not update the design. Please try again.";
 const AI_EDIT_TIMEOUT_MESSAGE = "The AI request timed out. Please try again.";
 const AI_EDIT_STALE_MESSAGE =
   "The design changed while AI was working. Submit the prompt again.";
+const AI_SUBMIT_BUTTON_CLASS =
+  "shrink-0 bg-indigo-600 text-white hover:bg-indigo-500";
+const AI_STOP_BUTTON_CLASS =
+  "shrink-0 border border-white/10 bg-slate-700/70 text-slate-300 shadow-sm hover:bg-slate-600/80 hover:text-white";
+const AI_STOP_ICON_CLASS = "h-3 w-3 fill-current";
 const AI_SQUARE_RESET_TARGETS = [
   "colors",
   "directions",
@@ -269,6 +278,7 @@ const isAiPaletteResponse = (value: unknown): value is AiPaletteResponse => {
       candidate.operation === "set_blended_palette" ||
       candidate.operation === "set_dimensions" ||
       candidate.operation === "set_backboard_color" ||
+      candidate.operation === "set_artwork" ||
       candidate.operation === "edit_squares" ||
       candidate.operation === "ask_question") &&
     (candidate.operation !== "edit_squares" ||
@@ -316,6 +326,13 @@ const isAiPaletteResponse = (value: unknown): value is AiPaletteResponse => {
     (candidate.operation !== "set_backboard_color" ||
       (typeof candidate.backboardColor === "string" &&
         HEX_COLOR_PATTERN.test(candidate.backboardColor))) &&
+    (candidate.operation !== "set_artwork" ||
+      (candidate.dimensions !== undefined &&
+        isAiArtwork(
+          candidate.artwork,
+          candidate.palette.length,
+          candidate.dimensions,
+        ))) &&
     candidate.palette.length >= AI_PALETTE_CONFIG.minPaletteColors &&
     candidate.palette.length <= AI_PALETTE_CONFIG.maxPaletteColors &&
     candidate.palette.every(
@@ -433,6 +450,9 @@ const getAppliedMessage = (response: AiPaletteResponse): string => {
   if (response.operation === "set_backboard_color") {
     return "Done — I changed and saved the backboard color.";
   }
+  if (response.operation === "set_artwork") {
+    return "Done — I created the artwork as an editable square pattern.";
+  }
   return "Done — I updated the palette and pattern.";
 };
 
@@ -475,6 +495,7 @@ export function AiPatternPrompt() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const requestSequenceRef = useRef(EMPTY_ITEM_COUNT);
   const activeRequestRef = useRef<AbortController | null>(null);
+  const activePromptRef = useRef<string | null>(null);
 
   const sourceState = useMemo<AiPatternSourceState>(
     () => ({
@@ -532,6 +553,7 @@ export function AiPatternPrompt() {
     undoFingerprint === sourceFingerprint &&
     patternUndoStack.at(-SINGULAR_ITEM_COUNT)?.label ===
       AI_PATTERN_HISTORY_LABEL;
+  const requestAction = getAiRequestActionState(isSubmitting, canSubmit);
 
   useEffect(
     () => () => {
@@ -550,6 +572,7 @@ export function AiPatternPrompt() {
     const requestSequence = requestSequenceRef.current;
     const abortController = new AbortController();
     activeRequestRef.current = abortController;
+    activePromptRef.current = submittedPrompt;
     setIsSubmitting(true);
     setErrorMessage(null);
     setPrompt("");
@@ -571,9 +594,9 @@ export function AiPatternPrompt() {
       pattern: activePattern,
       dimensions,
       backboardColor,
-      conversation: threadMessages
-        .filter((message) => message.tone !== "error")
-        .slice(-AI_PALETTE_CONFIG.maxConversationMessages)
+      conversation: getAiConversationWindow(
+        threadMessages.filter((message) => message.tone !== "error"),
+      )
         .map((message) => ({
           role: message.role,
           content: message.content.slice(
@@ -661,8 +684,33 @@ export function AiPatternPrompt() {
       clearTimeout(timeoutId);
       if (requestSequence === requestSequenceRef.current) {
         activeRequestRef.current = null;
+        activePromptRef.current = null;
         setIsSubmitting(false);
       }
+    }
+  };
+
+  const handleStopAi = () => {
+    if (!activeRequestRef.current) return;
+
+    const stoppedPrompt = activePromptRef.current;
+    requestSequenceRef.current = cancelAiRequest(
+      activeRequestRef.current,
+      requestSequenceRef.current,
+    );
+    activeRequestRef.current = null;
+    activePromptRef.current = null;
+    setIsSubmitting(false);
+    setErrorMessage(null);
+    if (stoppedPrompt) {
+      setPrompt(stoppedPrompt);
+      setThreadMessages((messages) => {
+        const lastMessage = messages.at(-SINGULAR_ITEM_COUNT);
+        return lastMessage?.role === "user" &&
+          lastMessage.content === stoppedPrompt
+          ? messages.slice(EMPTY_ITEM_COUNT, -SINGULAR_ITEM_COUNT)
+          : messages;
+      });
     }
   };
 
@@ -719,8 +767,8 @@ export function AiPatternPrompt() {
             {threadMessages.length === EMPTY_ITEM_COUNT && !isSubmitting ? (
               <ConversationEmptyState
                 icon={<Sparkles className="h-5 w-5" />}
-                title="Describe an edit"
-                description="I can update colors, squares, backboard, layout, and size."
+                title="Describe an artwork or edit"
+                description="I can create a complete art piece or update colors, squares, layout, and size."
                 className="gap-2 p-4 [&_h3]:text-xs [&_p]:text-[0.7rem]"
               />
             ) : (
@@ -767,7 +815,7 @@ export function AiPatternPrompt() {
           placeholder={
             clarificationContext
               ? "Reply to the question…"
-              : "Ask for a design change…"
+              : "Describe artwork or ask for a change…"
           }
           aria-describedby={
             errorMessage
@@ -782,15 +830,19 @@ export function AiPatternPrompt() {
           }}
         />
         <Button
-          type="submit"
+          type={requestAction.type}
           size="icon"
-          disabled={!canSubmit}
-          aria-label="Apply AI pattern edit"
+          disabled={requestAction.disabled}
+          aria-label={requestAction.label}
+          title={requestAction.label}
           aria-busy={isSubmitting}
-          className="shrink-0 bg-indigo-600 text-white hover:bg-indigo-500"
+          onClick={isSubmitting ? handleStopAi : undefined}
+          className={
+            isSubmitting ? AI_STOP_BUTTON_CLASS : AI_SUBMIT_BUTTON_CLASS
+          }
         >
           {isSubmitting ? (
-            <LoaderCircle className="h-4 w-4 animate-spin" />
+            <Square className={AI_STOP_ICON_CLASS} />
           ) : (
             <Sparkles className="h-4 w-4" />
           )}
@@ -800,7 +852,8 @@ export function AiPatternPrompt() {
         id={AI_PATTERN_PROMPT_DESCRIPTION_ID}
         className="text-xs text-slate-500"
       >
-        Ask for colors, size, squares, backboard, visibility, or layout.
+        Try “make me an American flag,” or ask for colors, size, squares,
+        backboard, visibility, or layout.
       </p>
       {errorMessage && (
         <p id={AI_PATTERN_PROMPT_ERROR_ID} className="sr-only" role="alert">

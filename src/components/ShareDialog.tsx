@@ -11,43 +11,32 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Copy, Check, Loader2, LinkIcon, ExternalLink } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { motion } from "framer-motion";
-import { compressJsonForUrl } from "@/lib/urlUtils";
 
 interface ShareDialogProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+const PROD_BUILDER_ORIGIN = "https://custom.everwood.shop";
+
 export function ShareDialog({ isOpen, onClose }: ShareDialogProps) {
   const createSharedDesign = useCustomStore(
     (state) => state.createSharedDesign
-  );
-  const getShareableStateSnapshot = useCustomStore(
-    (state) => state.getShareableStateSnapshot
   );
   // Linking the share to its owner is what lets the shared viewer resolve
   // the owner's latest saved palette on every visit instead of the frozen
   // snapshot. Guest shares have no server-side identity and stay frozen.
   const { user } = useAuth();
 
-  const [shareableLink, setShareableLink] = useState("");
   const [copied, setCopied] = useState<"builder" | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [shareId, setShareId] = useState("");
   const [builderLink, setBuilderLink] = useState("");
 
-  // Production share target. On a local/dev host there is no shared-designs
-  // database, so we instead embed the design in the URL and point the link
-  // at the current origin — letting the shared viewer be opened and tested
-  // locally and while signed out. The legacy viewer.everwoodus.com link was
-  // dropped: every share now opens the gallery-room page (/shared/<id>).
-  const PROD_BUILDER_ORIGIN = "https://custom.everwood.shop";
+  // Every share uses the short /shared/<id> route. The API stores local-dev
+  // shares in memory and production shares in MongoDB.
 
   // Generate link when dialog opens
   useEffect(() => {
@@ -60,33 +49,12 @@ export function ShareDialog({ isOpen, onClose }: ShareDialogProps) {
     setIsGenerating(true);
 
     try {
-      const { hostname, origin } = window.location;
-      const isLocal =
-        hostname === "localhost" ||
-        hostname === "127.0.0.1" ||
-        hostname === "0.0.0.0" ||
-        hostname.endsWith(".local");
-
-      if (isLocal) {
-        // No database on dev: pack the whole design into the URL. The
-        // shared viewer (/shared/[id]) decodes ?d= and renders it without
-        // any DB call, so it works on dev and for signed-out visitors.
-        const encoded = compressJsonForUrl(
-          JSON.stringify(getShareableStateSnapshot())
-        );
-        const link = `${origin}/shared/preview?d=${encoded}`;
-        setShareId("preview");
-        setShareableLink(link);
-        setBuilderLink(link);
-        return;
-      }
-
       const result = await createSharedDesign(user?.id, user?.email);
 
       if (result.success && result.shareId) {
-        setShareId(result.shareId);
-        setShareableLink(result.shareUrl || "");
-        setBuilderLink(`${PROD_BUILDER_ORIGIN}/shared/${result.shareId}`);
+        setBuilderLink(
+          result.shareUrl || `${PROD_BUILDER_ORIGIN}/shared/${result.shareId}`
+        );
       } else {
         toast.error(result.error || "Failed to create shared design");
       }
@@ -96,14 +64,6 @@ export function ShareDialog({ isOpen, onClose }: ShareDialogProps) {
     } finally {
       setIsGenerating(false);
     }
-  };
-
-  // The inline-preview link carries the whole design in a ?d=... payload.
-  // Show a clean URL in the dialog (Copy/Open still use the full link).
-  const displayLink = (url: string) => {
-    if (!url) return "";
-    const [base, query] = url.split("?");
-    return query ? `${base}?…` : base;
   };
 
   const handleCopy = (url: string, which: "builder") => {
@@ -150,7 +110,7 @@ export function ShareDialog({ isOpen, onClose }: ShareDialogProps) {
                       Builder
                     </div>
                     <div className="text-sm font-medium text-white truncate">
-                      {displayLink(builderLink)}
+                      {builderLink}
                     </div>
                   </div>
                   <div className="flex shrink-0 gap-2">

@@ -25,7 +25,10 @@ import { DEFAULT_WOOD_STYLE_ID } from "@/components/preview/woodStyles";
 import { DEFAULT_WALL_COLOR } from "@/components/preview/wallColors";
 import { normalizeBackboardColor } from "@/lib/backboardColor";
 import { nanoid } from "nanoid";
-import type { AiPaletteResponse } from "@/lib/aiPalette";
+import {
+  createAiArtworkPatternGrid,
+  type AiPaletteResponse,
+} from "@/lib/aiPalette";
 import {
   PANEL_LAYOUT_CONFIG,
   normalizePanelCount,
@@ -2675,7 +2678,8 @@ export const useCustomStore = create<CustomStore>()(
       const changesPalette =
         response.operation === "replace_colors" ||
         response.operation === "set_palette" ||
-        response.operation === "set_blended_palette";
+        response.operation === "set_blended_palette" ||
+        response.operation === "set_artwork";
       if (changesPalette) {
         set((state) => {
           const officialPalette: CustomColor[] = Object.values(
@@ -2826,8 +2830,15 @@ export const useCustomStore = create<CustomStore>()(
           const patternHiddenOverride = isReplacement
             ? { ...state.patternHiddenOverride }
             : {};
+          const isArtwork = response.operation === "set_artwork";
           const drawnPatternGrid =
-            isReplacement && state.drawnPatternGrid
+            isArtwork && response.artwork
+              ? createAiArtworkPatternGrid(
+                  response.artwork,
+                  response.palette,
+                  response.dimensions,
+                )
+              : isReplacement && state.drawnPatternGrid
               ? state.drawnPatternGrid.map((row) =>
                   row.map((cell) => {
                     if (!cell.color) return { ...cell };
@@ -2863,13 +2874,16 @@ export const useCustomStore = create<CustomStore>()(
           return {
             customPalette: paletteWithIds,
             currentColors:
-              isReplacement && state.activeCustomMode === "pattern"
+              isArtwork ||
+              (isReplacement && state.activeCustomMode === "pattern")
                 ? null
                 : createColorMap(paletteWithIds),
             selectedDesign: ItemDesigns.Custom,
-            activeCustomMode: isReplacement
-              ? state.activeCustomMode
-              : "palette",
+            activeCustomMode: isArtwork
+              ? "pattern"
+              : isReplacement
+                ? state.activeCustomMode
+                : "palette",
             colorPattern: response.pattern.colorPattern,
             orientation: response.pattern.orientation,
             isReversed: response.pattern.isReversed,
@@ -2880,6 +2894,9 @@ export const useCustomStore = create<CustomStore>()(
                 ? state.editingPaletteId
                 : null,
             drawnPatternGrid,
+            drawnPatternGridSize: isArtwork
+              ? { ...response.dimensions }
+              : state.drawnPatternGridSize,
             patternOverride,
             patternDirectionOverride,
             patternHiddenOverride,

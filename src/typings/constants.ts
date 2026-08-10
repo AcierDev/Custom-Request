@@ -9,6 +9,7 @@ export const SIZE_STRING = {
   [ItemSizes.Twenty_By_Twelve]: `36" x 6 Feet`,
   [ItemSizes.TwentyFour_By_Twelve]: `36" x 7 Feet`,
   [ItemSizes.TwentyEight_By_Twelve]: `36 x 8 Feet`,
+  [ItemSizes.ThirtyTwo_By_Twelve]: `36" x 8 Feet`,
   [ItemSizes.TwentyEight_By_Sixteen]: `48" x 7 Feet`,
   [ItemSizes.ThirtyTwo_By_Sixteen]: `48" x 8 Feet`,
   [ItemSizes.ThirtySix_By_Sixteen]: `48" x 9 Feet`,

@@ -42,6 +42,7 @@ import { SQUARE_GAP_OPTIONS } from "@/lib/squareGap";
 import { DEFAULT_BACKBOARD_PICKER_COLOR } from "@/lib/backboardColor";
 import { AiPatternPrompt } from "./AiPatternPrompt";
 import { PatternHistoryControls } from "./PatternHistoryControls";
+import { WavePatternOption } from "./WavePatternOption";
 
 interface PatternEditorProps {
   className?: string;
@@ -927,6 +928,8 @@ export function PatternEditor({ className }: PatternEditorProps) {
                   id={EXTRA_OPTIONS_CONTENT_ID}
                   className="space-y-2.5 border-t border-white/10 px-3 py-3"
                 >
+                  <WavePatternOption />
+                  <div className="h-px bg-white/10" />
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="text-xs font-medium text-slate-300">

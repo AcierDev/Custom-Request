@@ -7,6 +7,7 @@ export enum ItemSizes {
   Twenty_By_Twelve = "20 x 12",
   TwentyFour_By_Twelve = "24 x 12",
   TwentyEight_By_Twelve = "28 x 12",
+  ThirtyTwo_By_Twelve = "32 x 12",
   TwentyEight_By_Sixteen = "28 x 16",
   ThirtyTwo_By_Sixteen = "32 x 16",
   ThirtySix_By_Sixteen = "36 x 16",

@@ -1,10 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCollection } from "@/lib/mongodb";
+import {
+  LOCAL_SHARED_DESIGN_CONFIG,
+  localSharedDesignStore,
+} from "@/lib/localSharedDesignStore";
 import { nanoid } from "nanoid";
 
 // Collection name for shared designs
 const SHARED_DESIGNS_COLLECTION = "sharedDesigns";
-const SHARE_ID_LENGTH = 12;
+const DEFAULT_PRODUCTION_SHARE_ORIGIN = "https://custom.everwood.shop";
+const USE_LOCAL_SHARED_DESIGN_STORE =
+  process.env.NODE_ENV !== "production" && !process.env.MONGODB_URI;
+
+const getShareOrigin = (request: NextRequest): string =>
+  process.env.NEXT_PUBLIC_APP_URL ||
+  (USE_LOCAL_SHARED_DESIGN_STORE
+    ? request.nextUrl.origin
+    : DEFAULT_PRODUCTION_SHARE_ORIGIN);
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,53 +30,52 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const collection = await getCollection(SHARED_DESIGNS_COLLECTION);
+    let shareId: string;
+    if (USE_LOCAL_SHARED_DESIGN_STORE) {
+      shareId = localSharedDesignStore.create({
+        designData,
+        userId,
+        email,
+      }).shareId;
+    } else {
+      const collection = await getCollection(SHARED_DESIGNS_COLLECTION);
+      shareId = nanoid(LOCAL_SHARED_DESIGN_CONFIG.shareIdLength);
+      const now = new Date();
+      await collection.insertOne({
+        shareId,
+        designData,
+        userId: userId || null,
+        email: email || null,
+        createdAt: now,
+        lastAccessed: now,
+        accessCount: 0,
+      });
 
-    // Generate a unique ID for the shared design
-    const shareId = nanoid(SHARE_ID_LENGTH);
-
-    // Create the shared design document
-    const sharedDesign = {
-      shareId,
-      designData,
-      userId: userId || null,
-      email: email || null,
-      createdAt: new Date(),
-      lastAccessed: new Date(),
-      accessCount: 0,
-    };
-
-    // Insert the shared design
-    await collection.insertOne(sharedDesign);
-
-    // Create indexes for better performance
-    try {
-      await collection.createIndexes([
-        { key: { shareId: 1 }, unique: true },
-        { key: { userId: 1 } },
-        { key: { createdAt: 1 } }, // Removed TTL to keep designs indefinitely
-      ]);
-    } catch (error: any) {
-      if (error.code === 85) {
-        // IndexOptionsConflict: Index exists with different options (likely TTL)
-        // Drop the conflicting index and retry
-        console.log("Dropping conflicting index createdAt_1 to remove TTL...");
-        await collection.dropIndex("createdAt_1");
+      // Create indexes for better performance
+      try {
         await collection.createIndexes([
           { key: { shareId: 1 }, unique: true },
           { key: { userId: 1 } },
           { key: { createdAt: 1 } },
         ]);
-      } else {
-        throw error;
+      } catch (error: any) {
+        if (error.code === 85) {
+          // IndexOptionsConflict: replace the old TTL index.
+          await collection.dropIndex("createdAt_1");
+          await collection.createIndexes([
+            { key: { shareId: 1 }, unique: true },
+            { key: { userId: 1 } },
+            { key: { createdAt: 1 } },
+          ]);
+        } else {
+          throw error;
+        }
       }
     }
 
     return NextResponse.json({
       shareId,
-      shareUrl: `${
-        process.env.NEXT_PUBLIC_APP_URL || "https://custom.everwood.shop"
-      }/shared/${shareId}`,
+      shareUrl: `${getShareOrigin(request)}/shared/${shareId}`,
     });
   } catch (error) {
     console.error("Error creating shared design:", error);
@@ -88,6 +99,22 @@ export async function GET(request: NextRequest) {
         { error: "Share ID is required" },
         { status: 400 }
       );
+    }
+
+    if (USE_LOCAL_SHARED_DESIGN_STORE) {
+      const sharedDesign = localSharedDesignStore.get(shareId, isPoll);
+      if (!sharedDesign) {
+        return NextResponse.json(
+          { error: "Shared design not found" },
+          { status: 404 }
+        );
+      }
+      return NextResponse.json({
+        shareId: sharedDesign.shareId,
+        designData: sharedDesign.designData,
+        createdAt: sharedDesign.createdAt,
+        accessCount: sharedDesign.accessCount,
+      });
     }
 
     const collection = await getCollection(SHARED_DESIGNS_COLLECTION);

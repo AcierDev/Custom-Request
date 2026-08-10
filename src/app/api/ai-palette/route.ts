@@ -1,19 +1,27 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import {
+  generateImage,
   generateText,
   LoadAPIKeyError,
+  NoImageGeneratedError,
   NoObjectGeneratedError,
   Output,
 } from "ai";
 import { NextResponse, type NextRequest } from "next/server";
+import sharp from "sharp";
 import { z } from "zod";
 import { blendHexColors, hexToHSL, hslToHex } from "@/lib/colorUtils";
+import { convertImagePixelsToAiArtwork } from "@/lib/aiImageToArtwork";
 import {
   AI_PALETTE_COLOR_PATTERNS,
   AI_PALETTE_CONFIG,
   AI_PALETTE_ORIENTATIONS,
   AI_SQUARE_DIRECTIONS,
   HEX_COLOR_PATTERN,
+  createAiRequestAbortSignal,
+  getAiConversationWindow,
+  hasAiArtworkColorVariation,
+  isAiArtworkCreationPrompt,
   type AiPaletteColor,
   type AiPaletteAdjustment,
   type AiPaletteDimensions,
@@ -43,6 +51,7 @@ const HTTP_STATUS = {
   badGateway: 502,
   serviceUnavailable: 503,
   gatewayTimeout: 504,
+  clientClosedRequest: 499,
 } as const;
 
 const MILLISECONDS_PER_SECOND = 1_000;
@@ -83,6 +92,8 @@ const REGEX_CAPTURE_INDEX = {
   fifth: 5,
 } as const;
 const FALLBACK_CLIENT_KEY = "unknown-client";
+const ARTWORK_IMAGE_PROMPT =
+  "Create a clean, recognizable flat-color image for conversion into a handcrafted square-grid artwork. Fill the canvas edge to edge. Use bold shapes, crisp boundaries, strong contrast, and only the essential identifying details. Avoid text, labels, frames, gradients, shadows, photographic texture, and tiny details.";
 const CACHE_CONTROL_HEADERS = { "Cache-Control": "no-store" } as const;
 const RESPONSE_SOURCE_HEADER = "X-Design-Command-Source";
 const RESPONSE_SOURCE = {
@@ -332,7 +343,9 @@ const inputColorSchema = z.object({
   name: z
     .string()
     .trim()
-    .max(AI_PALETTE_CONFIG.maxColorNameLength)
+    .transform((name) =>
+      name.slice(EMPTY_ITEM_COUNT, AI_PALETTE_CONFIG.maxColorNameLength)
+    )
     .optional(),
 });
 
@@ -447,7 +460,7 @@ const requestSchema = z.object({
           .max(AI_PALETTE_CONFIG.maxConversationMessageLength),
       })
     )
-    .max(AI_PALETTE_CONFIG.maxConversationMessages)
+    .transform(getAiConversationWindow)
     .optional(),
   clarificationContext: z
     .string()
@@ -3626,9 +3639,13 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  const localResponse =
-    resolveLocalSingleRequest(parsedRequest.data) ??
-    resolveLocalCompoundRequest(parsedRequest.data);
+  const isArtworkRequest = isAiArtworkCreationPrompt(
+    parsedRequest.data.prompt
+  );
+  const localResponse = isArtworkRequest
+    ? null
+    : resolveLocalSingleRequest(parsedRequest.data) ??
+      resolveLocalCompoundRequest(parsedRequest.data);
   if (localResponse) {
     return NextResponse.json(localResponse, {
       headers: {
@@ -3641,7 +3658,7 @@ export async function POST(request: NextRequest) {
   const openRouterApiKey = getOpenRouterApiKey();
   if (!openRouterApiKey) {
     return NextResponse.json(
-      { error: "AI palette editing is not configured yet." },
+      { error: "AI design generation is not configured yet." },
       {
         status: HTTP_STATUS.serviceUnavailable,
         headers: CACHE_CONTROL_HEADERS,
@@ -3652,7 +3669,7 @@ export async function POST(request: NextRequest) {
   const retryAfterSeconds = consumeRateLimit(getClientKey(request));
   if (retryAfterSeconds !== null) {
     return NextResponse.json(
-      { error: "Too many palette requests. Try again shortly." },
+      { error: "Too many AI design requests. Try again shortly." },
       {
         status: HTTP_STATUS.tooManyRequests,
         headers: {
@@ -3664,6 +3681,59 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    if (isArtworkRequest) {
+      const openrouter = createOpenRouter({
+        apiKey: openRouterApiKey,
+        compatibility: "strict",
+      });
+      const { image } = await generateImage({
+        model: openrouter.imageModel(
+          process.env.AI_ARTWORK_IMAGE_MODEL?.trim() ||
+            AI_PALETTE_CONFIG.defaultImageModel,
+          { provider: { require_parameters: true } }
+        ),
+        prompt: `${ARTWORK_IMAGE_PROMPT}\n\nTarget grid: ${parsedRequest.data.dimensions.width} columns by ${parsedRequest.data.dimensions.height} rows. Match that aspect ratio. User request: ${parsedRequest.data.prompt}`,
+        abortSignal: createAiRequestAbortSignal(
+          request.signal,
+          AI_PALETTE_CONFIG.imageRequestTimeoutMs,
+        ),
+      });
+      const { data: resizedPixels } = await sharp(image.uint8Array)
+        .resize(
+          parsedRequest.data.dimensions.width,
+          parsedRequest.data.dimensions.height,
+          { fit: "fill" }
+        )
+        .removeAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+      const generatedArtwork = convertImagePixelsToAiArtwork({
+        pixels: resizedPixels,
+        width: parsedRequest.data.dimensions.width,
+        height: parsedRequest.data.dimensions.height,
+        maxPaletteColors:
+          AI_PALETTE_CONFIG.generatedArtworkPaletteColorCount,
+      });
+      if (!hasAiArtworkColorVariation(generatedArtwork.artwork)) {
+        throw new RangeError("Generated artwork grid is invalid.");
+      }
+      const response: AiPaletteResponse = {
+        operation: "set_artwork",
+        palette: generatedArtwork.palette,
+        pattern: parsedRequest.data.pattern,
+        dimensions: parsedRequest.data.dimensions,
+        replacements: [],
+        artwork: generatedArtwork.artwork,
+      };
+      cacheResponse(cacheKey, response);
+      return NextResponse.json(response, {
+        headers: {
+          ...CACHE_CONTROL_HEADERS,
+          [RESPONSE_SOURCE_HEADER]: RESPONSE_SOURCE.model,
+        },
+      });
+    }
+
     const { output } = await generateText({
       model: getModel(openRouterApiKey),
       system: buildSystemPrompt(),
@@ -3676,7 +3746,10 @@ export async function POST(request: NextRequest) {
       }),
       maxOutputTokens: AI_PALETTE_CONFIG.maxOutputTokens,
       temperature: AI_PALETTE_CONFIG.modelTemperature,
-      abortSignal: AbortSignal.timeout(AI_PALETTE_CONFIG.requestTimeoutMs),
+      abortSignal: createAiRequestAbortSignal(
+        request.signal,
+        AI_PALETTE_CONFIG.requestTimeoutMs,
+      ),
     });
 
     const response = resolveCommands(
@@ -3692,9 +3765,20 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
+    if (request.signal.aborted) {
+      return new NextResponse(null, {
+        status: HTTP_STATUS.clientClosedRequest,
+        headers: CACHE_CONTROL_HEADERS,
+      });
+    }
+
     if (error instanceof RangeError) {
       return NextResponse.json(
-        { error: "The palette request could not be applied." },
+        {
+          error: isArtworkRequest
+            ? "The generated artwork could not be applied."
+            : "The palette request could not be applied.",
+        },
         {
           status: HTTP_STATUS.unprocessableContent,
           headers: CACHE_CONTROL_HEADERS,
@@ -3720,9 +3804,19 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    if (NoImageGeneratedError.isInstance(error)) {
+      return NextResponse.json(
+        { error: "AI artwork generation failed. Please try again." },
+        {
+          status: HTTP_STATUS.badGateway,
+          headers: CACHE_CONTROL_HEADERS,
+        }
+      );
+    }
+
     if (isAuthenticationError(error)) {
       return NextResponse.json(
-        { error: "AI palette editing is not configured yet." },
+        { error: "AI design generation is not configured yet." },
         {
           status: HTTP_STATUS.serviceUnavailable,
           headers: CACHE_CONTROL_HEADERS,
@@ -3732,7 +3826,7 @@ export async function POST(request: NextRequest) {
 
     if (getErrorStatusCode(error) === HTTP_STATUS.paymentRequired) {
       return NextResponse.json(
-        { error: "AI palette editing needs OpenRouter credits." },
+        { error: "AI design generation needs OpenRouter credits." },
         {
           status: HTTP_STATUS.serviceUnavailable,
           headers: CACHE_CONTROL_HEADERS,
@@ -3752,7 +3846,11 @@ export async function POST(request: NextRequest) {
 
     if (isTimeoutError(error)) {
       return NextResponse.json(
-        { error: "Palette generation timed out. Please try again." },
+        {
+          error: isArtworkRequest
+            ? "Artwork generation timed out. Please try again."
+            : "Palette generation timed out. Please try again.",
+        },
         {
           status: HTTP_STATUS.gatewayTimeout,
           headers: CACHE_CONTROL_HEADERS,
@@ -3766,12 +3864,16 @@ export async function POST(request: NextRequest) {
       upstreamStatusCode >= HTTP_STATUS.internalServerError
         ? HTTP_STATUS.badGateway
         : HTTP_STATUS.internalServerError;
-    console.error("AI palette request failed.", {
+    console.error("AI design request failed.", {
       name: getErrorName(error),
       statusCode: upstreamStatusCode,
     });
     return NextResponse.json(
-      { error: "Palette generation failed. Please try again." },
+      {
+        error: isArtworkRequest
+          ? "Artwork generation failed. Please try again."
+          : "Palette generation failed. Please try again.",
+      },
       {
         status: responseStatus,
         headers: CACHE_CONTROL_HEADERS,
