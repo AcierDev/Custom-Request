@@ -2,7 +2,6 @@
 
 import { Suspense, useEffect, useMemo, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 import { GeometricPattern } from "./GeometricPattern";
 import { RotatableLighting, type TimeOfDay } from "./RotatableLighting";
@@ -27,6 +26,7 @@ import { Ruler3D } from "./Ruler3D";
 import { frameAlpha } from "./animationUtils";
 import { RESPONSIVE_ORBIT_SETTINGS } from "./orbitResponse";
 import { OrbitPivotDrag } from "./OrbitPivotDrag";
+import { StableOrbitControls } from "./StableOrbitControls";
 import { getOrbitPivotWorldX } from "./orbitPivot";
 import { SmoothWheelZoom, TOUCH_ZOOM_SPEED } from "./SmoothWheelZoom";
 import { useCustomStore } from "@/store/customStore";
@@ -646,7 +646,7 @@ export function GalleryArtScene({
       {/* Controls live OUTSIDE the Suspense boundary — a texture load
           suspends the scene, and if controls were inside they'd unmount
           and the camera would freeze. */}
-      <OrbitControls
+      <StableOrbitControls
         enableDamping={RESPONSIVE_ORBIT_SETTINGS.enableDamping}
         dampingFactor={RESPONSIVE_ORBIT_SETTINGS.dampingFactor}
         enablePan={false}

@@ -23,7 +23,6 @@ import {
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { OrbitControls } from "@react-three/drei";
 import { TOUCH } from "three";
 import { useSpring, animated } from "@react-spring/three";
 import { GeometricPattern } from "@/components/preview/GeometricPattern";
@@ -55,6 +54,7 @@ import { Ruler3D } from "@/components/preview/Ruler3D";
 import { frameAlpha } from "@/components/preview/animationUtils";
 import { RESPONSIVE_ORBIT_SETTINGS } from "@/components/preview/orbitResponse";
 import { OrbitPivotDrag } from "@/components/preview/OrbitPivotDrag";
+import { StableOrbitControls } from "@/components/preview/StableOrbitControls";
 import { getOrbitPivotWorldX } from "@/components/preview/orbitPivot";
 import {
   SmoothWheelZoom,
@@ -79,6 +79,7 @@ import { EmptyPaletteWarning } from "@/components/EmptyPaletteWarning";
 import { CustomChoiceDialog } from "@/components/CustomChoiceDialog";
 import { useCustomChoiceDialog } from "@/hooks/useCustomChoiceDialog";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { useInitialRoomViewDefault } from "@/hooks/useInitialRoomViewDefault";
 import {
   Tooltip,
   TooltipContent,
@@ -394,7 +395,10 @@ export default function DesignPage() {
   const showUIControls = useCustomStore((s) => s.viewSettings.showUIControls);
   const wallColor = useCustomStore((s) => s.viewSettings.wallColor);
   const setShowUIControls = useCustomStore((s) => s.setShowUIControls);
+  const setInitialShowRoom = useCustomStore((s) => s.setInitialShowRoom);
   const setWallColor = useCustomStore((s) => s.setWallColor);
+
+  useInitialRoomViewDefault(setInitialShowRoom);
 
   // Custom with no palette colors and no drawn pattern no longer
   // redirects away — GeometricPattern renders every square a single
@@ -873,7 +877,7 @@ export default function DesignPage() {
               falls back to null and the camera freezes ("can't look
               around"). They load nothing async, so keeping them mounted
               regardless is safe. */}
-          <OrbitControls
+          <StableOrbitControls
             enableDamping={RESPONSIVE_ORBIT_SETTINGS.enableDamping}
             dampingFactor={RESPONSIVE_ORBIT_SETTINGS.dampingFactor}
             enablePan={false}

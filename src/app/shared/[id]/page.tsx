@@ -11,7 +11,6 @@ import {
   ImageOff,
   X,
   Info,
-  Download,
 } from "lucide-react";
 import {
   useCustomStore,
@@ -19,6 +18,13 @@ import {
 } from "@/store/customStore";
 import { Button } from "@/components/ui/button";
 import { GalleryArtScene } from "@/components/preview/GalleryArtScene";
+import { SharedBrandPill } from "./SharedBrandPill";
+import { SharedImageSaveAction } from "./SharedImageSaveAction";
+import {
+  SharedMobilePanelActions,
+  SharedMobilePanelHeader,
+  type SharedMobilePanel,
+} from "./SharedMobilePanelNavigation";
 import { LightingControls } from "@/components/preview/LightingControls";
 import { PatternControls } from "@/components/preview/PatternControls";
 import type { TimeOfDay } from "@/components/preview/RotatableLighting";
@@ -29,6 +35,8 @@ import { SizeCard } from "@/components/cards/SizeCard";
 import { DESIGN_COLORS } from "@/typings/color-maps";
 import { ItemDesigns } from "@/typings/types";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { useIsPhoneLandscape } from "@/hooks/useIsPhoneLandscape";
+import { useInitialRoomViewDefault } from "@/hooks/useInitialRoomViewDefault";
 import { cn } from "@/lib/utils";
 import { sizeToHeightInchesWidthFeetLabel } from "@/lib/size-pills";
 import { decompressJsonFromUrl } from "@/lib/urlUtils";
@@ -51,6 +59,12 @@ const SHARED_ACTION_BUTTON_CLASS =
   "rounded-full glass-surface hover:bg-gray-900/50 hover:border-white/30 transition-colors";
 const SHARED_ICON_BUTTON_CLASS = "h-9 w-9";
 const SHARED_ACTION_ICON_CLASS = "h-4 w-4 text-gray-200";
+const MOBILE_CTA_PORTRAIT_CLASS =
+  "fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))]";
+const PHONE_LANDSCAPE_CTA_CLASS =
+  "pointer-events-none fixed inset-y-0 left-[max(0.75rem,env(safe-area-inset-left))] flex w-[20vw] items-center";
+const PHONE_LANDSCAPE_AR_CLASS =
+  "px-2 text-[10px] leading-tight [&_svg]:hidden [&_span]:whitespace-normal";
 // Only show the view count once it reads as real social proof, never
 // "Viewed 1 time".
 const VIEW_COUNT_THRESHOLD = 5;
@@ -78,6 +92,7 @@ export default function SharedDesignPage() {
   const params = useParams();
   const shareId = params.id as string;
   const isMobile = useIsMobile();
+  const isPhoneLandscape = useIsPhoneLandscape();
 
   const [sharedDesign, setSharedDesign] = useState<SharedDesignData | null>(
     null
@@ -87,7 +102,7 @@ export default function SharedDesignPage() {
   const [copied, setCopied] = useState(false);
   const [showUI, setShowUI] = useState(true);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [sheetTab, setSheetTab] = useState<"about" | "view">("about");
+  const [sheetTab, setSheetTab] = useState<SharedMobilePanel>("about");
   const [placardOpen, setPlacardOpen] = useState(true);
   const [reducedMotion, setReducedMotion] = useState(false);
   const {
@@ -106,6 +121,9 @@ export default function SharedDesignPage() {
     setLampOn((current) => toggleLampAtTimeOfDay(timeOfDay, current));
   }, [timeOfDay]);
   const [wallColor, setWallColor] = useState<string>(DEFAULT_WALL_COLOR);
+  const [showRoom, setShowRoom] = useState(true);
+
+  useInitialRoomViewDefault(setShowRoom);
 
   const dimensions = useCustomStore((s) => s.dimensions);
   const selectedDesign = useCustomStore((s) => s.selectedDesign);
@@ -269,7 +287,7 @@ export default function SharedDesignPage() {
           lampOn={lampOn}
           onLampToggle={handleLampToggle}
           wallColor={wallColor}
-          showRoom
+          showRoom={showRoom}
           showColorInfo={false}
           autoOrbit={!reducedMotion}
           isMobile={isMobile}
@@ -291,7 +309,7 @@ export default function SharedDesignPage() {
               isMobile ? "top-3 left-3" : "top-5 left-5"
             )}
           >
-            <BrandPill />
+            <SharedBrandPill />
           </motion.div>
         )}
       </AnimatePresence>
@@ -356,16 +374,19 @@ export default function SharedDesignPage() {
             className={cn(
               "z-50",
               isMobile
-                ? "fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))]"
+                ? isPhoneLandscape
+                  ? PHONE_LANDSCAPE_CTA_CLASS
+                  : MOBILE_CTA_PORTRAIT_CLASS
                 : "absolute bottom-6 left-1/2 -translate-x-1/2"
             )}
           >
             <CtaBar
               isMobile={isMobile}
+              isPhoneLandscape={isPhoneLandscape}
               copied={copied}
               onCopy={handleCopyLink}
-              onDetails={() => {
-                setSheetTab("about");
+              onPanel={(panel) => {
+                setSheetTab(panel);
                 setSheetOpen(true);
               }}
             />
@@ -381,22 +402,12 @@ export default function SharedDesignPage() {
         )}
       >
         {showUI && (
-          <Button
-            type="button"
-            variant="ghost"
-            size={isMobile ? "icon" : "sm"}
-            disabled={isSavingImage || !isImageCaptureReady}
-            aria-busy={isSavingImage}
-            aria-label="Save image"
-            onClick={handleSaveImage}
-            className={cn(
-              SHARED_ACTION_BUTTON_CLASS,
-              isMobile && SHARED_ICON_BUTTON_CLASS
-            )}
-          >
-            <Download className={SHARED_ACTION_ICON_CLASS} />
-            {!isMobile && (isSavingImage ? "Saving…" : "Save image")}
-          </Button>
+          <SharedImageSaveAction
+            isMobile={isMobile}
+            isSaving={isSavingImage}
+            isReady={isImageCaptureReady}
+            onSave={handleSaveImage}
+          />
         )}
         <Button
           variant="ghost"
@@ -416,12 +427,12 @@ export default function SharedDesignPage() {
         </Button>
       </div>
 
-      {/* ── Mobile detail sheet (About / View tabs) ─────────────────── */}
+      {/* ── Mobile Details / Edit panel sheet ───────────────────────── */}
       <AnimatePresence>
         {sheetOpen && isMobile && (
           <>
             <motion.button
-              aria-label="Close details"
+              aria-label="Close panel"
               className="fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-[1px]"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -435,34 +446,10 @@ export default function SharedDesignPage() {
               exit={{ y: "105%" }}
               transition={{ type: "spring", stiffness: 420, damping: 36 }}
             >
-              <div className="flex items-center justify-between border-b border-white/10 px-3 py-2.5">
-                <div className="flex gap-1 rounded-lg bg-black/30 p-1">
-                  {(["about", "view"] as const).map((tab) => (
-                    <button
-                      key={tab}
-                      type="button"
-                      onClick={() => setSheetTab(tab)}
-                      className={cn(
-                        "rounded-md px-3 py-1.5 text-xs font-medium capitalize transition-colors",
-                        sheetTab === tab
-                          ? "bg-white/12 text-white"
-                          : "text-slate-400 hover:text-slate-200"
-                      )}
-                    >
-                      {tab}
-                    </button>
-                  ))}
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 rounded-full text-slate-300 hover:bg-white/10 hover:text-white"
-                  onClick={() => setSheetOpen(false)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
+              <SharedMobilePanelHeader
+                panel={sheetTab}
+                onClose={() => setSheetOpen(false)}
+              />
               <div className="max-h-[calc(74dvh-3.25rem)] overflow-y-auto p-4 no-scrollbar">
                 {sheetTab === "about" ? (
                   <Placard
@@ -502,30 +489,6 @@ export default function SharedDesignPage() {
           </>
         )}
       </AnimatePresence>
-    </div>
-  );
-}
-
-//╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
-//║ 🏷️ BRAND PILL                                                        ║
-//╚═══╝ ════════════════════════════════════════════════════════════════ ╚═══╝
-
-function BrandPill() {
-  return (
-    <div
-      className="flex items-center gap-2.5 rounded-full glass-surface px-3.5 py-2 shadow-lg"
-    >
-      <span className="grid h-6 w-6 place-items-center rounded-full bg-gradient-to-br from-amber-300/90 to-amber-600/90 text-[11px] font-bold text-amber-950 shadow-inner">
-        E
-      </span>
-      <span className="leading-tight">
-        <span className="block text-sm font-semibold tracking-tight text-white">
-          Everwood
-        </span>
-        <span className="block text-[10px] uppercase tracking-wider text-slate-400">
-          Shared with you
-        </span>
-      </span>
     </div>
   );
 }
@@ -712,34 +675,36 @@ function ViewingControls({
 }
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
-//║ 🚀 CTA BAR — the single, calm conversion door                        ║
+//║ 🚀 CTA BAR — mobile panel shortcuts / desktop sharing                 ║
 //╚═══╝ ════════════════════════════════════════════════════════════════ ╚═══╝
 
 function CtaBar({
   isMobile,
+  isPhoneLandscape,
   copied,
   onCopy,
-  onDetails,
+  onPanel,
 }: {
   isMobile: boolean;
+  isPhoneLandscape: boolean;
   copied: boolean;
   onCopy: () => void;
-  onDetails: () => void;
+  onPanel: (panel: SharedMobilePanel) => void;
 }) {
   if (isMobile) {
     return (
-      <div className="flex flex-col gap-2">
-        {/* iOS-mobile-only (renders null elsewhere): hang this exact piece,
-            life-size, on the viewer's own wall via AR Quick Look. */}
-        <ARButton variant="shared" className="w-full" />
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={onDetails}
-          className="h-11 w-full rounded-full glass-surface px-4 text-sm text-slate-200 hover:bg-gray-900/50"
-        >
-          Details
-        </Button>
+      <div className="pointer-events-auto flex w-full flex-col gap-2">
+        <ARButton
+          variant="shared"
+          className={cn(
+            "w-full",
+            isPhoneLandscape && PHONE_LANDSCAPE_AR_CLASS,
+          )}
+        />
+        <SharedMobilePanelActions
+          layout={isPhoneLandscape ? "rail" : "row"}
+          onOpen={onPanel}
+        />
       </div>
     );
   }
@@ -778,7 +743,7 @@ function LoadingState({ reducedMotion }: { reducedMotion: boolean }) {
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_38%,rgba(255,250,240,0.35),transparent_60%),radial-gradient(circle_at_50%_100%,rgba(0,0,0,0.28),transparent_55%)]"
       />
       <div className="absolute top-5 left-5 z-10">
-        <BrandPill />
+        <SharedBrandPill />
       </div>
       <div className="relative z-10 flex flex-col items-center gap-3">
         <motion.span
@@ -813,7 +778,7 @@ function ErrorState({
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_38%,rgba(255,250,240,0.3),transparent_60%),radial-gradient(circle_at_50%_100%,rgba(0,0,0,0.3),transparent_55%)]"
       />
       <div className="absolute top-5 left-5 z-10">
-        <BrandPill />
+        <SharedBrandPill />
       </div>
       <div className="relative z-10 w-full max-w-sm rounded-2xl border border-white/10 bg-[rgba(22,19,16,0.72)] p-6 text-center shadow-2xl backdrop-blur-md">
         <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full bg-white/5 ring-1 ring-white/10">

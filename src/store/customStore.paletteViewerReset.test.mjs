@@ -402,6 +402,16 @@ test("reselecting the active palette keeps its current viewer settings", () => {
   assert.deepEqual(selectViewerState(), createDirtyViewerState());
 });
 
+test("viewer remount preserves an explicit Room View selection", () => {
+  useCustomStore.getState().setShowRoom(true);
+
+  useCustomStore.getState().setInitialShowRoom(false);
+
+  const state = useCustomStore.getState();
+  assert.equal(state.hasUserSelectedRoomView, true);
+  assert.equal(state.viewSettings.showRoom, true);
+});
+
 test("loading a saved viewer version restores its intentional settings", () => {
   useCustomStore.setState(DEFAULT_VIEWER_STATE);
 

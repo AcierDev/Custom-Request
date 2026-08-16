@@ -42,6 +42,7 @@ import {
   normalizePaletteBlendPercent,
 } from "@/lib/paletteBlend";
 import { markPaletteOpened } from "@/lib/paletteRecency";
+import { resolveHydratedRoomView } from "@/lib/roomViewDefault";
 
 const DEFAULT_DEBOUNCE_DELAY_MS = 1_000;
 const STORE_PERSISTENCE_DEBOUNCE_MS = 2_000;
@@ -393,6 +394,7 @@ interface CustomState {
     woodStyle: string;
     metallic: boolean;
   };
+  hasUserSelectedRoomView: boolean;
   lastSaved: number;
   autoSaveEnabled: boolean;
   dataSyncVersion: number;
@@ -545,6 +547,7 @@ interface CustomStore extends CustomState {
   setSquareGapInches: (value: number) => void;
   setShowFPS: (value: boolean) => void;
   setShowUIControls: (value: boolean) => void;
+  setInitialShowRoom: (value: boolean) => void;
   setShowRoom: (value: boolean) => void;
   setWallColor: (value: string) => void;
   setBackboardColor: (value: string | null) => void;
@@ -1471,6 +1474,7 @@ export const useCustomStore = create<CustomStore>()(
       pickedColors: [],
       selectedAutoColors: [],
     },
+    hasUserSelectedRoomView: false,
     lastSaved: 0,
     autoSaveEnabled: true,
     dataSyncVersion: 1,
@@ -1935,9 +1939,18 @@ export const useCustomStore = create<CustomStore>()(
       set((state) => ({
         viewSettings: { ...state.viewSettings, showUIControls: value },
       })),
+    setInitialShowRoom: (value) =>
+      set((state) =>
+        state.hasUserSelectedRoomView
+          ? {}
+          : {
+              viewSettings: { ...state.viewSettings, showRoom: value },
+            },
+      ),
     setShowRoom: (value) =>
       set((state) => ({
         viewSettings: { ...state.viewSettings, showRoom: value },
+        hasUserSelectedRoomView: true,
       })),
     setWallColor: (value) =>
       set((state) => ({
@@ -3338,6 +3351,7 @@ export const useCustomStore = create<CustomStore>()(
             const storedPanelSettings = resolveStoredPanelSettings(
               data.viewSettings,
             );
+            const currentState = get();
 
             const viewSettings = {
               showRuler: data.viewSettings?.showRuler ?? DEFAULT_SHOW_RULER,
@@ -3347,7 +3361,14 @@ export const useCustomStore = create<CustomStore>()(
               ...storedPanelSettings,
               showFPS: data.viewSettings?.showFPS ?? false,
               showUIControls: data.viewSettings?.showUIControls ?? true,
-              showRoom: data.viewSettings?.showRoom ?? true,
+              showRoom: resolveHydratedRoomView({
+                persistedShowRoom: data.viewSettings?.showRoom ?? true,
+                currentShowRoom: currentState.viewSettings.showRoom,
+                hasUserSelectedRoomView:
+                  currentState.hasUserSelectedRoomView,
+                viewportWidth: window.innerWidth,
+                pathname: window.location.pathname,
+              }),
               wallColor: data.viewSettings?.wallColor ?? DEFAULT_WALL_COLOR,
               woodStyle: data.viewSettings?.woodStyle ?? DEFAULT_WOOD_STYLE_ID,
               metallic: data.viewSettings?.metallic ?? false,
@@ -3381,6 +3402,8 @@ export const useCustomStore = create<CustomStore>()(
                 ),
                 dataSyncVersion: Math.max(storedVersion, localVersion),
                 lastSaved: Date.now(),
+                hasUserSelectedRoomView:
+                  currentState.hasUserSelectedRoomView,
               });
 
               console.log(
@@ -3660,6 +3683,7 @@ export const useCustomStore = create<CustomStore>()(
         const storedPanelSettings = resolveStoredPanelSettings(
           mergedState.viewSettings,
         );
+        const currentRoomViewState = get();
         const finalState = {
           dimensions: mergedState.dimensions || get().dimensions,
           selectedDesign: mergedState.selectedDesign || get().selectedDesign,
@@ -3713,8 +3737,16 @@ export const useCustomStore = create<CustomStore>()(
             showUIControls:
               mergedState.viewSettings?.showUIControls ??
               get().viewSettings.showUIControls,
-            showRoom:
-              mergedState.viewSettings?.showRoom ?? get().viewSettings.showRoom,
+            showRoom: resolveHydratedRoomView({
+              persistedShowRoom:
+                mergedState.viewSettings?.showRoom ??
+                currentRoomViewState.viewSettings.showRoom,
+              currentShowRoom: currentRoomViewState.viewSettings.showRoom,
+              hasUserSelectedRoomView:
+                currentRoomViewState.hasUserSelectedRoomView,
+              viewportWidth: window.innerWidth,
+              pathname: window.location.pathname,
+            }),
             wallColor:
               mergedState.viewSettings?.wallColor ??
               get().viewSettings.wallColor,

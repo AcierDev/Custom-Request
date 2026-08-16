@@ -1,10 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  isMobileViewport,
+  MOBILE_BREAKPOINT_PX,
+} from "../lib/mobileViewport.ts";
 
 // Screens narrower than this are treated as mobile. Matches the
 // breakpoint used by <MobileWarning /> and Tailwind's `lg`.
-export const MOBILE_BREAKPOINT_PX = 1024;
+export { MOBILE_BREAKPOINT_PX };
 
 /**
  * True on viewports narrower than the mobile breakpoint. SSR-safe:
@@ -15,7 +19,7 @@ export function useIsMobile() {
 
   useEffect(() => {
     const check = () =>
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT_PX);
+      setIsMobile(isMobileViewport(window.innerWidth));
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
