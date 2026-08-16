@@ -158,6 +158,7 @@ export default function SharedDesignPage() {
           ) as ShareableState;
           if (!isActive()) return;
           if (loadFromDatabaseData(designData)) {
+            setWallColor(designData.wallColor ?? DEFAULT_WALL_COLOR);
             setSharedDesign({
               shareId,
               designData,
@@ -188,6 +189,7 @@ export default function SharedDesignPage() {
         const data: SharedDesignData = await response.json();
         if (!isActive()) return;
         if (loadFromDatabaseData(data.designData)) {
+          setWallColor(data.designData.wallColor ?? DEFAULT_WALL_COLOR);
           setSharedDesign(data);
         } else {
           setError("notfound");

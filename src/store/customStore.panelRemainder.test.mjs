@@ -78,6 +78,7 @@ registerHooks({
 const { useCustomStore } = await import("./customStore.ts");
 const TRIPTYCH_REMAINDER_MODE = "triptych";
 const RIGHT_TO_LEFT_REMAINDER_MODE = "right-to-left";
+const SELECTED_WALL_COLOR = "#5f6f80";
 const originalState = useCustomStore.getState();
 
 test.beforeEach(() => {
@@ -111,5 +112,26 @@ test("stores and shares the selected panel remainder mode", () => {
   assert.equal(
     useCustomStore.getState().getShareableStateSnapshot().panelRemainderMode,
     RIGHT_TO_LEFT_REMAINDER_MODE,
+  );
+});
+
+test("captures the selected wall color in shared design snapshots", () => {
+  useCustomStore.getState().setWallColor(SELECTED_WALL_COLOR);
+
+  assert.equal(
+    useCustomStore.getState().getShareableStateSnapshot().wallColor,
+    SELECTED_WALL_COLOR,
+  );
+});
+
+test("restores the selected wall color from a regular share link", () => {
+  useCustomStore.getState().setWallColor(SELECTED_WALL_COLOR);
+  const shareLink = useCustomStore.getState().generateShareableLink();
+  useCustomStore.getState().setWallColor(originalState.viewSettings.wallColor);
+
+  assert.equal(useCustomStore.getState().loadFromShareableData(shareLink), true);
+  assert.equal(
+    useCustomStore.getState().viewSettings.wallColor,
+    SELECTED_WALL_COLOR,
   );
 });

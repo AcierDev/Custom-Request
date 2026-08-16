@@ -95,6 +95,7 @@ const PENULTIMATE_LINE_INDEX = 4;
 const LAST_LINE_INDEX = 5;
 const CUSTOM_DESIGN_ID = "custom";
 const PALETTE_PATTERN = "fade";
+const CENTER_PALETTE_PATTERN = "center-fade";
 const COLOR_ENTRIES = [
   ["0", { hex: "#ff0000", name: "Color A" }],
   ["1", { hex: "#0000ff", name: "Color B" }],
@@ -106,13 +107,14 @@ const generatePaletteMap = ({
   orientation,
   isReversed = false,
   blendPercent,
+  colorPattern = PALETTE_PATTERN,
 }) =>
   generateColorMap(
     width,
     height,
     COLOR_ENTRIES,
     orientation,
-    PALETTE_PATTERN,
+    colorPattern,
     isReversed,
     false,
     CUSTOM_DESIGN_ID,
@@ -123,6 +125,28 @@ const generatePaletteMap = ({
     undefined,
     blendPercent,
   );
+
+test("zero-percent centered palette keeps every main band solid", () => {
+  const centeredMap = generatePaletteMap({
+    width: AXIS_LINE_COUNT + 3,
+    height: CROSS_AXIS_LINE_COUNT,
+    orientation: "horizontal",
+    blendPercent: HARD_BLEND_PERCENT,
+    colorPattern: CENTER_PALETTE_PATTERN,
+  });
+
+  assert.deepEqual(uniqueColumnColors(centeredMap), [
+    [COLOR_A_INDEX],
+    [COLOR_A_INDEX],
+    [COLOR_A_INDEX],
+    [COLOR_B_INDEX],
+    [COLOR_B_INDEX],
+    [COLOR_B_INDEX],
+    [COLOR_A_INDEX],
+    [COLOR_A_INDEX],
+    [COLOR_A_INDEX],
+  ]);
+});
 
 const uniqueColumnColors = (colorMap) =>
   colorMap.map((column) => [...new Set(column)].sort());

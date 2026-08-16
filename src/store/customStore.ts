@@ -618,6 +618,7 @@ interface CustomStore extends CustomState {
     panelRemainderMode: PanelRemainderMode;
     squareGapInches: number;
     backboardColor: string | null;
+    wallColor: string;
   };
   createSharedDesign: (
     userId?: string,
@@ -914,6 +915,7 @@ export interface ShareableState {
   panelRemainderMode?: PanelRemainderMode;
   squareGapInches?: number;
   backboardColor?: string | null;
+  wallColor?: string;
 }
 
 const resolveStoredPanelSettings = (
@@ -3014,6 +3016,7 @@ export const useCustomStore = create<CustomStore>()(
           state.viewSettings.squareGapInches,
         ),
         backboardColor: state.viewSettings.backboardColor,
+        wallColor: state.viewSettings.wallColor,
       };
     },
     getShareableDesignData: () => {
@@ -3047,6 +3050,7 @@ export const useCustomStore = create<CustomStore>()(
           state.viewSettings.squareGapInches,
         ),
         backboardColor: state.viewSettings.backboardColor,
+        wallColor: state.viewSettings.wallColor,
       };
     },
     createSharedDesign: async (userId?: string, email?: string) => {
@@ -3210,6 +3214,7 @@ export const useCustomStore = create<CustomStore>()(
           viewSettings: {
             ...state.viewSettings,
             ...sharedPanelSettings,
+            wallColor: shareableState.wallColor ?? DEFAULT_WALL_COLOR,
           },
           patternUndoStack: [],
           patternRedoStack: [],

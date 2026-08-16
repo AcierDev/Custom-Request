@@ -88,6 +88,7 @@ import {
 import { PatternEditor } from "./components/PatternEditor";
 import { PaletteVersionSwitcher } from "./components/PaletteVersionSwitcher";
 import { WallColorPicker } from "@/components/preview/WallColorPicker";
+import { PaintColorPicker } from "@/components/preview/PaintColorPicker";
 import { PatternControls } from "@/components/preview/PatternControls";
 import { PanelLayoutControls } from "@/components/preview/PanelLayoutControls";
 import {
@@ -1115,6 +1116,8 @@ function WallColorControls({
       <div className="p-3 space-y-2">
         <Label className="text-sm text-gray-300">Wall Color</Label>
         <WallColorPicker value={value} onChange={onChange} />
+        <div className="my-3 h-px bg-white/10" />
+        <PaintColorPicker value={value} onChange={onChange} />
       </div>
     </Card>
   );

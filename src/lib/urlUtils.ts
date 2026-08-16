@@ -21,6 +21,7 @@ const SHORT_PANEL_COUNT_KEY = "pc";
 const SHORT_PANEL_SPACING_KEY = "psg";
 const SHORT_PANEL_REMAINDER_MODE_KEY = "prm";
 const SHORT_SQUARE_GAP_KEY = "sqg";
+const SHORT_WALL_COLOR_KEY = "wc";
 const SHORT_BOOLEAN_FALSE = 0;
 const SHORT_BOOLEAN_TRUE = 1;
 
@@ -213,6 +214,9 @@ export const generateShortShareableUrl = (stateData: any): string => {
   if (typeof stateData.squareGapInches === "number") {
     minimalState[SHORT_SQUARE_GAP_KEY] = stateData.squareGapInches;
   }
+  if (typeof stateData.wallColor === "string") {
+    minimalState[SHORT_WALL_COLOR_KEY] = stateData.wallColor;
+  }
   if (stateData.drawnPatternGrid && stateData.drawnPatternGridSize) {
     minimalState[SHORT_DRAWN_PATTERN_GRID_KEY] = stateData.drawnPatternGrid;
     minimalState[SHORT_DRAWN_PATTERN_SIZE_KEY] = [
@@ -359,6 +363,9 @@ export const extractStateFromShortUrl = <T>(compressedData: string): T => {
     }
     if (minimalState[SHORT_SQUARE_GAP_KEY] !== undefined) {
       fullState.squareGapInches = minimalState[SHORT_SQUARE_GAP_KEY];
+    }
+    if (minimalState[SHORT_WALL_COLOR_KEY] !== undefined) {
+      fullState.wallColor = minimalState[SHORT_WALL_COLOR_KEY];
     }
     if (
       minimalState[SHORT_DRAWN_PATTERN_GRID_KEY] &&

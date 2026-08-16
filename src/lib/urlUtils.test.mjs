@@ -14,6 +14,9 @@ const LONG_SQUARE_GAP_KEY = "squareGapInches";
 const RIGHT_TO_LEFT_REMAINDER_MODE = "right-to-left";
 const SHORT_PANEL_REMAINDER_MODE_KEY = "prm";
 const LONG_PANEL_REMAINDER_MODE_KEY = "panelRemainderMode";
+const SELECTED_WALL_COLOR = "#5f6f80";
+const SHORT_WALL_COLOR_KEY = "wc";
+const LONG_WALL_COLOR_KEY = "wallColor";
 
 test("round-trips square spacing through the compact share URL", () => {
   const generatedUrl = generateShortShareableUrl({
@@ -53,4 +56,21 @@ test("round-trips the panel remainder mode through the compact share URL", () =>
     compactJson,
     new RegExp(`"${LONG_PANEL_REMAINDER_MODE_KEY}"`),
   );
+});
+
+test("round-trips wall color through the compact share URL", () => {
+  const generatedUrl = generateShortShareableUrl({
+    wallColor: SELECTED_WALL_COLOR,
+  });
+  const compressed = new URL(generatedUrl, TEST_ORIGIN).searchParams.get(
+    SHORT_STATE_PARAM,
+  );
+
+  assert.ok(compressed);
+  const decoded = extractStateFromShortUrl(compressed);
+  assert.equal(decoded.wallColor, SELECTED_WALL_COLOR);
+
+  const compactJson = decompressJsonFromUrl(compressed);
+  assert.match(compactJson, new RegExp(`"${SHORT_WALL_COLOR_KEY}"`));
+  assert.doesNotMatch(compactJson, new RegExp(`"${LONG_WALL_COLOR_KEY}"`));
 });

@@ -882,7 +882,7 @@ export function generateColorMap(
       adjustedModelWidth,
       adjustedModelHeight,
       effectiveOrientation,
-      PALETTE_BLEND_CONFIG.defaultPercent,
+      paletteBlend,
     );
   } else if (colorPattern === "scatter") {
     // Scatter pattern with mass conservation (1-to-1 swaps)
