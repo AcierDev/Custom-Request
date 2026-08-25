@@ -25,13 +25,9 @@ import {
   SharedMobilePanelHeader,
   type SharedMobilePanel,
 } from "./SharedMobilePanelNavigation";
-import { LightingControls } from "@/components/preview/LightingControls";
-import { PatternControls } from "@/components/preview/PatternControls";
+import { SharedViewerEditPanel } from "./SharedViewerEditPanel";
 import type { TimeOfDay } from "@/components/preview/RotatableLighting";
 import { DEFAULT_WALL_COLOR } from "@/components/preview/wallColors";
-import { WallColorPicker } from "@/components/preview/WallColorPicker";
-import { PaintColorPicker } from "@/components/preview/PaintColorPicker";
-import { SizeCard } from "@/components/cards/SizeCard";
 import { DESIGN_COLORS } from "@/typings/color-maps";
 import { ItemDesigns } from "@/typings/types";
 import { useIsMobile } from "@/hooks/useIsMobile";
@@ -65,6 +61,11 @@ const PHONE_LANDSCAPE_CTA_CLASS =
   "pointer-events-none fixed inset-y-0 left-[max(0.75rem,env(safe-area-inset-left))] flex w-[20vw] items-center";
 const PHONE_LANDSCAPE_AR_CLASS =
   "px-2 text-[10px] leading-tight [&_svg]:hidden [&_span]:whitespace-normal";
+const SHARED_EDIT_PANEL_DESKTOP_WIDTH_CLASS = "w-80";
+const SHARED_MOBILE_SHEET_CLASS =
+  "fixed inset-x-2 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-50 max-h-[76dvh] overflow-hidden rounded-[1.6rem] border border-white/[0.12] bg-[rgba(9,10,13,0.92)] shadow-[0_28px_90px_rgba(0,0,0,0.52)] backdrop-blur-2xl backdrop-saturate-150";
+const SHARED_MOBILE_SHEET_CONTENT_CLASS =
+  "max-h-[calc(76dvh-4.5rem)] overflow-y-auto px-2 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 no-scrollbar";
 // Only show the view count once it reads as real social proof, never
 // "Viewed 1 time".
 const VIEW_COUNT_THRESHOLD = 5;
@@ -323,13 +324,16 @@ export default function SharedDesignPage() {
             animate={reducedMotion ? undefined : { opacity: 1, y: 0 }}
             exit={reducedMotion ? undefined : { opacity: 0, y: -8 }}
             transition={{ duration: 0.3, delay: 0.05 }}
-            className="absolute top-5 right-5 z-40 w-72 max-h-[calc(100dvh-2.5rem)] overflow-y-auto no-scrollbar"
+            className={cn(
+              "absolute top-5 right-5 z-40 max-h-[calc(100dvh-2.5rem)] overflow-y-auto no-scrollbar",
+              SHARED_EDIT_PANEL_DESKTOP_WIDTH_CLASS,
+            )}
           >
-            <ViewingControls
+            <SharedViewerEditPanel
               timeOfDay={timeOfDay}
-              onTimeOfDay={setTimeOfDay}
+              onTimeOfDayChange={setTimeOfDay}
               wallColor={wallColor}
-              onWallColor={setWallColor}
+              onWallColorChange={setWallColor}
             />
           </motion.div>
         )}
@@ -440,7 +444,7 @@ export default function SharedDesignPage() {
               onClick={() => setSheetOpen(false)}
             />
             <motion.div
-              className="fixed inset-x-2 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-50 max-h-[74dvh] overflow-hidden rounded-2xl border border-white/12 bg-[rgba(20,18,16,0.82)] shadow-2xl backdrop-blur-xl"
+              className={SHARED_MOBILE_SHEET_CLASS}
               initial={{ y: "105%" }}
               animate={{ y: 0 }}
               exit={{ y: "105%" }}
@@ -450,38 +454,41 @@ export default function SharedDesignPage() {
                 panel={sheetTab}
                 onClose={() => setSheetOpen(false)}
               />
-              <div className="max-h-[calc(74dvh-3.25rem)] overflow-y-auto p-4 no-scrollbar">
+              <div className={SHARED_MOBILE_SHEET_CONTENT_CLASS}>
                 {sheetTab === "about" ? (
-                  <Placard
-                    name={pieceName}
-                    width={dimensions.width}
-                    height={dimensions.height}
-                    palette={palette}
-                    createdAt={sharedDesign.createdAt}
-                    accessCount={sharedDesign.accessCount}
-                    bare
-                    reducedMotion={reducedMotion}
-                    footerAction={
-                      <button
-                        type="button"
-                        onClick={handleCopyLink}
-                        className="inline-flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-slate-200"
-                      >
-                        {copied ? (
-                          <Check className="h-3.5 w-3.5" />
-                        ) : (
-                          <Copy className="h-3.5 w-3.5" />
-                        )}
-                        {copied ? "Copied" : "Copy link"}
-                      </button>
-                    }
-                  />
+                  <div className="px-2 py-2">
+                    <Placard
+                      name={pieceName}
+                      width={dimensions.width}
+                      height={dimensions.height}
+                      palette={palette}
+                      createdAt={sharedDesign.createdAt}
+                      accessCount={sharedDesign.accessCount}
+                      bare
+                      reducedMotion={reducedMotion}
+                      footerAction={
+                        <button
+                          type="button"
+                          onClick={handleCopyLink}
+                          className="inline-flex min-h-9 items-center gap-1.5 rounded-full px-2 text-[11px] text-slate-400 transition-colors hover:bg-white/[0.05] hover:text-slate-200"
+                        >
+                          {copied ? (
+                            <Check className="h-3.5 w-3.5" />
+                          ) : (
+                            <Copy className="h-3.5 w-3.5" />
+                          )}
+                          {copied ? "Copied" : "Copy link"}
+                        </button>
+                      }
+                    />
+                  </div>
                 ) : (
-                  <ViewingControls
+                  <SharedViewerEditPanel
                     timeOfDay={timeOfDay}
-                    onTimeOfDay={setTimeOfDay}
+                    onTimeOfDayChange={setTimeOfDay}
                     wallColor={wallColor}
-                    onWallColor={setWallColor}
+                    onWallColorChange={setWallColor}
+                    compactHeader
                   />
                 )}
               </div>
@@ -637,39 +644,6 @@ function PaletteStory({
       <p className="text-[11px] text-slate-500">
         {palette.length} solid hardwood tone{palette.length === 1 ? "" : "s"}
       </p>
-    </div>
-  );
-}
-
-//╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
-//║ ⚙️ VIEWING CONTROLS — lighting + wall color                          ║
-//╚═══╝ ════════════════════════════════════════════════════════════════ ╚═══╝
-
-function ViewingControls({
-  timeOfDay,
-  onTimeOfDay,
-  wallColor,
-  onWallColor,
-}: {
-  timeOfDay: TimeOfDay;
-  onTimeOfDay: (v: TimeOfDay) => void;
-  wallColor: string;
-  onWallColor: (v: string) => void;
-}) {
-  return (
-    <div className="space-y-3">
-      <div className="glass-surface rounded-[0.7rem] p-3 shadow-lg">
-        <div className="mb-2 text-sm text-slate-300">See it at another size</div>
-        <SizeCard compact bare labelMode="physical" />
-      </div>
-      <PatternControls />
-      <LightingControls value={timeOfDay} onChange={onTimeOfDay} />
-      <div className="glass-surface rounded-[0.7rem] p-3 shadow-lg">
-        <div className="mb-2 text-sm text-slate-300">Try it on your wall</div>
-        <WallColorPicker value={wallColor} onChange={onWallColor} />
-        <div className="my-3 h-px bg-white/10" />
-        <PaintColorPicker value={wallColor} onChange={onWallColor} />
-      </div>
     </div>
   );
 }

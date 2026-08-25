@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { nanoid } from "nanoid";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -81,6 +81,7 @@ import {
 } from "./paintEstimate";
 import { ColorHarmonyGenerator } from "./ColorHarmonyGenerator";
 import { VersionHistoryDialog } from "../PaletteList/VersionHistoryDialog";
+import { createDeferredColorDeletionQueue } from "./deferredColorDeletion";
 
 // Hex -> readable RGB / HSL strings for the color info readout.
 function describeColor(hex: string): { rgb: string; hsl: string } | null {
@@ -150,7 +151,6 @@ export function PaletteManager() {
     customPalette,
     selectedColors,
     addCustomColor,
-    removeCustomColor,
     duplicateCustomColor,
     toggleColorSelection,
     clearSelectedColors,
@@ -171,6 +171,41 @@ export function PaletteManager() {
   const [mixScope, setMixScope] = useState<MixScope>(DEFAULT_MIX_SCOPE);
   const [deleteMode, setDeleteMode] = useState(false);
   const [deleteSelected, setDeleteSelected] = useState<string[]>([]);
+  const [pendingDeleteIds, setPendingDeleteIds] = useState<string[]>([]);
+  const deferredDeleteQueueRef = useRef<ReturnType<
+    typeof createDeferredColorDeletionQueue
+  > | null>(null);
+
+  if (!deferredDeleteQueueRef.current) {
+    deferredDeleteQueueRef.current = createDeferredColorDeletionQueue({
+      onPendingChange: setPendingDeleteIds,
+      onCommit: (ids) => {
+        const store = useCustomStore.getState();
+        const pendingIdSet = new Set(ids);
+        const nextPalette = store.customPalette.filter(
+          (color) => !pendingIdSet.has(color.id),
+        );
+        const removedCount = store.customPalette.length - nextPalette.length;
+
+        if (removedCount === 0) return;
+
+        if (nextPalette.length === 0) {
+          store.resetPaletteEditor();
+        } else {
+          store.setCustomPalette(nextPalette);
+          useCustomStore.setState((state) => ({
+            selectedColors: state.selectedColors.filter(
+              (id) => !pendingIdSet.has(id),
+            ),
+          }));
+        }
+
+        toast.success(
+          `Deleted ${removedCount} ${removedCount === 1 ? "color" : "colors"}`,
+        );
+      },
+    });
+  }
   // Index of the last swatch toggled in delete mode — anchor for
   // shift-click range selection.
   const [deleteAnchor, setDeleteAnchor] = useState<number | null>(null);
@@ -190,6 +225,17 @@ export function PaletteManager() {
       localStorage.getItem("hasSeenBlendingGuide") === "true",
   );
   const [showHarmonyGenerator, setShowHarmonyGenerator] = useState(false);
+  const pendingDeleteIdSet = useMemo(
+    () => new Set(pendingDeleteIds),
+    [pendingDeleteIds],
+  );
+
+  useEffect(
+    () => () => {
+      deferredDeleteQueueRef.current?.dispose();
+    },
+    [],
+  );
 
   // Palette-wide parts-per-paint so each color's recipe can flag paints
   // that are used heavily across other colors (white/black excluded).
@@ -966,6 +1012,7 @@ export function PaletteManager() {
                         paintAmount={paintAmount ?? undefined}
                         handMix={color.handMix}
                         index={index}
+                        isPendingRemoval={pendingDeleteIdSet.has(color.id)}
                         isSelected={
                           (mixMode &&
                             mixScope === "pair" &&
@@ -991,7 +1038,9 @@ export function PaletteManager() {
                             handleEditColor(index);
                           }
                         }}
-                        onRemove={() => removeCustomColor(index)}
+                        onRemove={() =>
+                          deferredDeleteQueueRef.current?.queue(color.id)
+                        }
                         onEdit={() => handleEditColor(index)}
                         onDuplicate={() => handleDuplicateColor(index)}
                         showBlendHint={

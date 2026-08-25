@@ -1,0 +1,1 @@
+{"duration_seconds": 1.612791, "finished_at": "2026-08-05T01:24:40.330979+00:00", "job": "smoke_box", "request_id": "install_smoke_box", "result": {"body_count": 1, "body_name": "Fusion Bridge Smoke Box", "depth_mm": 30.0, "height_mm": 10.0, "width_mm": 40.0}, "started_at": "2026-08-05T01:24:38.718187+00:00", "status": "success"}

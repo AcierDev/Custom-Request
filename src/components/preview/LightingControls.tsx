@@ -1,92 +1,78 @@
 "use client";
 
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { motion } from "framer-motion";
-import { Sunset, Moon } from "lucide-react";
-import { cn } from "@/lib/utils";
+import type { LucideIcon } from "lucide-react";
+import { Moon, SunMedium, Sunset } from "lucide-react";
+import {
+  ViewerControlHeader,
+  ViewerControlSurface,
+  ViewerControlTile,
+} from "./ViewerControlSurface";
 
 type TimeOfDay = "morning" | "afternoon" | "night";
 
 interface LightingControlsProps {
   value: TimeOfDay;
   onChange: (value: TimeOfDay) => void;
+  embedded?: boolean;
 }
 
-export function LightingControls({ value, onChange }: LightingControlsProps) {
-  const options = [
-    {
-      value: "afternoon" as TimeOfDay,
-      label: "Afternoon",
-      icon: Sunset,
-      description: "Warm, golden light from above",
-    },
-    {
-      value: "night" as TimeOfDay,
-      label: "Night",
-      icon: Moon,
-      description: "Soft, diffused evening light",
-    },
-  ];
+interface LightingOption {
+  value: TimeOfDay;
+  label: string;
+  description: string;
+  Icon: LucideIcon;
+}
 
-  const selectedIndex = Math.max(
-    0,
-    options.findIndex((o) => o.value === value)
+const LIGHTING_OPTIONS: readonly LightingOption[] = [
+  {
+    value: "afternoon",
+    label: "Afternoon",
+    Icon: Sunset,
+    description: "Warm, directional daylight",
+  },
+  {
+    value: "night",
+    label: "Night",
+    Icon: Moon,
+    description: "Soft, diffused evening light",
+  },
+];
+
+export function LightingControls({
+  value,
+  onChange,
+  embedded = false,
+}: LightingControlsProps) {
+  const choices = (
+    <div role="group" aria-label="Lighting" className="grid grid-cols-2 gap-2">
+      {LIGHTING_OPTIONS.map(({ value: optionValue, label, description, Icon }) => {
+        const selected = value === optionValue;
+        return (
+          <ViewerControlTile
+            key={optionValue}
+            selected={selected}
+            onClick={() => onChange(optionValue)}
+            className="min-w-0 justify-start px-2.5 text-left"
+            title={description}
+          >
+            <Icon className="h-4 w-4 shrink-0" />
+            <span className="min-w-0 truncate text-xs">{label}</span>
+          </ViewerControlTile>
+        );
+      })}
+    </div>
   );
 
-  return (
-    <Card className="glass-surface shadow-lg">
-      <CardHeader className="pb-1.5 pt-2.5 px-3">
-        <CardTitle className="text-sm font-medium">Lighting</CardTitle>
-      </CardHeader>
-      <CardContent className="px-2 pb-2 pt-0">
-        <div className="relative">
-          {/* Single travelling selection outline, layered above the
-              buttons so it never slides behind an intermediate row. */}
-          <motion.div
-            aria-hidden
-            className="absolute inset-x-0 top-0 h-10 rounded-md border-2 border-indigo-400/70 ring-1 ring-indigo-400/30 bg-indigo-500/5 pointer-events-none z-10"
-            animate={{ y: selectedIndex * 44 }}
-            transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-          />
-          <div className="flex flex-col gap-1">
-            {options.map((option) => {
-              const Icon = option.icon;
-              const isSelected = value === option.value;
+  if (embedded) return choices;
 
-              return (
-                <Button
-                  key={option.value}
-                  variant="outline"
-                  size="sm"
-                  className="group justify-start h-10 py-0 px-2"
-                  onClick={() => onChange(option.value)}
-                  title={option.description}
-                >
-                  <div className="flex items-center gap-2 w-full">
-                    <div
-                      className={cn(
-                        "p-1 rounded-full shrink-0",
-                        isSelected
-                          ? "bg-indigo-500/20 text-indigo-200"
-                          : "bg-gray-800 text-gray-400"
-                      )}
-                    >
-                      <Icon className="w-3.5 h-3.5" />
-                    </div>
-                    <div className="text-left min-w-0">
-                      <div className="font-medium text-sm leading-tight">
-                        {option.label}
-                      </div>
-                    </div>
-                  </div>
-                </Button>
-              );
-            })}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+  return (
+    <ViewerControlSurface ariaLabel="Lighting">
+      <ViewerControlHeader
+        title="Lighting"
+        description="Preview the finish in a different mood"
+        icon={SunMedium}
+      />
+      <div className="p-4">{choices}</div>
+    </ViewerControlSurface>
   );
 }

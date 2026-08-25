@@ -4,7 +4,6 @@ import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useStore } from "zustand";
 import { toast } from "@/lib/toast";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import {
@@ -17,11 +16,9 @@ import {
 } from "@/store/customStore";
 import { getColorEntries } from "@/components/preview/patternUtils";
 import {
-  ChevronRight,
   ChevronDown,
   Eraser,
   RotateCcw,
-  Palette,
   MousePointer,
   ArrowUp,
   ArrowRight,
@@ -43,6 +40,11 @@ import { DEFAULT_BACKBOARD_PICKER_COLOR } from "@/lib/backboardColor";
 import { AiPatternPrompt } from "./AiPatternPrompt";
 import { PatternHistoryControls } from "./PatternHistoryControls";
 import { WavePatternOption } from "./WavePatternOption";
+import { PatternEditorSurface } from "./PatternEditorSurface";
+import {
+  ViewerControlTile,
+  ViewerValueBadge,
+} from "@/components/preview/ViewerControlSurface";
 
 interface PatternEditorProps {
   className?: string;
@@ -90,6 +92,11 @@ const CONTEXT_MENU_HEIGHT_PX = 40;
 const CONTEXT_MENU_VIEWPORT_GAP_PX = 8;
 const CONTEXT_MENU_ANCHOR_DIVISOR = 2;
 const DEFAULT_PATTERN_EDITOR_COLLAPSED = false;
+const EDITOR_SECTION_CLASS =
+  "rounded-2xl border border-white/[0.07] bg-black/15 p-3 shadow-inner shadow-black/15";
+const EDITOR_SECTION_LABEL_CLASS =
+  "text-[0.68rem] font-semibold uppercase tracking-[0.1em] text-slate-400";
+const EDITOR_ICON_TILE_CLASS = "h-10 min-h-10 w-10 px-0";
 const TOOL_INSTRUCTIONS: Record<PatternEditingMode["tool"], string> = {
   none: "Select a color, direction, or visibility tool to start editing",
   color: "Click or drag across squares to paint them",
@@ -484,66 +491,34 @@ export function PatternEditor({ className }: PatternEditorProps) {
         `Color ${replaceSourceIndex + HUMAN_INDEX_OFFSET}`;
 
   return (
-    <Card
-      className={cn(
-        "glass-surface rounded-[0.7rem] shadow-xl transition-all duration-200",
-        className,
-      )}
+    <PatternEditorSurface
+      active={isPatternEditorActive}
+      collapsed={isCollapsed}
+      contentId={PATTERN_EDITOR_CONTENT_ID}
+      onCollapseToggle={handleCollapseToggle}
+      className={cn("transition-all duration-200", className)}
     >
-      <div>
-        {/* Header */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleCollapseToggle}
-          aria-expanded={!isCollapsed}
-          aria-controls={PATTERN_EDITOR_CONTENT_ID}
-          className="h-auto w-full justify-between rounded-[0.7rem] p-4 text-gray-200 hover:bg-gray-900/40 hover:text-white"
-        >
-          <div className="flex items-center gap-2">
-            <Palette className="w-4 h-4" />
-            <span className="text-sm font-medium">Pattern Editor</span>
-            {isPatternEditorActive && (
-              <div
-                className="w-2 h-2 bg-green-500 rounded-full"
-                title="Editor Active"
-              />
-            )}
-          </div>
-          {isCollapsed ? (
-            <ChevronRight className="w-4 h-4" />
-          ) : (
-            <ChevronDown className="w-4 h-4" />
-          )}
-        </Button>
-
-        {/* Collapsible Content */}
-        {!isCollapsed && (
-          <div
-            id={PATTERN_EDITOR_CONTENT_ID}
-            className="space-y-4 px-4 pb-4 pt-2"
-          >
+      <div className="space-y-3 p-3">
             <AiPatternPrompt />
 
             {/* Enable/Disable Toggle */}
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-gray-400">
+            <div className={cn(EDITOR_SECTION_CLASS, "flex items-center justify-between gap-3")}>
+              <span className={EDITOR_SECTION_LABEL_CLASS}>
                 Editor Status
               </span>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
                 <Button
                   size="sm"
                   variant="ghost"
                   onClick={handleClearAll}
                   disabled={!modifiedSquareCount}
-                  className="h-6 px-2 text-xs text-gray-400 hover:text-gray-200"
+                  className="h-9 rounded-xl px-2.5 text-[0.68rem] text-slate-500 hover:bg-white/[0.05] hover:text-slate-200"
                 >
-                  <RotateCcw className="w-3 h-3 mr-1" />
+                  <RotateCcw className="mr-1 h-3 w-3" />
                   Reset All
                 </Button>
-                <Button
-                  size="sm"
-                  variant={isPatternEditorActive ? "default" : "outline"}
+                <ViewerControlTile
+                  selected={isPatternEditorActive}
                   onClick={() => {
                     cancelReplaceMode();
                     if (isPatternEditorActive) {
@@ -553,50 +528,46 @@ export function PatternEditor({ className }: PatternEditorProps) {
                       setIsPatternEditorActive(true);
                     }
                   }}
-                  className={cn(
-                    "h-6 px-2 text-xs",
-                    isPatternEditorActive
-                      ? "bg-green-600 hover:bg-green-700 text-white"
-                      : "text-gray-400 hover:text-gray-200",
-                  )}
+                  className="h-9 min-h-9 px-3 text-[0.68rem]"
                 >
                   {isPatternEditorActive ? "Active" : "Inactive"}
-                </Button>
+                </ViewerControlTile>
               </div>
             </div>
 
             {/* Area Brush */}
-            <div className="space-y-2">
+            <div
+              className={cn(EDITOR_SECTION_CLASS, "space-y-3")}
+              role="group"
+              aria-label="Area brush"
+            >
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-gray-400">Area</span>
+                <span className={EDITOR_SECTION_LABEL_CLASS}>Area brush</span>
                 {sizedBrushShape && (
-                  <span className="text-[0.7rem] text-gray-500">
-                    {sizedBrushShape === "square"
-                      ? `${activeBrushSize} × ${activeBrushSize}`
-                      : `${activeBrushSize} squares`}
-                  </span>
+                  <ViewerValueBadge
+                    label="Brush size"
+                    value={
+                      sizedBrushShape === "square"
+                        ? `${activeBrushSize} × ${activeBrushSize}`
+                        : `${activeBrushSize} squares`
+                    }
+                  />
                 )}
               </div>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="grid grid-cols-5 gap-1.5">
                 {BRUSH_OPTIONS.map(({ shape, label, Icon }) => {
                   const isSelected = patternBrush.shape === shape;
                   return (
-                    <button
-                      type="button"
+                    <ViewerControlTile
                       key={shape}
-                      className={cn(
-                        "w-8 h-8 rounded-lg border-2 flex items-center justify-center transition-all duration-200 hover:scale-105",
-                        isSelected
-                          ? "border-indigo-400 bg-indigo-500/20 ring-2 ring-indigo-400/30 shadow-md"
-                          : "border-white/15 bg-gray-800 hover:border-white/30",
-                      )}
+                      selected={isSelected}
+                      className="h-10 min-h-10 min-w-0 px-0"
                       onClick={() => setPatternBrushShape(shape)}
                       title={label}
                       aria-label={label}
-                      aria-pressed={isSelected}
                     >
-                      <Icon className="w-4 h-4 text-gray-200" />
-                    </button>
+                      <Icon className="h-4 w-4" />
+                    </ViewerControlTile>
                   );
                 })}
               </div>
@@ -614,14 +585,17 @@ export function PatternEditor({ className }: PatternEditorProps) {
                       ? "Square area size"
                       : "Circle area diameter"
                   }
+                  trackClassName="h-1 bg-white/[0.08]"
+                  rangeClassName="bg-white/80"
+                  thumbClassName="border-white/70 bg-slate-950"
                 />
               )}
             </div>
 
             {/* Color Palette */}
-            <div className="space-y-2">
+            <div className={cn(EDITOR_SECTION_CLASS, "space-y-3")}>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-medium text-gray-400">
+                <span className={EDITOR_SECTION_LABEL_CLASS}>
                   Colors
                 </span>
                 <Button
@@ -629,10 +603,10 @@ export function PatternEditor({ className }: PatternEditorProps) {
                   variant={isReplaceMode ? "ghost" : "outline"}
                   size="sm"
                   className={cn(
-                    "h-7 px-2 text-xs",
+                    "h-9 rounded-xl border px-2.5 text-[0.68rem]",
                     isReplaceMode
-                      ? "text-red-300 hover:bg-red-900/20 hover:text-red-200"
-                      : "border-white/15 bg-gray-900/40 text-gray-300 hover:text-white",
+                      ? "border-rose-300/20 bg-rose-400/10 text-rose-200 hover:bg-rose-400/15"
+                      : "border-white/[0.09] bg-white/[0.035] text-slate-400 hover:border-white/[0.18] hover:bg-white/[0.07] hover:text-white",
                   )}
                   disabled={distinctColorCount < MINIMUM_REPLACE_COLOR_COUNT}
                   onClick={handleReplaceToggle}
@@ -642,7 +616,7 @@ export function PatternEditor({ className }: PatternEditorProps) {
                 </Button>
               </div>
               {colorEntries.length ? (
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-2">
                   {colorEntries.map(([key, colorInfo], index) => {
                     const isSelected =
                       !isReplaceMode &&
@@ -664,12 +638,12 @@ export function PatternEditor({ className }: PatternEditorProps) {
                         type="button"
                         key={key}
                         className={cn(
-                          "group relative w-7 h-7 rounded-lg border-2 transition-all duration-200 hover:scale-105 hover:shadow-md",
+                          "group relative h-9 w-9 rounded-xl border-2 outline-none transition-[border-color,box-shadow,transform] duration-200 hover:scale-105 hover:shadow-md focus-visible:ring-2 focus-visible:ring-amber-100/60",
                           isReplaceSource
                             ? "border-amber-300 ring-2 ring-amber-300/40 shadow-md"
                             : isSelected
-                              ? "border-indigo-400 ring-2 ring-indigo-400/30 shadow-md"
-                              : "border-white/15 hover:border-white/30",
+                              ? "border-white ring-2 ring-white/20 shadow-md"
+                              : "border-white/15 hover:border-white/35",
                         )}
                         style={{ backgroundColor: colorInfo.hex }}
                         onClick={() => handleColorSelect(index)}
@@ -750,7 +724,7 @@ export function PatternEditor({ className }: PatternEditorProps) {
                     id={COLOR_CONTEXT_MENU_ID}
                     role="menu"
                     aria-label={`Actions for ${colorContextMenu.colorLabel}`}
-                    className="fixed z-50 min-w-40 rounded-md border border-white/15 bg-slate-950 p-1 text-slate-100 shadow-xl"
+                    className="fixed z-50 min-w-40 rounded-xl border border-white/[0.12] bg-slate-950/95 p-1.5 text-slate-100 shadow-2xl backdrop-blur-xl"
                     style={{
                       left: colorContextMenu.left,
                       top: colorContextMenu.top,
@@ -760,7 +734,7 @@ export function PatternEditor({ className }: PatternEditorProps) {
                       ref={contextMenuActionRef}
                       type="button"
                       role="menuitem"
-                      className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm text-red-300 outline-none hover:bg-red-900/30 focus:bg-red-900/30 focus:text-red-200"
+                      className="flex min-h-10 w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-rose-300 outline-none hover:bg-rose-900/30 focus:bg-rose-900/30 focus:text-rose-200"
                       onClick={handleDeleteColor}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -772,7 +746,7 @@ export function PatternEditor({ className }: PatternEditorProps) {
               {isReplaceMode && (
                 <div
                   role="status"
-                  className="rounded-md border border-amber-300/20 bg-amber-300/10 px-2 py-1.5 text-[0.7rem] text-amber-100"
+                  className="rounded-xl border border-amber-200/15 bg-amber-100/[0.07] px-3 py-2 text-[0.68rem] leading-4 text-amber-100"
                 >
                   {replaceSourceLabel
                     ? `2. Select the replacement for ${replaceSourceLabel} on the artwork or palette`
@@ -782,9 +756,9 @@ export function PatternEditor({ className }: PatternEditorProps) {
             </div>
 
             {/* Square Direction */}
-            <div className="space-y-2">
+            <div className={cn(EDITOR_SECTION_CLASS, "space-y-3")}>
               <div className={DIRECTION_HEADER_CLASS}>
-                <span className="text-xs font-medium text-gray-400">
+                <span className={EDITOR_SECTION_LABEL_CLASS}>
                   Direction (raised edge)
                 </span>
                 <Button
@@ -793,7 +767,7 @@ export function PatternEditor({ className }: PatternEditorProps) {
                   size="sm"
                   className={cn(
                     COMPACT_ACTION_BUTTON_CLASS,
-                    "text-gray-400 hover:text-gray-200",
+                    "rounded-lg text-slate-500 hover:bg-white/[0.05] hover:text-slate-200",
                   )}
                   disabled={!Object.keys(patternDirectionOverride).length}
                   onClick={handleResetDirections}
@@ -803,41 +777,41 @@ export function PatternEditor({ className }: PatternEditorProps) {
                   Reset directions
                 </Button>
               </div>
-              <div className="flex flex-wrap gap-1.5">
+              <div
+                role="radiogroup"
+                aria-label="Raised edge direction"
+                className="grid grid-cols-4 gap-1.5"
+              >
                 {DIRECTION_OPTIONS.map(({ direction, label, Icon }) => {
                   const isSelected =
                     patternEditingMode.tool === "direction" &&
                     patternEditingMode.selectedDirection === direction;
 
                   return (
-                    <button
-                      type="button"
+                    <ViewerControlTile
                       key={direction}
-                      className={cn(
-                        "w-8 h-8 rounded-lg border-2 flex items-center justify-center transition-all duration-200 hover:scale-105",
-                        isSelected
-                          ? "border-indigo-400 bg-indigo-500/20 ring-2 ring-indigo-400/30 shadow-md"
-                          : "border-white/15 bg-gray-800 hover:border-white/30",
-                      )}
+                      role="radio"
+                      aria-checked={isSelected}
+                      selected={isSelected}
+                      className={EDITOR_ICON_TILE_CLASS}
                       onClick={() => handleDirectionSelect(direction)}
                       title={`Raised edge ${label.toLowerCase()}`}
                       aria-label={`Set raised edge ${label.toLowerCase()}`}
-                      aria-pressed={isSelected}
                     >
-                      <Icon className="w-4 h-4 text-gray-200" />
-                    </button>
+                      <Icon className="h-4 w-4" />
+                    </ViewerControlTile>
                   );
                 })}
               </div>
             </div>
 
             {/* Square Visibility */}
-            <div className="flex items-center justify-between gap-3">
+            <div className={cn(EDITOR_SECTION_CLASS, "flex items-center justify-between gap-3")}>
               <div>
-                <p className="text-xs font-medium text-gray-400">
+                <p className={EDITOR_SECTION_LABEL_CLASS}>
                   Hide squares
                 </p>
-                <p className="text-[0.7rem] text-gray-500">
+                <p className="mt-1 text-[0.66rem] leading-4 text-slate-500">
                   Remove squares while keeping their spots editable
                 </p>
               </div>
@@ -848,7 +822,7 @@ export function PatternEditor({ className }: PatternEditorProps) {
                   size="sm"
                   className={cn(
                     COMPACT_ACTION_BUTTON_CLASS,
-                    "text-gray-400 hover:text-gray-200",
+                    "rounded-lg text-slate-500 hover:bg-white/[0.05] hover:text-slate-200",
                   )}
                   disabled={!Object.keys(patternHiddenOverride).length}
                   onClick={clearPatternHiddenOverride}
@@ -857,63 +831,52 @@ export function PatternEditor({ className }: PatternEditorProps) {
                   <RotateCcw className={COMPACT_ACTION_ICON_CLASS} />
                   Show all
                 </Button>
-                <button
-                  type="button"
-                  className={cn(
-                    "w-8 h-8 rounded-lg border-2 flex items-center justify-center transition-all duration-200 hover:scale-105",
-                    patternEditingMode.tool === "hide"
-                      ? "border-indigo-400 bg-indigo-500/20 ring-2 ring-indigo-400/30 shadow-md"
-                      : "border-white/15 bg-gray-800 hover:border-white/30",
-                  )}
+                <ViewerControlTile
+                  selected={patternEditingMode.tool === "hide"}
+                  className={EDITOR_ICON_TILE_CLASS}
                   onClick={handleHideToggle}
                   title="Hide selected squares"
                   aria-label="Hide selected area"
-                  aria-pressed={patternEditingMode.tool === "hide"}
                 >
-                  <EyeOff className="w-4 h-4 text-gray-300" />
-                </button>
+                  <EyeOff className="h-4 w-4" />
+                </ViewerControlTile>
               </div>
             </div>
 
             {/* Reset Tool */}
-            <div className="flex items-center justify-between">
+            <div className={cn(EDITOR_SECTION_CLASS, "flex items-center justify-between gap-3")}>
               <div>
-                <p className="text-xs font-medium text-gray-400">Reset area</p>
-                <p className="text-[0.7rem] text-gray-500">
+                <p className={EDITOR_SECTION_LABEL_CLASS}>Reset area</p>
+                <p className="mt-1 text-[0.66rem] leading-4 text-slate-500">
                   Restore its generated color, direction, and visibility
                 </p>
               </div>
-              <button
-                type="button"
-                className={cn(
-                  "w-8 h-8 rounded-lg border-2 flex items-center justify-center transition-all duration-200 hover:scale-105",
-                  patternEditingMode.tool === "eraser"
-                    ? "border-red-400 bg-red-900/20 ring-2 ring-red-400/30 shadow-md"
-                    : "border-white/15 bg-gray-800 hover:border-white/30",
-                )}
+              <ViewerControlTile
+                selected={patternEditingMode.tool === "eraser"}
+                tone="danger"
+                className={EDITOR_ICON_TILE_CLASS}
                 onClick={handleEraserToggle}
                 title="Reset squares to the generated pattern"
                 aria-label="Reset selected area"
-                aria-pressed={patternEditingMode.tool === "eraser"}
               >
-                <Eraser className="w-4 h-4 text-gray-300" />
-              </button>
+                <Eraser className="h-4 w-4" />
+              </ViewerControlTile>
             </div>
 
             <PatternHistoryControls />
 
             {/* Extra Options */}
-            <div className="overflow-hidden rounded-xl border border-white/10 bg-slate-950/30">
+            <div className="overflow-hidden rounded-2xl border border-white/[0.07] bg-black/15 shadow-inner shadow-black/15">
               <button
                 type="button"
-                className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-sm text-slate-200 transition-colors hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-400/60"
+                className="flex min-h-11 w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-sm text-slate-200 transition-colors hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-100/60"
                 onClick={() => setIsExtraOptionsOpen((isOpen) => !isOpen)}
                 aria-expanded={isExtraOptionsOpen}
                 aria-controls={EXTRA_OPTIONS_CONTENT_ID}
               >
-                <span className="flex items-center gap-2 font-medium">
-                  <SlidersHorizontal className="h-3.5 w-3.5 text-indigo-300" />
-                  Extra Options
+                <span className="flex items-center gap-2 text-xs font-semibold">
+                  <SlidersHorizontal className="h-3.5 w-3.5 text-amber-100" />
+                  Extra options
                 </span>
                 <ChevronDown
                   className={cn(
@@ -926,7 +889,7 @@ export function PatternEditor({ className }: PatternEditorProps) {
               {isExtraOptionsOpen && (
                 <div
                   id={EXTRA_OPTIONS_CONTENT_ID}
-                  className="space-y-2.5 border-t border-white/10 px-3 py-3"
+                  className="space-y-3 border-t border-white/[0.07] px-3 py-3"
                 >
                   <WavePatternOption />
                   <div className="h-px bg-white/10" />
@@ -950,7 +913,7 @@ export function PatternEditor({ className }: PatternEditorProps) {
                       >
                         Natural
                       </Button>
-                      <label className="relative h-8 w-8 cursor-pointer overflow-hidden rounded-md border border-white/20">
+                      <label className="relative h-9 w-9 cursor-pointer overflow-hidden rounded-xl border border-white/20 outline-none focus-within:ring-2 focus-within:ring-amber-100/60">
                         <span className="sr-only">Choose backboard color</span>
                         <input
                           type="color"
@@ -975,7 +938,7 @@ export function PatternEditor({ className }: PatternEditorProps) {
                     </p>
                   </div>
                   <div
-                    className="grid grid-cols-5 gap-1 rounded-full border border-white/10 bg-slate-950/70 p-1"
+                    className="grid grid-cols-5 gap-1.5 rounded-2xl border border-white/[0.07] bg-black/20 p-1.5"
                     role="group"
                     aria-label="Square gap size"
                   >
@@ -986,10 +949,10 @@ export function PatternEditor({ className }: PatternEditorProps) {
                           key={option.value}
                           type="button"
                           className={cn(
-                            "rounded-full px-1.5 py-1.5 text-[0.68rem] font-medium transition-all",
+                            "min-h-9 rounded-xl px-1.5 py-1.5 text-[0.68rem] font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-amber-100/60",
                             isSelected
-                              ? "bg-indigo-500 text-white shadow-md shadow-indigo-950/40"
-                              : "text-slate-400 hover:bg-white/5 hover:text-slate-200",
+                              ? "bg-white text-slate-950 shadow-md"
+                              : "text-slate-500 hover:bg-white/[0.05] hover:text-slate-200",
                           )}
                           onClick={() => setSquareGapInches(option.value)}
                           aria-label={option.accessibleLabel}
@@ -1006,36 +969,34 @@ export function PatternEditor({ className }: PatternEditorProps) {
 
             {/* Instructions */}
             {!isReplaceMode && (
-              <div className="text-xs text-gray-400 space-y-0.5 bg-gray-900/40 border border-white/10 rounded-lg p-2">
-                <div className="flex items-center gap-1.5 mb-2">
-                  <MousePointer className="w-3 h-3" />
-                  <span className="font-medium">
+              <div className="rounded-2xl border border-white/[0.07] bg-white/[0.025] px-3 py-2.5 text-slate-400">
+                <div className="flex items-start gap-2.5">
+                  <span
+                    aria-hidden
+                    className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-white/[0.05] text-amber-100"
+                  >
+                    <MousePointer className="h-3.5 w-3.5" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[0.69rem] font-medium leading-4 text-slate-300">
                     {isPatternEditorActive
                       ? activeInstruction
                       : "Select a tool to enable editing"}
-                  </span>
-                </div>
-                {isPatternEditorActive ? (
-                  <>
-                    <p>• Choose an area and tool, then click or drag</p>
-                    <p>
-                      • Hidden spots stay selectable so Reset can restore them
                     </p>
-                    <p>• Press 'h' to hide/show UI controls</p>
-                  </>
-                ) : (
-                  <>
-                    <p>• Click "Active" above to enable the pattern editor</p>
-                    <p>• Selecting any tool also enables it automatically</p>
-                  </>
-                )}
+                    <p className="mt-0.5 text-[0.63rem] leading-4 text-slate-600">
+                      {isPatternEditorActive
+                        ? "Click or drag on the artwork · H hides the interface"
+                        : "Choosing any tool starts editing automatically"}
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
 
             {/* Stats */}
             {Boolean(modifiedSquareCount) && (
-              <div className="text-xs text-gray-400 bg-indigo-500/10 border border-indigo-400/20 rounded-lg p-2">
-                <p className="font-medium text-indigo-300">
+              <div className="rounded-xl border border-emerald-300/15 bg-emerald-300/[0.07] px-3 py-2 text-[0.68rem] text-emerald-200">
+                <p className="font-medium">
                   {modifiedSquareCount} square
                   {modifiedSquareCount !== SINGULAR_SQUARE_COUNT
                     ? "s"
@@ -1044,9 +1005,7 @@ export function PatternEditor({ className }: PatternEditorProps) {
                 </p>
               </div>
             )}
-          </div>
-        )}
       </div>
-    </Card>
+    </PatternEditorSurface>
   );
 }

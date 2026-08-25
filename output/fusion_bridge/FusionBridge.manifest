@@ -1,0 +1,13 @@
+{
+  "autodeskProduct": "Fusion",
+  "type": "addin",
+  "id": "com.openai.codex.fusionbridge",
+  "author": "OpenAI Codex",
+  "description": {
+    "": "Local file-queue bridge for Fusion API jobs"
+  },
+  "version": "1.0.0",
+  "runOnStartup": true,
+  "supportedOS": "mac",
+  "editEnabled": true
+}

@@ -18,6 +18,8 @@ export interface ColorSwatchProps {
   name?: string;
   index: number;
   isSelected: boolean;
+  /** True while this swatch is waiting for the batched delete to commit. */
+  isPendingRemoval?: boolean;
   /** 1-based selection order when blending (1 = first selected, 2 = second). */
   selectionOrder?: number;
   showBlendHint?: boolean;

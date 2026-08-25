@@ -138,7 +138,10 @@ test("mobile shared actions show Details and Edit side by side", () => {
   );
 
   assert.match(actionGroup?.props.className ?? "", /grid-cols-2/);
-  assert.deepEqual(buttons.map(flattenText), ["Details", "Edit"]);
+  assert.deepEqual(buttons.map((button) => flattenText(button).trim()), [
+    "Details",
+    "Edit",
+  ]);
 });
 
 test("landscape rail stacks Details and Edit at full width", () => {
@@ -182,8 +185,24 @@ test("mobile sheet header labels the selected panel without tab actions", () => 
     );
     const text = flattenText(tree).replace(/\s+/g, " ").trim();
 
-    assert.equal(text, label);
+    assert.ok(text.startsWith(label));
     assert.equal(buttons.length, 1);
     assert.equal(buttons[0].props["aria-label"], `Close ${label}`);
   }
+});
+
+test("mobile sheet header explains the panel and includes a drag affordance", () => {
+  assertComponentsLoaded();
+  const editHeader = SharedMobilePanelHeader({
+    panel: "view",
+    onClose: () => {},
+  });
+  const text = flattenText(editHeader).replace(/\s+/g, " ").trim();
+  const handles = collectElements(
+    editHeader,
+    (node) => node.props["data-sheet-handle"] === "true",
+  );
+
+  assert.match(text, /Adjust size, pattern, lighting, and wall color/);
+  assert.equal(handles.length, 1);
 });

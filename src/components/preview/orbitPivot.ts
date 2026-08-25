@@ -1,6 +1,7 @@
 const MIN_PIVOT_RATIO = -1;
 const MAX_PIVOT_RATIO = 1;
 const PIVOT_RATIO_VIEWPORT_SPAN = 2;
+const PIVOT_DRAG_SPEED_MULTIPLIER = 1.25;
 const HALF_ART_WIDTH = 0.5;
 const RIGHT_MOUSE_BUTTON = 2;
 
@@ -49,6 +50,7 @@ export function moveOrbitPivotHorizontally({
   const ratioDelta =
     viewportWidthPixels > 0
       ? (deltaPixelsX / viewportWidthPixels) * PIVOT_RATIO_VIEWPORT_SPAN
+        * PIVOT_DRAG_SPEED_MULTIPLIER
       : 0;
   const pivotRatio = clampPivotRatio(currentPivotRatio + ratioDelta);
   const nextTargetX = getOrbitPivotWorldX(

@@ -1,0 +1,1 @@
+{"duration_seconds": 0.004477, "finished_at": "2026-08-05T01:24:18.340050+00:00", "job": "ping", "request_id": "install_ping", "result": {"pong": true, "protocol_version": 1, "request_id": "install_ping"}, "started_at": "2026-08-05T01:24:18.335580+00:00", "status": "success"}

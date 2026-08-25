@@ -87,6 +87,7 @@ export function ColorSwatch({
   paintAmount,
   handMix,
   isSelected,
+  isPendingRemoval,
   onSelect,
   onRemove,
   onEdit,
@@ -156,13 +157,26 @@ export function ColorSwatch({
         opacity: { duration: 0.18 },
       }}
       className={cn(
-        "relative group flex-1 min-w-0 cursor-pointer rounded-md overflow-hidden",
+        "relative group flex-1 min-w-0 rounded-md overflow-hidden transition-opacity",
         BAR_HEIGHT_CLASS,
-        isSelected ? "z-10" : ""
+        isSelected ? "z-10" : "",
+        isPendingRemoval
+          ? "cursor-default opacity-50 saturate-50"
+          : "cursor-pointer",
       )}
       style={{ backgroundColor: color }}
-      onClick={onSelect}
+      data-pending-removal={isPendingRemoval || undefined}
+      aria-busy={isPendingRemoval || undefined}
+      onClick={isPendingRemoval ? undefined : onSelect}
     >
+      {isPendingRemoval && (
+        <div className="pointer-events-auto absolute inset-0 z-50 flex items-center justify-center bg-black/20">
+          <span className="rounded-full bg-black/65 px-2 py-1 text-[10px] font-semibold text-white ring-1 ring-white/30">
+            Queued
+          </span>
+        </div>
+      )}
+
       {/* Selection / blend-hint outline (static layer so the
           entrance scale animation can't make it jitter) */}
       <div
@@ -209,7 +223,8 @@ export function ColorSwatch({
       <Button
         size="icon"
         variant="ghost"
-        aria-label="Remove color"
+        aria-label={isPendingRemoval ? "Color queued for removal" : "Remove color"}
+        disabled={isPendingRemoval}
         className="absolute bottom-1.5 right-1.5 z-40 h-7 w-7 rounded-full bg-black/25 backdrop-blur-sm hover:bg-black/40 sm:hidden"
         style={textColorStyle}
         onClick={(e) => {
@@ -498,6 +513,12 @@ export function ColorSwatch({
                   <Button
                     size="icon"
                     variant="ghost"
+                    aria-label={
+                      isPendingRemoval
+                        ? "Color queued for removal"
+                        : "Remove color"
+                    }
+                    disabled={isPendingRemoval}
                     className="h-6 w-6 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30"
                     style={textColorStyle}
                     onClick={(e) => {
@@ -575,7 +596,7 @@ export function ColorSwatch({
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
-                  <p>Remove color</p>
+                  <p>{isPendingRemoval ? "Queued for removal" : "Remove color"}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

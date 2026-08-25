@@ -46,13 +46,13 @@ function move(overrides = {}) {
   });
 }
 
-test("right drag moves the orbit pivot only along artwork world X", () => {
+test("right drag moves the orbit pivot 25 percent faster along artwork world X", () => {
   const result = move({ deltaPixelsX: 250 });
 
   assert.deepEqual(result, {
-    pivotRatio: 0.5,
-    targetX: 4,
-    cameraX: 12,
+    pivotRatio: 0.625,
+    targetX: 4.5,
+    cameraX: 12.5,
   });
 });
 

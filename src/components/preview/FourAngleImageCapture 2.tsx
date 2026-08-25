@@ -1,0 +1,470 @@
+"use client";
+
+import { useEffect } from "react";
+import { useThree } from "@react-three/fiber";
+import * as THREE from "three";
+import {
+  ORBIT_MAX_AZIMUTH,
+  ORBIT_MAX_POLAR,
+  ORBIT_MIN_POLAR,
+} from "./Room";
+
+//╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
+//║ 📸 FOUR-ANGLE IMAGE EXPORT                                          ║
+//╚═══╝ ════════════════════════════════════════════════════════════════ ╚═══╝
+
+const EXPORT_CANVAS_WIDTH_PX = 3840;
+const EXPORT_CANVAS_HEIGHT_PX = 2160;
+const EXPORT_GRID_COLUMN_COUNT = 2;
+const EXPORT_GRID_ROW_COUNT = 2;
+const EXPORT_TILE_WIDTH_PX =
+  EXPORT_CANVAS_WIDTH_PX / EXPORT_GRID_COLUMN_COUNT;
+const EXPORT_TILE_HEIGHT_PX =
+  EXPORT_CANVAS_HEIGHT_PX / EXPORT_GRID_ROW_COUNT;
+const EXPORT_TILE_ASPECT_RATIO = EXPORT_TILE_WIDTH_PX / EXPORT_TILE_HEIGHT_PX;
+const EXPORT_IMAGE_MIME_TYPE = "image/png";
+const EXPORT_BACKGROUND_COLOR = "#020617";
+const EXPORT_VIEW_LIMIT_FRACTION = 0.5;
+const EXPORT_CAMERA_BASE_DISTANCE_SCALE = 0.95;
+const EXPORT_CAMERA_CLOSER_SCALE = 0.75;
+// Ease farther back as the art fills more of a tile, then move every size
+// uniformly closer by the configured distance scale.
+const EXPORT_CAMERA_DISTANCE_CONFIG = {
+  closestScale: 0.75,
+  farthestScale: 1,
+  allSizesDistanceScale:
+    EXPORT_CAMERA_BASE_DISTANCE_SCALE * EXPORT_CAMERA_CLOSER_SCALE,
+  smallestArtWidthSquares: 14,
+  smallestArtHeightSquares: 7,
+  largestArtWidthSquares: 40,
+  largestArtHeightSquares: 16,
+} as const;
+const EXPORT_SMALLEST_ART_SPAN = Math.max(
+  EXPORT_CAMERA_DISTANCE_CONFIG.smallestArtWidthSquares,
+  EXPORT_CAMERA_DISTANCE_CONFIG.smallestArtHeightSquares *
+    EXPORT_TILE_ASPECT_RATIO
+);
+const EXPORT_LARGEST_ART_SPAN = Math.max(
+  EXPORT_CAMERA_DISTANCE_CONFIG.largestArtWidthSquares,
+  EXPORT_CAMERA_DISTANCE_CONFIG.largestArtHeightSquares *
+    EXPORT_TILE_ASPECT_RATIO
+);
+const EXPORT_COLOR_CHANNEL_COUNT = 4;
+const EXPORT_RED_CHANNEL_OFFSET = 0;
+const EXPORT_GREEN_CHANNEL_OFFSET = 1;
+const EXPORT_BLUE_CHANNEL_OFFSET = 2;
+const EXPORT_ALPHA_CHANNEL_OFFSET = 3;
+const EXPORT_TRANSPARENT_ALPHA = 0;
+const EXPORT_OPAQUE_ALPHA = 255;
+const EXPORT_FRONT_POLAR_ANGLE = Math.PI / 2;
+const EXPORT_SIDE_AZIMUTH =
+  ORBIT_MAX_AZIMUTH * EXPORT_VIEW_LIMIT_FRACTION;
+const EXPORT_UPPER_POLAR =
+  ORBIT_MIN_POLAR +
+  (EXPORT_FRONT_POLAR_ANGLE - ORBIT_MIN_POLAR) * EXPORT_VIEW_LIMIT_FRACTION;
+const EXPORT_LOWER_POLAR =
+  EXPORT_FRONT_POLAR_ANGLE +
+  (ORBIT_MAX_POLAR - EXPORT_FRONT_POLAR_ANGLE) *
+    EXPORT_VIEW_LIMIT_FRACTION;
+
+export const IMAGE_EXPORT_ANGLE_COUNTS = [1, 2, 4] as const;
+export type ImageExportAngleCount =
+  (typeof IMAGE_EXPORT_ANGLE_COUNTS)[number];
+export const DEFAULT_IMAGE_EXPORT_ANGLE_COUNT: ImageExportAngleCount = 4;
+
+type ExportLayout = {
+  canvasWidth: number;
+  canvasHeight: number;
+  tileWidth: number;
+  tileHeight: number;
+};
+
+const EXPORT_LAYOUTS: Record<ImageExportAngleCount, ExportLayout> = {
+  1: {
+    canvasWidth: EXPORT_CANVAS_WIDTH_PX,
+    canvasHeight: EXPORT_CANVAS_HEIGHT_PX,
+    tileWidth: EXPORT_CANVAS_WIDTH_PX,
+    tileHeight: EXPORT_CANVAS_HEIGHT_PX,
+  },
+  2: {
+    canvasWidth: EXPORT_CANVAS_WIDTH_PX,
+    canvasHeight: EXPORT_TILE_HEIGHT_PX,
+    tileWidth: EXPORT_TILE_WIDTH_PX,
+    tileHeight: EXPORT_TILE_HEIGHT_PX,
+  },
+  4: {
+    canvasWidth: EXPORT_CANVAS_WIDTH_PX,
+    canvasHeight: EXPORT_CANVAS_HEIGHT_PX,
+    tileWidth: EXPORT_TILE_WIDTH_PX,
+    tileHeight: EXPORT_TILE_HEIGHT_PX,
+  },
+};
+
+const EXPORT_VIEWS = [
+  {
+    column: 0,
+    row: 0,
+    azimuth: 0,
+    polar: EXPORT_FRONT_POLAR_ANGLE,
+  },
+  {
+    column: 1,
+    row: 0,
+    azimuth: EXPORT_SIDE_AZIMUTH,
+    polar: EXPORT_UPPER_POLAR,
+  },
+  {
+    column: 0,
+    row: 1,
+    azimuth: -EXPORT_SIDE_AZIMUTH,
+    polar: EXPORT_UPPER_POLAR,
+  },
+  {
+    column: 1,
+    row: 1,
+    azimuth: EXPORT_SIDE_AZIMUTH,
+    polar: EXPORT_LOWER_POLAR,
+  },
+] as const;
+type ExportView = (typeof EXPORT_VIEWS)[number];
+
+type OrbitControlsApi = {
+  enabled: boolean;
+  target: THREE.Vector3;
+};
+
+export type RoomCaptureBounds = {
+  wallHalfX: number;
+  floorY: number;
+  ceilingY: number;
+};
+
+export type CaptureFourAngleImage = (
+  angleCount?: ImageExportAngleCount
+) => Promise<Blob>;
+
+type FourAngleImageCaptureProps = {
+  artWidthSquares: number;
+  artHeightSquares: number;
+  baseDistance?: number;
+  bounds: RoomCaptureBounds | null;
+  collisionInset: number;
+  minimumDistance: number;
+  onReady: (capture: CaptureFourAngleImage | null) => void;
+};
+
+function getArtSizeCameraDistanceScale(
+  artWidthSquares: number,
+  artHeightSquares: number
+) {
+  const projectedArtSpan = Math.max(
+    artWidthSquares,
+    artHeightSquares * EXPORT_TILE_ASPECT_RATIO
+  );
+  const sizeProgress = THREE.MathUtils.clamp(
+    (projectedArtSpan - EXPORT_SMALLEST_ART_SPAN) /
+      (EXPORT_LARGEST_ART_SPAN - EXPORT_SMALLEST_ART_SPAN),
+    0,
+    1
+  );
+
+  return (
+    THREE.MathUtils.lerp(
+      EXPORT_CAMERA_DISTANCE_CONFIG.closestScale,
+      EXPORT_CAMERA_DISTANCE_CONFIG.farthestScale,
+      sizeProgress
+    ) * EXPORT_CAMERA_DISTANCE_CONFIG.allSizesDistanceScale
+  );
+}
+
+function getBoundedCaptureDistance(
+  requestedDistance: number,
+  target: THREE.Vector3,
+  bounds: RoomCaptureBounds | null,
+  collisionInset: number,
+  minimumDistance: number,
+  views: readonly ExportView[]
+) {
+  if (!bounds) return requestedDistance;
+
+  const maxX = bounds.wallHalfX - collisionInset;
+  const ceilingY = bounds.ceilingY - collisionInset;
+  const floorY = bounds.floorY + collisionInset;
+
+  return views.reduce((safeDistance, view) => {
+    const direction = new THREE.Vector3().setFromSpherical(
+      new THREE.Spherical(1, view.polar, view.azimuth)
+    );
+    let viewLimit = requestedDistance;
+
+    if (direction.x > 0) {
+      viewLimit = Math.min(viewLimit, (maxX - target.x) / direction.x);
+    } else if (direction.x < 0) {
+      viewLimit = Math.min(viewLimit, (-maxX - target.x) / direction.x);
+    }
+
+    if (direction.y > 0) {
+      viewLimit = Math.min(
+        viewLimit,
+        (ceilingY - target.y) / direction.y
+      );
+    } else if (direction.y < 0) {
+      viewLimit = Math.min(viewLimit, (floorY - target.y) / direction.y);
+    }
+
+    return Math.min(safeDistance, Math.max(minimumDistance, viewLimit));
+  }, requestedDistance);
+}
+
+function canvasToPngBlob(canvas: HTMLCanvasElement) {
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) {
+        resolve(blob);
+        return;
+      }
+
+      reject(new Error("The four-angle image could not be encoded."));
+    }, EXPORT_IMAGE_MIME_TYPE);
+  });
+}
+
+export function FourAngleImageCapture({
+  artWidthSquares,
+  artHeightSquares,
+  baseDistance,
+  bounds,
+  collisionInset,
+  minimumDistance,
+  onReady,
+}: FourAngleImageCaptureProps) {
+  const camera = useThree((state) => state.camera);
+  const controls = useThree(
+    (state) => state.controls
+  ) as OrbitControlsApi | null;
+  const gl = useThree((state) => state.gl);
+  const invalidate = useThree((state) => state.invalidate);
+  const scene = useThree((state) => state.scene);
+
+  useEffect(() => {
+    if (!controls) {
+      onReady(null);
+      return;
+    }
+
+    const capture: CaptureFourAngleImage = async (
+      angleCount = DEFAULT_IMAGE_EXPORT_ANGLE_COUNT
+    ) => {
+      const sourceWidth = gl.domElement.width;
+      const sourceHeight = gl.domElement.height;
+      if (sourceWidth <= 0 || sourceHeight <= 0) {
+        throw new Error("The viewer is not ready to export an image.");
+      }
+
+      const layout = EXPORT_LAYOUTS[angleCount];
+      const activeViews = EXPORT_VIEWS.slice(0, angleCount);
+      const exportCanvas = document.createElement("canvas");
+      exportCanvas.width = layout.canvasWidth;
+      exportCanvas.height = layout.canvasHeight;
+      const tileCanvas = document.createElement("canvas");
+      tileCanvas.width = layout.tileWidth;
+      tileCanvas.height = layout.tileHeight;
+
+      const context = exportCanvas.getContext("2d");
+      const tileContext = tileCanvas.getContext("2d");
+      if (!context || !tileContext) {
+        throw new Error("The four-angle image canvas is unavailable.");
+      }
+
+      context.fillStyle = EXPORT_BACKGROUND_COLOR;
+      context.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+
+      const originalPosition = camera.position.clone();
+      const originalQuaternion = camera.quaternion.clone();
+      const originalControlsEnabled = controls.enabled;
+      const originalRenderTarget = gl.getRenderTarget();
+      const originalPixelRatio = gl.getPixelRatio();
+      const originalRendererSize = gl.getSize(new THREE.Vector2());
+      const perspectiveCamera = camera as THREE.PerspectiveCamera;
+      const isPerspectiveCamera = perspectiveCamera.isPerspectiveCamera;
+      const originalCameraAspect = perspectiveCamera.aspect;
+      const target = controls.target.clone();
+      const requestedDistance =
+        baseDistance ?? originalPosition.distanceTo(target);
+      const boundedCaptureDistance = getBoundedCaptureDistance(
+        requestedDistance,
+        target,
+        bounds,
+        collisionInset,
+        minimumDistance,
+        activeViews
+      );
+      const cameraDistanceScale = getArtSizeCameraDistanceScale(
+        artWidthSquares,
+        artHeightSquares
+      );
+      const captureDistance = Math.max(
+        minimumDistance,
+        boundedCaptureDistance * cameraDistanceScale
+      );
+      const offset = new THREE.Vector3();
+      const webGlContext = gl.getContext();
+      const pixelBuffer = new Uint8Array(
+        layout.tileWidth * layout.tileHeight * EXPORT_COLOR_CHANNEL_COUNT
+      );
+      const flippedPixelBuffer = new Uint8ClampedArray(pixelBuffer.length);
+      const rowByteLength = layout.tileWidth * EXPORT_COLOR_CHANNEL_COUNT;
+
+      controls.enabled = false;
+
+      try {
+        gl.setRenderTarget(null);
+        gl.setPixelRatio(1);
+        gl.setSize(layout.tileWidth, layout.tileHeight, false);
+
+        if (isPerspectiveCamera) {
+          perspectiveCamera.aspect = EXPORT_TILE_ASPECT_RATIO;
+          perspectiveCamera.updateProjectionMatrix();
+        }
+
+        for (const view of activeViews) {
+          offset.setFromSpherical(
+            new THREE.Spherical(captureDistance, view.polar, view.azimuth)
+          );
+          camera.position.copy(target).add(offset);
+          camera.lookAt(target);
+          camera.updateMatrixWorld(true);
+          gl.render(scene, camera);
+          webGlContext.readPixels(
+            0,
+            0,
+            layout.tileWidth,
+            layout.tileHeight,
+            webGlContext.RGBA,
+            webGlContext.UNSIGNED_BYTE,
+            pixelBuffer
+          );
+
+          for (
+            let outputRow = 0;
+            outputRow < layout.tileHeight;
+            outputRow += 1
+          ) {
+            const sourceRow = layout.tileHeight - outputRow - 1;
+            const sourceStart = sourceRow * rowByteLength;
+            const outputStart = outputRow * rowByteLength;
+            flippedPixelBuffer.set(
+              pixelBuffer.subarray(sourceStart, sourceStart + rowByteLength),
+              outputStart
+            );
+          }
+
+          // The WebGL canvas stores translucent pixels premultiplied by alpha,
+          // while ImageData expects straight RGBA. Undo that multiplication so
+          // semi-transparent scene details keep their intended brightness.
+          for (
+            let pixelOffset = 0;
+            pixelOffset < flippedPixelBuffer.length;
+            pixelOffset += EXPORT_COLOR_CHANNEL_COUNT
+          ) {
+            const alpha =
+              flippedPixelBuffer[pixelOffset + EXPORT_ALPHA_CHANNEL_OFFSET];
+            if (
+              alpha === EXPORT_TRANSPARENT_ALPHA ||
+              alpha === EXPORT_OPAQUE_ALPHA
+            ) {
+              continue;
+            }
+
+            const alphaScale = EXPORT_OPAQUE_ALPHA / alpha;
+            flippedPixelBuffer[pixelOffset + EXPORT_RED_CHANNEL_OFFSET] =
+              Math.min(
+                EXPORT_OPAQUE_ALPHA,
+                Math.round(
+                  flippedPixelBuffer[
+                    pixelOffset + EXPORT_RED_CHANNEL_OFFSET
+                  ] * alphaScale
+                )
+              );
+            flippedPixelBuffer[pixelOffset + EXPORT_GREEN_CHANNEL_OFFSET] =
+              Math.min(
+                EXPORT_OPAQUE_ALPHA,
+                Math.round(
+                  flippedPixelBuffer[
+                    pixelOffset + EXPORT_GREEN_CHANNEL_OFFSET
+                  ] * alphaScale
+                )
+              );
+            flippedPixelBuffer[pixelOffset + EXPORT_BLUE_CHANNEL_OFFSET] =
+              Math.min(
+                EXPORT_OPAQUE_ALPHA,
+                Math.round(
+                  flippedPixelBuffer[
+                    pixelOffset + EXPORT_BLUE_CHANNEL_OFFSET
+                  ] * alphaScale
+                )
+              );
+          }
+
+          tileContext.putImageData(
+            new ImageData(
+              flippedPixelBuffer,
+              layout.tileWidth,
+              layout.tileHeight
+            ),
+            0,
+            0
+          );
+
+          const tileLeft = layout.tileWidth * view.column;
+          const tileTop = layout.tileHeight * view.row;
+
+          context.drawImage(
+            tileCanvas,
+            tileLeft,
+            tileTop
+          );
+        }
+      } finally {
+        gl.setPixelRatio(originalPixelRatio);
+        gl.setSize(
+          originalRendererSize.x,
+          originalRendererSize.y,
+          false
+        );
+        if (isPerspectiveCamera) {
+          perspectiveCamera.aspect = originalCameraAspect;
+          perspectiveCamera.updateProjectionMatrix();
+        }
+        camera.position.copy(originalPosition);
+        camera.quaternion.copy(originalQuaternion);
+        camera.updateMatrixWorld(true);
+        controls.enabled = originalControlsEnabled;
+        gl.setRenderTarget(null);
+        gl.render(scene, camera);
+        gl.setRenderTarget(originalRenderTarget);
+        invalidate();
+      }
+
+      return canvasToPngBlob(exportCanvas);
+    };
+
+    onReady(capture);
+    return () => onReady(null);
+  }, [
+    artHeightSquares,
+    artWidthSquares,
+    baseDistance,
+    bounds,
+    camera,
+    collisionInset,
+    controls,
+    gl,
+    invalidate,
+    minimumDistance,
+    onReady,
+    scene,
+  ]);
+
+  return null;
+}

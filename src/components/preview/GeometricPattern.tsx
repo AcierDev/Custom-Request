@@ -54,6 +54,7 @@ import {
   getSquareGapSceneUnits,
   normalizeSquareGapInches,
 } from "@/lib/squareGap";
+import { WEDGE_GEOMETRY_CONFIG } from "@/lib/wedgeGeometry";
 
 // Shown when Custom is selected with no palette colors and no drawn
 // pattern: every square renders this single dark blue.
@@ -377,8 +378,10 @@ function GeometricPatternComponent({
 
   // Use memoization for layout calculations to prevent recalculation on every render
   const layoutDetails = useMemo(() => {
-    const squareSize = 0.5;
-    const squareSpacing = useMini ? 0.9 : 1; // Extract the spacing factor
+    const squareSize = WEDGE_GEOMETRY_CONFIG.fullSquareSizeSceneUnits;
+    const squareSpacing = useMini
+      ? WEDGE_GEOMETRY_CONFIG.miniScale
+      : WEDGE_GEOMETRY_CONFIG.normalizedEdge;
 
     // Calculate layout dimensions
     return {
@@ -599,7 +602,9 @@ function GeometricPatternComponent({
   const { instances, effectivePatternColorIndexes } = useMemo(() => {
     const squares: SquareInstance[] = [];
     const colorIndexes: RenderedPatternColorIndexes = {};
-    const sizeScale = useMini ? 0.9 : 1.0;
+    const sizeScale = useMini
+      ? WEDGE_GEOMETRY_CONFIG.miniScale
+      : WEDGE_GEOMETRY_CONFIG.normalizedEdge;
 
     // Limit the maximum number of squares to render based on device capability
     const totalSquares = currentGridWidth * currentGridHeight;

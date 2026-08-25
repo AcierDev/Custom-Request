@@ -36,6 +36,7 @@ const PAINT_SOURCES = [
 
 // Cap the rendered rows so typing stays smooth against the full ~15k array.
 const MAX_RESULTS = 48;
+const NAMED_PAINT_SEARCH_ID = "named-paint-search";
 
 // The datasets are static, so fetch them at most once per session and share
 // the result across every mount. Caching the PROMISE (not just the data) also
@@ -142,7 +143,8 @@ export function PaintColorPicker({
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="flex w-full items-center justify-between rounded-md border border-white/10 bg-stone-950/80 px-2.5 py-2 text-left shadow-sm backdrop-blur-md transition-colors hover:border-white/25"
+        aria-controls={NAMED_PAINT_SEARCH_ID}
+        className="flex min-h-11 w-full items-center justify-between rounded-xl border border-white/[0.09] bg-white/[0.035] px-3 py-2 text-left shadow-inner shadow-black/15 outline-none backdrop-blur-md transition-colors hover:border-white/[0.18] hover:bg-white/[0.07] focus-visible:ring-2 focus-visible:ring-amber-100/60"
       >
         <span className="flex items-center gap-2 text-[12px] text-slate-100">
           {activePaint ? (
@@ -169,7 +171,10 @@ export function PaintColorPicker({
         // Solid dark panel — the surrounding card is translucent glass, so a
         // light wall color would otherwise bleed through and wash the text
         // out. This keeps the suggestions readable over any wall.
-        <div className="mt-2 space-y-2 rounded-lg border border-white/10 bg-stone-950/95 p-2 shadow-xl backdrop-blur-md">
+        <div
+          id={NAMED_PAINT_SEARCH_ID}
+          className="mt-2 space-y-2 rounded-2xl border border-white/[0.09] bg-black/35 p-2.5 shadow-inner shadow-black/20 backdrop-blur-md"
+        >
           {/* Search + brand filter. */}
           <div className="flex items-center gap-1.5">
             <div className="relative flex-1">
@@ -180,14 +185,14 @@ export function PaintColorPicker({
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder='Name or code, e.g. "Sea Salt"'
-                className="h-8 w-full rounded-md border border-white/10 bg-black/30 pl-7 pr-2 text-[12px] text-slate-200 placeholder:text-slate-500 outline-none focus:border-indigo-300/60"
+                className="h-10 w-full rounded-xl border border-white/[0.09] bg-black/30 pl-8 pr-2 text-[12px] text-slate-200 placeholder:text-slate-600 outline-none transition-colors focus:border-amber-100/50 focus:ring-2 focus:ring-amber-100/10"
               />
             </div>
             <select
               value={brand}
               onChange={(e) => setBrand(e.target.value)}
               aria-label="Paint brand"
-              className="h-8 rounded-md border border-white/10 bg-black/30 px-1.5 text-[11px] text-slate-300 outline-none focus:border-indigo-300/60"
+              className="h-10 rounded-xl border border-white/[0.09] bg-black/30 px-2 text-[11px] text-slate-300 outline-none transition-colors focus:border-amber-100/50 focus:ring-2 focus:ring-amber-100/10"
             >
               {BRAND_OPTIONS.map((b) => (
                 <option key={b} value={b} className="bg-stone-900 text-slate-200">
@@ -222,9 +227,9 @@ export function PaintColorPicker({
                       onClick={() => onChange(c.hex)}
                       title={`${brandDisplayName(c.brand)}${c.code ? ` · ${c.code}` : ""} · ${c.hex.toUpperCase()}`}
                       className={cn(
-                        "flex w-full items-center gap-2 rounded-md border px-2 py-1.5 text-left transition-colors",
+                        "flex min-h-11 w-full items-center gap-2 rounded-xl border px-2 py-1.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-amber-100/50",
                         selected
-                          ? "border-indigo-300 bg-indigo-400/10"
+                          ? "border-white/60 bg-white/[0.1]"
                           : "border-transparent hover:border-white/20 hover:bg-white/5"
                       )}
                     >
@@ -242,7 +247,7 @@ export function PaintColorPicker({
                         </span>
                       </span>
                       {selected && (
-                        <Check className="h-3.5 w-3.5 shrink-0 text-indigo-300" />
+                        <Check className="h-3.5 w-3.5 shrink-0 text-amber-100" />
                       )}
                     </button>
                   </li>

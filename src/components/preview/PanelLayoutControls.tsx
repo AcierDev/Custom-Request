@@ -1,8 +1,11 @@
 "use client";
 
 import { Columns3, Info } from "lucide-react";
-import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import {
+  ViewerControlDisclosure,
+  ViewerControlSurface,
+} from "./ViewerControlSurface";
 import {
   Select,
   SelectContent,
@@ -91,11 +94,16 @@ export function PanelLayoutControls() {
   const allocation = panels.map((panel) => panel.columnCount).join(" / ");
 
   return (
-    <Card className="glass-surface overflow-hidden rounded-2xl border-white/10 bg-slate-950/50 shadow-xl shadow-black/15">
-      <div className="grid grid-cols-3 gap-2 p-3">
+    <ViewerControlSurface ariaLabel="Panel layout">
+      <ViewerControlDisclosure
+        title="Panel layout"
+        description="Split the backboard and set its spacing"
+        icon={Columns3}
+        compact
+        contentClassName="grid grid-cols-3 gap-2 p-3.5"
+      >
         <div className="min-w-0 space-y-1.5">
           <div className="flex h-5 items-center gap-1.5">
-            <Columns3 className="h-3.5 w-3.5 text-indigo-300" />
             <Label className="text-xs font-medium text-slate-300">
               Panels
             </Label>
@@ -130,7 +138,7 @@ export function PanelLayoutControls() {
           >
             <SelectTrigger
               aria-label="Panel count"
-              className="h-8 rounded-full border-white/10 bg-slate-950/70 px-2.5 text-xs text-slate-100 shadow-inner shadow-black/20 focus:ring-indigo-400/50"
+              className="h-10 rounded-xl border-white/[0.09] bg-white/[0.035] px-2.5 text-xs text-slate-100 shadow-inner shadow-black/20 focus:ring-amber-100/50"
             >
               <SelectValue>{panelCountLabel(effectivePanelCount)}</SelectValue>
             </SelectTrigger>
@@ -164,7 +172,7 @@ export function PanelLayoutControls() {
           >
             <SelectTrigger
               aria-label="Spacing between panels in inches"
-              className="h-8 rounded-full border-white/10 bg-slate-950/70 px-2.5 text-xs text-slate-100 shadow-inner shadow-black/20 focus:ring-indigo-400/50"
+              className="h-10 rounded-xl border-white/[0.09] bg-white/[0.035] px-2.5 text-xs text-slate-100 shadow-inner shadow-black/20 focus:ring-amber-100/50"
             >
               <SelectValue>
                 {panelSpacingLabel(panelSpacingInches)}
@@ -199,7 +207,7 @@ export function PanelLayoutControls() {
           >
             <SelectTrigger
               aria-label="Extra column placement"
-              className="h-8 rounded-full border-white/10 bg-slate-950/70 px-2.5 text-xs text-slate-100 shadow-inner shadow-black/20 focus:ring-indigo-400/50"
+              className="h-10 rounded-xl border-white/[0.09] bg-white/[0.035] px-2.5 text-xs text-slate-100 shadow-inner shadow-black/20 focus:ring-amber-100/50"
             >
               <SelectValue />
             </SelectTrigger>
@@ -216,7 +224,7 @@ export function PanelLayoutControls() {
             </SelectContent>
           </Select>
         </div>
-      </div>
-    </Card>
+      </ViewerControlDisclosure>
+    </ViewerControlSurface>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import { Info, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -11,6 +11,14 @@ const PANEL_LABEL: Record<SharedMobilePanel, string> = {
   about: "Details",
   view: "Edit",
 };
+const PANEL_DESCRIPTION: Record<SharedMobilePanel, string> = {
+  about: "Artwork, palette, and sharing information",
+  view: "Adjust size, pattern, lighting, and wall color",
+};
+const PANEL_ICON = {
+  about: Info,
+  view: SlidersHorizontal,
+} as const;
 const PANEL_ACTIONS_CLASS = "grid gap-2";
 const PANEL_ACTION_LAYOUT_CLASS: Record<
   SharedMobilePanelActionLayout,
@@ -20,11 +28,11 @@ const PANEL_ACTION_LAYOUT_CLASS: Record<
   rail: "grid-cols-1",
 };
 const PANEL_ACTION_BUTTON_CLASS =
-  "h-11 w-full rounded-full glass-surface px-4 text-sm text-slate-200 hover:bg-gray-900/50";
+  "h-11 w-full rounded-full border border-white/[0.12] bg-[rgba(14,15,18,0.78)] px-4 text-sm text-slate-200 shadow-[0_12px_36px_rgba(0,0,0,0.25)] backdrop-blur-xl hover:border-white/25 hover:bg-[rgba(24,25,29,0.9)]";
 const PANEL_HEADER_CLASS =
-  "flex items-center justify-between border-b border-white/10 px-3 py-2.5";
+  "relative flex items-center justify-between gap-3 border-b border-white/[0.08] bg-[rgba(12,13,16,0.78)] px-4 pb-3 pt-5 backdrop-blur-2xl";
 const PANEL_CLOSE_BUTTON_CLASS =
-  "h-8 w-8 rounded-full text-slate-300 hover:bg-white/10 hover:text-white";
+  "h-9 w-9 rounded-full border border-white/[0.08] bg-white/[0.04] text-slate-300 hover:border-white/20 hover:bg-white/[0.09] hover:text-white";
 
 export function SharedMobilePanelActions({
   layout = "row",
@@ -45,6 +53,7 @@ export function SharedMobilePanelActions({
         onClick={() => onOpen("about")}
         className={PANEL_ACTION_BUTTON_CLASS}
       >
+        <Info className="h-4 w-4 text-slate-400" />
         Details
       </Button>
       <Button
@@ -53,6 +62,7 @@ export function SharedMobilePanelActions({
         onClick={() => onOpen("view")}
         className={PANEL_ACTION_BUTTON_CLASS}
       >
+        <SlidersHorizontal className="h-4 w-4 text-amber-100" />
         Edit
       </Button>
     </div>
@@ -67,10 +77,32 @@ export function SharedMobilePanelHeader({
   onClose: () => void;
 }) {
   const label = PANEL_LABEL[panel];
+  const description = PANEL_DESCRIPTION[panel];
+  const Icon = PANEL_ICON[panel];
 
   return (
     <div className={PANEL_HEADER_CLASS}>
-      <h2 className="px-1 text-sm font-medium text-white">{label}</h2>
+      <span
+        aria-hidden
+        data-sheet-handle="true"
+        className="absolute left-1/2 top-2 h-1 w-9 -translate-x-1/2 rounded-full bg-white/20"
+      />
+      <div className="flex min-w-0 items-start gap-2.5">
+        <span
+          aria-hidden
+          className="grid h-8 w-8 shrink-0 place-items-center rounded-xl border border-white/[0.09] bg-white/[0.05] text-amber-100"
+        >
+          <Icon className="h-4 w-4" />
+        </span>
+        <div className="min-w-0">
+          <h2 className="text-sm font-semibold tracking-[-0.01em] text-white">
+            {label}
+          </h2>
+          <p className="mt-0.5 text-[0.68rem] leading-4 text-slate-500">
+            {description}
+          </p>
+        </div>
+      </div>
       <Button
         type="button"
         variant="ghost"

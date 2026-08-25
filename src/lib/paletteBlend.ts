@@ -3,6 +3,8 @@ export const PALETTE_BLEND_CONFIG = {
   maxPercent: 100,
   stepPercent: 5,
   defaultPercent: 25,
+  solidLineSeparationThresholdPercent: 15,
+  maxProgressionLineSpread: 1,
   minSwapFraction: 0.1,
   maxSwapFraction: 0.45,
 } as const;

@@ -4,7 +4,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown, ChevronUp, Save } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { ViewerControlSurface } from "@/components/preview/ViewerControlSurface";
 import {
   useCustomStore,
   type CustomColor,
@@ -219,10 +219,10 @@ const VersionButton = memo(function VersionButton({
       aria-pressed={active}
       onClick={() => onSelectVersion(version.id)}
       className={cn(
-        "w-full shrink-0 rounded-md border p-1.5 text-left transition-colors",
+        "w-full shrink-0 rounded-xl border p-1.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-amber-100/60",
         active
-          ? "border-indigo-400/70 bg-indigo-500/15 ring-1 ring-indigo-400/35"
-          : "border-white/10 bg-gray-900/40 hover:border-white/25 hover:bg-gray-900/60",
+          ? "border-white/60 bg-white/[0.1] ring-1 ring-white/15"
+          : "border-white/[0.08] bg-white/[0.025] hover:border-white/20 hover:bg-white/[0.06]",
       )}
     >
       <VersionPreview3D version={version} />
@@ -234,7 +234,7 @@ const VersionButton = memo(function VersionButton({
           <span className="text-[0.6rem] text-slate-500">
             {formatVersionDate(version.createdAt)}
           </span>
-          {active && <Check className="h-3 w-3 text-indigo-300" />}
+          {active && <Check className="h-3 w-3 text-amber-100" />}
         </div>
       </div>
     </button>
@@ -423,13 +423,19 @@ export function PaletteVersionSwitcher() {
   }, []);
 
   return (
-    <Card className="glass-surface group/viewer-versions w-72 rounded-[0.7rem] shadow-lg">
-      <div className="p-2">
-        <div className="mb-1 flex items-center justify-between gap-2">
+    <ViewerControlSurface
+      ariaLabel="Viewer versions"
+      className="group/viewer-versions w-72"
+    >
+      <div className="p-3">
+        <div className="mb-2.5 flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <div className="text-xs font-medium text-gray-200">
+            <div className="text-xs font-semibold text-slate-200">
               Viewer versions
             </div>
+            <p className="mt-0.5 text-[0.62rem] text-slate-600">
+              Save and compare viewer setups
+            </p>
           </div>
           <Button
             type="button"
@@ -437,7 +443,7 @@ export function PaletteVersionSwitcher() {
             variant="outline"
             onClick={handleSaveCurrent}
             disabled={activeViewerVersionId !== null}
-            className="h-6 shrink-0 gap-1 px-1.5 text-[0.65rem]"
+            className="h-9 shrink-0 gap-1 rounded-xl border-white/[0.09] bg-white/[0.035] px-2.5 text-[0.65rem] text-slate-300 hover:bg-white/[0.08]"
           >
             <Save className="h-2.5 w-2.5" />
             Save
@@ -445,7 +451,7 @@ export function PaletteVersionSwitcher() {
         </div>
 
         {viewerVersions.length === ARRAY_START_INDEX ? (
-          <div className="rounded-md border border-dashed border-white/10 px-2 py-2 text-center text-[0.68rem] text-gray-500">
+          <div className="rounded-xl border border-dashed border-white/[0.1] bg-black/10 px-3 py-3 text-center text-[0.68rem] leading-4 text-slate-600">
             Save the current viewer design to create its first version.
           </div>
         ) : (
@@ -498,6 +504,6 @@ export function PaletteVersionSwitcher() {
           </>
         )}
       </div>
-    </Card>
+    </ViewerControlSurface>
   );
 }

@@ -14,10 +14,9 @@ import { Button } from "@/components/ui/button";
 import {
   ArrowLeft,
   Download,
-  Minimize2,
-  Maximize2,
   Eye,
   EyeOff,
+  PaintBucket,
   SlidersHorizontal,
   X,
 } from "lucide-react";
@@ -92,6 +91,12 @@ import { WallColorPicker } from "@/components/preview/WallColorPicker";
 import { PaintColorPicker } from "@/components/preview/PaintColorPicker";
 import { PatternControls } from "@/components/preview/PatternControls";
 import { PanelLayoutControls } from "@/components/preview/PanelLayoutControls";
+import { SquareSizeControls } from "@/components/preview/SquareSizeControls";
+import {
+  ViewerControlDisclosure,
+  ViewerControlHeader,
+  ViewerControlSurface,
+} from "@/components/preview/ViewerControlSurface";
 import {
   FourAngleImageCapture,
   IMAGE_EXPORT_ANGLE_COUNTS,
@@ -134,6 +139,10 @@ const TOUCH_GESTURES = { ONE: TOUCH.ROTATE, TWO: TOUCH.DOLLY_PAN } as const;
 // piece with this much margin. Wide screens already fit it, so they're
 // unaffected. See fitWidthDistance() in Room.tsx.
 const ZOOM_FIT_WIDTH_MARGIN = 1.12;
+const VIEWER_MOBILE_OPTIONS_SHEET_CLASS =
+  "fixed inset-x-2 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-50 max-h-[76dvh] overflow-hidden rounded-[1.6rem] border border-white/[0.12] bg-[rgba(9,10,13,0.92)] shadow-[0_28px_90px_rgba(0,0,0,0.52)] backdrop-blur-2xl backdrop-saturate-150";
+const VIEWER_MOBILE_OPTIONS_CONTENT_CLASS =
+  "max-h-[calc(76dvh-4.75rem)] overflow-y-auto px-2 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 no-scrollbar";
 
 // Pieces 24 squares WIDE or smaller don't fill the back wall, so the
 // art (with its flanking plant & lamp) spreads evenly between the
@@ -674,7 +683,7 @@ export default function DesignPage() {
         <>
           <Button
             type="button"
-            className="fixed right-3 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-50 rounded-full h-9 inline-flex items-center gap-1.5 px-3 text-xs font-medium bg-indigo-600 hover:bg-indigo-500 text-white ring-1 ring-indigo-400/40 shadow-lg transition-colors"
+            className="fixed right-3 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-50 inline-flex h-11 items-center gap-1.5 rounded-full border border-white/[0.12] bg-[rgba(14,15,18,0.82)] px-4 text-xs font-medium text-white shadow-[0_14px_40px_rgba(0,0,0,0.3)] backdrop-blur-xl transition-colors hover:border-white/25 hover:bg-[rgba(24,25,29,0.92)]"
             onClick={() => setMobileOptionsOpen(true)}
           >
             <SlidersHorizontal className="h-4 w-4 shrink-0" />
@@ -693,28 +702,41 @@ export default function DesignPage() {
                   onClick={() => setMobileOptionsOpen(false)}
                 />
                 <motion.div
-                  className="fixed inset-x-2 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-50 max-h-[72dvh] overflow-hidden rounded-2xl border border-white/15 bg-slate-950/70 shadow-2xl backdrop-blur-xl"
+                  className={VIEWER_MOBILE_OPTIONS_SHEET_CLASS}
                   initial={{ y: "105%", opacity: 0.8 }}
                   animate={{ y: 0, opacity: 1 }}
                   exit={{ y: "105%", opacity: 0.8 }}
                   transition={{ type: "spring", stiffness: 420, damping: 36 }}
                 >
-                  <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-slate-950/80 px-4 py-3 backdrop-blur-xl">
-                    <div className="flex items-center gap-2 text-sm font-medium text-slate-100">
-                      <SlidersHorizontal className="h-4 w-4 text-indigo-300" />
-                      Options
+                  <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-white/[0.08] bg-[rgba(12,13,16,0.78)] px-4 pb-3 pt-5 backdrop-blur-2xl">
+                    <span
+                      aria-hidden
+                      className="absolute left-1/2 top-2 h-1 w-9 -translate-x-1/2 rounded-full bg-white/20"
+                    />
+                    <div className="flex min-w-0 items-start gap-2.5">
+                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl border border-white/[0.09] bg-white/[0.05] text-amber-100">
+                        <SlidersHorizontal className="h-4 w-4" />
+                      </span>
+                      <div>
+                        <div className="text-sm font-semibold text-white">
+                          Viewer options
+                        </div>
+                        <p className="mt-0.5 text-[0.68rem] text-slate-500">
+                          Shape the artwork and room
+                        </p>
+                      </div>
                     </div>
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 rounded-full text-slate-300 hover:bg-white/10 hover:text-white"
+                      className="h-9 w-9 rounded-full border border-white/[0.08] bg-white/[0.04] text-slate-300 hover:border-white/20 hover:bg-white/[0.09] hover:text-white"
                       onClick={() => setMobileOptionsOpen(false)}
                     >
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
-                  <div className="max-h-[calc(72dvh-3.5rem)] overflow-y-auto p-3 no-scrollbar">
+                  <div className={VIEWER_MOBILE_OPTIONS_CONTENT_CLASS}>
                     <ViewerOptionsStack
                       timeOfDay={timeOfDay}
                       onTimeOfDayChange={setTimeOfDay}
@@ -1090,7 +1112,7 @@ function ViewerOptionsStack({
         <LightingControls value={timeOfDay} onChange={onTimeOfDayChange} />
       </motion.div>
       <WallColorControls value={wallColor} onChange={onWallColorChange} />
-      <Card className="glass-surface rounded-[0.7rem] shadow-lg">
+      <ViewerControlSurface ariaLabel="Design and size">
         <div className="flex flex-row items-center gap-3 px-4 py-3">
           <div className="design-card flex items-center">
             <DesignCard compact bare />
@@ -1099,8 +1121,8 @@ function ViewerOptionsStack({
             <SizeCard compact bare />
           </div>
         </div>
-      </Card>
-      <MiniCard compact />
+      </ViewerControlSurface>
+      <SquareSizeControls compact />
       <div className="pattern-controls">
         <PatternControls />
       </div>
@@ -1116,59 +1138,18 @@ function WallColorControls({
   onChange: (value: string) => void;
 }) {
   return (
-    <Card className="glass-surface rounded-[0.7rem] shadow-lg">
-      <div className="p-3 space-y-2">
-        <Label className="text-sm text-gray-300">Wall Color</Label>
+    <ViewerControlSurface ariaLabel="Wall color">
+      <ViewerControlDisclosure
+        title="Wall color"
+        description="Preview a tone or find a named paint"
+        icon={PaintBucket}
+        compact
+        contentClassName="space-y-2 p-4"
+      >
         <WallColorPicker value={value} onChange={onChange} />
-        <div className="my-3 h-px bg-white/10" />
+        <div className="my-3 h-px bg-white/[0.07]" />
         <PaintColorPicker value={value} onChange={onChange} />
-      </div>
-    </Card>
-  );
-}
-
-// Add the MiniCard component
-function MiniCard({ compact = false }: { compact?: boolean }) {
-  const useMini = useCustomStore((s) => s.useMini);
-  const setUseMini = useCustomStore((s) => s.setUseMini);
-
-  return (
-    <Card className="glass-surface rounded-[0.7rem] shadow-lg">
-      <div className="p-3 space-y-2">
-        <Label className="text-sm text-gray-300">Square Size</Label>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={!useMini}
-          onClick={() => setUseMini(!useMini)}
-          className="relative grid w-full grid-cols-2 items-center rounded-md border border-white/10 bg-gray-900/40 p-1 text-xs font-medium overflow-hidden cursor-pointer hover:bg-gray-900/60 transition-colors"
-        >
-          <motion.span
-            aria-hidden
-            className="absolute top-1 bottom-1 left-1 w-[calc(50%-0.25rem)] rounded border border-indigo-400/70 ring-1 ring-indigo-400/30 bg-indigo-500/10"
-            animate={{ x: useMini ? "100%" : 0 }}
-            transition={{ type: "tween", ease: "easeInOut", duration: 0.35 }}
-          />
-          <span
-            className={cn(
-              "relative z-10 flex items-center justify-center gap-1 py-1 transition-colors",
-              !useMini ? "text-white" : "text-gray-400"
-            )}
-          >
-            <Maximize2 className="w-4 h-4" />
-            Full
-          </span>
-          <span
-            className={cn(
-              "relative z-10 flex items-center justify-center gap-1 py-1 transition-colors",
-              useMini ? "text-white" : "text-gray-400"
-            )}
-          >
-            <Minimize2 className="w-4 h-4" />
-            Mini
-          </span>
-        </button>
-      </div>
-    </Card>
+      </ViewerControlDisclosure>
+    </ViewerControlSurface>
   );
 }

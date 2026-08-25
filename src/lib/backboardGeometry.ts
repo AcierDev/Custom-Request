@@ -7,14 +7,16 @@ import {
   getSquareGapSceneUnits,
   getSquareGridSpanSceneUnits,
 } from "./squareGap.ts";
+import { WEDGE_GEOMETRY_CONFIG } from "./wedgeGeometry.ts";
 
 export const BACKBOARD_GEOMETRY_CONFIG = {
-  inchesPerSceneUnit: PANEL_LAYOUT_CONFIG.inchesPerSceneUnit,
+  inchesPerSceneUnit: WEDGE_GEOMETRY_CONFIG.inchesPerSceneUnit,
   thicknessSceneUnits: 0.07,
   insetInches: 0.5,
   insetSceneUnits: 0.5 / PANEL_LAYOUT_CONFIG.inchesPerSceneUnit,
   gridOriginOffsetSceneUnits: -0.25,
-  miniGridCorrectionSceneUnits: 0.03,
+  miniGridCorrectionSceneUnits:
+    WEDGE_GEOMETRY_CONFIG.miniGridCorrectionSceneUnits,
   minimumDimensionSceneUnits: 0.01,
   bodyIdPrefix: "backboard-body",
   bodyNumberWidth: 3,

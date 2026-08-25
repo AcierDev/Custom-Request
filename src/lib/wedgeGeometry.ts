@@ -1,7 +1,20 @@
+const STANDARD_SQUARE_EDGE_INCHES = 3;
+const MINI_SQUARE_EDGE_INCHES = 2.65;
+const INCHES_PER_SCENE_UNIT = 6;
+const FULL_SQUARE_SIZE_SCENE_UNITS =
+  STANDARD_SQUARE_EDGE_INCHES / INCHES_PER_SCENE_UNIT;
+const MINI_SQUARE_SCALE =
+  MINI_SQUARE_EDGE_INCHES / STANDARD_SQUARE_EDGE_INCHES;
+const MINI_GRID_CORRECTION_SCENE_UNITS =
+  (FULL_SQUARE_SIZE_SCENE_UNITS * (1 - MINI_SQUARE_SCALE)) / 2;
+
 export const WEDGE_GEOMETRY_CONFIG = {
-  inchesPerSceneUnit: 6,
-  fullSquareSizeSceneUnits: 0.5,
-  miniScale: 0.9,
+  inchesPerSceneUnit: INCHES_PER_SCENE_UNIT,
+  standardSquareEdgeInches: STANDARD_SQUARE_EDGE_INCHES,
+  miniSquareEdgeInches: MINI_SQUARE_EDGE_INCHES,
+  fullSquareSizeSceneUnits: FULL_SQUARE_SIZE_SCENE_UNITS,
+  miniScale: MINI_SQUARE_SCALE,
+  miniGridCorrectionSceneUnits: MINI_GRID_CORRECTION_SCENE_UNITS,
   angleDegrees: 21.5,
   degreesPerHalfTurn: 180,
   backboardLipInches: 3 / 16,

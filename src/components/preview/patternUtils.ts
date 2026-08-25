@@ -16,6 +16,8 @@ import {
   PALETTE_BLEND_CONFIG,
   normalizePaletteBlendPercent,
 } from "@/lib/paletteBlend";
+import { WEDGE_GEOMETRY_CONFIG } from "@/lib/wedgeGeometry";
+import { generatePalettePatternMap } from "./palettePattern";
 
 /**
  * Shared types for pattern components
@@ -55,9 +57,21 @@ const FALLBACK_COLOR_HASH_SALT = 91.41;
 const ROTATION_SEED_THRESHOLD = 0.5;
 const PALETTE_POSITION_OFFSET = 1;
 const BLEND_PERCENT_DIVISOR = 100;
-const MIN_BLEND_DEPTH = 1;
 const MIN_BLEND_SWAP_COUNT = 1;
+const MIN_BLEND_BUCKET_SPAN = 1;
 const BLEND_POSITION_COUNT_MULTIPLIER = 2;
+const FIRST_BLEND_GRID_INDEX = 0;
+const ORTHOGONAL_GRID_STEP = 1;
+
+interface SeamSwap {
+  lineA: number;
+  posA: number;
+  colorA: number;
+  lineB: number;
+  posB: number;
+  colorB: number;
+  active: boolean;
+}
 
 /** Stable pseudo-random value in [0, 1) for a grid coordinate and purpose. */
 function deterministicGridValue(x: number, y: number, salt: number): number {
@@ -73,9 +87,40 @@ function deterministicGridValue(x: number, y: number, salt: number): number {
 }
 
 /**
+ * Choose deterministic, evenly distributed positions that have not already
+ * participated in a neighboring seam. Reservations stop a color introduced
+ * on one side of a one-line band from being carried through its other side.
+ */
+function selectAvailableBlendPositions(
+  line: number,
+  peerLine: number,
+  lineLength: number,
+  count: number,
+  reserved: Set<number>,
+): number[] {
+  const available = Array.from({ length: lineLength }, (_, position) => position)
+    .filter((position) => !reserved.has(position));
+  const positions: number[] = [];
+
+  for (let bucket = 0; bucket < count; bucket++) {
+    const start = Math.floor((bucket * available.length) / count);
+    const end = Math.floor(((bucket + 1) * available.length) / count);
+    const span = Math.max(MIN_BLEND_BUCKET_SPAN, end - start);
+    const bucketValue = deterministicGridValue(
+      line,
+      peerLine,
+      SEAM_BLEND_HASH_SALT + bucket,
+    );
+    positions.push(available[start + Math.floor(bucketValue * span)]);
+  }
+
+  positions.forEach((position) => reserved.add(position));
+  return positions;
+}
+
+/**
  * Swap squares between the two solid lines straddling a seam to stipple the
- * boundary. Mixed squares are spread one-per-bucket along the seam, and every
- * swap conserves the number of squares assigned to each color.
+ * boundary. Every swap conserves the number of squares assigned to each color.
  */
 function swapAcrossSeam(
   lineA: number,
@@ -84,50 +129,159 @@ function swapAcrossSeam(
   swapFraction: number,
   read: (line: number, pos: number) => number,
   write: (line: number, pos: number, color: number) => void,
+  reservedByLine: Array<Set<number>>,
+  swaps: SeamSwap[],
+  activeSwapByPosition: Map<number, number>,
 ): void {
-  const pairs = Math.min(
+  const requestedPairs = Math.min(
     Math.max(MIN_BLEND_SWAP_COUNT, Math.round(lineLength * swapFraction)),
     Math.floor(lineLength / BLEND_POSITION_COUNT_MULTIPLIER),
   );
+  const reservedA = reservedByLine[lineA];
+  const reservedB = reservedByLine[lineB];
+  const pairs = Math.min(
+    requestedPairs,
+    lineLength - reservedA.size,
+    lineLength - reservedB.size,
+  );
   if (pairs <= 0) return;
-  const positionCount = pairs * BLEND_POSITION_COUNT_MULTIPLIER;
 
-  // One mixed row per evenly sized bucket. The coordinate hash keeps the
-  // organic-looking placement identical in the builder and every shared view.
-  const positions: number[] = [];
-  for (let i = 0; i < positionCount; i++) {
-    const start = Math.floor((i * lineLength) / positionCount);
-    const end = Math.floor(((i + 1) * lineLength) / positionCount);
-    const span = Math.max(1, end - start);
-    const bucketValue = deterministicGridValue(
-      lineA,
-      lineB,
-      SEAM_BLEND_HASH_SALT + i,
-    );
-    positions.push(start + Math.floor(bucketValue * span));
-  }
+  const positionsA = selectAvailableBlendPositions(
+    lineA,
+    lineB,
+    lineLength,
+    pairs,
+    reservedA,
+  );
+  const positionsB = selectAvailableBlendPositions(
+    lineB,
+    lineA,
+    lineLength,
+    pairs,
+    reservedB,
+  );
 
-  // Alternate buckets between the two columns and swap each pair, conserving
-  // color counts (each swap exchanges one square from each side).
   for (let i = 0; i < pairs; i++) {
-    const posA = positions[i * 2];
-    const posB = positions[i * 2 + 1];
-    const temp = read(lineA, posA);
-    write(lineA, posA, read(lineB, posB));
-    write(lineB, posB, temp);
+    const posA = positionsA[i];
+    const posB = positionsB[i];
+    const colorA = read(lineA, posA);
+    const colorB = read(lineB, posB);
+    const swapIndex = swaps.length;
+    swaps.push({ lineA, posA, colorA, lineB, posB, colorB, active: true });
+    activeSwapByPosition.set(lineA * lineLength + posA, swapIndex);
+    activeSwapByPosition.set(lineB * lineLength + posB, swapIndex);
+    write(lineA, posA, colorB);
+    write(lineB, posB, colorA);
+  }
+}
+
+function getOrthogonalBlendNeighbors(
+  line: number,
+  pos: number,
+  lineCount: number,
+  lineLength: number,
+): Array<[number, number]> {
+  const neighbors: Array<[number, number]> = [];
+  if (line > FIRST_BLEND_GRID_INDEX) {
+    neighbors.push([line - ORTHOGONAL_GRID_STEP, pos]);
+  }
+  if (line + ORTHOGONAL_GRID_STEP < lineCount) {
+    neighbors.push([line + ORTHOGONAL_GRID_STEP, pos]);
+  }
+  if (pos > FIRST_BLEND_GRID_INDEX) {
+    neighbors.push([line, pos - ORTHOGONAL_GRID_STEP]);
+  }
+  if (pos + ORTHOGONAL_GRID_STEP < lineLength) {
+    neighbors.push([line, pos + ORTHOGONAL_GRID_STEP]);
+  }
+  return neighbors;
+}
+
+function getOriginalSwapColorAt(
+  swap: SeamSwap,
+  line: number,
+  pos: number,
+): number | undefined {
+  if (swap.lineA === line && swap.posA === pos) return swap.colorA;
+  if (swap.lineB === line && swap.posB === pos) return swap.colorB;
+  return undefined;
+}
+
+/**
+ * Revert only swaps that leave a square without an edge-sharing same-color
+ * neighbor. Reverting complete swaps preserves exact palette color counts.
+ */
+function removeOrthogonallyIsolatedBlendSquares(
+  lineCount: number,
+  lineLength: number,
+  read: (line: number, pos: number) => number,
+  write: (line: number, pos: number, color: number) => void,
+  swaps: SeamSwap[],
+  activeSwapByPosition: Map<number, number>,
+): void {
+  while (true) {
+    let swapToRevert: number | undefined;
+
+    for (let line = FIRST_BLEND_GRID_INDEX; line < lineCount; line++) {
+      for (let pos = FIRST_BLEND_GRID_INDEX; pos < lineLength; pos++) {
+        const color = read(line, pos);
+        const neighbors = getOrthogonalBlendNeighbors(
+          line,
+          pos,
+          lineCount,
+          lineLength,
+        );
+        if (
+          neighbors.some(
+            ([nextLine, nextPos]) => read(nextLine, nextPos) === color,
+          )
+        ) {
+          continue;
+        }
+
+        const ownSwap = activeSwapByPosition.get(line * lineLength + pos);
+        if (ownSwap !== undefined) {
+          swapToRevert = ownSwap;
+          break;
+        }
+
+        for (const [nextLine, nextPos] of neighbors) {
+          const neighborSwap = activeSwapByPosition.get(
+            nextLine * lineLength + nextPos,
+          );
+          if (neighborSwap === undefined) continue;
+          const swap = swaps[neighborSwap];
+          if (
+            swap.active &&
+            getOriginalSwapColorAt(swap, nextLine, nextPos) === color
+          ) {
+            swapToRevert = neighborSwap;
+            break;
+          }
+        }
+
+        if (swapToRevert !== undefined) break;
+      }
+      if (swapToRevert !== undefined) break;
+    }
+
+    if (swapToRevert === undefined) return;
+    const swap = swaps[swapToRevert];
+    if (!swap.active) continue;
+    write(swap.lineA, swap.posA, swap.colorA);
+    write(swap.lineB, swap.posB, swap.colorB);
+    swap.active = false;
+    activeSwapByPosition.delete(swap.lineA * lineLength + swap.posA);
+    activeSwapByPosition.delete(swap.lineB * lineLength + swap.posB);
   }
 }
 
 /**
- * Soften the seams between adjacent solid-color bands by swapping squares across
- * each seam, while guaranteeing every band keeps at least one fully solid line
- * (a column when filling horizontally, a row when vertically) — unless the band
- * is a single line wide, where it is literally impossible.
- *
- * A band only loses solidity at its edge lines, so: bands ≥3 wide always keep a
- * solid interior; a 2-wide band blends just one of its two seams so one line
- * survives (the other seam stays a hard edge); a 1-wide band can't be preserved
- * and blends on one side only.
+ * Soften every seam between adjacent solid-color bands. Only the two lines
+ * touching a seam exchange squares, and per-line reservations prevent colors
+ * from being carried through a narrow band into a line two squares away. Bands
+ * three lines or wider therefore keep a solid interior; one- and two-line bands
+ * prioritize blending every seam because no interior line exists.
  */
 function blendSolidSeams(
   colorMap: number[][],
@@ -170,7 +324,7 @@ function blendSolidSeams(
   }
 
   // Group consecutive solid lines of the same color into bands.
-  const bands: { start: number; end: number; width: number }[] = [];
+  const bands: { start: number; end: number }[] = [];
   for (let line = 0; line < lineCount;) {
     if (lineColor[line] === null) {
       line++;
@@ -178,12 +332,16 @@ function blendSolidSeams(
     }
     let end = line;
     while (end + 1 < lineCount && lineColor[end + 1] === lineColor[line]) end++;
-    bands.push({ start: line, end, width: end - line + 1 });
+    bands.push({ start: line, end });
     line = end + 1;
   }
 
-  // Solid lines still available per band; one is consumed per blended seam.
-  const solidRemaining = bands.map((band) => band.width);
+  const reservedByLine = Array.from(
+    { length: lineCount },
+    () => new Set<number>(),
+  );
+  const swaps: SeamSwap[] = [];
+  const activeSwapByPosition = new Map<number, number>();
 
   for (let k = 0; k < bands.length - 1; k++) {
     const left = bands[k];
@@ -192,18 +350,6 @@ function blendSolidSeams(
     if (right.start !== left.end + 1) continue;
     if (lineColor[left.end] === lineColor[right.start]) continue;
 
-    // Blend unless it would erase a band's last solid line — allowed only when
-    // the band is one line wide and can't keep one anyway.
-    const haveFresh =
-      solidRemaining[k] >= MIN_BLEND_DEPTH &&
-      solidRemaining[k + 1] >= MIN_BLEND_DEPTH;
-    const canBlendLeft =
-      left.width === MIN_BLEND_DEPTH || solidRemaining[k] > MIN_BLEND_DEPTH;
-    const canBlendRight =
-      right.width === MIN_BLEND_DEPTH ||
-      solidRemaining[k + 1] > MIN_BLEND_DEPTH;
-    if (!haveFresh || !canBlendLeft || !canBlendRight) continue;
-
     swapAcrossSeam(
       left.end,
       right.start,
@@ -211,10 +357,20 @@ function blendSolidSeams(
       edgeSwapFraction,
       read,
       write,
+      reservedByLine,
+      swaps,
+      activeSwapByPosition,
     );
-    solidRemaining[k] -= MIN_BLEND_DEPTH;
-    solidRemaining[k + 1] -= MIN_BLEND_DEPTH;
   }
+
+  removeOrthogonallyIsolatedBlendSquares(
+    lineCount,
+    lineLength,
+    read,
+    write,
+    swaps,
+    activeSwapByPosition,
+  );
 }
 
 /**
@@ -554,154 +710,24 @@ export function generateColorMap(
     : orientation;
 
   if (colorPattern === "fade") {
-    const progressionLineCount =
-      effectiveOrientation === "horizontal"
-        ? adjustedModelWidth
-        : adjustedModelHeight;
-    const progressionLineLength =
-      effectiveOrientation === "horizontal"
-        ? adjustedModelHeight
-        : adjustedModelWidth;
-    const lineCounts = getWeightedSquareCounts(
-      progressionLineCount,
+    const squareCounts = getWeightedSquareCounts(
+      totalSquares,
       colorEntries.length,
       extraPercentByIndex,
     );
-
-    const allColorIndices: number[] = [];
-    for (let i = 0; i < colorEntries.length; i++) {
-      const squareCount = (lineCounts[i] ?? 0) * progressionLineLength;
-      for (let j = 0; j < squareCount; j++) {
-        allColorIndices.push(i);
+    const paletteMap = generatePalettePatternMap({
+      width: adjustedModelWidth,
+      height: adjustedModelHeight,
+      squareCounts,
+      orientation: effectiveOrientation,
+      isReversed,
+      blendPercent: paletteBlend,
+    });
+    for (let x = 0; x < adjustedModelWidth; x++) {
+      for (let y = 0; y < adjustedModelHeight; y++) {
+        colorMap[x][y] = paletteMap[x][y];
       }
     }
-
-    // For fade, we want sequential progression, not random shuffling
-    // The array is already in order: [0,0,0,...,1,1,1,...,2,2,2,...]
-    const sequentialColors = [...allColorIndices];
-
-    // Determine the progression direction based on orientation
-    const progressDirection = effectiveOrientation;
-
-    // Apply reversal if needed
-    const shouldReverse = isReversed;
-
-    // Fill the grid based on rotation mode
-    let colorIndex = 0;
-
-    // Fill axis is driven entirely by effectiveOrientation (progressDirection),
-    // which already folds in isRotated — rotating flips horizontal <-> vertical.
-    if (progressDirection === "horizontal") {
-      // Fill columns from left to right (or right to left if reversed)
-      const columnOrder = shouldReverse
-        ? Array.from(
-            { length: adjustedModelWidth },
-            (_, i) => adjustedModelWidth - 1 - i,
-          )
-        : Array.from({ length: adjustedModelWidth }, (_, i) => i);
-
-      for (const x of columnOrder) {
-        // Fill this column with the next available colors
-        const columnPositions = Array.from(
-          { length: adjustedModelHeight },
-          (_, i) => i,
-        );
-
-        for (let y = 0; y < adjustedModelHeight; y++) {
-          if (colorIndex < sequentialColors.length) {
-            colorMap[x][y] = sequentialColors[colorIndex++];
-          } else {
-            // Fallback if we run out of colors
-            colorMap[x][y] = sequentialColors[sequentialColors.length - 1];
-          }
-        }
-
-        // If this column has a color transition, randomize the positions within the column
-        if (colorIndex > 0 && colorIndex < sequentialColors.length) {
-          // Find where the color transition happened in this column
-          let transitionY = -1;
-          for (let y = 0; y < adjustedModelHeight; y++) {
-            if (colorMap[x][y] !== colorMap[x][0]) {
-              transitionY = y;
-              break;
-            }
-          }
-
-          if (transitionY !== -1) {
-            // Randomize ALL positions in the column
-            const shuffledPositions = shuffleArray([...columnPositions]);
-
-            // Reassign the colors to the shuffled positions
-            for (let i = 0; i < columnPositions.length; i++) {
-              const originalY = columnPositions[i];
-              const newY = shuffledPositions[i];
-              const tempColor = colorMap[x][originalY];
-              colorMap[x][originalY] = colorMap[x][newY];
-              colorMap[x][newY] = tempColor;
-            }
-          }
-        }
-      }
-    } else {
-      // Fill rows from top to bottom (or bottom to top if reversed)
-      const rowOrder = shouldReverse
-        ? Array.from(
-            { length: adjustedModelHeight },
-            (_, i) => adjustedModelHeight - 1 - i,
-          )
-        : Array.from({ length: adjustedModelHeight }, (_, i) => i);
-
-      for (const y of rowOrder) {
-        // Fill this row with the next available colors
-        const rowPositions = Array.from(
-          { length: adjustedModelWidth },
-          (_, i) => i,
-        );
-
-        for (let x = 0; x < adjustedModelWidth; x++) {
-          if (colorIndex < sequentialColors.length) {
-            colorMap[x][y] = sequentialColors[colorIndex++];
-          } else {
-            // Fallback if we run out of colors
-            colorMap[x][y] = sequentialColors[sequentialColors.length - 1];
-          }
-        }
-
-        // If this row has a color transition, randomize the positions within the row
-        if (colorIndex > 0 && colorIndex < sequentialColors.length) {
-          // Find where the color transition happened in this row
-          let transitionX = -1;
-          for (let x = 0; x < adjustedModelWidth; x++) {
-            if (colorMap[x][y] !== colorMap[0][y]) {
-              transitionX = x;
-              break;
-            }
-          }
-
-          if (transitionX !== -1) {
-            // Randomize ALL positions in the row
-            const shuffledPositions = shuffleArray([...rowPositions]);
-
-            // Reassign the colors to the shuffled positions
-            for (let i = 0; i < rowPositions.length; i++) {
-              const originalX = rowPositions[i];
-              const newX = shuffledPositions[i];
-              const tempColor = colorMap[originalX][y];
-              colorMap[originalX][y] = colorMap[newX][y];
-              colorMap[newX][y] = tempColor;
-            }
-          }
-        }
-      }
-    }
-
-    blendSolidSeams(
-      colorMap,
-      adjustedModelWidth,
-      adjustedModelHeight,
-      effectiveOrientation,
-      paletteBlend,
-    );
   } else if (colorPattern === "center-fade") {
     // For center-fade patterns, create a mirrored color array
     const totalSquares = adjustedModelWidth * adjustedModelHeight;
@@ -1107,8 +1133,8 @@ export function generateColorMap(
   return colorMap;
 }
 
-// The 14x7 mini panel is defined as literally 14x7 mini squares (~36" x 18"),
-// so it skips the 1.1 mini upscale and uses an exact square count.
+// The 14x7 mini panel uses an exact square count, so it skips the general
+// mini-grid density adjustment.
 export const EXACT_MINI_WIDTH = 14;
 export const EXACT_MINI_HEIGHT = 7;
 
@@ -1151,8 +1177,11 @@ export function calculateSquareLayout(
   );
 
   // Calculate offsets with adjustment for mini mode
-  const offsetX = -totalWidth / 2 - 0.25 + (useMini ? 0.03 : 0);
-  const offsetY = -totalHeight / 2 - 0.25 + (useMini ? 0.03 : 0);
+  const miniGridCorrection = useMini
+    ? WEDGE_GEOMETRY_CONFIG.miniGridCorrectionSceneUnits
+    : 0;
+  const offsetX = -totalWidth / 2 - 0.25 + miniGridCorrection;
+  const offsetY = -totalHeight / 2 - 0.25 + miniGridCorrection;
 
   return {
     adjustedModelWidth,

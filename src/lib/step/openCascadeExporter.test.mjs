@@ -6,7 +6,10 @@ import { exportStepModel } from "./openCascadeExporter.ts";
 import { createStepExportMetadata } from "./stepMetadata.ts";
 
 const FULL_SQUARE_SCALE_SCENE_UNITS = 0.5;
-const MINI_SQUARE_SCALE_SCENE_UNITS = 0.45;
+const MINI_SQUARE_EDGE_INCHES = 2.65;
+const INCHES_PER_SCENE_UNIT = 6;
+const MINI_SQUARE_SCALE_SCENE_UNITS =
+  MINI_SQUARE_EDGE_INCHES / INCHES_PER_SCENE_UNIT;
 const LEFT_X_SCENE_UNITS = -0.4;
 const RIGHT_X_SCENE_UNITS = 0.4;
 const SQUARE_Z_SCENE_UNITS = 0.25;

@@ -15,7 +15,7 @@ export function SortableColorSwatch({ id, ...props }: SortableColorSwatchProps) 
     transform,
     transition,
     isDragging,
-  } = useSortable({ id });
+  } = useSortable({ id, disabled: props.isPendingRemoval });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -43,4 +43,3 @@ export function SortableColorSwatch({ id, ...props }: SortableColorSwatchProps) 
     </div>
   );
 }
-

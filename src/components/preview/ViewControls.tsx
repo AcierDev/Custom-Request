@@ -1,161 +1,146 @@
 "use client";
 
 import { useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { useCustomStore } from "@/store/customStore";
-import { Card } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import type { LucideIcon } from "lucide-react";
 import {
   ChevronDown,
-  Ruler,
   Grid,
+  Image,
   Info,
   Paperclip,
+  Ruler,
+  SlidersHorizontal,
   Sparkles,
-  Image,
 } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
+import { useCustomStore } from "@/store/customStore";
+import { ViewerControlSurface } from "./ViewerControlSurface";
 
 interface ViewControlsProps {
   className?: string;
 }
 
+interface ViewOptionRowProps {
+  label: string;
+  Icon: LucideIcon;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+}
+
+const VIEW_OPTIONS_CONTENT_ID = "viewer-view-options";
+const VIEW_OPTION_ROW_CLASS =
+  "flex min-h-11 items-center justify-between gap-3 rounded-xl border border-transparent px-2.5 transition-colors hover:border-white/[0.07] hover:bg-white/[0.035]";
+
+function ViewOptionRow({
+  label,
+  Icon,
+  checked,
+  onCheckedChange,
+}: ViewOptionRowProps) {
+  return (
+    <div className={VIEW_OPTION_ROW_CLASS}>
+      <div className="flex min-w-0 items-center gap-2.5">
+        <span
+          aria-hidden
+          className={cn(
+            "grid h-7 w-7 shrink-0 place-items-center rounded-lg border transition-colors",
+            checked
+              ? "border-white/20 bg-white/[0.1] text-white"
+              : "border-white/[0.07] bg-white/[0.035] text-slate-500",
+          )}
+        >
+          <Icon className="h-3.5 w-3.5" />
+        </span>
+        <span className="truncate text-xs font-medium text-slate-300">
+          {label}
+        </span>
+      </div>
+      <Switch
+        aria-label={label}
+        checked={checked}
+        onCheckedChange={onCheckedChange}
+        className="data-[state=checked]:bg-white data-[state=unchecked]:bg-white/10 data-[state=checked]:[&>span]:bg-slate-950"
+      />
+    </div>
+  );
+}
+
 export function ViewControls({ className = "" }: ViewControlsProps) {
-  const showRuler = useCustomStore((s) => s.viewSettings.showRuler);
-  const showWoodGrain = useCustomStore((s) => s.viewSettings.showWoodGrain);
-  const metallic = useCustomStore((s) => s.viewSettings.metallic);
-  const showColorInfo = useCustomStore((s) => s.viewSettings.showColorInfo);
-  const showHanger = useCustomStore((s) => s.viewSettings.showHanger);
-  const showRoom = useCustomStore((s) => s.viewSettings.showRoom);
-  const setShowRuler = useCustomStore((s) => s.setShowRuler);
-  const setShowWoodGrain = useCustomStore((s) => s.setShowWoodGrain);
-  const setMetallic = useCustomStore((s) => s.setMetallic);
-  const setShowColorInfo = useCustomStore((s) => s.setShowColorInfo);
-  const setShowHanger = useCustomStore((s) => s.setShowHanger);
-  const setShowRoom = useCustomStore((s) => s.setShowRoom);
+  const showRuler = useCustomStore((state) => state.viewSettings.showRuler);
+  const showWoodGrain = useCustomStore(
+    (state) => state.viewSettings.showWoodGrain,
+  );
+  const metallic = useCustomStore((state) => state.viewSettings.metallic);
+  const showColorInfo = useCustomStore(
+    (state) => state.viewSettings.showColorInfo,
+  );
+  const showHanger = useCustomStore((state) => state.viewSettings.showHanger);
+  const showRoom = useCustomStore((state) => state.viewSettings.showRoom);
+  const setShowRuler = useCustomStore((state) => state.setShowRuler);
+  const setShowWoodGrain = useCustomStore((state) => state.setShowWoodGrain);
+  const setMetallic = useCustomStore((state) => state.setMetallic);
+  const setShowColorInfo = useCustomStore((state) => state.setShowColorInfo);
+  const setShowHanger = useCustomStore((state) => state.setShowHanger);
+  const setShowRoom = useCustomStore((state) => state.setShowRoom);
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className={className}
-    >
-      <Card className="glass-surface shadow-lg">
-        <div className="p-3 space-y-4">
-          <button
-            type="button"
-            onClick={() => setIsExpanded((v) => !v)}
-            className="flex w-full items-center justify-between"
-            aria-expanded={isExpanded}
+    <ViewerControlSurface ariaLabel="View options" className={className}>
+      <button
+        type="button"
+        onClick={() => setIsExpanded((expanded) => !expanded)}
+        aria-expanded={isExpanded}
+        aria-controls={VIEW_OPTIONS_CONTENT_ID}
+        className="flex min-h-14 w-full items-center justify-between gap-3 px-4 py-3 text-left outline-none transition-colors hover:bg-white/[0.035] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-100/60"
+      >
+        <span className="flex min-w-0 items-center gap-3">
+          <span
+            aria-hidden
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-xl border border-white/[0.09] bg-white/[0.05] text-amber-100"
           >
-            <Label className="text-sm text-slate-300 cursor-pointer">
-              View Options
-            </Label>
-            <ChevronDown
-              className={`w-4 h-4 text-slate-400 transition-transform ${
-                isExpanded ? "rotate-180" : ""
-              }`}
-            />
-          </button>
-          <AnimatePresence initial={false}>
-            {isExpanded && (
-              <motion.div
-                key="view-options-content"
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden"
-              >
-                <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Ruler className="w-4 h-4 text-slate-400" />
-                <span className="text-sm text-slate-300">
-                  Show Ruler
-                </span>
-              </div>
-              <Switch
-                checked={showRuler}
-                onCheckedChange={setShowRuler}
-                className="data-[state=checked]:bg-indigo-600"
-              />
+            <SlidersHorizontal className="h-4 w-4" />
+          </span>
+          <span className="min-w-0">
+            <span className="block text-sm font-semibold text-white">
+              View options
+            </span>
+            <span className="mt-0.5 block text-[0.65rem] text-slate-500">
+              Room, material, and guides
+            </span>
+          </span>
+        </span>
+        <ChevronDown
+          aria-hidden
+          className={cn(
+            "h-4 w-4 shrink-0 text-slate-500 transition-transform",
+            isExpanded && "rotate-180",
+          )}
+        />
+      </button>
+      <AnimatePresence initial={false}>
+        {isExpanded && (
+          <motion.div
+            id={VIEW_OPTIONS_CONTENT_ID}
+            key="view-options-content"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden border-t border-white/[0.07]"
+          >
+            <div className="space-y-0.5 p-2">
+              <ViewOptionRow label="Show ruler" Icon={Ruler} checked={showRuler} onCheckedChange={setShowRuler} />
+              <ViewOptionRow label="Wood grain" Icon={Grid} checked={showWoodGrain} onCheckedChange={setShowWoodGrain} />
+              <ViewOptionRow label="Metallic finish" Icon={Sparkles} checked={metallic} onCheckedChange={setMetallic} />
+              <ViewOptionRow label="Show hanger" Icon={Paperclip} checked={showHanger} onCheckedChange={setShowHanger} />
+              <ViewOptionRow label="Color information" Icon={Info} checked={showColorInfo} onCheckedChange={setShowColorInfo} />
+              <ViewOptionRow label="Room view" Icon={Image} checked={showRoom} onCheckedChange={setShowRoom} />
             </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Grid className="w-4 h-4 text-slate-400" />
-                <span className="text-sm text-slate-300">
-                  Show Wood Grain
-                </span>
-              </div>
-              <Switch
-                checked={showWoodGrain}
-                onCheckedChange={setShowWoodGrain}
-                className="data-[state=checked]:bg-indigo-600"
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-slate-400" />
-                <span className="text-sm text-slate-300">Metallic</span>
-              </div>
-              <Switch
-                checked={metallic}
-                onCheckedChange={setMetallic}
-                className="data-[state=checked]:bg-indigo-600"
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Paperclip className="w-4 h-4 text-slate-400" />
-                <span className="text-sm text-slate-300">
-                  Show Hanger
-                </span>
-              </div>
-              <Switch
-                checked={showHanger}
-                onCheckedChange={setShowHanger}
-                className="data-[state=checked]:bg-indigo-600"
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Info className="w-4 h-4 text-slate-400" />
-                <span className="text-sm text-slate-300">
-                  Show Color Info
-                </span>
-              </div>
-              <Switch
-                checked={showColorInfo}
-                onCheckedChange={setShowColorInfo}
-                className="data-[state=checked]:bg-indigo-600"
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Image className="w-4 h-4 text-slate-400" />
-                <span className="text-sm text-slate-300">
-                  Show Room
-                </span>
-              </div>
-              <Switch
-                checked={showRoom}
-                onCheckedChange={setShowRoom}
-                className="data-[state=checked]:bg-indigo-600"
-              />
-            </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </Card>
-    </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </ViewerControlSurface>
   );
 }
