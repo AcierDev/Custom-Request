@@ -15,6 +15,9 @@ export interface HandMixSimulation {
 }
 
 const HEX_COLOR_PATTERN = /^#[0-9A-Fa-f]{6}$/;
+const SHORT_HEX_COLOR_PATTERN = /^#[0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f]$/;
+const HEX_PREFIX_LENGTH = 1;
+const HEX_CHANNEL_EXPANSION_LENGTH = 2;
 const HEX_CHANNEL_RADIX = 16;
 const HEX_RED_START = 1;
 const HEX_RED_END = 3;
@@ -119,9 +122,18 @@ const DECISION_COPY: Record<
 
 export type Lab = [number, number, number];
 
+function expandShortHex(hex: string): string {
+  if (!SHORT_HEX_COLOR_PATTERN.test(hex)) return hex;
+  const channels = hex.slice(HEX_PREFIX_LENGTH);
+  return `#${[...channels]
+    .map((channel) => channel.repeat(HEX_CHANNEL_EXPANSION_LENGTH))
+    .join("")}`;
+}
+
 function normalizeHex(hex: string): string | null {
-  if (!HEX_COLOR_PATTERN.test(hex)) return null;
-  return hex.toUpperCase();
+  const expandedHex = expandShortHex(hex);
+  if (!HEX_COLOR_PATTERN.test(expandedHex)) return null;
+  return expandedHex.toUpperCase();
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -148,13 +160,17 @@ function labPivot(value: number): number {
 }
 
 export function hexToLab(hex: string): Lab {
-  const red = parseInt(hex.slice(HEX_RED_START, HEX_RED_END), HEX_CHANNEL_RADIX);
+  const expandedHex = expandShortHex(hex);
+  const red = parseInt(
+    expandedHex.slice(HEX_RED_START, HEX_RED_END),
+    HEX_CHANNEL_RADIX
+  );
   const green = parseInt(
-    hex.slice(HEX_GREEN_START, HEX_GREEN_END),
+    expandedHex.slice(HEX_GREEN_START, HEX_GREEN_END),
     HEX_CHANNEL_RADIX
   );
   const blue = parseInt(
-    hex.slice(HEX_BLUE_START, HEX_BLUE_END),
+    expandedHex.slice(HEX_BLUE_START, HEX_BLUE_END),
     HEX_CHANNEL_RADIX
   );
 

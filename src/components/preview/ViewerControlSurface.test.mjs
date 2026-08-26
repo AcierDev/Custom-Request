@@ -126,6 +126,24 @@ test("studio surface exposes a labeled hierarchy and readable value", () => {
   assert.match(markup, /<output[^>]*aria-label="Palette blend"[^>]*>42%<\/output>/);
 });
 
+test("studio surface uses translucent liquid glass instead of solid black", () => {
+  assert.ifError(componentLoadError);
+  const { ViewerControlSurface } = controls;
+  const markup = renderToStaticMarkup(
+    React.createElement(
+      ViewerControlSurface,
+      { ariaLabel: "Liquid glass controls" },
+      "Controls",
+    ),
+  );
+  const openingTag = markup.match(/<section[^>]*>/)?.[0] ?? "";
+
+  assert.match(openingTag, /data-liquid-glass="true"/);
+  assert.match(openingTag, /backdrop-blur-\[28px\]/);
+  assert.match(openingTag, /rgba\(40,48,64,0\.58\)/);
+  assert.doesNotMatch(openingTag, /rgba\(20,20,22,0\.91\)/);
+});
+
 test("studio option tile exposes selection and a mobile-safe touch target", () => {
   assert.ifError(componentLoadError);
   const { ViewerControlTile } = controls;

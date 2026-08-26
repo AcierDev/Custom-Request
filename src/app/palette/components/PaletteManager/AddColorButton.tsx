@@ -15,25 +15,28 @@ import {
 } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { purchaseLabel } from "@/lib/paint";
+import {
+  ANY_PAINT_BRAND,
+  VERIFIED_BRANDS,
+  purchaseLabel,
+  type PaintColor,
+} from "@/lib/paint";
 import { AddColorButtonProps } from "./types";
+import { PaintColorSearch } from "./PaintColorSearch";
 
-// Suggestions are drawn only from real, currently-orderable paint colors
-// (the verified-brand datasets that carry manufacturer codes), so every
-// suggested swatch is something the user can actually buy at the counter —
-// not an arbitrary screen color.
-const VERIFIED_PAINT_SOURCES = [
+// Search spans the same current paint catalogs as the viewer. The Suggestions
+// tab further narrows these to verified, code-bearing brands.
+const ADD_COLOR_PAINT_SOURCES = [
   "/paints/sherwin/colors.json",
   "/paints/valspar/colors.json",
   "/paints/benjamin_moore/colors.json",
+  "/paints/behr/colors.json",
+  "/paints/ppg/colors.json",
+  "/paints/hgtv_home/colors.json",
 ] as const;
 
-type SuggestionColor = {
-  hex: string;
-  name: string;
-  brand: string;
-  code?: string;
-};
+type SuggestionColor = PaintColor;
+type AddColorTab = "picker" | "search" | "suggestions" | "codes";
 
 // Hue families the suggestions are grouped into, plus how many swatches to
 // show per family and the saturation below which a color reads as neutral.
@@ -48,6 +51,7 @@ const SUGGESTION_CATEGORY_ORDER = [
 ] as const;
 const SWATCHES_PER_CATEGORY = 12;
 const NEUTRAL_MAX_SATURATION = 0.12;
+const ADD_COLOR_TAB_CLASS = "px-1 text-xs sm:px-3 sm:text-sm";
 
 const hexToHsl = (hex: string): { h: number; s: number; l: number } => {
   const r = parseInt(hex.slice(1, 3), 16) / 255;
@@ -119,23 +123,24 @@ export function AddColorButton({
 }: AddColorButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [color, setColor] = useState("#6d28d9"); // Default to a nice purple
-  const [activeTab, setActiveTab] = useState<
-    "picker" | "suggestions" | "codes"
-  >("picker");
+  const [activeTab, setActiveTab] = useState<AddColorTab>("picker");
   const [codeInput, setCodeInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchBrand, setSearchBrand] = useState<string>(ANY_PAINT_BRAND);
+  const [selectedPaint, setSelectedPaint] = useState<PaintColor>();
   const [copiedToClipboard, setCopiedToClipboard] = useState(false);
   const [paintColors, setPaintColors] = useState<SuggestionColor[]>([]);
   const [paintLoaded, setPaintLoaded] = useState(false);
 
-  // Load the verified, orderable paint colors once the dialog is first
-  // opened (deferred so it doesn't cost anything until needed).
+  // Load orderable paint colors once the dialog is first opened (deferred so
+  // the full catalog doesn't cost anything until search/suggestions need it).
   useEffect(() => {
     if (!isOpen || paintLoaded) return;
     let cancelled = false;
     (async () => {
       try {
         const datasets = await Promise.all(
-          VERIFIED_PAINT_SOURCES.map((url) =>
+          ADD_COLOR_PAINT_SOURCES.map((url) =>
             fetch(url).then((r) => (r.ok ? r.json() : []))
           )
         );
@@ -167,6 +172,7 @@ export function AddColorButton({
     const buckets = new Map<string, SuggestionColor[]>();
     const seen = new Set<string>();
     for (const c of paintColors) {
+      if (!VERIFIED_BRANDS.has(c.brand)) continue;
       if (seen.has(c.hex)) continue;
       seen.add(c.hex);
       const family = categorizeColor(c.hex);
@@ -229,9 +235,23 @@ export function AddColorButton({
 
   const handleAddColor = () => {
     if (color) {
-      onColorAdd(color);
+      if (
+        selectedPaint?.hex.toLowerCase() === color.toLowerCase() &&
+        onColorsAdd
+      ) {
+        onColorsAdd([
+          { hex: selectedPaint.hex, name: purchaseLabel(selectedPaint) },
+        ]);
+      } else {
+        onColorAdd(color);
+      }
       setIsOpen(false);
     }
+  };
+
+  const handleSearchSelect = (paint: PaintColor) => {
+    setSelectedPaint(paint);
+    setColor(paint.hex.toUpperCase());
   };
 
   const handleRandomColor = () => {
@@ -239,6 +259,7 @@ export function AddColorButton({
       .toString(16)
       .padStart(6, "0")}`;
     setColor(randomColor);
+    setSelectedPaint(undefined);
   };
 
   const copyToClipboard = () => {
@@ -346,15 +367,25 @@ export function AddColorButton({
             <Tabs
               defaultValue="picker"
               value={activeTab}
-              onValueChange={(value) =>
-                setActiveTab(value as "picker" | "suggestions")
-              }
+              onValueChange={(value) => setActiveTab(value as AddColorTab)}
               className="mt-4"
             >
-              <TabsList className="grid grid-cols-3 mb-4">
-                <TabsTrigger value="picker">Picker</TabsTrigger>
-                <TabsTrigger value="suggestions">Suggestions</TabsTrigger>
-                <TabsTrigger value="codes">Codes</TabsTrigger>
+              <TabsList className="grid grid-cols-4 mb-4">
+                <TabsTrigger value="picker" className={ADD_COLOR_TAB_CLASS}>
+                  Picker
+                </TabsTrigger>
+                <TabsTrigger value="search" className={ADD_COLOR_TAB_CLASS}>
+                  Search
+                </TabsTrigger>
+                <TabsTrigger
+                  value="suggestions"
+                  className={ADD_COLOR_TAB_CLASS}
+                >
+                  Suggestions
+                </TabsTrigger>
+                <TabsTrigger value="codes" className={ADD_COLOR_TAB_CLASS}>
+                  Codes
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="picker" className="space-y-4">
@@ -416,6 +447,7 @@ export function AddColorButton({
                             const value = e.target.value.toUpperCase();
                             if (/^#[0-9A-F]{0,6}$/.test(value)) {
                               setColor(value);
+                              setSelectedPaint(undefined);
                             }
                           }}
                           maxLength={7}
@@ -441,12 +473,28 @@ export function AddColorButton({
                   <div className="relative">
                     <HexColorPicker
                       color={color}
-                      onChange={setColor}
+                      onChange={(nextColor) => {
+                        setColor(nextColor);
+                        setSelectedPaint(undefined);
+                      }}
                       style={{ width: "100%", height: "180px" }}
                     />
                     <div className="absolute inset-0 pointer-events-none rounded-md ring-1 ring-inset ring-black/10 dark:ring-white/10" />
                   </div>
                 </div>
+              </TabsContent>
+
+              <TabsContent value="search" className="space-y-4">
+                <PaintColorSearch
+                  colors={paintColors}
+                  loading={!paintLoaded}
+                  query={searchQuery}
+                  brand={searchBrand}
+                  selectedHex={selectedPaint?.hex}
+                  onQueryChange={setSearchQuery}
+                  onBrandChange={setSearchBrand}
+                  onSelect={handleSearchSelect}
+                />
               </TabsContent>
 
               <TabsContent value="suggestions" className="space-y-4">
@@ -490,7 +538,10 @@ export function AddColorButton({
                                     "ring-2 ring-blue-400/60 shadow-md"
                                 )}
                                 style={{ backgroundColor: colorOption.hex }}
-                                onClick={() => setColor(colorOption.hex)}
+                                onClick={() => {
+                                  setColor(colorOption.hex);
+                                  setSelectedPaint(undefined);
+                                }}
                               />
                             </TooltipTrigger>
                             <TooltipContent side="bottom">

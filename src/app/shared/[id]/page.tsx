@@ -42,6 +42,10 @@ import {
   DEFAULT_LAMP_ON,
   toggleLampAtTimeOfDay,
 } from "@/components/preview/lampInteraction";
+import {
+  VIEWER_GLASS_BACKDROP_CLASS,
+  VIEWER_GLASS_SHEET_CLASS,
+} from "@/components/preview/viewerGlass";
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ 🔗 CONSTANTS                                                          ║
@@ -62,8 +66,6 @@ const PHONE_LANDSCAPE_CTA_CLASS =
 const PHONE_LANDSCAPE_AR_CLASS =
   "px-2 text-[10px] leading-tight [&_svg]:hidden [&_span]:whitespace-normal";
 const SHARED_EDIT_PANEL_DESKTOP_WIDTH_CLASS = "w-80";
-const SHARED_MOBILE_SHEET_CLASS =
-  "fixed inset-x-2 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-50 max-h-[76dvh] overflow-hidden rounded-[1.6rem] border border-white/[0.12] bg-[rgba(9,10,13,0.92)] shadow-[0_28px_90px_rgba(0,0,0,0.52)] backdrop-blur-2xl backdrop-saturate-150";
 const SHARED_MOBILE_SHEET_CONTENT_CLASS =
   "max-h-[calc(76dvh-4.5rem)] overflow-y-auto px-2 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 no-scrollbar";
 // Only show the view count once it reads as real social proof, never
@@ -437,14 +439,14 @@ export default function SharedDesignPage() {
           <>
             <motion.button
               aria-label="Close panel"
-              className="fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-[1px]"
+              className={VIEWER_GLASS_BACKDROP_CLASS}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setSheetOpen(false)}
             />
             <motion.div
-              className={SHARED_MOBILE_SHEET_CLASS}
+              className={VIEWER_GLASS_SHEET_CLASS}
               initial={{ y: "105%" }}
               animate={{ y: 0 }}
               exit={{ y: "105%" }}

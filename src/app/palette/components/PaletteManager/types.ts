@@ -30,6 +30,10 @@ export interface ColorSwatchProps {
   /** "Convert to paint" original swatch hex (pre-grounding). Rendered as a
    *  small chip next to the paint so the match can be eyeballed. */
   paintSourceHex?: string;
+  /** Closest other-brand option when the default Lowe's match is poor. */
+  paintBackup?: string;
+  paintBackupMatch?: number;
+  paintLowesWarning?: boolean;
   /** "Convert to paint" mix recipe (parts of 2–3 paints) that lands
    *  closer than the single nearest can. Shown as a "Mix" pill. */
   paintMixRecipe?: PaintMixRecipe;

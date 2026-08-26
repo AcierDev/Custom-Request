@@ -3,6 +3,10 @@
 import { Info, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import {
+  VIEWER_GLASS_ACTION_CLASS,
+  VIEWER_GLASS_HEADER_CLASS,
+} from "@/components/preview/viewerGlass";
 
 export type SharedMobilePanel = "about" | "view";
 export type SharedMobilePanelActionLayout = "row" | "rail";
@@ -28,9 +32,7 @@ const PANEL_ACTION_LAYOUT_CLASS: Record<
   rail: "grid-cols-1",
 };
 const PANEL_ACTION_BUTTON_CLASS =
-  "h-11 w-full rounded-full border border-white/[0.12] bg-[rgba(14,15,18,0.78)] px-4 text-sm text-slate-200 shadow-[0_12px_36px_rgba(0,0,0,0.25)] backdrop-blur-xl hover:border-white/25 hover:bg-[rgba(24,25,29,0.9)]";
-const PANEL_HEADER_CLASS =
-  "relative flex items-center justify-between gap-3 border-b border-white/[0.08] bg-[rgba(12,13,16,0.78)] px-4 pb-3 pt-5 backdrop-blur-2xl";
+  `h-11 w-full rounded-full px-4 text-sm ${VIEWER_GLASS_ACTION_CLASS}`;
 const PANEL_CLOSE_BUTTON_CLASS =
   "h-9 w-9 rounded-full border border-white/[0.08] bg-white/[0.04] text-slate-300 hover:border-white/20 hover:bg-white/[0.09] hover:text-white";
 
@@ -81,7 +83,7 @@ export function SharedMobilePanelHeader({
   const Icon = PANEL_ICON[panel];
 
   return (
-    <div className={PANEL_HEADER_CLASS}>
+    <div className={VIEWER_GLASS_HEADER_CLASS}>
       <span
         aria-hidden
         data-sheet-handle="true"

@@ -206,3 +206,24 @@ test("mobile sheet header explains the panel and includes a drag affordance", ()
   assert.match(text, /Adjust size, pattern, lighting, and wall color/);
   assert.equal(handles.length, 1);
 });
+
+test("mobile panel chrome uses the shared translucent glass treatment", () => {
+  assertComponentsLoaded();
+  const actions = SharedMobilePanelActions({ onOpen: () => {} });
+  const [actionButton] = collectElements(
+    actions,
+    (node) => typeName(node) === "Button",
+  );
+  const header = SharedMobilePanelHeader({
+    panel: "view",
+    onClose: () => {},
+  });
+
+  assert.match(actionButton.props.className ?? "", /bg-white\/\[0\.10\]/);
+  assert.match(
+    actionButton.props.className ?? "",
+    /backdrop-blur-\[24px\]/,
+  );
+  assert.match(header.props.className ?? "", /rgba\(255,255,255,0\.13\)/);
+  assert.doesNotMatch(header.props.className ?? "", /rgba\(12,13,16,0\.78\)/);
+});

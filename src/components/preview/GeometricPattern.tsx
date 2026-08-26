@@ -4,6 +4,7 @@ import {
   hoverStore,
   useCustomStore,
   type RenderedPatternColorIndexes,
+  type RenderedPatternDirections,
 } from "@/store/customStore";
 import { getDimensionsDetails } from "@/lib/utils";
 import { memo, useRef, useEffect, useState, useMemo, useCallback } from "react";
@@ -39,6 +40,7 @@ import {
   getPatternSquareKey,
   getPatternBrushKeys,
   getPatternOrientationRotation,
+  getSquareDirectionFromRotation,
   getSquareDirectionRotation,
 } from "./patternUtils";
 import { useSpring } from "@react-spring/three";
@@ -268,6 +270,9 @@ function GeometricPatternComponent({
   const setRenderedPatternColorIndexes = useCustomStore(
     (s) => s.setRenderedPatternColorIndexes,
   );
+  const setRenderedPatternDirections = useCustomStore(
+    (s) => s.setRenderedPatternDirections,
+  );
   const isPatternEditorActive = useCustomStore((s) => s.isPatternEditorActive);
   const isPatternColorReplaceActive = useCustomStore(
     (s) => s.isPatternColorReplaceActive,
@@ -395,11 +400,17 @@ function GeometricPatternComponent({
         squareSize,
         squareSpacing,
         useMini,
-        isExactMiniSize(modelWidth, modelHeight),
+        hasDrawnPattern || isExactMiniSize(modelWidth, modelHeight),
         squareGapInches,
       ),
     };
-  }, [useMini, modelWidth, modelHeight, squareGapInches]);
+  }, [
+    useMini,
+    modelWidth,
+    modelHeight,
+    hasDrawnPattern,
+    squareGapInches,
+  ]);
 
   const {
     squareSize,
@@ -599,9 +610,14 @@ function GeometricPatternComponent({
   // Build a flat list of per-square instance descriptors. One pass; the
   // GPU work (transform/colour/grain) is carried as instance attributes
   // by <InstancedSquares /> rather than as ~2500 React meshes.
-  const { instances, effectivePatternColorIndexes } = useMemo(() => {
+  const {
+    instances,
+    effectivePatternColorIndexes,
+    effectivePatternDirections,
+  } = useMemo(() => {
     const squares: SquareInstance[] = [];
     const colorIndexes: RenderedPatternColorIndexes = {};
+    const directions: RenderedPatternDirections = {};
     const sizeScale = useMini
       ? WEDGE_GEOMETRY_CONFIG.miniScale
       : WEDGE_GEOMETRY_CONFIG.normalizedEdge;
@@ -681,21 +697,6 @@ function GeometricPatternComponent({
           colorIndexes[patternKey] = colorIndex;
         }
 
-        // Keep replacement data complete even when the 3D renderer skips
-        // squares for performance.
-        if (
-          shouldLimitSquares &&
-          (x % skipFactor !== NO_AXIS_ROTATION ||
-            y % skipFactor !== NO_AXIS_ROTATION)
-        ) {
-          continue;
-        }
-
-        // Calculate base position without drift
-        const baseXPos = x * squareStride + offsetX + squareSize / 2;
-        const yPos = y * squareStride + offsetY + squareSize / 2;
-        const zPos = squareSize / 2 - (useMini ? 0.41 : 0.401);
-
         const isHorizontal = shouldBeHorizontal(x, y);
         let rotation = getRotation(
           x,
@@ -710,6 +711,25 @@ function GeometricPatternComponent({
             patternRotationZ,
           );
         }
+        directions[patternKey] =
+          directionOverride ??
+          getSquareDirectionFromRotation(rotation, patternRotationZ);
+
+        // Keep extension/replacement data complete even when the 3D renderer
+        // skips squares for performance.
+        if (
+          shouldLimitSquares &&
+          (x % skipFactor !== NO_AXIS_ROTATION ||
+            y % skipFactor !== NO_AXIS_ROTATION)
+        ) {
+          continue;
+        }
+
+        // Calculate base position without drift
+        const baseXPos = x * squareStride + offsetX + squareSize / 2;
+        const yPos = y * squareStride + offsetY + squareSize / 2;
+        const zPos = squareSize / 2 - (useMini ? 0.41 : 0.401);
+
         const textureVariation = textureVariationsRef.current![x][y];
 
         // Only render if color is not null
@@ -745,6 +765,7 @@ function GeometricPatternComponent({
     return {
       instances: squares,
       effectivePatternColorIndexes: colorIndexes,
+      effectivePatternDirections: directions,
     };
   }, [
     adjustedModelWidth,
@@ -784,16 +805,26 @@ function GeometricPatternComponent({
   useEffect(() => {
     if (customDesign) return;
     setRenderedPatternColorIndexes(effectivePatternColorIndexes);
+    setRenderedPatternDirections(effectivePatternDirections);
   }, [
     customDesign,
     effectivePatternColorIndexes,
+    effectivePatternDirections,
     setRenderedPatternColorIndexes,
+    setRenderedPatternDirections,
   ]);
 
   useEffect(() => {
     if (customDesign) return;
-    return () => setRenderedPatternColorIndexes({});
-  }, [customDesign, setRenderedPatternColorIndexes]);
+    return () => {
+      setRenderedPatternColorIndexes({});
+      setRenderedPatternDirections({});
+    };
+  }, [
+    customDesign,
+    setRenderedPatternColorIndexes,
+    setRenderedPatternDirections,
+  ]);
 
   const renderedPatternKeys = useMemo(
     () => new Set(instances.map(({ x, y }) => getPatternSquareKey(x, y))),

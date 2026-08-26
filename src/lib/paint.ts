@@ -58,14 +58,17 @@ export const BRAND_RETAILER: Record<Brand, string> = {
 // Special grounding pool: Lowe's-native Valspar + HGTV Home colors,
 // plus the approved Sherwin-Williams Historic Interior collection.
 // This is a matching filter, not a brand.
+export const ANY_PAINT_BRAND = "Any";
 export const LOWES_MATCHES = "Lowe's matches";
+export const LOWES_WITH_FALLBACK = "Lowe's + fallback";
 
 // Options for the brand selector used by the palette grounding flow.
 // "Any" disables brand filtering; "Lowe's matches" restricts to the
 // Lowe's paint wall. Ordered code-bearing brands first (those ground to
 // a real, purchasable color number).
 export const BRAND_OPTIONS = [
-  "Any",
+  ANY_PAINT_BRAND,
+  LOWES_WITH_FALLBACK,
   LOWES_MATCHES,
   "Sherwin-Williams",
   "Valspar",

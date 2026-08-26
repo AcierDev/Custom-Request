@@ -122,11 +122,13 @@ export type CustomColor = {
   paintSourceHex?: string;
   paintSourceName?: string;
   /**
-   * Set by "Convert to paint": the second-closest paint match (a fallback
-   * to suggest at the counter) and how close it is (0–100%).
+   * Set by "Convert to paint": the normal second-closest paint, or the
+   * closest other-brand option when Lowe's scores poorly.
    */
   paintBackup?: string;
   paintBackupMatch?: number;
+  /** True when the default Lowe's match is 97% or lower. */
+  paintLowesWarning?: boolean;
   /**
    * Set by "Convert to paint": a 2–3 paint mixing recipe (integer parts)
    * that lands closer to the original swatch than the single nearest
@@ -155,6 +157,8 @@ export type PatternColorOverrides = Record<string, number>;
 export type PatternDirectionOverrides = Record<string, SquareDirection>;
 export type PatternHiddenOverrides = Record<string, boolean>;
 export type RenderedPatternColorIndexes = Record<string, number>;
+export type RenderedPatternDirections = Record<string, SquareDirection>;
+export type ArtworkExtensionEdge = "top" | "right" | "bottom" | "left";
 export type PatternBrushShape =
   "single" | "row" | "column" | "square" | "circle";
 export type SizedPatternBrushShape = "square" | "circle";
@@ -169,6 +173,15 @@ export const PATTERN_BRUSH_SIZE_CONFIG = {
   max: 31,
   step: 2,
   default: 3,
+} as const;
+
+export const ARTWORK_EXTENSION_CONFIG = {
+  min: 1,
+  max: 24,
+  step: 1,
+  default: 1,
+  whiteHex: "#FFFFFF",
+  whiteName: "White",
 } as const;
 
 export type PatternEditingMode =
@@ -419,6 +432,7 @@ interface CustomState {
   isPatternEditorActive: boolean;
   isPatternColorReplaceActive: boolean;
   renderedPatternColorIndexes: RenderedPatternColorIndexes;
+  renderedPatternDirections: RenderedPatternDirections;
   patternUndoStack: PatternEditHistoryEntry[];
   patternRedoStack: PatternEditHistoryEntry[];
 
@@ -452,6 +466,7 @@ type PaletteViewerState = Pick<
   | "isPatternEditorActive"
   | "isPatternColorReplaceActive"
   | "renderedPatternColorIndexes"
+  | "renderedPatternDirections"
   | "patternUndoStack"
   | "patternRedoStack"
 >;
@@ -505,6 +520,7 @@ const createDefaultViewerState = (): PaletteViewerState => ({
   isPatternEditorActive: false,
   isPatternColorReplaceActive: false,
   renderedPatternColorIndexes: {},
+  renderedPatternDirections: {},
   patternUndoStack: [],
   patternRedoStack: [],
 });
@@ -694,6 +710,9 @@ interface CustomStore extends CustomState {
   setRenderedPatternColorIndexes: (
     indexes: RenderedPatternColorIndexes,
   ) => void;
+  setRenderedPatternDirections: (
+    directions: RenderedPatternDirections,
+  ) => void;
   replaceRenderedPatternColors: (
     sourceColorIndexes: readonly number[],
     replacementColorIndex: number,
@@ -710,6 +729,10 @@ interface CustomStore extends CustomState {
   setPatternBrushSize: (shape: SizedPatternBrushShape, size: number) => void;
   setIsPatternEditorActive: (active: boolean) => void;
   setIsPatternColorReplaceActive: (active: boolean) => void;
+  extendArtworkWithWhite: (
+    edge: ArtworkExtensionEdge,
+    count?: number,
+  ) => void;
 
   // Action for setting a directly drawn pattern
   setDrawnPattern: (
@@ -740,33 +763,54 @@ export const hoverStore = createStore<HoverState>((set) => ({
   setPinnedInfo: (info) => set({ pinnedInfo: info }),
 }));
 
-// A manual hex edit makes a color primary and severs every tie to its
-// previous identity: the mix link, the hand-mix prediction, AND the
-// "Convert to paint" metadata (match %, mix recipe, the original source
-// it was grounded from, and the backup suggestion). Dropping only some
-// of these leaves a stale source/backup that a later re-ground or
-// convert-to-hex would silently restore over the user's edit, so they
-// must all go together.
+// Restore a grounded color's pre-paint identity while removing every field
+// derived from its old paint match. Mixed colors keep their mix link so a
+// parent edit can rederive them before they are grounded again.
+function restorePaintMetadata(color: CustomColor): CustomColor {
+  const hasPaintMetadata =
+    color.paintMatch !== undefined ||
+    color.paintSourceHex !== undefined ||
+    color.paintSourceName !== undefined ||
+    color.paintBackup !== undefined ||
+    color.paintBackupMatch !== undefined ||
+    color.paintLowesWarning !== undefined ||
+    color.paintMixRecipe !== undefined;
+  if (!hasPaintMetadata) return color;
+
+  const {
+    name: _paintName,
+    paintMatch: _droppedMatch,
+    paintMixRecipe: _droppedRecipe,
+    paintSourceHex: _droppedSourceHex,
+    paintSourceName,
+    paintBackup: _droppedBackup,
+    paintBackupMatch: _droppedBackupMatch,
+    paintLowesWarning: _droppedLowesWarning,
+    ...rest
+  } = color;
+  void _paintName;
+  void _droppedMatch;
+  void _droppedRecipe;
+  void _droppedSourceHex;
+  void _droppedBackup;
+  void _droppedBackupMatch;
+  void _droppedLowesWarning;
+  return {
+    ...rest,
+    ...(paintSourceName !== undefined ? { name: paintSourceName } : {}),
+  };
+}
+
+// A manual hex edit also makes the color primary, so sever its mix link and
+// hand-mix prediction after restoring the pre-paint identity.
 function detachColorMetadata(color: CustomColor): CustomColor {
   const {
     mix: _droppedMix,
     handMix: _droppedHandMix,
-    paintMatch: _droppedMatch,
-    paintMixRecipe: _droppedRecipe,
-    paintSourceHex: _droppedSourceHex,
-    paintSourceName: _droppedSourceName,
-    paintBackup: _droppedBackup,
-    paintBackupMatch: _droppedBackupMatch,
     ...rest
-  } = color;
+  } = restorePaintMetadata(color);
   void _droppedMix;
   void _droppedHandMix;
-  void _droppedMatch;
-  void _droppedRecipe;
-  void _droppedSourceHex;
-  void _droppedSourceName;
-  void _droppedBackup;
-  void _droppedBackupMatch;
   return rest;
 }
 
@@ -799,7 +843,7 @@ const reblendMixedColors = (colors: CustomColor[]): CustomColor[] => {
         c.handMix.recipe !== handMix.recipe;
       if (hex === c.hex && !handMixChanged) return c;
       changed = true;
-      const updated = { ...c, hex, handMix };
+      const updated = { ...restorePaintMetadata(c), hex, handMix };
       byId.set(c.id, updated);
       return updated;
     });
@@ -1244,6 +1288,92 @@ const omitSnapshotBackboardColor = (
 const normalizePatternColorHex = (hex: string): string =>
   hex.trim().toUpperCase();
 
+const shiftPatternCoordinateRecord = <Value>(
+  record: Record<string, Value>,
+  offsetX: number,
+  offsetY: number,
+): Record<string, Value> =>
+  Object.fromEntries(
+    Object.entries(record).map(([key, value]) => {
+      const [x, y] = key.split("-").map(Number);
+      if (!Number.isInteger(x) || !Number.isInteger(y)) return [key, value];
+      return [`${x + offsetX}-${y + offsetY}`, value];
+    }),
+  );
+
+const getPatternRecordGridSize = (
+  ...records: ReadonlyArray<Record<string, unknown>>
+): Dimensions | null => {
+  let maximumX = -ARRAY_INDEX_OFFSET;
+  let maximumY = -ARRAY_INDEX_OFFSET;
+  records.forEach((record) => {
+    Object.keys(record).forEach((key) => {
+      const [x, y] = key.split("-").map(Number);
+      if (!Number.isInteger(x) || !Number.isInteger(y)) return;
+      maximumX = Math.max(maximumX, x);
+      maximumY = Math.max(maximumY, y);
+    });
+  });
+  return maximumX >= ARRAY_START_INDEX && maximumY >= ARRAY_START_INDEX
+    ? {
+        width: maximumX + ARRAY_INDEX_OFFSET,
+        height: maximumY + ARRAY_INDEX_OFFSET,
+      }
+    : null;
+};
+
+const getOfficialPatternPalette = (design: ItemDesigns): CustomColor[] =>
+  Object.entries(DESIGN_COLORS[design] ?? {}).map(([key, color]) => ({
+    id: `${OFFICIAL_VIEWER_COLOR_ID_PREFIX}-${design}-${key}`,
+    hex: color.hex,
+    name: color.name,
+  }));
+
+const materializeGeneratedPatternGrid = (
+  width: number,
+  height: number,
+  palette: readonly CustomColor[],
+  renderedColorIndexes: RenderedPatternColorIndexes,
+  colorOverrides: PatternColorOverrides,
+): PatternCell[][] =>
+  Array.from({ length: height }, (_, storedRowIndex) => {
+    const visualY = height - storedRowIndex - ARRAY_INDEX_OFFSET;
+    return Array.from({ length: width }, (_, x) => {
+      const key = `${x}-${visualY}`;
+      const colorIndex =
+        renderedColorIndexes[key] ?? colorOverrides[key] ?? ARRAY_START_INDEX;
+      const color = palette[colorIndex] ?? palette[ARRAY_START_INDEX];
+      return {
+        color: color?.hex ?? ARTWORK_EXTENSION_CONFIG.whiteHex,
+        colorName: color?.name ?? ARTWORK_EXTENSION_CONFIG.whiteName,
+      };
+    });
+  });
+
+const addMissingDrawnPatternColors = (
+  palette: readonly CustomColor[],
+  grid: readonly PatternCell[][],
+): CustomColor[] => {
+  const nextPalette = cloneCustomColors(palette);
+  const knownHexes = new Set(
+    nextPalette.map((color) => normalizePatternColorHex(color.hex)),
+  );
+  grid.forEach((row) => {
+    row.forEach((cell) => {
+      if (!cell.color) return;
+      const normalizedHex = normalizePatternColorHex(cell.color);
+      if (knownHexes.has(normalizedHex)) return;
+      knownHexes.add(normalizedHex);
+      nextPalette.push({
+        id: nanoid(),
+        hex: normalizedHex,
+        name: cell.colorName ?? "",
+      });
+    });
+  });
+  return nextPalette;
+};
+
 const getDrawnPatternPalette = (
   grid: PatternCell[][],
   fallbackPalette: readonly CustomColor[],
@@ -1301,6 +1431,149 @@ const appendPatternHistoryEntry = (
   entry: PatternEditHistoryEntry,
 ): PatternEditHistoryEntry[] =>
   [...entries, entry].slice(-PATTERN_EDIT_HISTORY_LIMIT);
+
+const buildArtworkExtensionState = (
+  state: CustomState,
+  edge: ArtworkExtensionEdge,
+  requestedCount: number,
+): Partial<CustomState> => {
+  const hasDrawnPattern = Boolean(
+    state.drawnPatternGrid && state.drawnPatternGridSize,
+  );
+  if (
+    !hasDrawnPattern &&
+    !Object.keys(state.renderedPatternColorIndexes).length
+  ) {
+    return state;
+  }
+
+  const finiteCount = Number.isFinite(requestedCount)
+    ? requestedCount
+    : ARTWORK_EXTENSION_CONFIG.default;
+  const normalizedCount = Math.min(
+    ARTWORK_EXTENSION_CONFIG.max,
+    Math.max(ARTWORK_EXTENSION_CONFIG.min, Math.round(finiteCount)),
+  );
+  const createWhiteCell = (): PatternCell => ({
+    color: ARTWORK_EXTENSION_CONFIG.whiteHex,
+    colorName: ARTWORK_EXTENSION_CONFIG.whiteName,
+  });
+  const renderedGridSize = getPatternRecordGridSize(
+    state.renderedPatternDirections,
+    state.renderedPatternColorIndexes,
+  );
+  const sourceSize = hasDrawnPattern
+    ? state.drawnPatternGridSize!
+    : (renderedGridSize ?? state.dimensions);
+  const sourcePalette = hasDrawnPattern
+    ? addMissingDrawnPatternColors(
+        state.customPalette,
+        state.drawnPatternGrid!,
+      )
+    : state.selectedDesign === ItemDesigns.Custom
+      ? cloneCustomColors(state.customPalette)
+      : getOfficialPatternPalette(state.selectedDesign);
+  const sourceGrid = hasDrawnPattern
+    ? state.drawnPatternGrid!.map((row) =>
+        row.map((cell) => ({ ...cell })),
+      )
+    : materializeGeneratedPatternGrid(
+        sourceSize.width,
+        sourceSize.height,
+        sourcePalette,
+        state.renderedPatternColorIndexes,
+        state.patternOverride,
+      );
+  const createWhiteRow = () =>
+    Array.from({ length: sourceSize.width }, createWhiteCell);
+  const whiteRows = () =>
+    Array.from({ length: normalizedCount }, createWhiteRow);
+  const drawnPatternGrid: PatternCell[][] =
+    edge === "left"
+      ? sourceGrid.map((row) => [
+          ...Array.from({ length: normalizedCount }, createWhiteCell),
+          ...row,
+        ])
+      : edge === "right"
+        ? sourceGrid.map((row) => [
+            ...row,
+            ...Array.from({ length: normalizedCount }, createWhiteCell),
+          ])
+        : edge === "bottom"
+          ? [...whiteRows(), ...sourceGrid]
+          : [...sourceGrid, ...whiteRows()];
+  const addsColumns = edge === "left" || edge === "right";
+  const dimensions: Dimensions = {
+    width: sourceSize.width + (addsColumns ? normalizedCount : 0),
+    height: sourceSize.height + (addsColumns ? 0 : normalizedCount),
+  };
+  const hasWhite = sourcePalette.some(
+    (color) =>
+      normalizePatternColorHex(color.hex) ===
+      ARTWORK_EXTENSION_CONFIG.whiteHex,
+  );
+  const customPalette: CustomColor[] = hasWhite
+    ? sourcePalette
+    : [
+        ...sourcePalette,
+        {
+          id: nanoid(),
+          hex: ARTWORK_EXTENSION_CONFIG.whiteHex,
+          name: ARTWORK_EXTENSION_CONFIG.whiteName,
+        },
+      ];
+  const extensionUnit = addsColumns ? "column" : "row";
+  const historyEntry: PatternEditHistoryEntry = {
+    ...createPatternEditHistoryEntry(
+      state,
+      `Added ${normalizedCount} white ${extensionUnit}${
+        normalizedCount === SINGULAR_PATTERN_SQUARE_COUNT ? "" : "s"
+      } to ${edge}`,
+    ),
+    designSnapshot: createPatternEditorDesignSnapshot(state),
+  };
+
+  return {
+    drawnPatternGrid,
+    drawnPatternGridSize: dimensions,
+    dimensions,
+    pricing: calculatePrice(dimensions, state.shippingSpeed),
+    customPalette,
+    selectedDesign: ItemDesigns.Custom,
+    editingPaletteId:
+      state.selectedDesign === ItemDesigns.Custom
+        ? state.editingPaletteId
+        : null,
+    selectedColors:
+      state.selectedDesign === ItemDesigns.Custom ? state.selectedColors : [],
+    activeCustomMode: "pattern",
+    currentColors: null,
+    patternOverride: shiftPatternCoordinateRecord(
+      state.patternOverride,
+      edge === "left" ? normalizedCount : 0,
+      edge === "top" ? normalizedCount : 0,
+    ),
+    patternDirectionOverride: shiftPatternCoordinateRecord(
+      Object.keys(state.renderedPatternDirections).length
+        ? state.renderedPatternDirections
+        : state.patternDirectionOverride,
+      edge === "left" ? normalizedCount : 0,
+      edge === "top" ? normalizedCount : 0,
+    ),
+    patternHiddenOverride: shiftPatternCoordinateRecord(
+      state.patternHiddenOverride,
+      edge === "left" ? normalizedCount : 0,
+      edge === "top" ? normalizedCount : 0,
+    ),
+    patternUndoStack: appendPatternHistoryEntry(
+      state.patternUndoStack,
+      historyEntry,
+    ),
+    patternRedoStack: [],
+    renderedPatternColorIndexes: {},
+    renderedPatternDirections: {},
+  };
+};
 
 const getDefaultPatternEditLabel = (
   edit: PatternEditingMode,
@@ -4194,6 +4467,8 @@ export const useCustomStore = create<CustomStore>()(
       }),
     setRenderedPatternColorIndexes: (indexes) =>
       set({ renderedPatternColorIndexes: indexes }),
+    setRenderedPatternDirections: (directions) =>
+      set({ renderedPatternDirections: directions }),
     replaceRenderedPatternColors: (
       sourceColorIndexes,
       replacementColorIndex,
@@ -4474,6 +4749,11 @@ export const useCustomStore = create<CustomStore>()(
       set({ isPatternEditorActive: active }),
     setIsPatternColorReplaceActive: (active: boolean) =>
       set({ isPatternColorReplaceActive: active }),
+    extendArtworkWithWhite: (
+      edge,
+      count = ARTWORK_EXTENSION_CONFIG.default,
+    ) =>
+      set((state) => buildArtworkExtensionState(state, edge, count)),
   })),
 );
 

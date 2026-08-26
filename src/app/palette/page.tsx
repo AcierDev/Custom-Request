@@ -9,6 +9,11 @@ import { PaletteList } from "./components/PaletteList";
 import { ExistingPalettePicker } from "./components/ExistingPalettePicker";
 import { OfficialPalettes } from "./components/OfficialPalettes";
 import { ImageColorExtractor } from "./components/ImageColorExtractor";
+import {
+  DEFAULT_MIX_SOURCE,
+  PaintMatchMixControls,
+  type MixSource,
+} from "./components/PaintMatchMixControls";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -60,25 +65,31 @@ import { toast } from "@/lib/toast";
 import { ImportCard } from "./components/PaletteList/ImportCard";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
+  ANY_PAINT_BRAND,
   BRAND_OPTIONS,
   type BrandOption,
   type PaintColor,
   VERIFIED_BRANDS,
   LOWES_MATCHES,
+  LOWES_WITH_FALLBACK,
   purchaseLabel,
 } from "@/lib/paint";
 import {
   DEFAULT_PAINT_MATCH_BRAND,
   LAB_LIGHTNESS_INDEX,
+  findClosestLowesFallbackMatches,
   findClosestPaintMatches,
   getGroundablePaintColors,
+  getLowesFallbackPaintColors,
+  paintMatchPercent,
+  paintSourceNameOf,
+  selectPaintMatchResults,
   type PaintLab,
   type PaintMatch,
   type ResolvedPaintLightnessMode,
 } from "@/lib/paintMatch";
 import { deltaE2000, hexToLab } from "@/lib/paintMixSimulator";
 import { findBestPaintMix, type PaintMixRecipe } from "@/lib/paintMixOptimizer";
-import { cn } from "@/lib/utils";
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ 🎨 BUTTON THEME                                                       ║
@@ -106,15 +117,12 @@ const STUDIO_MAX_WIDTH_PX = 2400;
 //║ 🎯 PAINT MATCH                                                        ║
 //╚═══╝ ════════════════════════════════════════════════════════════════ ╚═══╝
 
-// ΔE2000 → human "% match". 1 unit of ΔE costs this many percentage
-// points, so a just-perceptible difference (ΔE ≈ 2.3) still reads as a
-// strong ~98% match. Clamped to 0–100.
-const PAINT_MATCH_DE_FALLOFF = 1;
 const MATCH_LIST_START_INDEX = 0;
 const PRIMARY_PAINT_MATCH_INDEX = 0;
 const BACKUP_PAINT_MATCH_INDEX = 1;
 const PAINT_MATCH_COUNT_WITH_BACKUP = 2;
 const PAINT_MATCH_CANDIDATE_COUNT = 12;
+const LOWES_FALLBACK_MATCH_COUNT = 1;
 
 // Remember which studio tab the user was on so a refresh returns to it
 // instead of snapping back to the "official" default.
@@ -132,8 +140,6 @@ const SINGLE_COMPONENT_COUNT = 1;
 //    the pool's white and black anchors.
 //  - "purchase": any nearby purchasable paint, even ones not in the
 //    palette — buys the closest possible match at the cost of extra cans.
-type MixSource = "palette" | "black-white" | "purchase";
-const DEFAULT_MIX_SOURCE: MixSource = "palette";
 // Independent keeps today's nearest-match behavior. The other modes keep
 // every swatch on the same side of its source lightness so a gradient cannot
 // split into one unexpectedly lighter paint and one unexpectedly darker one.
@@ -160,14 +166,9 @@ const YIELD_DELAY_MS = 0;
 const VERIFIED_BRAND_BADGE_LABEL = "Verified";
 const ANY_BRAND_LABEL = "Any brand";
 
-const paintMatchPercent = (deltaE: number) =>
-  Math.round(
-    Math.max(0, Math.min(100, 100 - deltaE * PAINT_MATCH_DE_FALLOFF))
-  );
-
 const paintMatchKey = (match: PaintMatch) => purchaseLabel(match.paintColor);
 const paintBrandPickerLabel = (brand: BrandOption) =>
-  brand === "Any" ? ANY_BRAND_LABEL : brand;
+  brand === ANY_PAINT_BRAND ? ANY_BRAND_LABEL : brand;
 
 function VerifiedBrandBadge() {
   return (
@@ -258,8 +259,8 @@ export default function PalettePage() {
   // Paint color grounding
   const [allPaintColors, setAllPaintColors] = useState<PaintColor[]>([]);
   const [paintColorsLoaded, setPaintColorsLoaded] = useState(false);
-  // Normal matching analyzes every available catalog paint. Choosing a
-  // brand or retailer explicitly narrows that pool.
+  // Start with Lowe's-orderable matches and surface another brand when
+  // Lowe's scores poorly. Choosing "Any brand" broadens the primary pool.
   const [groundBrand, setGroundBrand] = useState<BrandOption>(
     DEFAULT_PAINT_MATCH_BRAND
   );
@@ -399,7 +400,7 @@ export default function PalettePage() {
           paintLabs,
           PAINT_MATCH_COUNT_WITH_BACKUP,
           mode,
-          sourceNameOf(color)
+          paintSourceNameOf(color)
         )[PRIMARY_PAINT_MATCH_INDEX];
         return sum + (match?.distance ?? Number.POSITIVE_INFINITY);
       }, 0);
@@ -414,9 +415,6 @@ export default function PalettePage() {
   // never compounds off a previous paint match.
   const sourceHexOf = (color: CustomColor) =>
     color.paintSourceHex ?? color.hex;
-  const sourceNameOf = (color: CustomColor) =>
-    color.paintSourceName ?? color.name;
-
   // Ground every palette color to the chosen brand pool. Idempotent:
   // always works from each color's source hex, so it can be re-run when
   // the brand / "verified only" filter changes. Reads the live palette
@@ -455,7 +453,7 @@ export default function PalettePage() {
     if (pool.length === 0) {
       toast.error(
         verified
-          ? `No verified ${brand === "Any" ? "" : brand + " "}` +
+          ? `No verified ${brand === ANY_PAINT_BRAND ? "" : brand + " "}` +
             `colors — uncheck "Verified only" or pick another brand.`
           : `No purchasable ${brand} colors yet. Try "Any".`
       );
@@ -482,6 +480,14 @@ export default function PalettePage() {
         paintColor,
         lab: hexToLab(paintColor.hex),
       }));
+      const fallbackPaintLabs =
+        brand === LOWES_WITH_FALLBACK
+          ? getLowesFallbackPaintColors(allPaintColors, verified)
+              .map((paintColor) => ({
+                paintColor,
+                lab: hexToLab(paintColor.hex),
+              }))
+          : [];
       const resolvedLightnessMode = resolvePaintLightnessMode(
         lightnessMode,
         palette,
@@ -519,7 +525,7 @@ export default function PalettePage() {
             paintLabs,
             PAINT_MATCH_COUNT_WITH_BACKUP,
             resolvedLightnessMode,
-            sourceNameOf(customColor)
+            paintSourceNameOf(customColor)
           )[PRIMARY_PAINT_MATCH_INDEX];
           if (!nearest) continue;
           const key = paintMatchKey(nearest);
@@ -537,20 +543,35 @@ export default function PalettePage() {
           paintLabs,
           PAINT_MATCH_CANDIDATE_COUNT,
           resolvedLightnessMode,
-          sourceNameOf(customColor)
+          paintSourceNameOf(customColor)
+        );
+        const initialMatchSelection = selectPaintMatchResults(
+          matches,
+          [],
+          brand,
+        );
+        const fallbackMatches =
+          initialMatchSelection.lowesMatchIsPoor &&
+          fallbackPaintLabs.length > MATCH_LIST_START_INDEX
+            ? findClosestLowesFallbackMatches(
+                sourceHex,
+                fallbackPaintLabs,
+                LOWES_FALLBACK_MATCH_COUNT,
+                paintSourceNameOf(customColor),
+              )
+            : [];
+        const matchSelection = selectPaintMatchResults(
+          matches,
+          fallbackMatches,
+          brand,
         );
         // Ground to the nearest paint allowed by the shared lightness rule.
         // Independent mode keeps the original smallest-ΔE behavior.
-        const primaryMatch = matches[PRIMARY_PAINT_MATCH_INDEX];
+        const { primaryMatch, backupMatch, lowesMatchIsPoor } = matchSelection;
         if (!primaryMatch) {
           groundedColors.push(customColor);
           continue;
         }
-
-        const primaryKey = paintMatchKey(primaryMatch);
-        const backupMatch = matches.find(
-          (match) => paintMatchKey(match) !== primaryKey
-        );
 
         // The closest ACHIEVABLE color: a 2–3 paint recipe (in integer
         // parts) that lands nearer the source than the single can. Only
@@ -594,13 +615,14 @@ export default function PalettePage() {
           name: purchaseLabel(primaryMatch.paintColor),
           paintMatch: paintMatchPercent(primaryMatch.distance),
           paintSourceHex: sourceHex,
-          paintSourceName: sourceNameOf(customColor),
+          paintSourceName: paintSourceNameOf(customColor),
           paintBackup: backupMatch
             ? purchaseLabel(backupMatch.paintColor)
             : undefined,
           paintBackupMatch: backupMatch
             ? paintMatchPercent(backupMatch.distance)
             : undefined,
+          paintLowesWarning: lowesMatchIsPoor || undefined,
           paintMixRecipe,
         });
         // Yield so the spinner can paint between colors — the spectral
@@ -610,7 +632,7 @@ export default function PalettePage() {
 
       setCustomPalette(groundedColors);
       lastGroundedSelectionRef.current = selection;
-      const where = brand === "Any" ? "" : ` (${brand})`;
+      const where = brand === ANY_PAINT_BRAND ? "" : ` (${brand})`;
       const lightnessNote =
         resolvedLightnessMode === "independent"
           ? ""
@@ -680,6 +702,7 @@ export default function PalettePage() {
         paintMatch: _paintMatch,
         paintBackup: _paintBackup,
         paintBackupMatch: _paintBackupMatch,
+        paintLowesWarning: _paintLowesWarning,
         paintMixRecipe: _paintMixRecipe,
         paintSourceHex,
         paintSourceName,
@@ -689,6 +712,7 @@ export default function PalettePage() {
       void _paintMatch;
       void _paintBackup;
       void _paintBackupMatch;
+      void _paintLowesWarning;
       void _paintMixRecipe;
 
       return {
@@ -747,7 +771,9 @@ export default function PalettePage() {
         const primaryLabel = compactPaintLabel(raw || `Color ${i + 1}`);
         const printBackupMatch = c.paintBackup
           ? { label: c.paintBackup, match: c.paintBackupMatch }
-          : (() => {
+          : c.paintLowesWarning
+            ? null
+            : (() => {
               const backupMatch = findClosestPaintMatches(
                 c.hex,
                 printPaintLabs,
@@ -759,7 +785,7 @@ export default function PalettePage() {
                     match: paintMatchPercent(backupMatch.distance),
                   }
                 : null;
-            })();
+              })();
         // Only the "Backup:" tag is struck through (marks it as the
         // fallback); the code + name + match stay clean so they're still
         // readable at the counter.
@@ -776,7 +802,11 @@ export default function PalettePage() {
             <span class="name">${esc(primaryLabel)}</span>
             ${
               backupDetails
-                ? `<span class="backup"><span class="backup-tag">Backup:</span> ${esc(
+                ? `<span class="backup"><span class="${
+                    c.paintLowesWarning ? "alternative-tag" : "backup-tag"
+                  }">${
+                    c.paintLowesWarning ? "Closest other brand:" : "Backup:"
+                  }</span> ${esc(
                     backupDetails
                   )}</span>`
                 : ""
@@ -808,6 +838,7 @@ export default function PalettePage() {
         .backup { font-size: 7pt; color: #000; line-height: 1.2; }
         .backup-tag { text-decoration: line-through;
           text-decoration-thickness: 0.15pt; }
+        .alternative-tag { font-weight: 700; }
         .order { font-size: 9.5pt; font-weight: 700; margin: 0 0 8pt;
           padding: 4pt 6pt; border: 1pt solid #000; border-radius: 3pt; }
       </style></head>
@@ -1782,8 +1813,8 @@ export default function PalettePage() {
                         Match to real paint
                       </h3>
                       <p className="mt-0.5 max-w-md text-xs text-slate-400">
-                        Snap every color to the nearest purchasable paint so
-                        you can buy it at the store.
+                        Defaults to Lowe&apos;s. Scores of 97% or lower also
+                        show the closest other-brand option.
                       </p>
                     </div>
                   </div>
@@ -1799,7 +1830,7 @@ export default function PalettePage() {
                       <SelectTrigger
                         aria-label="Ground to which paint brand"
                         className="h-9 w-full sm:w-auto sm:min-w-56 rounded-[10px] border-white/10 bg-gray-900/80 text-slate-200 focus:ring-blue-500 [&>span]:flex [&>span]:items-center [&>span]:gap-2 [&>span]:line-clamp-none"
-                        title="Only match colors from this brand. Verified badge = current color codes"
+                        title="Prefer Lowe's by default and show another brand when its match is poor"
                       >
                         <SelectValue placeholder={ANY_BRAND_LABEL} />
                       </SelectTrigger>
@@ -1858,91 +1889,15 @@ export default function PalettePage() {
                         </SelectItem>
                       </SelectContent>
                     </Select>
-                    {/* Mixing opt-in + its ingredient source, grouped so the
-                        dropdown always reads as "part of" the checkbox and the
-                        two wrap together rather than drifting onto separate
-                        rows. Violet ties them to the swatch "Mix" badge. */}
-                    <div
-                      className={cn(
-                        "flex flex-wrap items-center gap-2 rounded-[10px] transition-colors",
-                        mixToMatch &&
-                          "bg-violet-500/10 p-1 ring-1 ring-violet-400/25"
-                      )}
-                    >
-                      <label
-                        className="flex h-9 cursor-pointer select-none items-center gap-1.5 rounded-[10px] border border-white/10 bg-gray-900/80 px-3 text-sm text-slate-300"
-                        title="Also compute a 2–3 paint mix recipe that lands even closer than the nearest single can"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={mixToMatch}
-                          onChange={(e) => setMixToMatch(e.target.checked)}
-                          disabled={!paintColorsLoaded || isGrounding}
-                          className="accent-violet-500"
-                        />
-                        Mix to get closer
-                      </label>
-                      {mixToMatch && (
-                        <Select
-                          value={mixSource}
-                          disabled={!paintColorsLoaded || isGrounding}
-                          onValueChange={(value) =>
-                            setMixSource(value as MixSource)
-                          }
-                        >
-                          <SelectTrigger
-                            aria-label="Which paints the mix may use"
-                            className="h-9 w-auto min-w-52 rounded-[10px] border-white/10 bg-gray-900/80 text-slate-200 focus:ring-violet-500"
-                            title="Which paints a mix recipe may draw from"
-                          >
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="border-white/10 bg-gray-950 text-slate-100">
-                            <SelectItem
-                              value="palette"
-                              textValue="Using palette + white/black"
-                              className="focus:bg-violet-500/15 focus:text-white"
-                            >
-                              Using palette + white/black
-                            </SelectItem>
-                            <SelectItem
-                              value="black-white"
-                              textValue="Adding only white/black"
-                              className="focus:bg-violet-500/15 focus:text-white"
-                            >
-                              Adding only white/black
-                            </SelectItem>
-                            <SelectItem
-                              value="purchase"
-                              textValue="Buying any paint"
-                              className="focus:bg-violet-500/15 focus:text-white"
-                            >
-                              Buying any paint
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      )}
-                      {/* Only "palette" mode draws ingredients from the
-                          palette itself, so the blend opt-in only appears
-                          there — in "buy any" mode blends can't leak in. */}
-                      {mixToMatch && mixSource === "palette" && (
-                        <label
-                          className="flex h-9 cursor-pointer select-none items-center gap-1.5 rounded-[10px] border border-white/10 bg-gray-900/80 px-3 text-sm text-slate-300"
-                          title="Let digitally-mixed swatches contribute their nearest can as a mix ingredient. Off = only directly-picked colors' cans are used."
-                        >
-                          <input
-                            type="checkbox"
-                            checked={useMixedColors}
-                            onChange={(e) =>
-                              setUseMixedColors(e.target.checked)
-                            }
-                            disabled={!paintColorsLoaded || isGrounding}
-                            className="accent-violet-500"
-                          />
-                          Use mixed colors
-                        </label>
-                      )}
-                    </div>
+                    <PaintMatchMixControls
+                      mixToMatch={mixToMatch}
+                      mixSource={mixSource}
+                      useMixedColors={useMixedColors}
+                      disabled={!paintColorsLoaded || isGrounding}
+                      onMixToMatchChange={setMixToMatch}
+                      onMixSourceChange={setMixSource}
+                      onUseMixedColorsChange={setUseMixedColors}
+                    />
                     {isGrounding ? (
                       <Button
                         className={BTN_PRIMARY}

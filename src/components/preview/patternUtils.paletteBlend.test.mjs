@@ -75,7 +75,9 @@ registerHooks({
   },
 });
 
-const { generateColorMap } = await import("./patternUtils.ts");
+const { generateColorMap, getSquareDirectionFromRotation } = await import(
+  "./patternUtils.ts"
+);
 
 const COLOR_A_INDEX = 0;
 const COLOR_B_INDEX = 1;
@@ -150,6 +152,26 @@ const NON_DIVISIBLE_COLOR_ENTRIES = createColorEntries(
   NON_DIVISIBLE_COLOR_COUNT,
 );
 const SOLID_LINE_COLOR_ENTRIES = createColorEntries(SOLID_LINE_COLOR_COUNT);
+
+test("exposes square-direction resolution for frozen artwork", () => {
+  assert.equal(typeof getSquareDirectionFromRotation, "function");
+});
+
+test("resolves local wedge rotations to their visible raised-edge direction", () => {
+  const quarterTurn = Math.PI / 2;
+  const cases = [
+    { local: 0, parent: 0, direction: "north" },
+    { local: -quarterTurn, parent: 0, direction: "east" },
+    { local: Math.PI, parent: 0, direction: "south" },
+    { local: quarterTurn, parent: 0, direction: "west" },
+    { local: -quarterTurn, parent: quarterTurn, direction: "north" },
+    { local: 0, parent: quarterTurn, direction: "west" },
+  ];
+
+  for (const { local, parent, direction } of cases) {
+    assert.equal(getSquareDirectionFromRotation(local, parent), direction);
+  }
+});
 
 const generatePaletteMap = ({
   width,

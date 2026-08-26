@@ -41,6 +41,7 @@ import { AiPatternPrompt } from "./AiPatternPrompt";
 import { PatternHistoryControls } from "./PatternHistoryControls";
 import { WavePatternOption } from "./WavePatternOption";
 import { PatternEditorSurface } from "./PatternEditorSurface";
+import { ArtworkExtensionControls } from "@/components/preview/ArtworkExtensionControls";
 import {
   ViewerControlTile,
   ViewerValueBadge,
@@ -891,6 +892,8 @@ export function PatternEditor({ className }: PatternEditorProps) {
                   id={EXTRA_OPTIONS_CONTENT_ID}
                   className="space-y-3 border-t border-white/[0.07] px-3 py-3"
                 >
+                  <ArtworkExtensionControls embedded />
+                  <div className="h-px bg-white/10" />
                   <WavePatternOption />
                   <div className="h-px bg-white/10" />
                   <div className="flex items-center justify-between gap-3">

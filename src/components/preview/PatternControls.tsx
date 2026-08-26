@@ -21,6 +21,7 @@ import {
   ViewerControlTile,
   ViewerValueBadge,
 } from "./ViewerControlSurface";
+import { ArtworkExtensionControls } from "./ArtworkExtensionControls";
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ 🎛️ PATTERN CONTROLS — pattern, orientation, rotate                    ║
@@ -28,6 +29,7 @@ import {
 
 interface PatternControlsProps {
   embedded?: boolean;
+  showArtworkExtension?: boolean;
 }
 
 interface PatternOption {
@@ -81,7 +83,10 @@ const CONTROL_LABEL_CLASS =
  * preview and shared viewer. `embedded` removes only the outer surface so a
  * parent edit panel can provide one continuous visual hierarchy.
  */
-export function PatternControls({ embedded = false }: PatternControlsProps) {
+export function PatternControls({
+  embedded = false,
+  showArtworkExtension = true,
+}: PatternControlsProps) {
   const colorPattern = useCustomStore((state) => state.colorPattern);
   const setColorPattern = useCustomStore((state) => state.setColorPattern);
   const orientation = useCustomStore((state) => state.orientation);
@@ -251,6 +256,8 @@ export function PatternControls({ embedded = false }: PatternControlsProps) {
           isReversed={isReversed}
         />
       </ViewerControlTile>
+
+      {showArtworkExtension && <ArtworkExtensionControls />}
     </div>
   );
 

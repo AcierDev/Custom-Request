@@ -205,6 +205,20 @@ test("embedded pattern controls use a compact accessible tile grid", () => {
   assert.match(markup, /<output[^>]*aria-label="Palette blend"/);
 });
 
+test("pattern controls can add white rows or columns without resizing the design", () => {
+  const markup = renderToStaticMarkup(
+    React.createElement(PatternControls, { embedded: true }),
+  );
+
+  assert.match(markup, />Extend artwork</);
+  assert.match(markup, /aria-label="Rows or columns to add"/);
+  assert.match(markup, /aria-label="Add white rows to top"/);
+  assert.match(markup, /aria-label="Add white columns to right"/);
+  assert.match(markup, /aria-label="Add white rows to bottom"/);
+  assert.match(markup, /aria-label="Add white columns to left"/);
+  assert.match(markup, /Keeps the current design unchanged/);
+});
+
 test("embedded lighting controls expose two equal pressed-state choices", () => {
   const markup = renderToStaticMarkup(
     React.createElement(LightingControls, {

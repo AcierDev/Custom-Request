@@ -1,5 +1,19 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const DEFAULT_DIST_DIR = ".next";
+const PROJECT_ROOT_DIR = path.dirname(fileURLToPath(import.meta.url));
+const configuredDistDir = process.env.CUSTOM_REQUEST_NEXT_DIST_DIR;
+const distDir = configuredDistDir
+  ? path.relative(
+      PROJECT_ROOT_DIR,
+      path.resolve(PROJECT_ROOT_DIR, configuredDistDir),
+    )
+  : DEFAULT_DIST_DIR;
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  distDir,
   // Next 16 removed the `eslint` config key; ESLint no longer runs during
   // `next build` (use `next lint` separately), so it's simply omitted.
   typescript: {

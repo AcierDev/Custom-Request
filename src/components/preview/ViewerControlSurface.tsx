@@ -4,12 +4,13 @@ import * as React from "react";
 import { ChevronDown } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { VIEWER_GLASS_SURFACE_CLASS } from "./viewerGlass";
 
-const VIEWER_CONTROL_SURFACE_CLASS =
-  "relative overflow-hidden rounded-[1.4rem] border border-white/[0.11] bg-[linear-gradient(145deg,rgba(20,20,22,0.91),rgba(9,10,13,0.84))] text-slate-100 shadow-[0_24px_80px_rgba(0,0,0,0.34),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-2xl backdrop-saturate-150";
 const VIEWER_CONTROL_SURFACE_COMPACT_CLASS = "rounded-[1.15rem]";
 const VIEWER_CONTROL_HIGHLIGHT_CLASS =
-  "pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-amber-100/35 to-transparent";
+  "pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/70 to-transparent";
+const VIEWER_CONTROL_SHEEN_CLASS =
+  "pointer-events-none absolute -left-14 -top-20 h-44 w-44 rounded-full bg-sky-100/[0.11] blur-3xl";
 const VIEWER_CONTROL_HEADER_CLASS =
   "flex items-start justify-between gap-3 border-b border-white/[0.08] px-4 py-4";
 const VIEWER_CONTROL_HEADER_COMPACT_CLASS = "px-3.5 py-3";
@@ -84,12 +85,14 @@ export function ViewerControlSurface({
     <section
       aria-label={ariaLabel}
       data-viewer-control-surface="true"
+      data-liquid-glass="true"
       className={cn(
-        VIEWER_CONTROL_SURFACE_CLASS,
+        VIEWER_GLASS_SURFACE_CLASS,
         compact && VIEWER_CONTROL_SURFACE_COMPACT_CLASS,
         className,
       )}
     >
+      <span aria-hidden className={VIEWER_CONTROL_SHEEN_CLASS} />
       <span aria-hidden className={VIEWER_CONTROL_HIGHLIGHT_CLASS} />
       <div className="relative">{children}</div>
     </section>

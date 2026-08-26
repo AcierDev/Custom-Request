@@ -23,6 +23,7 @@ import { useCustomStore } from "@/store/customStore";
 import type { PaintEstimateMode } from "@/store/customStore";
 import { blendHexColors } from "@/lib/colorUtils";
 import { simulatePaintLikeMix } from "@/lib/paintMixSimulator";
+import { paintSourceNameOf } from "@/lib/paintMatch";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -369,7 +370,7 @@ export function PaletteManager() {
     const color = customPalette[index];
     setEditingColor(index);
     setEditColorHex(color.hex);
-    setEditColorName(color.name || "");
+    setEditColorName(paintSourceNameOf(color) ?? "");
   };
 
   const handleDuplicateColor = (index: number) => {
@@ -454,17 +455,17 @@ export function PaletteManager() {
     }
   };
 
-  // Bulk-add colors resolved from pasted paint codes (e.g. "SW 6910").
-  // Names already carry the full purchase label, and setCustomPalette
-  // records one undo step for the whole paste.
-  const handleAddColorsByCode = (colors: { hex: string; name: string }[]) => {
+  // Add named paints resolved from search or pasted codes. Names already
+  // carry the full purchase label, and setCustomPalette records one undo
+  // step for the whole addition.
+  const handleAddNamedColors = (colors: { hex: string; name: string }[]) => {
     if (colors.length === 0) return;
     setCustomPalette([
       ...customPalette,
       ...colors.map((c) => ({ id: nanoid(), hex: c.hex, name: c.name })),
     ]);
     toast.success(
-      `Added ${colors.length} color${colors.length === 1 ? "" : "s"} from codes`,
+      `Added ${colors.length} named color${colors.length === 1 ? "" : "s"}`,
     );
   };
 
@@ -1007,6 +1008,9 @@ export function PaletteManager() {
                         mixed={!!color.mix}
                         paintMatch={color.paintMatch}
                         paintSourceHex={color.paintSourceHex}
+                        paintBackup={color.paintBackup}
+                        paintBackupMatch={color.paintBackupMatch}
+                        paintLowesWarning={color.paintLowesWarning}
                         paintMixRecipe={color.paintMixRecipe}
                         paintTotals={paintTotals}
                         paintAmount={paintAmount ?? undefined}
@@ -1060,7 +1064,7 @@ export function PaletteManager() {
               <div className="flex w-full items-stretch gap-2 sm:contents">
                 <AddColorButton
                   onColorAdd={handleAddColor}
-                  onColorsAdd={handleAddColorsByCode}
+                  onColorsAdd={handleAddNamedColors}
                   isEmpty={customPalette.length === 0}
                 />
 

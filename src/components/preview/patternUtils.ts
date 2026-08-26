@@ -413,6 +413,7 @@ type PatternOrientation = "horizontal" | "vertical";
 const NO_ROTATION_RADIANS = 0;
 const QUARTER_TURN_RADIANS = Math.PI / 2;
 const HALF_TURN_RADIANS = Math.PI;
+const QUARTER_TURNS_PER_FULL_TURN = 4;
 const GRID_INDEX_START = 0;
 const GRID_INDEX_INCREMENT = 1;
 const BRUSH_DIAMETER_DIVISOR = 2;
@@ -446,6 +447,26 @@ export function getSquareDirectionRotation(
   patternRotationZ: number,
 ): number {
   return SQUARE_DIRECTION_ROTATION_Z[direction] - patternRotationZ;
+}
+
+export function getSquareDirectionFromRotation(
+  localRotation: number,
+  patternRotationZ: number,
+): SquareDirection {
+  const visibleQuarterTurns = Math.round(
+    (localRotation + patternRotationZ) / QUARTER_TURN_RADIANS,
+  );
+  const normalizedQuarterTurns =
+    ((visibleQuarterTurns % QUARTER_TURNS_PER_FULL_TURN) +
+      QUARTER_TURNS_PER_FULL_TURN) %
+    QUARTER_TURNS_PER_FULL_TURN;
+  const directionsByCounterClockwiseQuarterTurn: readonly SquareDirection[] = [
+    "north",
+    "west",
+    "south",
+    "east",
+  ];
+  return directionsByCounterClockwiseQuarterTurn[normalizedQuarterTurns];
 }
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗

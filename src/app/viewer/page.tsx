@@ -98,6 +98,12 @@ import {
   ViewerControlSurface,
 } from "@/components/preview/ViewerControlSurface";
 import {
+  VIEWER_GLASS_ACTION_CLASS,
+  VIEWER_GLASS_BACKDROP_CLASS,
+  VIEWER_GLASS_HEADER_CLASS,
+  VIEWER_GLASS_SHEET_CLASS,
+} from "@/components/preview/viewerGlass";
+import {
   FourAngleImageCapture,
   IMAGE_EXPORT_ANGLE_COUNTS,
 } from "@/components/preview/FourAngleImageCapture";
@@ -139,8 +145,6 @@ const TOUCH_GESTURES = { ONE: TOUCH.ROTATE, TWO: TOUCH.DOLLY_PAN } as const;
 // piece with this much margin. Wide screens already fit it, so they're
 // unaffected. See fitWidthDistance() in Room.tsx.
 const ZOOM_FIT_WIDTH_MARGIN = 1.12;
-const VIEWER_MOBILE_OPTIONS_SHEET_CLASS =
-  "fixed inset-x-2 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-50 max-h-[76dvh] overflow-hidden rounded-[1.6rem] border border-white/[0.12] bg-[rgba(9,10,13,0.92)] shadow-[0_28px_90px_rgba(0,0,0,0.52)] backdrop-blur-2xl backdrop-saturate-150";
 const VIEWER_MOBILE_OPTIONS_CONTENT_CLASS =
   "max-h-[calc(76dvh-4.75rem)] overflow-y-auto px-2 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 no-scrollbar";
 
@@ -675,6 +679,7 @@ export default function DesignPage() {
             onTimeOfDayChange={setTimeOfDay}
             wallColor={currentWallColor}
             onWallColorChange={setWallColor}
+            showArtworkExtension={false}
           />
         </div>
       )}
@@ -683,7 +688,10 @@ export default function DesignPage() {
         <>
           <Button
             type="button"
-            className="fixed right-3 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-50 inline-flex h-11 items-center gap-1.5 rounded-full border border-white/[0.12] bg-[rgba(14,15,18,0.82)] px-4 text-xs font-medium text-white shadow-[0_14px_40px_rgba(0,0,0,0.3)] backdrop-blur-xl transition-colors hover:border-white/25 hover:bg-[rgba(24,25,29,0.92)]"
+            className={cn(
+              "fixed right-3 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-50 inline-flex h-11 items-center gap-1.5 rounded-full px-4 text-xs font-medium",
+              VIEWER_GLASS_ACTION_CLASS,
+            )}
             onClick={() => setMobileOptionsOpen(true)}
           >
             <SlidersHorizontal className="h-4 w-4 shrink-0" />
@@ -695,20 +703,20 @@ export default function DesignPage() {
               <>
                 <motion.button
                   aria-label="Close options"
-                  className="fixed inset-0 z-40 bg-slate-950/30 backdrop-blur-[1px]"
+                  className={VIEWER_GLASS_BACKDROP_CLASS}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   onClick={() => setMobileOptionsOpen(false)}
                 />
                 <motion.div
-                  className={VIEWER_MOBILE_OPTIONS_SHEET_CLASS}
+                  className={VIEWER_GLASS_SHEET_CLASS}
                   initial={{ y: "105%", opacity: 0.8 }}
                   animate={{ y: 0, opacity: 1 }}
                   exit={{ y: "105%", opacity: 0.8 }}
                   transition={{ type: "spring", stiffness: 420, damping: 36 }}
                 >
-                  <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-white/[0.08] bg-[rgba(12,13,16,0.78)] px-4 pb-3 pt-5 backdrop-blur-2xl">
+                  <div className={cn("sticky top-0 z-10", VIEWER_GLASS_HEADER_CLASS)}>
                     <span
                       aria-hidden
                       className="absolute left-1/2 top-2 h-1 w-9 -translate-x-1/2 rounded-full bg-white/20"
@@ -742,6 +750,7 @@ export default function DesignPage() {
                       onTimeOfDayChange={setTimeOfDay}
                       wallColor={currentWallColor}
                       onWallColorChange={setWallColor}
+                      showArtworkExtension
                     />
                   </div>
                 </motion.div>
@@ -1093,11 +1102,13 @@ function ViewerOptionsStack({
   onTimeOfDayChange,
   wallColor,
   onWallColorChange,
+  showArtworkExtension,
 }: {
   timeOfDay: TimeOfDay;
   onTimeOfDayChange: (value: TimeOfDay) => void;
   wallColor: string;
   onWallColorChange: (value: string) => void;
+  showArtworkExtension: boolean;
 }) {
   return (
     <div className="flex flex-col gap-3 select-none">
@@ -1124,7 +1135,7 @@ function ViewerOptionsStack({
       </ViewerControlSurface>
       <SquareSizeControls compact />
       <div className="pattern-controls">
-        <PatternControls />
+        <PatternControls showArtworkExtension={showArtworkExtension} />
       </div>
     </div>
   );

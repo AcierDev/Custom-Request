@@ -12,6 +12,7 @@ import {
   ShoppingCart,
   Beaker,
   PaintBucket,
+  TriangleAlert,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +31,7 @@ import { formatGrams } from "./paintEstimate";
 // Mobile: short grid tiles so many colors stay tappable; sm+: tall
 // side-by-side paint-strip bars.
 const BAR_HEIGHT_CLASS = "h-28 sm:h-80";
+const LOWES_WARNING_BAR_HEIGHT_CLASS = "h-44 sm:h-80";
 // At/above this single-can match %, the nearest paint is already a great
 // buy, so the "mix to get closer" pill drops to a hollow (outline) style —
 // still there if you want it, just not competing for attention.
@@ -82,6 +84,9 @@ export function ColorSwatch({
   mixed,
   paintMatch,
   paintSourceHex,
+  paintBackup,
+  paintBackupMatch,
+  paintLowesWarning,
   paintMixRecipe,
   paintTotals,
   paintAmount,
@@ -158,7 +163,7 @@ export function ColorSwatch({
       }}
       className={cn(
         "relative group flex-1 min-w-0 rounded-md overflow-hidden transition-opacity",
-        BAR_HEIGHT_CLASS,
+        paintLowesWarning ? LOWES_WARNING_BAR_HEIGHT_CLASS : BAR_HEIGHT_CLASS,
         isSelected ? "z-10" : "",
         isPendingRemoval
           ? "cursor-default opacity-50 saturate-50"
@@ -319,7 +324,14 @@ export function ColorSwatch({
               style={textColorStyle}
             >
               <span className="text-[10px] font-medium opacity-90">
-                {paintMatch}% match
+                {paintLowesWarning ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-950/80 px-1.5 py-0.5 font-semibold text-amber-100 ring-1 ring-amber-300/60">
+                    <TriangleAlert className="h-3 w-3" />
+                    Poor Lowe&apos;s match · {paintMatch}%
+                  </span>
+                ) : (
+                  `${paintMatch}% match`
+                )}
               </span>
               {/* Before/after swatches so the match can be eyeballed: the
                   original picked color butted right up against the paint it
@@ -362,6 +374,22 @@ export function ColorSwatch({
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
+              )}
+            </div>
+          )}
+          {paintLowesWarning && paintBackup && (
+            <div
+              className="mt-1 flex max-w-full items-center gap-1 rounded-md bg-black/60 px-1.5 py-1 text-[10px] font-medium text-white ring-1 ring-amber-300/50"
+              title={paintBackup}
+            >
+              <span className="shrink-0 font-semibold text-amber-200">
+                Closest other brand:
+              </span>
+              <span className="truncate">{paintBackup}</span>
+              {typeof paintBackupMatch === "number" && (
+                <span className="shrink-0 tabular-nums">
+                  {paintBackupMatch}%
+                </span>
               )}
             </div>
           )}
