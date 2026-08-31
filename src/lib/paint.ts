@@ -59,6 +59,7 @@ export const BRAND_RETAILER: Record<Brand, string> = {
 // plus the approved Sherwin-Williams Historic Interior collection.
 // This is a matching filter, not a brand.
 export const ANY_PAINT_BRAND = "Any";
+export const VERIFIED_PAINT_COLORS = "Verified colors";
 export const LOWES_MATCHES = "Lowe's matches";
 export const LOWES_WITH_FALLBACK = "Lowe's + fallback";
 
@@ -68,6 +69,7 @@ export const LOWES_WITH_FALLBACK = "Lowe's + fallback";
 // a real, purchasable color number).
 export const BRAND_OPTIONS = [
   ANY_PAINT_BRAND,
+  VERIFIED_PAINT_COLORS,
   LOWES_WITH_FALLBACK,
   LOWES_MATCHES,
   "Sherwin-Williams",
@@ -78,15 +80,46 @@ export const BRAND_OPTIONS = [
 ] as const;
 export type BrandOption = (typeof BRAND_OPTIONS)[number];
 
-// Brands whose dataset carries verified, current manufacturer codes
-// (so a grounded color is genuinely orderable at the counter). Behr
-// and PPG are name/hex only until an authoritative feed exists.
+// Brands whose dataset carries verified manufacturer codes from an
+// authoritative source, so a grounded color is genuinely orderable at the
+// counter. PPG remains name/hex-only until an authoritative feed exists.
 export const VERIFIED_BRANDS: ReadonlySet<string> = new Set([
   "Sherwin-Williams",
   "Valspar",
   "Benjamin Moore",
+  "Behr",
   "HGTV Home by Sherwin-Williams",
 ]);
+
+// Physical black/white paints used by the studio's mix recipes. Catalog
+// pool extremes previously changed with the selected matching filter and
+// did not represent the paints actually being mixed.
+export const MIX_BLACK_PAINT_BRAND = "Sherwin-Williams";
+export const MIX_BLACK_PAINT_CODE = "SW 6258";
+export const UNTINTED_WHITE_PAINT: PaintColor = Object.freeze({
+  name: "Plain Untinted White",
+  hex: "#FFFFFF",
+  brand: "Untinted base",
+  available: true,
+});
+const FALLBACK_DARK_ANCHOR_INDEX = 0;
+
+export function configuredPaintMixAnchors(
+  allPaintColors: PaintColor[],
+  fallbackAnchors: PaintColor[],
+): PaintColor[] {
+  const tricornBlack = allPaintColors.find(
+    (color) =>
+      color.brand === MIX_BLACK_PAINT_BRAND &&
+      color.code === MIX_BLACK_PAINT_CODE,
+  );
+  const darkAnchor =
+    tricornBlack ?? fallbackAnchors[FALLBACK_DARK_ANCHOR_INDEX];
+
+  return darkAnchor
+    ? [darkAnchor, UNTINTED_WHITE_PAINT]
+    : [UNTINTED_WHITE_PAINT];
+}
 
 /** Resolve a color's retailer, falling back to the brand map. */
 export function retailerFor(c: Pick<PaintColor, "brand" | "retailer">): string {

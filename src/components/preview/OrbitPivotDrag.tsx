@@ -1,8 +1,7 @@
 "use client";
 
-import { Html } from "@react-three/drei";
 import { useThree } from "@react-three/fiber";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import type * as THREE from "three";
 import {
   getOrbitPivotWorldX,
@@ -25,7 +24,6 @@ interface OrbitPivotDragProps {
   artCenter: [number, number, number];
   artWidth: number;
   pivotRatioRef: PivotRatioRef;
-  showHint?: boolean;
 }
 
 type OrbitControlsLike = {
@@ -37,7 +35,6 @@ export function OrbitPivotDrag({
   artCenter,
   artWidth,
   pivotRatioRef,
-  showHint = true,
 }: OrbitPivotDragProps) {
   const camera = useThree((state) => state.camera);
   const controls = useThree((state) => state.controls) as
@@ -62,9 +59,6 @@ export function OrbitPivotDrag({
     controlsWereEnabled: true,
     previousCursor: "",
   });
-  const [hintDismissed, setHintDismissed] = useState(false);
-  const hintVisible = showHint && !hintDismissed;
-
   useEffect(() => {
     artRef.current = {
       centerX: artCenter[0],
@@ -148,7 +142,6 @@ export function OrbitPivotDrag({
       controls.enabled = false;
       element.style.cursor = PIVOT_DRAG_CURSOR;
       element.setPointerCapture?.(event.pointerId);
-      setHintDismissed(true);
       showMarker();
     };
 
@@ -215,47 +208,35 @@ export function OrbitPivotDrag({
   }, [camera, controls, gl, invalidate, pivotRatioRef]);
 
   return (
-    <>
-      <group ref={markerRef} visible={false}>
-        <mesh renderOrder={PIVOT_MARKER_RENDER_ORDER}>
-          <ringGeometry
-            args={[
-              PIVOT_MARKER_INNER_RADIUS,
-              PIVOT_MARKER_OUTER_RADIUS,
-              PIVOT_MARKER_SEGMENTS,
-            ]}
-          />
-          <meshBasicMaterial
-            color="#ffffff"
-            depthTest={false}
-            depthWrite={false}
-            toneMapped={false}
-            transparent
-            opacity={0.95}
-          />
-        </mesh>
-        <mesh renderOrder={PIVOT_MARKER_RENDER_ORDER}>
-          <circleGeometry
-            args={[PIVOT_MARKER_CENTER_RADIUS, PIVOT_MARKER_SEGMENTS]}
-          />
-          <meshBasicMaterial
-            color="#38bdf8"
-            depthTest={false}
-            depthWrite={false}
-            toneMapped={false}
-          />
-        </mesh>
-      </group>
-
-      {hintVisible && (
-        <Html fullscreen style={{ pointerEvents: "none" }}>
-          <div className="absolute inset-x-0 bottom-20 flex justify-center px-4">
-            <div className="rounded-full border border-white/15 bg-slate-950/70 px-3 py-1.5 text-xs font-medium text-white/90 shadow-lg backdrop-blur-md">
-              Right-drag to move rotation point
-            </div>
-          </div>
-        </Html>
-      )}
-    </>
+    <group ref={markerRef} visible={false}>
+      <mesh renderOrder={PIVOT_MARKER_RENDER_ORDER}>
+        <ringGeometry
+          args={[
+            PIVOT_MARKER_INNER_RADIUS,
+            PIVOT_MARKER_OUTER_RADIUS,
+            PIVOT_MARKER_SEGMENTS,
+          ]}
+        />
+        <meshBasicMaterial
+          color="#ffffff"
+          depthTest={false}
+          depthWrite={false}
+          toneMapped={false}
+          transparent
+          opacity={0.95}
+        />
+      </mesh>
+      <mesh renderOrder={PIVOT_MARKER_RENDER_ORDER}>
+        <circleGeometry
+          args={[PIVOT_MARKER_CENTER_RADIUS, PIVOT_MARKER_SEGMENTS]}
+        />
+        <meshBasicMaterial
+          color="#38bdf8"
+          depthTest={false}
+          depthWrite={false}
+          toneMapped={false}
+        />
+      </mesh>
+    </group>
   );
 }

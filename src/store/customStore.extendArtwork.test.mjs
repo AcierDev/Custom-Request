@@ -145,7 +145,7 @@ test("adds white columns without changing the existing drawn cells", () => {
   );
 });
 
-test("adds top rows and shifts square edits with the existing artwork", () => {
+test("adds top rows without moving square edit coordinates", () => {
   useCustomStore.setState({
     patternOverride: { "0-0": 1 },
     patternDirectionOverride: { "1-1": "west" },
@@ -156,14 +156,14 @@ test("adds top rows and shifts square edits with the existing artwork", () => {
 
   const state = useCustomStore.getState();
   assert.deepEqual(state.drawnPatternGrid, [
+    [WHITE_CELL, WHITE_CELL],
     [RED_CELL, BLUE_CELL],
     [GREEN_CELL, GOLD_CELL],
-    [WHITE_CELL, WHITE_CELL],
   ]);
   assert.deepEqual(state.drawnPatternGridSize, { width: 2, height: 3 });
-  assert.deepEqual(state.patternOverride, { "0-1": 1 });
-  assert.deepEqual(state.patternDirectionOverride, { "1-2": "west" });
-  assert.deepEqual(state.patternHiddenOverride, { "0-2": true });
+  assert.deepEqual(state.patternOverride, { "0-0": 1 });
+  assert.deepEqual(state.patternDirectionOverride, { "1-1": "west" });
+  assert.deepEqual(state.patternHiddenOverride, { "0-1": true });
 });
 
 test("adds left columns and shifts square edits to the right", () => {
@@ -207,7 +207,7 @@ test("keeps every wedge direction fixed when artwork shifts", () => {
   });
 });
 
-test("adds bottom rows without moving square edit coordinates", () => {
+test("adds bottom rows and shifts square edits upward", () => {
   useCustomStore.setState({
     patternOverride: { "0-0": 1 },
     patternDirectionOverride: { "1-1": "west" },
@@ -218,14 +218,14 @@ test("adds bottom rows without moving square edit coordinates", () => {
 
   const state = useCustomStore.getState();
   assert.deepEqual(state.drawnPatternGrid, [
-    [WHITE_CELL, WHITE_CELL],
     [RED_CELL, BLUE_CELL],
     [GREEN_CELL, GOLD_CELL],
+    [WHITE_CELL, WHITE_CELL],
   ]);
   assert.deepEqual(state.drawnPatternGridSize, { width: 2, height: 3 });
-  assert.deepEqual(state.patternOverride, { "0-0": 1 });
-  assert.deepEqual(state.patternDirectionOverride, { "1-1": "west" });
-  assert.deepEqual(state.patternHiddenOverride, { "0-1": true });
+  assert.deepEqual(state.patternOverride, { "0-1": 1 });
+  assert.deepEqual(state.patternDirectionOverride, { "1-2": "west" });
+  assert.deepEqual(state.patternHiddenOverride, { "0-2": true });
 });
 
 test("freezes a generated pattern before extending it", () => {

@@ -23,24 +23,31 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { toast } from "@/lib/toast";
-import { handMixMatchPercent } from "@/lib/paintMixSimulator";
-import { ColorSwatchProps } from "./types";
+import {
+  assessPaintMatch,
+  formatPaintMatchDeltaE,
+} from "@/lib/paintMatch";
+import type { ColorSwatchProps } from "./types";
 import { swatchParts } from "./mixTotals";
 import { formatGrams } from "./paintEstimate";
 
 // Mobile: short grid tiles so many colors stay tappable; sm+: tall
 // side-by-side paint-strip bars.
 const BAR_HEIGHT_CLASS = "h-28 sm:h-80";
-const LOWES_WARNING_BAR_HEIGHT_CLASS = "h-44 sm:h-80";
-// At/above this single-can match %, the nearest paint is already a great
-// buy, so the "mix to get closer" pill drops to a hollow (outline) style —
-// still there if you want it, just not competing for attention.
+const PAINT_BAR_HEIGHT_CLASS = "h-40 sm:h-80";
+const LOWES_WARNING_BAR_HEIGHT_CLASS = "h-52 sm:h-80";
+// When the single-can match is already extremely close, the mix pill drops
+// to an outline style. The percentage threshold only supports older saved
+// palettes that do not carry Delta E yet.
 const MIX_OPTIONAL_MATCH_PERCENT = 99;
+const MIX_OPTIONAL_MAX_DELTA_E = 1;
 // Solid vs. hollow "Mix" pill.
 const MIX_PILL_SOLID =
   "bg-violet-600/85 text-white ring-violet-300/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_1px_2px_rgba(0,0,0,0.20)]";
 const MIX_PILL_HOLLOW =
   "bg-black/20 text-violet-100 ring-violet-300/40 backdrop-blur-sm";
+const MIX_MODEL_DISCLAIMER =
+  "Digital estimate only. Test a small batch; catalog hex values do not capture real pigment tint strength.";
 const HAND_MIX_DECISION_THEME = {
   mix: {
     className: "bg-emerald-600/85 ring-emerald-300/45",
@@ -83,9 +90,12 @@ export function ColorSwatch({
   name,
   mixed,
   paintMatch,
+  paintMatchDeltaE,
   paintSourceHex,
+  paintSourceName,
   paintBackup,
   paintBackupMatch,
+  paintBackupDeltaE,
   paintLowesWarning,
   paintMixRecipe,
   paintTotals,
@@ -112,6 +122,31 @@ export function ColorSwatch({
 
   const textColor = getContrastTextColor(color);
   const textColorStyle = { color: textColor };
+  const hasPaintMatch =
+    typeof paintMatchDeltaE === "number" || typeof paintMatch === "number";
+  const paintAssessment =
+    typeof paintMatchDeltaE === "number"
+      ? assessPaintMatch(paintMatchDeltaE)
+      : undefined;
+  const paintMatchDeltaEDisplay =
+    typeof paintMatchDeltaE === "number"
+      ? formatPaintMatchDeltaE(paintMatchDeltaE)
+      : undefined;
+  const paintMatchSummary =
+    paintAssessment && paintMatchDeltaEDisplay
+      ? `${paintAssessment.label} · ΔE ${paintMatchDeltaEDisplay}`
+      : typeof paintMatch === "number"
+        ? `${paintMatch}% legacy score`
+        : undefined;
+  const sourceLabel = paintSourceName?.trim();
+  const matchedLabel = name?.trim();
+  const translatedFromLabel =
+    sourceLabel && sourceLabel !== matchedLabel ? sourceLabel : undefined;
+  const mixIsOptional =
+    typeof paintMatchDeltaE === "number"
+      ? paintMatchDeltaE <= MIX_OPTIONAL_MAX_DELTA_E
+      : typeof paintMatch === "number" &&
+        paintMatch >= MIX_OPTIONAL_MATCH_PERCENT;
 
   // With a piece size set, a mixed color's total paint splits across its
   // recipe by the integer part ratio, so each ingredient reads as the grams
@@ -163,7 +198,11 @@ export function ColorSwatch({
       }}
       className={cn(
         "relative group flex-1 min-w-0 rounded-md overflow-hidden transition-opacity",
-        paintLowesWarning ? LOWES_WARNING_BAR_HEIGHT_CLASS : BAR_HEIGHT_CLASS,
+        paintLowesWarning
+          ? LOWES_WARNING_BAR_HEIGHT_CLASS
+          : hasPaintMatch
+            ? PAINT_BAR_HEIGHT_CLASS
+            : BAR_HEIGHT_CLASS,
         isSelected ? "z-10" : "",
         isPendingRemoval
           ? "cursor-default opacity-50 saturate-50"
@@ -271,7 +310,7 @@ export function ColorSwatch({
         <button
           type="button"
           onClick={copyHex}
-          title="Click to copy hex"
+          title={name ? `${name} — click to copy hex` : "Click to copy hex"}
           className="min-w-0 text-left cursor-pointer rounded-sm hover:opacity-80 transition-opacity pointer-events-none sm:pointer-events-auto"
         >
           {(() => {
@@ -282,7 +321,7 @@ export function ColorSwatch({
               <>
                 {brand && (
                   <div
-                    className="font-semibold text-xs sm:text-sm truncate"
+                    className="break-words text-xs font-semibold leading-tight sm:text-sm"
                     style={textColorStyle}
                   >
                     {brand}
@@ -290,7 +329,7 @@ export function ColorSwatch({
                 )}
                 {code && (
                   <div
-                    className="text-[11px] opacity-90 truncate"
+                    className="break-words text-[11px] leading-tight opacity-90"
                     style={textColorStyle}
                   >
                     {code}
@@ -298,7 +337,7 @@ export function ColorSwatch({
                 )}
                 <div
                   className={cn(
-                    "truncate",
+                    "whitespace-normal break-words leading-tight",
                     brand
                       ? "text-[11px] opacity-90"
                       : "font-semibold text-xs sm:text-sm"
@@ -312,13 +351,22 @@ export function ColorSwatch({
           })()}
           {name && (
             <div
-              className="font-mono text-[10px] opacity-80 truncate"
+              className="break-words font-mono text-[10px] leading-tight opacity-80"
               style={textColorStyle}
             >
               {color}
             </div>
           )}
-          {typeof paintMatch === "number" && (
+          {translatedFromLabel && (
+            <div
+              className="mt-0.5 whitespace-normal break-words text-[10px] leading-tight opacity-90"
+              style={textColorStyle}
+              title={translatedFromLabel}
+            >
+              {`From ${translatedFromLabel}`}
+            </div>
+          )}
+          {hasPaintMatch && (
             <div
               className="mt-0.5 flex w-full items-center gap-2"
               style={textColorStyle}
@@ -327,10 +375,10 @@ export function ColorSwatch({
                 {paintLowesWarning ? (
                   <span className="inline-flex items-center gap-1 rounded-full bg-amber-950/80 px-1.5 py-0.5 font-semibold text-amber-100 ring-1 ring-amber-300/60">
                     <TriangleAlert className="h-3 w-3" />
-                    Poor Lowe&apos;s match · {paintMatch}%
+                    Lowe&apos;s differs · {paintMatchSummary}
                   </span>
                 ) : (
-                  `${paintMatch}% match`
+                  paintMatchSummary
                 )}
               </span>
               {/* Before/after swatches so the match can be eyeballed: the
@@ -343,11 +391,11 @@ export function ColorSwatch({
                     <TooltipTrigger asChild>
                       <span className="ml-auto inline-flex overflow-hidden rounded-md ring-1 ring-white/50">
                         <span
-                          className="h-12 w-12"
+                          className="h-8 w-8 sm:h-12 sm:w-12"
                           style={{ backgroundColor: paintSourceHex }}
                         />
                         <span
-                          className="h-12 w-12"
+                          className="h-8 w-8 sm:h-12 sm:w-12"
                           style={{ backgroundColor: color }}
                         />
                       </span>
@@ -359,7 +407,9 @@ export function ColorSwatch({
                             className="h-3 w-8 rounded-sm ring-1 ring-white/30"
                             style={{ backgroundColor: paintSourceHex }}
                           />
-                          <span className="font-medium">Original</span>
+                          <span className="font-medium">
+                            {sourceLabel ?? "Original"}
+                          </span>
                           <span className="font-mono">{paintSourceHex}</span>
                         </div>
                         <div className="flex items-center gap-2">
@@ -367,7 +417,9 @@ export function ColorSwatch({
                             className="h-3 w-8 rounded-sm ring-1 ring-white/30"
                             style={{ backgroundColor: color }}
                           />
-                          <span className="font-medium">Paint</span>
+                          <span className="font-medium">
+                            {matchedLabel ?? "Paint"}
+                          </span>
                           <span className="font-mono">{color}</span>
                         </div>
                       </div>
@@ -379,18 +431,25 @@ export function ColorSwatch({
           )}
           {paintLowesWarning && paintBackup && (
             <div
-              className="mt-1 flex max-w-full items-center gap-1 rounded-md bg-black/60 px-1.5 py-1 text-[10px] font-medium text-white ring-1 ring-amber-300/50"
+              className="mt-1 flex max-w-full flex-col items-start gap-0.5 rounded-md bg-black/60 px-1.5 py-1 text-[10px] font-medium text-white ring-1 ring-amber-300/50"
               title={paintBackup}
             >
               <span className="shrink-0 font-semibold text-amber-200">
                 Closest other brand:
               </span>
-              <span className="truncate">{paintBackup}</span>
-              {typeof paintBackupMatch === "number" && (
+              <span className="whitespace-normal break-words leading-tight">
+                {paintBackup}
+              </span>
+              {typeof paintBackupDeltaE === "number" ? (
                 <span className="shrink-0 tabular-nums">
-                  {paintBackupMatch}%
+                  {assessPaintMatch(paintBackupDeltaE).label} · ΔE{" "}
+                  {formatPaintMatchDeltaE(paintBackupDeltaE)}
                 </span>
-              )}
+              ) : typeof paintBackupMatch === "number" ? (
+                <span className="shrink-0 tabular-nums">
+                  {paintBackupMatch}% legacy score
+                </span>
+              ) : null}
             </div>
           )}
           {paintMixRecipe && (
@@ -400,10 +459,7 @@ export function ColorSwatch({
                   <div
                     className={cn(
                       "mt-1 inline-flex max-w-full items-center gap-1.5 rounded-[10px] px-1.5 py-1 text-[10px] font-semibold ring-1",
-                      typeof paintMatch === "number" &&
-                        paintMatch >= MIX_OPTIONAL_MATCH_PERCENT
-                        ? MIX_PILL_HOLLOW
-                        : MIX_PILL_SOLID
+                      mixIsOptional ? MIX_PILL_HOLLOW : MIX_PILL_SOLID,
                     )}
                   >
                     <Beaker className="h-3 w-3 shrink-0" />
@@ -422,15 +478,18 @@ export function ColorSwatch({
                             .join(" : ")}
                     </span>
                     <span className="shrink-0 tabular-nums opacity-80">
-                      · {paintMixRecipe.matchPercent}%
+                      · model ΔE {formatPaintMatchDeltaE(paintMixRecipe.deltaE)}
                     </span>
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="top" className="max-w-72">
                   <div className="space-y-2 text-xs">
                     <div className="font-medium">
-                      Mix to get closer ({paintMixRecipe.matchPercent}% match ·
-                      ΔE {paintMixRecipe.deltaE})
+                      Digital model · ΔE{" "}
+                      {formatPaintMatchDeltaE(paintMixRecipe.deltaE)}
+                    </div>
+                    <div className="rounded bg-amber-500/15 px-2 py-1 text-amber-100">
+                      {MIX_MODEL_DISCLAIMER}
                     </div>
                     <div className="space-y-1">
                       {paintMixRecipe.components.map((component) => (
@@ -498,7 +557,7 @@ export function ColorSwatch({
                     })()}
                     <span className="truncate">{handMix.label}</span>
                     <span className="shrink-0 tabular-nums opacity-80">
-                      · {handMixMatchPercent(handMix.deltaE)}%
+                      · model ΔE {formatPaintMatchDeltaE(handMix.deltaE)}
                     </span>
                   </div>
                 </TooltipTrigger>
@@ -521,8 +580,11 @@ export function ColorSwatch({
                       <span className="font-mono">{handMix.predictedHex}</span>
                     </div>
                     <div>
-                      {handMixMatchPercent(handMix.deltaE)}% match · ΔE{" "}
-                      {handMix.deltaE} · {handMix.recipe}
+                      Digital model · ΔE{" "}
+                      {formatPaintMatchDeltaE(handMix.deltaE)} · {handMix.recipe}
+                    </div>
+                    <div className="rounded bg-amber-500/15 px-2 py-1 text-amber-100">
+                      {MIX_MODEL_DISCLAIMER}
                     </div>
                   </div>
                 </TooltipContent>

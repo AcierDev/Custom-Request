@@ -109,12 +109,10 @@ export type CustomColor = {
   name?: string;
   /** Extra proportion of squares for this color (e.g. 50 = +50%). Default 0. */
   extraPercent?: number;
-  /**
-   * Set by "Convert to paint": how close (0–100%) this swatch is to the
-   * real paint color it was grounded onto, derived from the ΔE2000
-   * distance. Cleared when the color is edited directly.
-   */
+  /** Legacy 0–100 display score retained for saved-palette compatibility. */
   paintMatch?: number;
+  /** Actual perceptual ΔE2000 distance to the selected paint. */
+  paintMatchDeltaE?: number;
   /**
    * Set by "Convert to paint": the original swatch this color was grounded
    * from. Lets "Convert back to hex" restore the pre-paint hex/name.
@@ -127,7 +125,8 @@ export type CustomColor = {
    */
   paintBackup?: string;
   paintBackupMatch?: number;
-  /** True when the default Lowe's match is 97% or lower. */
+  paintBackupDeltaE?: number;
+  /** True when the default Lowe's result differs enough to offer fallback. */
   paintLowesWarning?: boolean;
   /**
    * Set by "Convert to paint": a 2–3 paint mixing recipe (integer parts)
@@ -688,8 +687,9 @@ interface CustomStore extends CustomState {
   setScatterAmount: (value: number) => void;
   setPaletteBlend: (value: number) => void;
 
-  // New action to set the active custom mode
+  // Custom viewer mode actions
   setActiveCustomMode: (mode: CustomMode) => void;
+  selectDrawnPatternForCustomEditing: () => void;
 
   // Draft Set Actions
   addToDraftSet: (item: { label?: string; designData: ShareableState }) => void;
@@ -769,10 +769,12 @@ export const hoverStore = createStore<HoverState>((set) => ({
 function restorePaintMetadata(color: CustomColor): CustomColor {
   const hasPaintMetadata =
     color.paintMatch !== undefined ||
+    color.paintMatchDeltaE !== undefined ||
     color.paintSourceHex !== undefined ||
     color.paintSourceName !== undefined ||
     color.paintBackup !== undefined ||
     color.paintBackupMatch !== undefined ||
+    color.paintBackupDeltaE !== undefined ||
     color.paintLowesWarning !== undefined ||
     color.paintMixRecipe !== undefined;
   if (!hasPaintMetadata) return color;
@@ -780,20 +782,24 @@ function restorePaintMetadata(color: CustomColor): CustomColor {
   const {
     name: _paintName,
     paintMatch: _droppedMatch,
+    paintMatchDeltaE: _droppedMatchDeltaE,
     paintMixRecipe: _droppedRecipe,
     paintSourceHex: _droppedSourceHex,
     paintSourceName,
     paintBackup: _droppedBackup,
     paintBackupMatch: _droppedBackupMatch,
+    paintBackupDeltaE: _droppedBackupDeltaE,
     paintLowesWarning: _droppedLowesWarning,
     ...rest
   } = color;
   void _paintName;
   void _droppedMatch;
+  void _droppedMatchDeltaE;
   void _droppedRecipe;
   void _droppedSourceHex;
   void _droppedBackup;
   void _droppedBackupMatch;
+  void _droppedBackupDeltaE;
   void _droppedLowesWarning;
   return {
     ...rest,
@@ -1499,10 +1505,12 @@ const buildArtworkExtensionState = (
             ...row,
             ...Array.from({ length: normalizedCount }, createWhiteCell),
           ])
-        : edge === "bottom"
+        : edge === "top"
           ? [...whiteRows(), ...sourceGrid]
           : [...sourceGrid, ...whiteRows()];
   const addsColumns = edge === "left" || edge === "right";
+  const patternOffsetX = edge === "left" ? normalizedCount : 0;
+  const patternOffsetY = edge === "bottom" ? normalizedCount : 0;
   const dimensions: Dimensions = {
     width: sourceSize.width + (addsColumns ? normalizedCount : 0),
     height: sourceSize.height + (addsColumns ? 0 : normalizedCount),
@@ -1550,20 +1558,20 @@ const buildArtworkExtensionState = (
     currentColors: null,
     patternOverride: shiftPatternCoordinateRecord(
       state.patternOverride,
-      edge === "left" ? normalizedCount : 0,
-      edge === "top" ? normalizedCount : 0,
+      patternOffsetX,
+      patternOffsetY,
     ),
     patternDirectionOverride: shiftPatternCoordinateRecord(
       Object.keys(state.renderedPatternDirections).length
         ? state.renderedPatternDirections
         : state.patternDirectionOverride,
-      edge === "left" ? normalizedCount : 0,
-      edge === "top" ? normalizedCount : 0,
+      patternOffsetX,
+      patternOffsetY,
     ),
     patternHiddenOverride: shiftPatternCoordinateRecord(
       state.patternHiddenOverride,
-      edge === "left" ? normalizedCount : 0,
-      edge === "top" ? normalizedCount : 0,
+      patternOffsetX,
+      patternOffsetY,
     ),
     patternUndoStack: appendPatternHistoryEntry(
       state.patternUndoStack,
@@ -4244,6 +4252,15 @@ export const useCustomStore = create<CustomStore>()(
       return true;
     },
     setActiveCustomMode: (mode: CustomMode) => set({ activeCustomMode: mode }),
+    selectDrawnPatternForCustomEditing: () => {
+      const state = get();
+      if (
+        state.selectedDesign === ItemDesigns.Custom &&
+        state.activeCustomMode !== "pattern"
+      ) {
+        set({ activeCustomMode: "pattern" });
+      }
+    },
 
     // Draft Set Actions
     addToDraftSet: (item) =>

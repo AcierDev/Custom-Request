@@ -75,8 +75,6 @@ import { ShareDesignButton } from "@/components/ShareDesignButton";
 import { DraftSetControls } from "@/components/DraftSetControls";
 import { DesignTutorial } from "@/components/DesignTutorial";
 import { EmptyPaletteWarning } from "@/components/EmptyPaletteWarning";
-import { CustomChoiceDialog } from "@/components/CustomChoiceDialog";
-import { useCustomChoiceDialog } from "@/hooks/useCustomChoiceDialog";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useInitialRoomViewDefault } from "@/hooks/useInitialRoomViewDefault";
 import {
@@ -444,13 +442,6 @@ export default function DesignPage() {
     setCapture: setCaptureFourAngleImage,
     saveImage: handleSaveImage,
   } = useFourAngleImageDownload();
-
-  // Custom choice dialog hook
-  const {
-    isDialogOpen: isCustomChoiceDialogOpen,
-    handleChoiceMade,
-    handleDialogClose: handleCustomChoiceDialogClose,
-  } = useCustomChoiceDialog();
 
   useEffect(() => {
     setMounted(true);
@@ -927,7 +918,6 @@ export default function DesignPage() {
             artCenter={artCenter}
             artWidth={installedArtWidth}
             pivotRatioRef={orbitPivotRatio}
-            showHint={!isMobile}
           />
           <SmoothWheelZoom
             minimumDistanceEpsilon={ROOM_COLLISION_MIN_OFFSET}
@@ -1087,12 +1077,6 @@ export default function DesignPage() {
       {/* Empty palette warning */}
       <EmptyPaletteWarning />
 
-      {/* Custom Choice Dialog */}
-      <CustomChoiceDialog
-        isOpen={isCustomChoiceDialogOpen}
-        onClose={handleCustomChoiceDialogClose}
-        onChoiceMade={handleChoiceMade}
-      />
     </div>
   );
 }

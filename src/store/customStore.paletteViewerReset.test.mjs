@@ -450,3 +450,29 @@ test("loading a saved viewer version restores its intentional settings", () => {
     VIEWER_VERSION_BACKBOARD_COLOR,
   );
 });
+
+test("starting custom editing selects the drawn pattern without altering either design", () => {
+  const customPalette = [{ ...VERSION_COLOR }];
+  const drawnPatternGrid = [[{ color: DIRTY_COLOR }]];
+  useCustomStore.setState({
+    selectedDesign: ItemDesigns.Custom,
+    customPalette,
+    drawnPatternGrid,
+    drawnPatternGridSize: {
+      width: DRAWN_PATTERN_SIZE,
+      height: DRAWN_PATTERN_SIZE,
+    },
+    activeCustomMode: "palette",
+  });
+
+  const selectDrawnPatternForCustomEditing =
+    useCustomStore.getState().selectDrawnPatternForCustomEditing;
+  assert.equal(typeof selectDrawnPatternForCustomEditing, "function");
+
+  selectDrawnPatternForCustomEditing();
+
+  const state = useCustomStore.getState();
+  assert.equal(state.activeCustomMode, "pattern");
+  assert.deepEqual(state.customPalette, customPalette);
+  assert.deepEqual(state.drawnPatternGrid, drawnPatternGrid);
+});

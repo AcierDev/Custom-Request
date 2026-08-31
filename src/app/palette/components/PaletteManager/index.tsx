@@ -1007,9 +1007,12 @@ export function PaletteManager() {
                         name={color.name}
                         mixed={!!color.mix}
                         paintMatch={color.paintMatch}
+                        paintMatchDeltaE={color.paintMatchDeltaE}
                         paintSourceHex={color.paintSourceHex}
+                        paintSourceName={color.paintSourceName}
                         paintBackup={color.paintBackup}
                         paintBackupMatch={color.paintBackupMatch}
+                        paintBackupDeltaE={color.paintBackupDeltaE}
                         paintLowesWarning={color.paintLowesWarning}
                         paintMixRecipe={color.paintMixRecipe}
                         paintTotals={paintTotals}

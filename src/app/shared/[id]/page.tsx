@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -46,6 +46,10 @@ import {
   VIEWER_GLASS_BACKDROP_CLASS,
   VIEWER_GLASS_SHEET_CLASS,
 } from "@/components/preview/viewerGlass";
+import {
+  copyPaletteHex,
+  createPaletteCopyHandlers,
+} from "./paletteClipboard";
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ 🔗 CONSTANTS                                                          ║
@@ -68,6 +72,7 @@ const PHONE_LANDSCAPE_AR_CLASS =
 const SHARED_EDIT_PANEL_DESKTOP_WIDTH_CLASS = "w-80";
 const SHARED_MOBILE_SHEET_CONTENT_CLASS =
   "max-h-[calc(76dvh-4.5rem)] overflow-y-auto px-2 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 no-scrollbar";
+const PALETTE_COPY_FEEDBACK_MS = 1600;
 // Only show the view count once it reads as real social proof, never
 // "Viewed 1 time".
 const VIEW_COUNT_THRESHOLD = 5;
@@ -608,41 +613,92 @@ function PaletteStory({
   palette: PaletteColor[];
   reducedMotion?: boolean;
 }) {
+  const [copiedHex, setCopiedHex] = useState<string | null>(null);
+  const copyFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const handleCopyHex = useCallback(async (hex: string) => {
+    const normalizedHex = hex.toUpperCase();
+    const copied = await copyPaletteHex(normalizedHex, navigator.clipboard);
+    if (!copied) return;
+
+    if (copyFeedbackTimerRef.current !== null) {
+      clearTimeout(copyFeedbackTimerRef.current);
+    }
+    setCopiedHex(normalizedHex);
+    copyFeedbackTimerRef.current = setTimeout(() => {
+      setCopiedHex(null);
+      copyFeedbackTimerRef.current = null;
+    }, PALETTE_COPY_FEEDBACK_MS);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (copyFeedbackTimerRef.current !== null) {
+        clearTimeout(copyFeedbackTimerRef.current);
+      }
+    },
+    [],
+  );
+
   if (palette.length === 0) return null;
-  const total = palette.reduce((sum, c) => sum + c.weight, 0) || 1;
 
   return (
     <div className="space-y-2.5">
       {/* Proportional color bar — each color sized by its share. */}
       <div className="flex h-7 w-full overflow-hidden rounded-md ring-1 ring-black/30">
-        {palette.map((c, i) => (
-          <motion.div
-            key={`${c.hex}-${i}`}
-            title={`${c.name} · ${c.hex.toUpperCase()}`}
-            initial={reducedMotion ? undefined : { flexGrow: 0 }}
-            animate={{ flexGrow: c.weight }}
-            transition={{ duration: 0.5, delay: i * 0.04, ease: "easeOut" }}
-            style={{ flexGrow: c.weight, flexBasis: 0, backgroundColor: c.hex }}
-          />
-        ))}
+        {palette.map((c, i) => {
+          const normalizedHex = c.hex.toUpperCase();
+          return (
+            <motion.button
+              key={`${c.hex}-${i}`}
+              type="button"
+              aria-label={`Copy ${c.name} ${normalizedHex}`}
+              title={`${c.name} · ${normalizedHex} · Hover or click to copy`}
+              {...createPaletteCopyHandlers(c.hex, handleCopyHex)}
+              initial={reducedMotion ? undefined : { flexGrow: 0 }}
+              animate={{ flexGrow: c.weight }}
+              transition={{ duration: 0.5, delay: i * 0.04, ease: "easeOut" }}
+              className="h-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-white"
+              style={{
+                flexGrow: c.weight,
+                flexBasis: 0,
+                backgroundColor: c.hex,
+              }}
+            />
+          );
+        })}
       </div>
 
-      {/* Named swatches — hover/tap reveals the hex. */}
+      {/* Named swatches — hover copies; click/tap is the mobile fallback. */}
       <div className="flex flex-wrap gap-1.5">
-        {palette.map((c, i) => (
-          <span
-            key={`${c.hex}-chip-${i}`}
-            title={c.hex.toUpperCase()}
-            className="group inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/20 py-0.5 pl-1 pr-2 transition-colors hover:border-white/25"
-          >
-            <span
-              className="h-3.5 w-3.5 rounded-full ring-1 ring-black/30"
-              style={{ backgroundColor: c.hex }}
-            />
-            <span className="text-[11px] text-slate-300">{c.name}</span>
-          </span>
-        ))}
+        {palette.map((c, i) => {
+          const normalizedHex = c.hex.toUpperCase();
+          return (
+            <button
+              key={`${c.hex}-chip-${i}`}
+              type="button"
+              aria-label={`Copy ${c.name} ${normalizedHex}`}
+              title={`Hover or click to copy ${normalizedHex}`}
+              {...createPaletteCopyHandlers(c.hex, handleCopyHex)}
+              className="group inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/20 py-0.5 pl-1 pr-2 transition-colors hover:border-white/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            >
+              <span
+                className="h-3.5 w-3.5 rounded-full ring-1 ring-black/30"
+                style={{ backgroundColor: c.hex }}
+              />
+              <span className="text-[11px] text-slate-300">
+                {copiedHex === normalizedHex
+                  ? `Copied ${normalizedHex}`
+                  : c.name}
+              </span>
+            </button>
+          );
+        })}
       </div>
+      <span className="sr-only" role="status" aria-live="polite">
+        {copiedHex ? `Copied ${copiedHex}` : ""}
+      </span>
       <p className="text-[11px] text-slate-500">
         {palette.length} solid hardwood tone{palette.length === 1 ? "" : "s"}
       </p>

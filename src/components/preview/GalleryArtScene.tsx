@@ -665,7 +665,6 @@ export function GalleryArtScene({
         artCenter={artCenter}
         artWidth={installedArtWidth}
         pivotRatioRef={orbitPivotRatio}
-        showHint={!isMobile}
       />
       <SmoothWheelZoom
         minimumDistanceEpsilon={ROOM_COLLISION_MIN_OFFSET}

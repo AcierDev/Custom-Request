@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { hexToLab } from "./paintMixSimulator.ts";
-import { LOWES_MATCHES, purchaseLabel } from "./paint.ts";
+import { BRAND_OPTIONS, LOWES_MATCHES, purchaseLabel } from "./paint.ts";
 import * as paintMatchModule from "./paintMatch.ts";
 import {
   findClosestPaintMatches,
@@ -11,6 +11,7 @@ import {
 
 const SINGLE_MATCH_COUNT = 1;
 const PRIMARY_MATCH_INDEX = 0;
+const PERFECT_MATCH_PERCENT = 100;
 const INDEPENDENT_LIGHTNESS = "independent";
 const MERLOT_CODE = "SW 2704";
 const MERLOT_NAME = "Merlot";
@@ -20,6 +21,11 @@ const ANY_PAINT_BRAND = "Any";
 const INDIGO_STREAMER_SOURCE_HEX = "#21394B";
 const INDIGO_STREAMER_CODE = "4010-4";
 const LOWES_FALLBACK_OPTION = "Lowe's + fallback";
+const VERIFIED_COLORS_OPTION = "Verified colors";
+const NIFTY_TURQUOISE_CODE = "SW 6941";
+const NIFTY_TURQUOISE_NAME = "Nifty Turquoise";
+const TROPICAL_HIDEAWAY_CODE = "5007-10C";
+const VERY_CLOSE_MATCH_LABEL = "Very close";
 const POOR_LOWES_DISTANCE = 3;
 const GOOD_LOWES_DISTANCE = 2;
 const ALTERNATIVE_DISTANCE = 1;
@@ -134,6 +140,52 @@ test("Lowe's + fallback keeps the primary pool at Lowe's", () => {
   assert.deepEqual(pool, [lowesPaint]);
 });
 
+test("Verified colors includes code-bearing Behr and excludes PPG", () => {
+  const verifiedPaint = {
+    name: "Verified candidate",
+    code: "VAL 1",
+    hex: "#22394a",
+    brand: "Valspar",
+    retailer: "Lowe's",
+  };
+  const verifiedBehrPaint = {
+    name: "Very Navy",
+    code: "M500-7",
+    hex: "#3a4859",
+    brand: "Behr",
+    retailer: "The Home Depot",
+  };
+  const unverifiedPaint = {
+    name: "Unverified candidate",
+    hex: INDIGO_STREAMER_SOURCE_HEX,
+    brand: "PPG",
+    retailer: "The Home Depot",
+  };
+
+  const pool = getGroundablePaintColors(
+    [unverifiedPaint, verifiedPaint, verifiedBehrPaint],
+    VERIFIED_COLORS_OPTION,
+  );
+
+  assert.equal(BRAND_OPTIONS.includes(VERIFIED_COLORS_OPTION), true);
+  assert.deepEqual(pool, [verifiedPaint, verifiedBehrPaint]);
+});
+
+test("paint-pool labels distinguish all verified colors from Lowe's-only translation", () => {
+  const paintPoolLabel = paintMatchModule.paintPoolLabel;
+
+  assert.equal(paintPoolLabel?.(ANY_PAINT_BRAND), "All colors");
+  assert.equal(
+    paintPoolLabel?.(VERIFIED_COLORS_OPTION),
+    "All verified colors",
+  );
+  assert.equal(paintPoolLabel?.(LOWES_MATCHES), "Lowe's colors only");
+  assert.equal(
+    paintPoolLabel?.(LOWES_FALLBACK_OPTION),
+    "Lowe's first + other-brand fallback",
+  );
+});
+
 test("Lowe's fallback candidates exclude Lowe's paints", () => {
   const lowesPaint = {
     name: "Lowe's candidate",
@@ -182,7 +234,7 @@ test("Lowe's fallback chooses the closest color without a lightness constraint",
   assert.equal(matches?.[PRIMARY_MATCH_INDEX]?.paintColor, closerDarkerPaint);
 });
 
-test("default mode offers another brand when the Lowe's score is 97%", () => {
+test("default mode offers another brand when the Lowe's Delta E reaches 3", () => {
   const lowesPrimary = {
     paintColor: {
       name: "Lowe's primary",
@@ -222,7 +274,7 @@ test("default mode offers another brand when the Lowe's score is 97%", () => {
   assert.equal(selection?.lowesMatchIsPoor, true);
 });
 
-test("Lowe's + fallback keeps the Lowe's backup when its score is 98%", () => {
+test("Lowe's + fallback keeps the Lowe's backup when its Delta E is 2", () => {
   const lowesPrimary = {
     paintColor: {
       name: "Lowe's primary",
@@ -276,6 +328,107 @@ test("Any brand ranks Valspar Indigo Streamer for its source hex", () => {
   )[PRIMARY_MATCH_INDEX];
 
   assert.equal(match.paintColor.code, INDIGO_STREAMER_CODE);
+});
+
+test("re-grounding from Lowe's to Any keeps Indigo Streamer at 100%", () => {
+  const catalog = loadPaints();
+  const sourceColor = { hex: INDIGO_STREAMER_SOURCE_HEX };
+  const lowesPaintLabs = toPaintLabs(
+    getGroundablePaintColors(catalog, LOWES_MATCHES),
+  );
+  const lowesSelection = paintMatchModule.findGroundedPaintMatches?.(
+    sourceColor,
+    lowesPaintLabs,
+    [],
+    LOWES_MATCHES,
+    SINGLE_MATCH_COUNT,
+    INDEPENDENT_LIGHTNESS,
+  );
+
+  assert.equal(
+    lowesSelection?.primaryMatch?.paintColor.code,
+    INDIGO_STREAMER_CODE,
+  );
+
+  const groundedColor = {
+    ...sourceColor,
+    hex: lowesSelection.primaryMatch.paintColor.hex,
+    name: purchaseLabel(lowesSelection.primaryMatch.paintColor),
+    paintSourceHex: sourceColor.hex,
+  };
+  const anySelection = paintMatchModule.findGroundedPaintMatches?.(
+    groundedColor,
+    toPaintLabs(getGroundablePaintColors(catalog, ANY_PAINT_BRAND)),
+    [],
+    ANY_PAINT_BRAND,
+    SINGLE_MATCH_COUNT,
+    INDEPENDENT_LIGHTNESS,
+  );
+
+  assert.equal(
+    anySelection?.primaryMatch?.paintColor.code,
+    INDIGO_STREAMER_CODE,
+  );
+  assert.equal(
+    paintMatchModule.paintMatchPercent?.(anySelection.primaryMatch.distance),
+    PERFECT_MATCH_PERCENT,
+  );
+});
+
+test("SW 6941 stays exact in verified colors and translates explicitly for Lowe's", () => {
+  const catalog = loadPaints([
+    "../../public/paints/sherwin/colors.json",
+    "../../public/paints/valspar/colors.json",
+    "../../public/paints/hgtv_home/colors.json",
+  ]);
+  const sourcePaint = catalog.find(
+    (paint) => paint.code === NIFTY_TURQUOISE_CODE,
+  );
+
+  assert.ok(sourcePaint);
+  assert.equal(sourcePaint.name, NIFTY_TURQUOISE_NAME);
+
+  const sourceColor = {
+    hex: sourcePaint.hex,
+    name: purchaseLabel(sourcePaint),
+  };
+  const verifiedSelection = paintMatchModule.findGroundedPaintMatches?.(
+    sourceColor,
+    toPaintLabs(
+      getGroundablePaintColors(catalog, VERIFIED_COLORS_OPTION),
+    ),
+    [],
+    VERIFIED_COLORS_OPTION,
+    SINGLE_MATCH_COUNT,
+    INDEPENDENT_LIGHTNESS,
+  );
+  const lowesSelection = paintMatchModule.findGroundedPaintMatches?.(
+    sourceColor,
+    toPaintLabs(getGroundablePaintColors(catalog, LOWES_MATCHES)),
+    [],
+    LOWES_MATCHES,
+    SINGLE_MATCH_COUNT,
+    INDEPENDENT_LIGHTNESS,
+  );
+
+  assert.equal(
+    verifiedSelection?.primaryMatch?.paintColor.code,
+    NIFTY_TURQUOISE_CODE,
+  );
+  assert.equal(
+    verifiedSelection?.primaryMatch?.distance,
+    0,
+  );
+  assert.equal(
+    lowesSelection?.primaryMatch?.paintColor.code,
+    TROPICAL_HIDEAWAY_CODE,
+  );
+  assert.equal(
+    paintMatchModule.assessPaintMatch?.(
+      lowesSelection.primaryMatch.distance,
+    ).label,
+    VERY_CLOSE_MATCH_LABEL,
+  );
 });
 
 test("the imported purchase label breaks an identical-color tie", () => {

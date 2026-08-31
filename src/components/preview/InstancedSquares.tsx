@@ -21,6 +21,7 @@ import {
   bakeArtEnvironment,
   createArtMaterial,
 } from "./artMaterial";
+import { commitInstancedSquareBuffers } from "./instancedSquareBuffers";
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ 🧱 INSTANCED SQUARES                                                  ║
@@ -700,15 +701,15 @@ function InstancedSquaresComponent({
     }
 
     mesh.count = instances.length;
-    mesh.instanceMatrix.needsUpdate = true;
-    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-    grainIndexAttr.needsUpdate = true;
-    mesh.computeBoundingSphere();
     if (pickMesh) {
       pickMesh.count = instances.length;
-      pickMesh.instanceMatrix.needsUpdate = true;
-      pickMesh.computeBoundingSphere();
     }
+    commitInstancedSquareBuffers({
+      mesh,
+      pickMesh,
+      grainIndexAttribute: grainIndexAttr,
+      invalidate,
+    });
     // `material` is intentionally a dependency: it lives in the <instancedMesh>
     // args, so toggling wood grain / metallic / wood style recreates the mesh
     // with a zeroed instance buffer. Re-running here repopulates the new mesh.
@@ -720,6 +721,7 @@ function InstancedSquaresComponent({
     bloomOnResize,
     driftAmount,
     getDriftFactor,
+    invalidate,
   ]);
 
   // One per-frame matrix writer for both the size-change bloom and the

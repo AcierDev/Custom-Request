@@ -26,23 +26,26 @@ exact manufacturer number, and discontinued colors are flagged.
 | Sherwin-Williams | `import-sherwin.mjs` | SW Prism API `colors/sherwin` (keyless, authoritative) | ✅ current + `archived` flag |
 | Valspar | `import-valspar.mjs` | SW Prism API `colors/valspar` (SW owns Valspar; keyless) | ✅ all current |
 | Benjamin Moore | `import-benjamin-moore.mjs` | Normalizes the existing local BM file — it already had correct, current fan-deck codes (verified). No fetch. | ✅ current |
-| Behr | `import-behr.mjs` | `api.behr.com` requires auth (HTTP 401); site is a SPA. No verifiable current feed found. | ⛔ stub (name/hex only) |
+| Behr | `import-behr.mjs` | Behr first-party AEM color-detail index (production site source) | ✅ codes + RGB/hex + LRV + archive state |
 | PPG | `import-ppg.mjs` | ppgpaints.com is a Webflow SPA; no public color JSON found. | ⛔ stub (name/hex only) |
 
-Behr/PPG were intentionally **not** scraped: no source could be
-confirmed to list only *currently sold* colors, and shipping a guess
-would reintroduce the original "color isn't available at the store"
-problem. Their existing name/hex data is left untouched and the app
-degrades gracefully (no code, no retailer filter) for those brands.
+Behr is imported from the same first-party index that powers its current
+color-detail pages. The importer rejects duplicate codes, malformed rows,
+RGB/hex disagreement, invalid LRV values, and incomplete responses before
+replacing the local catalog. Behr states that archived colors remain
+orderable online or at The Home Depot, so both current and archived colors
+stay eligible for matching.
 
-Stubbed brands keep their existing `{name,hex,brand}` JSON untouched
-and the app keeps working — `code`/`retailer`/`available` are optional
-and the UI falls back to the brand-prefixed name (see `purchaseLabel`).
+PPG remains intentionally **unscraped** because no source has been confirmed
+to provide authoritative codes and color values. Its existing
+`{name,hex,brand}` JSON stays untouched and the app falls back to the
+brand-prefixed name (see `purchaseLabel`).
 
 ## Run
 
 ```bash
 npm run paints:sherwin     # rebuilds public/paints/sherwin/colors.json
+npm run paints:behr        # rebuilds public/paints/behr/colors.json
 ```
 
 Re-run whenever you want to refresh against the manufacturer feed.

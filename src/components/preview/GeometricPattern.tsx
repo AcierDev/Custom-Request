@@ -639,9 +639,8 @@ function GeometricPatternComponent({
         let colorIndex: number | undefined;
 
         if (hasDrawnPattern && drawnPatternGrid && drawnPatternGridSize) {
-          // Y-axis is flipped: drawn pattern's bottom row is preview's top row.
-          // Rendering loop for y goes from 0 (top of preview) to currentGridHeight - 1 (bottom of preview).
-          // drawnPatternGridSize.height is the actual height of the stored grid.
+          // Stored rows run top-to-bottom, while render-space y=0 is the
+          // bottom row. Flip render y into the stored row coordinate.
           const accessY = drawnPatternGridSize.height - 1 - y;
 
           if (

@@ -25,14 +25,19 @@ export interface ColorSwatchProps {
   showBlendHint?: boolean;
   /** True when this color is a blend between two others (not primary). */
   mixed?: boolean;
-  /** "Convert to paint" closeness (0–100%). Shown under the name. */
+  /** Legacy 0–100 score for palettes saved before ΔE display metadata. */
   paintMatch?: number;
+  /** Actual perceptual ΔE2000 distance to the matched paint. */
+  paintMatchDeltaE?: number;
   /** "Convert to paint" original swatch hex (pre-grounding). Rendered as a
    *  small chip next to the paint so the match can be eyeballed. */
   paintSourceHex?: string;
+  /** Full identity of the color before cross-pool paint translation. */
+  paintSourceName?: string;
   /** Closest other-brand option when the default Lowe's match is poor. */
   paintBackup?: string;
   paintBackupMatch?: number;
+  paintBackupDeltaE?: number;
   paintLowesWarning?: boolean;
   /** "Convert to paint" mix recipe (parts of 2–3 paints) that lands
    *  closer than the single nearest can. Shown as a "Mix" pill. */
