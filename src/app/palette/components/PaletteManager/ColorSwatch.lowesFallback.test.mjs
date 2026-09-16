@@ -145,6 +145,7 @@ test("shows a poor Lowe's warning with the other-brand alternative", () => {
       color: "#22394a",
       name: "Valspar — 4010-4 — Indigo Streamer",
       index: 0,
+      layout: "card",
       isSelected: false,
       paintMatch: POOR_LOWES_MATCH_PERCENT,
       paintMatchDeltaE: NOTICEABLE_LOWES_DELTA_E,
@@ -161,18 +162,19 @@ test("shows a poor Lowe's warning with the other-brand alternative", () => {
   );
 
   assert.match(markup, /Lowe.*differs/);
-  assert.match(markup, /ΔE 3\.0/);
+  assert.match(markup, /97% match/);
   assert.match(markup, /Closest other brand/);
-  assert.match(markup, /Sherwin-Williams/);
-  assert.match(markup, /Very close.*ΔE.*1\.0/);
+  assert.match(markup, /SW 9178/);
+  assert.match(markup, /99% match/);
 });
 
-test("shows the full source-to-Lowe's translation and perceptual distance", () => {
+test("shows the full source-to-Lowe's translation and match percentage", () => {
   const markup = renderToStaticMarkup(
     React.createElement(ColorSwatch, {
       color: "#018d82",
       name: "Valspar — 5007-10C — Tropical Hideaway",
       index: 0,
+      layout: "card",
       isSelected: false,
       paintMatch: 99,
       paintMatchDeltaE: VERY_CLOSE_DELTA_E,
@@ -186,12 +188,15 @@ test("shows the full source-to-Lowe's translation and perceptual distance", () =
     }),
   );
 
+  assert.match(markup, /Color 1/);
   assert.match(markup, /Tropical Hideaway/);
-  assert.match(markup, /From Sherwin-Williams/);
+  assert.match(markup, /From SW/);
   assert.match(markup, /SW 6941/);
   assert.match(markup, /Nifty Turquoise/);
-  assert.match(markup, /Very close/);
-  assert.match(markup, /ΔE 1\.5/);
+  assert.match(markup, /99% match/);
+  assert.doesNotMatch(markup, /Very close|legacy score/);
+  assert.doesNotMatch(markup.replace(/<[^>]*>/g, ""), /#[0-9a-f]{6}/i);
+  assert.doesNotMatch(markup, /title=/);
 });
 
 test("labels black-white recipes as digital estimates", () => {
@@ -200,6 +205,7 @@ test("labels black-white recipes as digital estimates", () => {
       color: "#708090",
       name: "Target",
       index: 0,
+      layout: "card",
       isSelected: false,
       paintMixRecipe: {
         components: [
@@ -237,9 +243,10 @@ test("labels black-white recipes as digital estimates", () => {
     }),
   );
 
-  assert.match(markup, /model ΔE 4\.2/);
+  assert.match(markup, /<details[ >]/);
+  assert.match(markup, /<summary[ >]/);
+  assert.match(markup, /96% match/);
   assert.match(markup, /Digital estimate only/);
   assert.match(markup, /Tricorn Black/);
   assert.match(markup, /Plain Untinted White/);
-  assert.doesNotMatch(markup, /% match/);
 });

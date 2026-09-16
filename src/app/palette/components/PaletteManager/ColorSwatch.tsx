@@ -24,15 +24,31 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "@/lib/toast";
 import {
-  assessPaintMatch,
+  paintMatchPercent,
   formatPaintMatchDeltaE,
 } from "@/lib/paintMatch";
+import { handMixMatchPercent } from "@/lib/paintMixSimulator";
 import type { ColorSwatchProps } from "./types";
 import { swatchParts } from "./mixTotals";
 import { formatGrams } from "./paintEstimate";
 
-// Mobile: short grid tiles so many colors stay tappable; sm+: tall
-// side-by-side paint-strip bars.
+// Short display labels preserve the manufacturer codes used for ordering.
+const SHORT_BRAND_NAMES: Record<string, string> = {
+  "HGTV Home by Sherwin-Williams": "HGTV SW",
+  "Sherwin-Williams": "SW",
+  "Benjamin Moore": "BM",
+};
+const SHERWIN_CODE_PREFIX = /^(?:HG)?SW/i;
+const REDUNDANT_SHERWIN_BRAND = /^(?:HGTV )?SW\s+[—–-]\s+(?=(?:HG)?SW)/i;
+const BRAND_LABEL_PREFIX = /^(HGTV Home by Sherwin-Williams|Sherwin-Williams|Benjamin Moore)(?=\s+[—–-]\s+|$)/;
+function compactPaintLabel(label: string): string {
+  return label
+    .replace(BRAND_LABEL_PREFIX, (brand) => SHORT_BRAND_NAMES[brand])
+    .replace(REDUNDANT_SHERWIN_BRAND, "");
+}
+
+const PAINT_CARD_CLASS = "h-full min-h-56";
+const COLOR_NUMBER_OFFSET = 1;
 const BAR_HEIGHT_CLASS = "h-28 sm:h-80";
 const PAINT_BAR_HEIGHT_CLASS = "h-40 sm:h-80";
 const LOWES_WARNING_BAR_HEIGHT_CLASS = "h-52 sm:h-80";
@@ -86,6 +102,8 @@ function splitPaintLabel(label: string): {
 
 export function ColorSwatch({
   id,
+  index,
+  layout = "strip",
   color,
   name,
   mixed,
@@ -120,23 +138,17 @@ export function ColorSwatch({
     return yiq >= DARK_THRESHOLD ? DARK_TEXT_COLOR : LIGHT_TEXT_COLOR;
   };
 
+  const isPaintCard = layout === "card";
+  const SwatchInfo = isPaintCard ? "div" : "button";
   const textColor = getContrastTextColor(color);
   const textColorStyle = { color: textColor };
   const hasPaintMatch =
     typeof paintMatchDeltaE === "number" || typeof paintMatch === "number";
-  const paintAssessment =
-    typeof paintMatchDeltaE === "number"
-      ? assessPaintMatch(paintMatchDeltaE)
-      : undefined;
-  const paintMatchDeltaEDisplay =
-    typeof paintMatchDeltaE === "number"
-      ? formatPaintMatchDeltaE(paintMatchDeltaE)
-      : undefined;
   const paintMatchSummary =
-    paintAssessment && paintMatchDeltaEDisplay
-      ? `${paintAssessment.label} · ΔE ${paintMatchDeltaEDisplay}`
+    typeof paintMatchDeltaE === "number"
+      ? `${paintMatchPercent(paintMatchDeltaE)}% match`
       : typeof paintMatch === "number"
-        ? `${paintMatch}% legacy score`
+        ? `${paintMatch}% match`
         : undefined;
   const sourceLabel = paintSourceName?.trim();
   const matchedLabel = name?.trim();
@@ -198,7 +210,9 @@ export function ColorSwatch({
       }}
       className={cn(
         "relative group flex-1 min-w-0 rounded-md overflow-hidden transition-opacity",
-        paintLowesWarning
+        isPaintCard
+          ? PAINT_CARD_CLASS
+          : paintLowesWarning
           ? LOWES_WARNING_BAR_HEIGHT_CLASS
           : hasPaintMatch
             ? PAINT_BAR_HEIGHT_CLASS
@@ -216,7 +230,7 @@ export function ColorSwatch({
       {isPendingRemoval && (
         <div className="pointer-events-auto absolute inset-0 z-50 flex items-center justify-center bg-black/20">
           <span className="rounded-full bg-black/65 px-2 py-1 text-[10px] font-semibold text-white ring-1 ring-white/30">
-            Queued
+            Deleting
           </span>
         </div>
       )}
@@ -255,9 +269,9 @@ export function ColorSwatch({
                 <Blend className="h-3 w-3" />
               </div>
             </TooltipTrigger>
-            <TooltipContent side="left">
+            {!isPaintCard && (<TooltipContent side="left">
               <p>Mixed color — blended from two primary colors</p>
-            </TooltipContent>
+            </TooltipContent>)}
           </Tooltip>
         </TooltipProvider>
       )}
@@ -267,7 +281,7 @@ export function ColorSwatch({
       <Button
         size="icon"
         variant="ghost"
-        aria-label={isPendingRemoval ? "Color queued for removal" : "Remove color"}
+        aria-label={isPendingRemoval ? "Deleting color" : "Remove color"}
         disabled={isPendingRemoval}
         className="absolute bottom-1.5 right-1.5 z-40 h-7 w-7 rounded-full bg-black/25 backdrop-blur-sm hover:bg-black/40 sm:hidden"
         style={textColorStyle}
@@ -286,7 +300,7 @@ export function ColorSwatch({
           consumes once mixing shares it (∞ = white/black, infinite supply).
           Pinned to the bottom edge so it's always visible on mobile;
           bottom-left keeps clear of the mobile remove button. */}
-      {paintAmount ? (
+      {!isPaintCard && (paintAmount ? (
         <div className="pointer-events-none absolute bottom-1.5 left-1.5 z-40 inline-flex items-center gap-1 rounded-[10px] bg-black/40 px-1.5 py-1 text-[10px] font-semibold text-white ring-1 ring-white/25 backdrop-blur-sm transition-opacity sm:group-hover:opacity-0">
           <PaintBucket className="h-3 w-3 shrink-0" />
           <span className="tabular-nums">{paintAmount.shortLabel}</span>
@@ -301,17 +315,30 @@ export function ColorSwatch({
             </span>
           </div>
         );
-      })() : null}
+      })() : null)}
 
-      <div className="h-full p-2 flex flex-col justify-between overflow-hidden">
+      <div className={cn(
+        "h-full flex flex-col justify-between",
+        isPaintCard ? "gap-2 p-2.5 pb-10 sm:pb-2.5" : "p-2 overflow-hidden",
+      )}>
+        {isPaintCard && (
+          <div className="flex items-center justify-between gap-1" style={textColorStyle}>
+            <span className="text-[10px] font-semibold opacity-80" aria-label={`Color ${index + COLOR_NUMBER_OFFSET}`}>#{index + COLOR_NUMBER_OFFSET}</span>
+            {paintMatchSummary && (
+              <span className="whitespace-nowrap rounded-full bg-black/70 px-2 py-0.5 text-xs font-semibold tabular-nums text-white">
+                {paintMatchSummary}
+              </span>
+            )}
+          </div>
+        )}
         {/* Top: name + hex — click to copy the hex */}
         {/* pointer-events-none on mobile: taps anywhere on the tile go to
             the tile itself (select/edit); copy-on-click stays desktop-only */}
-        <button
-          type="button"
-          onClick={copyHex}
-          title={name ? `${name} — click to copy hex` : "Click to copy hex"}
-          className="min-w-0 text-left cursor-pointer rounded-sm hover:opacity-80 transition-opacity pointer-events-none sm:pointer-events-auto"
+        <SwatchInfo
+          type={isPaintCard ? undefined : "button"}
+          onClick={isPaintCard ? undefined : copyHex}
+          title={isPaintCard ? undefined : "Click to copy hex"}
+          className={cn("min-w-0 text-left rounded-sm", isPaintCard ? "flex-1" : "cursor-pointer hover:opacity-80 transition-opacity pointer-events-none sm:pointer-events-auto")}
         >
           {(() => {
             const { brand, code, name: readable } = splitPaintLabel(
@@ -321,15 +348,17 @@ export function ColorSwatch({
               <>
                 {brand && (
                   <div
-                    className="break-words text-xs font-semibold leading-tight sm:text-sm"
+                    className={cn("break-words font-semibold leading-snug", isPaintCard ? "text-xs" : "text-xs sm:text-sm")}
                     style={textColorStyle}
                   >
-                    {brand}
+                    {isPaintCard && code && SHERWIN_CODE_PREFIX.test(code)
+                      ? code
+                      : `${SHORT_BRAND_NAMES[brand] ?? brand}${isPaintCard && code ? ` · ${code}` : ""}`}
                   </div>
                 )}
-                {code && (
+                {code && !isPaintCard && (
                   <div
-                    className="break-words text-[11px] leading-tight opacity-90"
+                    className={cn("break-words leading-snug opacity-90", isPaintCard ? "text-sm" : "text-[11px]")}
                     style={textColorStyle}
                   >
                     {code}
@@ -338,7 +367,7 @@ export function ColorSwatch({
                 <div
                   className={cn(
                     "whitespace-normal break-words leading-tight",
-                    brand
+                    isPaintCard ? "text-sm font-medium" : brand
                       ? "text-[11px] opacity-90"
                       : "font-semibold text-xs sm:text-sm"
                   )}
@@ -349,7 +378,7 @@ export function ColorSwatch({
               </>
             );
           })()}
-          {name && (
+          {name && !hasPaintMatch && !paintMixRecipe && !handMix && (
             <div
               className="break-words font-mono text-[10px] leading-tight opacity-80"
               style={textColorStyle}
@@ -359,111 +388,66 @@ export function ColorSwatch({
           )}
           {translatedFromLabel && (
             <div
-              className="mt-0.5 whitespace-normal break-words text-[10px] leading-tight opacity-90"
+              className={cn("whitespace-normal break-words leading-snug opacity-90", isPaintCard ? "mt-1 text-[10px]" : "mt-0.5 text-[10px]")}
               style={textColorStyle}
-              title={translatedFromLabel}
             >
-              {`From ${translatedFromLabel}`}
+              {`From ${compactPaintLabel(translatedFromLabel)}`}
             </div>
           )}
           {hasPaintMatch && (
             <div
-              className="mt-0.5 flex w-full items-center gap-2"
+              className={cn("flex w-full gap-2", isPaintCard ? "mt-2 flex-col items-stretch" : "mt-0.5 items-center")}
               style={textColorStyle}
             >
-              <span className="text-[10px] font-medium opacity-90">
+              {(!isPaintCard || paintLowesWarning) && <span className={cn("font-medium", isPaintCard ? "text-xs" : "text-[10px] opacity-90")}>
                 {paintLowesWarning ? (
                   <span className="inline-flex items-center gap-1 rounded-full bg-amber-950/80 px-1.5 py-0.5 font-semibold text-amber-100 ring-1 ring-amber-300/60">
-                    <TriangleAlert className="h-3 w-3" />
-                    Lowe&apos;s differs · {paintMatchSummary}
+                    <TriangleAlert className="h-3 w-3 shrink-0" />
+                    Lowe&apos;s differs{!isPaintCard && ` · ${paintMatchSummary}`}
                   </span>
                 ) : (
                   paintMatchSummary
                 )}
-              </span>
-              {/* Before/after swatches so the match can be eyeballed: the
-                  original picked color butted right up against the paint it
-                  grounded to. Hugs the right edge; the two colors touch so
-                  any difference reads at the seam. */}
+              </span>}
               {paintSourceHex && (
-                <TooltipProvider delayDuration={225}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="ml-auto inline-flex overflow-hidden rounded-md ring-1 ring-white/50">
-                        <span
-                          className="h-8 w-8 sm:h-12 sm:w-12"
-                          style={{ backgroundColor: paintSourceHex }}
-                        />
-                        <span
-                          className="h-8 w-8 sm:h-12 sm:w-12"
-                          style={{ backgroundColor: color }}
-                        />
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">
-                      <div className="space-y-1 text-xs">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="h-3 w-8 rounded-sm ring-1 ring-white/30"
-                            style={{ backgroundColor: paintSourceHex }}
-                          />
-                          <span className="font-medium">
-                            {sourceLabel ?? "Original"}
-                          </span>
-                          <span className="font-mono">{paintSourceHex}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="h-3 w-8 rounded-sm ring-1 ring-white/30"
-                            style={{ backgroundColor: color }}
-                          />
-                          <span className="font-medium">
-                            {matchedLabel ?? "Paint"}
-                          </span>
-                          <span className="font-mono">{color}</span>
-                        </div>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <div className="grid w-full grid-cols-2 overflow-hidden rounded-md ring-1 ring-white/50">
+                  <span className="bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white">Original</span>
+                  <span className="bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white">Paint</span>
+                  <span className="h-8 w-full" style={{ backgroundColor: paintSourceHex }} />
+                  <span className="h-8 w-full" style={{ backgroundColor: color }} />
+                </div>
               )}
             </div>
           )}
           {paintLowesWarning && paintBackup && (
-            <div
-              className="mt-1 flex max-w-full flex-col items-start gap-0.5 rounded-md bg-black/60 px-1.5 py-1 text-[10px] font-medium text-white ring-1 ring-amber-300/50"
-              title={paintBackup}
-            >
-              <span className="shrink-0 font-semibold text-amber-200">
-                Closest other brand:
+            <details className="mt-2 rounded-md bg-black/70 p-2 text-[11px] text-white ring-1 ring-amber-300/50" onClick={(event) => event.stopPropagation()}>
+              <summary className="cursor-pointer font-semibold text-amber-200">
+                Other brand{typeof paintBackupDeltaE === "number"
+                  ? ` · ${paintMatchPercent(paintBackupDeltaE)}%`
+                  : typeof paintBackupMatch === "number" ? ` · ${paintBackupMatch}%` : ""}
+              </summary>
+              <div className="mt-2 whitespace-normal break-words leading-snug">
+                <span className="block font-semibold">Closest other brand:</span>
+                {compactPaintLabel(paintBackup)}
+              </div>
+              <span className="tabular-nums">
+                {typeof paintBackupDeltaE === "number"
+                  ? `${paintMatchPercent(paintBackupDeltaE)}% match`
+                  : typeof paintBackupMatch === "number" ? `${paintBackupMatch}% match` : ""}
               </span>
-              <span className="whitespace-normal break-words leading-tight">
-                {paintBackup}
-              </span>
-              {typeof paintBackupDeltaE === "number" ? (
-                <span className="shrink-0 tabular-nums">
-                  {assessPaintMatch(paintBackupDeltaE).label} · ΔE{" "}
-                  {formatPaintMatchDeltaE(paintBackupDeltaE)}
-                </span>
-              ) : typeof paintBackupMatch === "number" ? (
-                <span className="shrink-0 tabular-nums">
-                  {paintBackupMatch}% legacy score
-                </span>
-              ) : null}
-            </div>
+            </details>
           )}
+
           {paintMixRecipe && (
-            <TooltipProvider delayDuration={225}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div
+            <details className="mt-3" onClick={(event) => event.stopPropagation()}>
+                <summary
                     className={cn(
-                      "mt-1 inline-flex max-w-full items-center gap-1.5 rounded-[10px] px-1.5 py-1 text-[10px] font-semibold ring-1",
+                      "flex min-h-11 cursor-pointer list-none flex-wrap items-center gap-1.5 rounded-[10px] px-2 py-1.5 text-[11px] font-semibold ring-1",
                       mixIsOptional ? MIX_PILL_HOLLOW : MIX_PILL_SOLID,
                     )}
                   >
                     <Beaker className="h-3 w-3 shrink-0" />
-                    <span className="truncate">
+                    <span className="min-w-0 whitespace-normal break-words">
                       Mix{" "}
                       {paintAmount
                         ? paintMixRecipe.components
@@ -478,14 +462,14 @@ export function ColorSwatch({
                             .join(" : ")}
                     </span>
                     <span className="shrink-0 tabular-nums opacity-80">
-                      · model ΔE {formatPaintMatchDeltaE(paintMixRecipe.deltaE)}
+                      · {paintMixRecipe.matchPercent}%
                     </span>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-72">
+                    <span className="ml-auto">Recipe ▾</span>
+                </summary>
+                <div className="mt-2 rounded-lg bg-black/75 p-3 text-white">
                   <div className="space-y-2 text-xs">
                     <div className="font-medium">
-                      Digital model · ΔE{" "}
+                      {paintMixRecipe.matchPercent}% match · ΔE{" "}
                       {formatPaintMatchDeltaE(paintMixRecipe.deltaE)}
                     </div>
                     <div className="rounded bg-amber-500/15 px-2 py-1 text-amber-100">
@@ -516,7 +500,7 @@ export function ColorSwatch({
                               backgroundColor: component.paintColor.hex,
                             }}
                           />
-                          <span className="truncate">
+                          <span className="min-w-0 whitespace-normal break-words">
                             {component.paintColor.code
                               ? `${component.paintColor.code} — `
                               : ""}
@@ -531,22 +515,16 @@ export function ColorSwatch({
                         className="h-3 w-8 rounded-sm ring-1 ring-white/30"
                         style={{ backgroundColor: paintMixRecipe.predictedHex }}
                       />
-                      <span className="font-mono">
-                        {paintMixRecipe.predictedHex}
-                      </span>
                     </div>
                   </div>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+                </div>
+            </details>
           )}
           {handMix && (
-            <TooltipProvider delayDuration={225}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div
+            <details className="mt-3" onClick={(event) => event.stopPropagation()}>
+                <summary
                     className={cn(
-                      "mt-1 inline-flex max-w-full items-center gap-1.5 rounded-[10px] px-1.5 py-1 text-[10px] font-semibold text-white ring-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_1px_2px_rgba(0,0,0,0.20)]",
+                      "flex min-h-11 cursor-pointer list-none flex-wrap items-center gap-1.5 rounded-[10px] px-2 py-1.5 text-[11px] font-semibold text-white ring-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_1px_2px_rgba(0,0,0,0.20)]",
                       HAND_MIX_DECISION_THEME[handMix.decision].className
                     )}
                   >
@@ -555,13 +533,13 @@ export function ColorSwatch({
                         HAND_MIX_DECISION_THEME[handMix.decision].Icon;
                       return <Icon className="h-3 w-3 shrink-0" />;
                     })()}
-                    <span className="truncate">{handMix.label}</span>
+                    <span className="min-w-0 whitespace-normal break-words">{handMix.label}</span>
                     <span className="shrink-0 tabular-nums opacity-80">
-                      · model ΔE {formatPaintMatchDeltaE(handMix.deltaE)}
+                      · {handMixMatchPercent(handMix.deltaE)}%
                     </span>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-64">
+                    <span className="ml-auto">Recipe ▾</span>
+                </summary>
+                <div className="mt-2 rounded-lg bg-black/75 p-3 text-white">
                   <div className="space-y-2 text-xs">
                     <div className="flex items-center gap-2">
                       <span className="font-medium">Target</span>
@@ -569,7 +547,6 @@ export function ColorSwatch({
                         className="h-3 w-8 rounded-sm ring-1 ring-white/30"
                         style={{ backgroundColor: handMix.targetHex }}
                       />
-                      <span className="font-mono">{handMix.targetHex}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="font-medium">Hand mix</span>
@@ -577,37 +554,35 @@ export function ColorSwatch({
                         className="h-3 w-8 rounded-sm ring-1 ring-white/30"
                         style={{ backgroundColor: handMix.predictedHex }}
                       />
-                      <span className="font-mono">{handMix.predictedHex}</span>
                     </div>
                     <div>
-                      Digital model · ΔE{" "}
+                      {handMixMatchPercent(handMix.deltaE)}% match · ΔE{" "}
                       {formatPaintMatchDeltaE(handMix.deltaE)} · {handMix.recipe}
                     </div>
                     <div className="rounded bg-amber-500/15 px-2 py-1 text-amber-100">
                       {MIX_MODEL_DISCLAIMER}
                     </div>
                   </div>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+                </div>
+            </details>
           )}
-        </button>
+        </SwatchInfo>
 
-        {/* Bottom: hover actions (desktop only — mobile tiles are too
-            small for four buttons; tap opens the edit modal instead) */}
-        <div className="flex flex-col gap-1">
-          <div className="hidden sm:flex flex-wrap items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        {/* Paint-card actions stay visible. On mobile, tapping the card edits it. */}
+        <div className="flex flex-col gap-2">
+          {isPaintCard && (paintAmount || (paintTotals && paintTotals.size > 0)) && (
+            <span className="w-fit rounded-md bg-black/70 px-2 py-1 text-xs font-medium text-white">
+              {paintAmount ? paintAmount.shortLabel : `${swatchParts(color, paintTotals!)} parts`}
+            </span>
+          )}
+          <div className={cn("hidden sm:flex flex-wrap items-center gap-1 transition-opacity", !isPaintCard && "opacity-0 group-hover:opacity-100")}>
             <TooltipProvider delayDuration={225}>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
                     size="icon"
                     variant="ghost"
-                    aria-label={
-                      isPendingRemoval
-                        ? "Color queued for removal"
-                        : "Remove color"
-                    }
+                    aria-label="Generate harmonies"
                     disabled={isPendingRemoval}
                     className="h-6 w-6 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30"
                     style={textColorStyle}
@@ -619,9 +594,9 @@ export function ColorSwatch({
                     <Sparkles className="h-3 w-3" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent side="top">
+                {!isPaintCard && (<TooltipContent side="top">
                   <p>Generate harmonies from this color</p>
-                </TooltipContent>
+                </TooltipContent>)}
               </Tooltip>
             </TooltipProvider>
 
@@ -637,13 +612,14 @@ export function ColorSwatch({
                       e.stopPropagation();
                       onDuplicate();
                     }}
+                    aria-label="Duplicate color"
                   >
                     <Copy className="h-3 w-3" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent side="top">
+                {!isPaintCard && (<TooltipContent side="top">
                   <p>Duplicate color</p>
-                </TooltipContent>
+                </TooltipContent>)}
               </Tooltip>
             </TooltipProvider>
 
@@ -659,13 +635,14 @@ export function ColorSwatch({
                       e.stopPropagation();
                       onEdit();
                     }}
+                    aria-label="Edit color"
                   >
                     <Edit className="h-3 w-3" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent side="bottom">
+                {!isPaintCard && (<TooltipContent side="bottom">
                   <p>Edit color</p>
-                </TooltipContent>
+                </TooltipContent>)}
               </Tooltip>
             </TooltipProvider>
 
@@ -681,13 +658,14 @@ export function ColorSwatch({
                       e.stopPropagation();
                       onRemove();
                     }}
+                    aria-label="Remove color"
                   >
                     <Trash2 className="h-3 w-3" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p>{isPendingRemoval ? "Queued for removal" : "Remove color"}</p>
-                </TooltipContent>
+                {!isPaintCard && (<TooltipContent side="bottom">
+                  <p>{isPendingRemoval ? "Deleting" : "Remove color"}</p>
+                </TooltipContent>)}
               </Tooltip>
             </TooltipProvider>
           </div>

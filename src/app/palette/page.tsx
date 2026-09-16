@@ -79,10 +79,8 @@ import {
 import {
   DEFAULT_PAINT_MATCH_BRAND,
   LAB_LIGHTNESS_INDEX,
-  assessPaintMatch,
   findClosestPaintMatches,
   findGroundedPaintMatches,
-  formatPaintMatchDeltaE,
   getGroundablePaintColors,
   getLowesFallbackPaintColors,
   paintPoolLabel,
@@ -148,7 +146,7 @@ const SINGLE_COMPONENT_COUNT = 1;
 // every swatch on the same side of its source lightness so a gradient cannot
 // split into one unexpectedly lighter paint and one unexpectedly darker one.
 type PaintLightnessMode = "independent" | "auto" | "lighter" | "darker";
-const DEFAULT_PAINT_LIGHTNESS_MODE: PaintLightnessMode = "independent";
+const DEFAULT_PAINT_LIGHTNESS_MODE: PaintLightnessMode = "auto";
 // Digitally-mixed palette colors (a `mix` blend of two swatches) aren't a
 // can the user buys, so by default their nearest-can approximation is NOT
 // offered as a "palette" mix ingredient. Opt in to let blends contribute.
@@ -775,9 +773,9 @@ export default function PalettePage() {
         const backupDetails = printBackupMatch
           ? `${compactPaintLabel(printBackupMatch.label)}${
               typeof printBackupMatch.deltaE === "number"
-                ? ` (${assessPaintMatch(printBackupMatch.deltaE).label} · ΔE ${formatPaintMatchDeltaE(printBackupMatch.deltaE)})`
+                ? ` (${paintMatchPercent(printBackupMatch.deltaE)}% match)`
                 : typeof printBackupMatch.legacyMatch === "number"
-                  ? ` (${printBackupMatch.legacyMatch}% legacy score)`
+                  ? ` (${printBackupMatch.legacyMatch}% match)`
                 : ""
             }`
           : "";

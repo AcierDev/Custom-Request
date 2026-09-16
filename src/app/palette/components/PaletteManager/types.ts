@@ -17,6 +17,8 @@ export interface ColorSwatchProps {
   color: string;
   name?: string;
   index: number;
+  /** Paint strips keep details readable in a horizontally scrolling row. */
+  layout?: "strip" | "card";
   isSelected: boolean;
   /** True while this swatch is waiting for the batched delete to commit. */
   isPendingRemoval?: boolean;
@@ -68,6 +70,7 @@ export interface AddColorButtonProps {
   /** Bulk-add (e.g. from pasted paint codes). Falls back to onColorAdd. */
   onColorsAdd?: (colors: { hex: string; name: string }[]) => void;
   isEmpty?: boolean;
+  compact?: boolean;
 }
 
 // Blending Guide component props

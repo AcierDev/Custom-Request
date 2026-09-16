@@ -1,4 +1,4 @@
-export const PALETTE_DELETE_IDLE_MS = 1_500;
+export const PALETTE_DELETE_IDLE_MS = 750;
 
 type TimerHandle = ReturnType<typeof setTimeout>;
 
