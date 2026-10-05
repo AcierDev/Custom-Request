@@ -1,0 +1,100 @@
+[
+  {
+    "file": "sofa.glb",
+    "source": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/GlamVelvetSofa/glTF-Binary/GlamVelvetSofa.glb",
+    "license": "CC-BY-4.0",
+    "author": "© 2021 Wayfair, LLC; Eric Chadwick",
+    "adaptation": "Champagne material variant selected; scene lights removed at load time",
+    "sourceSha256": "67202c74a1a33377771f162dc7fad612a6c9bd51ee15124c488e9851d9ac5266",
+    "sha256": "3ea486fff1270fd4f4393a2cb0d2f958d52d1899696bff5932035f812fd67073"
+  },
+  {
+    "file": "pillows.glb",
+    "source": "https://polyhaven.com/a/throw_pillows_01",
+    "license": "CC0-1.0",
+    "adaptation": "Packed glTF and textures into one self-contained GLB",
+    "sourceMd5": "ffffc13de5ce464056e24217dc565d19",
+    "sha256": "0f19a88aed2df017527b17f664fe43596007f3c7312fab9abc31039ff486f4e0"
+  },
+  {
+    "file": "plant-natural.glb",
+    "source": "https://polyhaven.com/a/potted_plant_01",
+    "license": "CC0-1.0",
+    "adaptation": "Self-contained captured foliage and soil; isolated authoring pebble removed; thin leaf transmission and soft sheen; original pot replaced in the room",
+    "sourceMd5": "199e9e3d68f5447142db4066d60ae3f0",
+    "sha256": "15b951ca2e7e8e6042b2844ccfe70b3de92f3e6944a243f3b769458456404ab5"
+  },
+  {
+    "file": "table-round.glb",
+    "source": "https://polyhaven.com/a/coffee_table_round_01",
+    "license": "CC0-1.0",
+    "adaptation": "Packed glTF and textures into one self-contained GLB",
+    "sourceMd5": "fa8772e8942e1863230b6745105c9a8e",
+    "sha256": "7b3fe051741436db539bbe15771efbe8094ff8d262a63ca0a462946bcd7063ec"
+  },
+  {
+    "file": "books.glb",
+    "source": "https://polyhaven.com/a/book_encyclopedia_set_01",
+    "license": "CC0-1.0",
+    "adaptation": "Self-contained photographed vintage volumes plus locally authored individual cloth/paper books, printed cover atlas and matted landscape frame; all CC0 1.0",
+    "sourceMd5": "d0a77d421a6ea2c9d82bcaaa64e8479b",
+    "sha256": "a8a301990e425df55f116eba99bc0424552c1e1602687aaa76e37037214df990"
+  },
+  {
+    "file": "vase.glb",
+    "source": "https://polyhaven.com/a/ceramic_vase_03",
+    "license": "CC0-1.0",
+    "adaptation": "Packed glTF and textures into one self-contained GLB",
+    "sourceMd5": "5c5ad889be3b7464bc87d29f0d85cd73",
+    "sha256": "152444a4b6f261181b358b48a2aa05ec3fa25ab7f5f3671e5a62322bfdff9af4"
+  },
+  {
+    "file": "floor-color.jpg",
+    "source": "https://polyhaven.com/a/laminate_floor_02",
+    "license": "CC0-1.0",
+    "sourceMd5": "34ab81c5882c1083028ffa71d40fe44d",
+    "sha256": "c112a8fb107d8600a2974af2f9fa9b595c491a33a59982e22706e9650990bf8f"
+  },
+  {
+    "file": "floor-normal.jpg",
+    "source": "https://polyhaven.com/a/laminate_floor_02",
+    "license": "CC0-1.0",
+    "sourceMd5": "40f4b1e4a5cafbd3bd1b02e8367cf3b1",
+    "sha256": "ec501e1c76269cabc1648ab0e3f38db1b062ffef7ff4ce037fdc369383afd005"
+  },
+  {
+    "file": "floor-roughness.jpg",
+    "source": "https://polyhaven.com/a/laminate_floor_02",
+    "license": "CC0-1.0",
+    "sourceMd5": "6ef14a4d438a44103689739248ef50b7",
+    "sha256": "1d48d21a8497d83d4148e4378bf6891e052c98b58cdce1f79003bcc24a3aff8f"
+  },
+  {
+    "file": "plaster-color.jpg",
+    "source": "https://polyhaven.com/a/white_plaster_02",
+    "license": "CC0-1.0",
+    "sourceMd5": "7b10c2686bcfd76d1f309a20fd06b57e",
+    "sha256": "a1ebbe091bd1ae93d2abd5de8d69f9003a8d0ee6532bcf9a87c2492c97051f23"
+  },
+  {
+    "file": "plaster-normal.jpg",
+    "source": "https://polyhaven.com/a/white_plaster_02",
+    "license": "CC0-1.0",
+    "sourceMd5": "55fc03203ebf1dc703a380fde93ff502",
+    "sha256": "eb572ca3630d5bfde72e2601b1f02412da23ca005cd19384dced8690be4cb783"
+  },
+  {
+    "file": "plaster-roughness.jpg",
+    "source": "https://polyhaven.com/a/white_plaster_02",
+    "license": "CC0-1.0",
+    "sourceMd5": "8b28f263360b8c4ddbdc4f7c650c4eeb",
+    "sha256": "4ff1fe957cd161b07f721fe6c28a9459c8c2e8ec65627a26c16e483a07c80d85"
+  },
+  {
+    "file": "daylight.hdr",
+    "source": "https://polyhaven.com/a/farm_field_puresky",
+    "license": "CC0-1.0",
+    "sourceMd5": "bf9103944928c6ae1596e523ce658558",
+    "sha256": "51c732607a26aec353a418c4e2a2772257234a055be99b3716aff34a189c88d2"
+  }
+]

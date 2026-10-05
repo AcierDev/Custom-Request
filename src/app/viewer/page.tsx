@@ -71,6 +71,7 @@ import { ShareDialog } from "@/components/ShareDialog";
 import { ARButton } from "@/components/ARButton";
 import { StepDownloadButton } from "@/components/StepDownloadButton";
 import { FusionPackageDownloadButton } from "@/components/FusionPackageDownloadButton";
+import { BlenderDownloadButton } from "@/components/BlenderDownloadButton";
 import { ShareDesignButton } from "@/components/ShareDesignButton";
 import { DraftSetControls } from "@/components/DraftSetControls";
 import { DesignTutorial } from "@/components/DesignTutorial";
@@ -103,9 +104,9 @@ import {
 } from "@/components/preview/viewerGlass";
 import {
   FourAngleImageCapture,
-  IMAGE_EXPORT_ANGLE_COUNTS,
 } from "@/components/preview/FourAngleImageCapture";
 import { useFourAngleImageDownload } from "@/hooks/useFourAngleImageDownload";
+import { PhotoRenderProgress } from "@/components/preview/PhotoRenderProgress";
 import {
   PANEL_LAYOUT_CONFIG,
   getInstalledArtWidthSceneUnits,
@@ -437,8 +438,9 @@ export default function DesignPage() {
   const {
     isSavingImage,
     isImageCaptureReady,
-    imageAngleCount,
-    setImageAngleCount,
+    renderProgress,
+    cancelRender,
+    downloadImage,
     setCapture: setCaptureFourAngleImage,
     saveImage: handleSaveImage,
   } = useFourAngleImageDownload();
@@ -879,6 +881,9 @@ export default function DesignPage() {
           {/* Register export only after the complete texture-backed scene
               has resolved, preventing an early click from saving empty tiles. */}
           <FourAngleImageCapture
+            wallColor={currentWallColor}
+            timeOfDay={timeOfDay}
+            lampOn={lampOn}
             artWidthSquares={
               installedArtWidth / ART_SCENE_UNITS_PER_SQUARE
             }
@@ -979,40 +984,12 @@ export default function DesignPage() {
           </Tooltip>
         </TooltipProvider>
         {showUIControls && (
-          <div
-            role="group"
-            aria-label="Number of image angles"
-            className="flex h-9 shrink-0 items-center gap-0.5 rounded-full border border-white/10 bg-gray-950/70 p-1"
-          >
-            {IMAGE_EXPORT_ANGLE_COUNTS.map((angleCount) => (
-              <button
-                key={angleCount}
-                type="button"
-                aria-pressed={imageAngleCount === angleCount}
-                title={`${angleCount} image angle${
-                  angleCount === IMAGE_EXPORT_ANGLE_COUNTS[0] ? "" : "s"
-                }`}
-                disabled={isSavingImage}
-                onClick={() => setImageAngleCount(angleCount)}
-                className={cn(
-                  "grid h-7 min-w-7 place-items-center rounded-full px-1.5 text-xs font-semibold transition-colors disabled:opacity-50",
-                  imageAngleCount === angleCount
-                    ? "bg-indigo-500 text-white shadow-sm"
-                    : "text-slate-400 hover:bg-white/10 hover:text-white"
-                )}
-              >
-                {angleCount}
-              </button>
-            ))}
-          </div>
-        )}
-        {showUIControls && (
           <Button
             variant="outline"
             size={isMobile ? "icon" : "default"}
             disabled={isSavingImage || !isImageCaptureReady}
             aria-busy={isSavingImage}
-            aria-label={isSavingImage ? "Saving image" : "Save image"}
+            aria-label={isSavingImage ? "Rendering image" : "Save image"}
             title={
               isImageCaptureReady
                 ? "Save image"
@@ -1026,7 +1003,7 @@ export default function DesignPage() {
             onClick={handleSaveImage}
           >
             <Download className="w-4 h-4 shrink-0" />
-            {!isMobile && (isSavingImage ? "Saving…" : "Save Image")}
+            {!isMobile && (isSavingImage ? "Rendering…" : "Save Image")}
           </Button>
         )}
         {/* iOS-mobile-only — renders null elsewhere. Bakes a life-size,
@@ -1037,6 +1014,9 @@ export default function DesignPage() {
         )}
         {showUIControls && (
           <FusionPackageDownloadButton isMobile={isMobile} />
+        )}
+        {showUIControls && (
+          <BlenderDownloadButton isMobile={isMobile} wallColor={currentWallColor} timeOfDay={timeOfDay} lampOn={lampOn} />
         )}
         {showUIControls && (
           <ARButton
@@ -1070,6 +1050,7 @@ export default function DesignPage() {
         isOpen={isShareDialogOpen}
         onClose={() => setIsShareDialogOpen(false)}
       />
+      <PhotoRenderProgress progress={renderProgress} onCancel={cancelRender} onDownload={downloadImage} />
 
       {/* Design tutorial */}
       {showUIControls && !isMobile && <DesignTutorial />}

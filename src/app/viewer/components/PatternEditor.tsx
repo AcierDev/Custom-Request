@@ -92,7 +92,7 @@ const CONTEXT_MENU_WIDTH_PX = 160;
 const CONTEXT_MENU_HEIGHT_PX = 40;
 const CONTEXT_MENU_VIEWPORT_GAP_PX = 8;
 const CONTEXT_MENU_ANCHOR_DIVISOR = 2;
-const DEFAULT_PATTERN_EDITOR_COLLAPSED = false;
+const DEFAULT_PATTERN_EDITOR_COLLAPSED = true;
 const EDITOR_SECTION_CLASS =
   "rounded-2xl border border-white/[0.07] bg-black/15 p-3 shadow-inner shadow-black/15";
 const EDITOR_SECTION_LABEL_CLASS =

@@ -628,6 +628,9 @@ export function GalleryArtScene({
 
         {onCaptureReady && (
           <FourAngleImageCapture
+            wallColor={currentWallColor}
+            timeOfDay={timeOfDay}
+            lampOn={lampOn}
             artWidthSquares={
               installedArtWidth / ART_SCENE_UNITS_PER_SQUARE
             }

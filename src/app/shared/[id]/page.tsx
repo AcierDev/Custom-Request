@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { GalleryArtScene } from "@/components/preview/GalleryArtScene";
 import { SharedBrandPill } from "./SharedBrandPill";
 import { SharedImageSaveAction } from "./SharedImageSaveAction";
+import { BlenderDownloadButton } from "@/components/BlenderDownloadButton";
 import {
   SharedMobilePanelActions,
   SharedMobilePanelHeader,
@@ -38,6 +39,7 @@ import { sizeToHeightInchesWidthFeetLabel } from "@/lib/size-pills";
 import { decompressJsonFromUrl } from "@/lib/urlUtils";
 import { ARButton } from "@/components/ARButton";
 import { useFourAngleImageDownload } from "@/hooks/useFourAngleImageDownload";
+import { PhotoRenderProgress } from "@/components/preview/PhotoRenderProgress";
 import {
   DEFAULT_LAMP_ON,
   toggleLampAtTimeOfDay,
@@ -57,7 +59,7 @@ import {
 
 // Network requests that hang shouldn't strand the recipient on a loader.
 const FETCH_TIMEOUT_MS = 10000;
-const SHARED_IMAGE_EXPORT_FILENAME = "shared-art-four-angles.png";
+const SHARED_IMAGE_EXPORT_FILENAME = "shared-art-render.png";
 const SHARED_ACTIONS_CLASS = "z-50 flex items-center gap-2";
 const SHARED_ACTION_BUTTON_CLASS =
   "rounded-full glass-surface hover:bg-gray-900/50 hover:border-white/30 transition-colors";
@@ -116,6 +118,9 @@ export default function SharedDesignPage() {
   const {
     isSavingImage,
     isImageCaptureReady,
+    renderProgress,
+    cancelRender,
+    downloadImage,
     setCapture: setCaptureFourAngleImage,
     saveImage: handleSaveImage,
   } = useFourAngleImageDownload(SHARED_IMAGE_EXPORT_FILENAME);
@@ -420,6 +425,9 @@ export default function SharedDesignPage() {
             onSave={handleSaveImage}
           />
         )}
+        {showUI && (
+          <BlenderDownloadButton isMobile={isMobile} wallColor={wallColor} timeOfDay={timeOfDay} lampOn={lampOn} />
+        )}
         <Button
           variant="ghost"
           size="icon"
@@ -503,6 +511,7 @@ export default function SharedDesignPage() {
           </>
         )}
       </AnimatePresence>
+      <PhotoRenderProgress progress={renderProgress} onCancel={cancelRender} onDownload={downloadImage} />
     </div>
   );
 }

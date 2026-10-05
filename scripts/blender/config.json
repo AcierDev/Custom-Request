@@ -1,0 +1,316 @@
+{
+  "version": 1,
+  "blender": "/Applications/Blender.app/Contents/MacOS/Blender",
+  "schema": {
+    "name": "everwood-blender",
+    "version": 1,
+    "max_file_bytes": 67108864,
+    "max_objects": 40256,
+    "max_geometries": 40256,
+    "max_vertices": 4000000,
+    "max_transformed_vertices": 8000000,
+    "max_coordinate": 1000,
+    "matrix_size": 16,
+    "vector_size": 3,
+    "uv_size": 2,
+    "triangle_size": 3,
+    "epsilon": 1e-05
+  },
+  "render": {
+    "preview": {
+      "width": 854,
+      "height": 480,
+      "samples": 64,
+      "noise_threshold": 0.035
+    },
+    "final": {
+      "width": 2560,
+      "height": 1440,
+      "samples": 384,
+      "noise_threshold": 0.008
+    },
+    "bounces": 10,
+    "diffuse_bounces": 6,
+    "glossy_bounces": 6,
+    "transmission_bounces": 8,
+    "transparent_bounces": 12,
+    "seed": 37,
+    "exposure": -1.5,
+    "view_transform": "AgX",
+    "look": "AgX - Medium High Contrast",
+    "timeout_seconds": 3600,
+    "cancel_grace_seconds": 5,
+    "cancel_poll_seconds": 0.25,
+    "max_png_bytes": 67108864,
+    "max_png_pixels": 16777216,
+    "texture_limit": "2048",
+    "png_depth": "8",
+    "png_compression": 35,
+    "resolution_percentage": 100
+  },
+  "room": {
+    "width": 6.4,
+    "height": 3.25,
+    "depth": 9,
+    "wall_thickness": 0.12,
+    "wall_color": "#e6e2d9",
+    "ceiling_color": "#f1eee7",
+    "trim_color": "#e8e3d9",
+    "wall_roughness": 0.83,
+    "wall_bump": 0.00015,
+    "edge_bevel": 0.003,
+    "bevel_segments": 3,
+    "floor_thickness": 0.04,
+    "floor_tile_meters": 1.7,
+    "floor_normal_strength": 0.22,
+    "baseboard_height": 0.115,
+    "baseboard_depth": 0.021,
+    "baseboard_cap_height": 0.012,
+    "art_center_height": 1.8,
+    "art_floor_clearance": 1.05,
+    "art_standoff": 0.024,
+    "art_width_padding": 2.8,
+    "art_ceiling_clearance": 0.45
+  },
+  "window": {
+    "near_y": -0.65,
+    "far_y": -3.05,
+    "bottom": 0.48,
+    "top": 2.87,
+    "frame_width": 0.032,
+    "frame_depth": 0.085,
+    "frame_color": "#302f2a",
+    "sill_depth": 0.19,
+    "sill_height": 0.035,
+    "curtain_width": 0.5,
+    "curtain_top": 3.04,
+    "curtain_bottom": 0.026,
+    "curtain_inset": 0.16,
+    "fold_depth": 0.04,
+    "folds": 6,
+    "horizontal_segments": 64,
+    "vertical_segments": 28,
+    "cloth_thickness": 0.0012,
+    "rod_radius": 0.008,
+    "rod_overhang": 0.33,
+    "hem_radius": 0.003,
+    "cloth_color": "#d8cebc"
+  },
+  "camera": {
+    "lens_mm": 35,
+    "sensor_width_mm": 36,
+    "minimum_distance": 6.0,
+    "eye_x": 0.4,
+    "eye_height": 1.55,
+    "target_height": 1.15,
+    "target_y": -0.25,
+    "margin": 0.91,
+    "fit_iterations": 40,
+    "distance_step": 0.15,
+    "near_clip": 0.03,
+    "far_clip": 100,
+    "f_stop": 11,
+    "framing_ignore_names": [
+      "Room / wool rug"
+    ]
+  },
+  "light": {
+    "day_window_watts": 1150,
+    "morning_window_watts": 850,
+    "night_window_watts": 8,
+    "window_temperature_day": "#fff4df",
+    "window_temperature_morning": "#ffe3bd",
+    "window_temperature_night": "#c3d5ff",
+    "window_size": 2.3,
+    "window_inset": 0.17,
+    "sky_day": 0.28,
+    "sky_night": 0.009,
+    "sky_elevation": 0.61,
+    "sky_rotation": 2.5,
+    "sun_disc": false,
+    "fill_watts": 75,
+    "night_fill_watts": 45,
+    "fill_size": 3.5,
+    "fill_position": [
+      0.4,
+      -4.5,
+      2.55
+    ],
+    "lamp_watts": 32,
+    "lamp_color": "#ffd19c",
+    "bulb_emission": 4,
+    "light_radius": 0.035
+  },
+  "furniture": {
+    "sofa_width": 2.28,
+    "sofa_position": [
+      0,
+      -0.72,
+      0.012
+    ],
+    "sofa_color": "#c8bba6",
+    "sofa_roughness": 0.76,
+    "sofa_sheen": 0.35,
+    "table_width": 1.1,
+    "table_position": [
+      0.1,
+      -1.83,
+      0.013
+    ],
+    "plant_height": 1.58,
+    "plant_position": [
+      2.4,
+      -0.56,
+      0
+    ],
+    "leaf_translucency": 0.17,
+    "leaf_roughness": 0.43,
+    "rug_size": [
+      3.6,
+      2.85,
+      0.012
+    ],
+    "rug_position": [
+      0,
+      -1.44,
+      0.006
+    ],
+    "rug_color": "#cfc4b1",
+    "rug_bevel": 0.016,
+    "fringe_count": 72,
+    "fringe_length": 0.058,
+    "fringe_radius": 0.0009,
+    "pillow_height": 0.32,
+    "pillow_positions": [
+      [
+        -0.64,
+        -0.7,
+        0.43
+      ],
+      [
+        0.65,
+        -0.68,
+        0.43
+      ]
+    ],
+    "pillow_rotations": [
+      -0.2,
+      0.17
+    ],
+    "vase_height": 0.19,
+    "vase_position": [
+      0.37,
+      -1.86,
+      0.432
+    ],
+    "table_book_position": [
+      -0.19,
+      -1.78,
+      0.429
+    ],
+    "contact_gap": 0.001
+  },
+  "shelf": {
+    "position": [
+      -1.91,
+      -0.29,
+      0
+    ],
+    "width": 0.78,
+    "depth": 0.34,
+    "height": 1.85,
+    "board": 0.025,
+    "back_thickness": 0.009,
+    "levels": [
+      0.08,
+      0.49,
+      0.94,
+      1.37,
+      1.825
+    ],
+    "wood_color": "#79563c",
+    "door_gap": 0.003,
+    "door_height": 0.355,
+    "door_y": -0.176,
+    "door_z": 0.285,
+    "handle_radius": 0.005,
+    "handle_height": 0.042,
+    "handle_y": -0.198,
+    "handle_z": 0.335,
+    "book_spacing": 0.042,
+    "book_depth": -0.032,
+    "book_base_clearance": 0.014,
+    "wood_roughness": 0.39,
+    "book_lean": 0.1,
+    "bowl_radius": 0.072,
+    "bowl_height": 0.045
+  },
+  "lamp": {
+    "position": [
+      1.61,
+      -0.47,
+      0
+    ],
+    "height": 1.94,
+    "base_radius": 0.205,
+    "base_height": 0.032,
+    "stem_radius": 0.01,
+    "shade_bottom": 1.53,
+    "shade_top": 1.93,
+    "shade_bottom_radius": 0.235,
+    "shade_top_radius": 0.172,
+    "shade_thickness": 0.0015,
+    "shade_segments": 96,
+    "shade_seam_radius": 0.002,
+    "shade_color": "#eee3cd",
+    "metal_color": "#a18a61",
+    "metal_roughness": 0.32,
+    "metalness": 0.8,
+    "bulb_radius": 0.035,
+    "bulb_height": 1.74,
+    "cord_radius": 0.003,
+    "cord_length": 0.28
+  },
+  "surface": {
+    "fabric_frequency": [
+      180,
+      150,
+      180
+    ],
+    "fabric_bump": 0.00015,
+    "fabric_roughness": 0.86,
+    "fabric_sheen": 0.24,
+    "grain_opacity": 0.12,
+    "grain_bump_strength": 0.45,
+    "grain_ridge_roughness": 0.91,
+    "grain_valley_roughness": 1,
+    "micro_roughness": 0.006,
+    "paint_frequency": 1200,
+    "paint_bump": 6e-06,
+    "noise_detail": 2,
+    "wood_frequency": [
+      3,
+      95,
+      3
+    ],
+    "wood_bump": 0.00013,
+    "wood_dark_factor": 0.67,
+    "wood_light_factor": 1.2,
+    "radial_segments": 64,
+    "tube_resolution": 3
+  },
+  "assets": {
+    "sofa": "photo-room/sofa.glb",
+    "table": "photo-room/table-round.glb",
+    "plant": "photo-room/plant-natural.glb",
+    "books": "photo-room/books.glb",
+    "vase": "photo-room/vase.glb",
+    "pillows": "photo-room/pillows.glb",
+    "floor_color": "photo-room/floor-color.jpg",
+    "floor_normal": "photo-room/floor-normal.jpg",
+    "floor_roughness": "photo-room/floor-roughness.jpg",
+    "grain": "textures/grain-atlas.png",
+    "side": "textures/wood-side-grain.jpg",
+    "plywood": "textures/plywood.jpg"
+  }
+}
