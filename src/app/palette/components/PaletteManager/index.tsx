@@ -61,6 +61,7 @@ import { toast } from "@/lib/toast";
 
 // Import sub-components
 import { ColorSwatch } from "./ColorSwatch";
+import { PaletteOverview } from "./PaletteOverview";
 import { SortableColorSwatch } from "./SortableColorSwatch";
 import { AddColorButton } from "./AddColorButton";
 import { BlendingGuide } from "./BlendingGuide";
@@ -638,7 +639,8 @@ export function PaletteManager() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className={cn("space-y-5", customPalette.length > 0 && "pb-[calc(6rem+env(safe-area-inset-bottom))]")}>
+      <PaletteOverview colors={customPalette} />
       {/* Color Palette Display */}
       <div className="space-y-3">
         <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:p-4">

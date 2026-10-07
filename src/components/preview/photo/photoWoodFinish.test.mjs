@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { PHOTO_MATH as M } from "./photoConfig.ts";
+import { PHOTO_MATH as M, PHOTO_WOOD_FINISH_CONFIG as WOOD } from "./photoConfig.ts";
 
 let naturalPhotoWoodFields;
 try { ({ naturalPhotoWoodFields } = await import("./photoWoodFinish.ts")); }
@@ -53,4 +53,31 @@ test("wood finish preparation keeps non-divisible atlas cells finite and isolate
     assert.ok(Number.isFinite(finish.height[pixel]) && Number.isFinite(finish.roughness[pixel]));
     assert.ok(Math.abs(finish.grain[pixel] - source[pixel]) < F.tolerance);
   }
+});
+
+// A photograph's base tone is not a physical bump. Depth variation may only
+// modulate its rings; otherwise even featureless wood develops false ripples.
+test("uneven grain depth does not bend a flat wood surface", () => {
+  const previous = WOOD.paintReliefFraction;
+  try {
+    WOOD.paintReliefFraction = M.zero;
+    const field = new Float32Array(F.size * F.size).fill(F.high);
+    const finish = naturalPhotoWoodFields(field, F.size, F.size, F.grid);
+    for (const height of finish.height)
+      assert.ok(Math.abs(height - F.high) < F.tolerance, "base tone has become a broad surface ripple");
+  } finally { WOOD.paintReliefFraction = previous; }
+});
+
+test("paint sheen does not mirror every wood ridge", () => {
+  const previous = WOOD.paintRoughnessFraction;
+  try {
+    WOOD.paintRoughnessFraction = M.zero;
+    const field = Float32Array.from({ length: F.size * F.size }, (_, index) =>
+      (index % F.size) / (F.size - M.one));
+    const finish = naturalPhotoWoodFields(field, F.size, F.size, M.one);
+    const range = values => Math.max(...values) - Math.min(...values);
+    assert.ok(range(finish.roughness) < range(finish.grain) * M.half,
+      "the paint repeats the grain's complete contrast in its highlights");
+    assert.ok(range(finish.roughness) > F.minimumBend, "paint must retain a subtle grain response");
+  } finally { WOOD.paintRoughnessFraction = previous; }
 });

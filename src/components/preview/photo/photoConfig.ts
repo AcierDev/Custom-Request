@@ -35,10 +35,10 @@ export function photoRenderSettings(viewportWidth: number, development: boolean)
 /** The artwork is always painted in semi-gloss. These are dielectric coating
  * parameters, separate from the customer's pigment RGB and the wood relief. */
 export const PHOTO_PAINT_FINISH_CONFIG = {
-  roughness: 0.34, metalness: 0, ior: 1.5,
+  roughness: 0.38, metalness: 0, ior: 1.5,
   // The paint is the reflective coating; no additional clear varnish layer.
   clearcoat: 0,
-  grainOpacity: 0.12, grainRidgeRoughness: 0.91, grainValleyRoughness: 1,
+  grainOpacity: 0.075, grainRidgeRoughness: 0.91, grainValleyRoughness: 1,
   roughnessVariation: 0.008,
 } as const;
 
@@ -48,7 +48,9 @@ export const PHOTO_ART_CONFIG = {
   metallicClearcoat: 0.07, metallicClearcoatRoughness: 0.55,
   normalStrength: 1, sideNormalStrength: 1,
   edgeBevelMeters: 0.0003,
-  grainReliefMeters: -0.00065, sideReliefMeters: -0.00006,
+  // Shallow brushed relief keeps semi-gloss reflections broad rather than
+  // turning the photographed grain into corrugated grooves.
+  grainReliefMeters: -0.0003, sideReliefMeters: -0.00006,
   grainSmoothingMeters: 0.0003, sideSmoothingMeters: 0.0001,
   smoothingSigmaRadius: 3, smoothingMaxRadius: 12,
   grainRidgeRoughness: PHOTO_PAINT_FINISH_CONFIG.grainRidgeRoughness,
@@ -59,10 +61,10 @@ export const PHOTO_ART_CONFIG = {
 } as const;
 
 export const PHOTO_WOOD_FINISH_CONFIG = {
-  grainWarp: 0.045, warpFrequency: 2.2, warpSeedOffset: 11,
-  depthVariation: 0.1, depthFrequency: 3.3, depthSeedOffset: 23,
-  paintFrequency: 84, paintReliefFraction: 0.025,
-  paintRoughnessFraction: 0.13, paintSeedOffset: 37,
+  grainWarp: 0.018, warpFrequency: 2.2, warpSeedOffset: 11,
+  depthVariation: 0.3, depthFrequency: 3.3, depthSeedOffset: 23,
+  paintFrequency: 84, paintReliefFraction: 0.008,
+  grainRoughnessFraction: 0.35, paintRoughnessFraction: 0.06, paintSeedOffset: 37,
   uvScale: 0.95, uvRotation: 0.032, uvOffset: 0.014,
   sideUvOffset: [0.36, 0.42],
   variationCount: 16, variationX: 17, variationY: 29, variationGrain: 13,

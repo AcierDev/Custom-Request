@@ -31,6 +31,18 @@ export function photoWoodVariation(index: number) {
 export function naturalPhotoWoodFields(source: Float32Array, width: number, height: number, grid: number) {
   const grain = new Float32Array(source.length), heightField = new Float32Array(source.length), roughness = new Float32Array(source.length);
   const cellWidth = width / grid, cellHeight = height / grid;
+  // Modulate the rings, not the photograph's base brightness. This avoids
+  // invented broad bumps while letting individual fibres rise unevenly.
+  const cellMeans = new Float64Array(grid * grid), cellCounts = new Uint32Array(grid * grid);
+  for (let y = M.zero; y < height; y += M.one) {
+    for (let x = M.zero; x < width; x += M.one) {
+      const cell = Math.floor(y / cellHeight) * grid + Math.floor(x / cellWidth);
+      cellMeans[cell] += source[y * width + x];
+      cellCounts[cell] += M.one;
+    }
+  }
+  for (let cell = M.zero; cell < cellMeans.length; cell += M.one)
+    cellMeans[cell] /= Math.max(M.one, cellCounts[cell]);
   for (let y = M.zero; y < height; y += M.one) {
     const row = Math.floor(y / cellHeight), top = Math.ceil(row * cellHeight);
     const bottom = Math.min(height - M.one, Math.ceil((row + M.one) * cellHeight) - M.one);
@@ -52,8 +64,11 @@ export function naturalPhotoWoodFields(source: Float32Array, width: number, heig
       const paint = noise(u * F.paintFrequency, v * F.paintFrequency, seed + F.paintSeedOffset) * M.two - M.one;
       const pixel = y * width + x;
       grain[pixel] = value;
-      heightField[pixel] = value * (M.one + depth * F.depthVariation) + paint * F.paintReliefFraction;
-      roughness[pixel] = clamp(value + paint * F.paintRoughnessFraction);
+      const mean = cellMeans[seed], ring = value - mean;
+      heightField[pixel] = mean + ring * (M.one + depth * F.depthVariation) + paint * F.paintReliefFraction;
+      // Paint sheen follows the coating; it should not trace every ring as
+      // precisely as a second copy of the wood's normal map.
+      roughness[pixel] = clamp(mean + ring * F.grainRoughnessFraction + paint * F.paintRoughnessFraction);
     }
   }
   return { grain, height: heightField, roughness };
