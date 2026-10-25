@@ -7,6 +7,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ReactNode,
 } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
@@ -669,15 +670,19 @@ export default function DesignPage() {
           right-side stack; mobile tucks the stack behind a small button
           so the room stays visible until the user asks for controls. */}
       {showUIControls && !isMobile && (
-        <div className="absolute top-4 right-4 z-50 flex max-h-[calc(100vh-2rem)] items-start gap-3 overflow-y-auto pr-1 no-scrollbar">
+        <aside
+          aria-label="Viewer controls"
+          className={VIEWER_DOCKED_PANEL_CLASS}
+        >
           <ViewerOptionsStack
+            variant="docked"
             timeOfDay={timeOfDay}
             onTimeOfDayChange={setTimeOfDay}
             wallColor={currentWallColor}
             onWallColorChange={setWallColor}
             showArtworkExtension={false}
           />
-        </div>
+        </aside>
       )}
 
       {showUIControls && isMobile && (
@@ -1084,19 +1089,146 @@ export default function DesignPage() {
   );
 }
 
+// Desktop controls live in one docked panel: a right-hand column that stops
+// above the bottom action bar and scrolls on its own, so nothing runs off the
+// screen or sits behind the room. The cards inside lose their individual glass
+// treatment and are separated by hairlines instead.
+const VIEWER_DOCKED_PANEL_CLASS = cn(
+  "absolute right-4 top-4 z-50 max-h-[calc(100dvh-6.5rem)] w-[22rem] max-w-[calc(100vw-2rem)] overflow-y-auto overscroll-contain no-scrollbar",
+  "rounded-[1.4rem] border border-white/[0.14] bg-slate-950/[0.86] shadow-[0_24px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl",
+  "[&_[data-viewer-control-surface]]:rounded-none [&_[data-viewer-control-surface]]:border-0 [&_[data-viewer-control-surface]]:bg-none [&_[data-viewer-control-surface]]:bg-transparent [&_[data-viewer-control-surface]]:shadow-none [&_[data-viewer-control-surface]]:backdrop-blur-none [&_[data-viewer-control-surface]]:backdrop-saturate-100",
+  "[&_[data-viewer-control-surface]>span]:hidden",
+);
+const VIEWER_DOCKED_TABS = [
+  { id: "artwork", label: "Artwork" },
+  { id: "room", label: "Room" },
+  { id: "layout", label: "Layout" },
+] as const;
+type ViewerDockedTab = (typeof VIEWER_DOCKED_TABS)[number]["id"];
+const VIEWER_DOCKED_DEFAULT_TAB: ViewerDockedTab = "artwork";
+const VIEWER_DOCKED_TABLIST_CLASS =
+  "sticky top-0 z-10 flex gap-1 border-b border-white/[0.08] bg-slate-950/95 p-2 backdrop-blur-md";
+const VIEWER_DOCKED_TAB_CLASS =
+  "flex-1 rounded-xl px-3 py-2 text-xs font-semibold tracking-wide outline-none transition-colors focus-visible:ring-2 focus-visible:ring-amber-100/60";
+const VIEWER_DOCKED_TAB_IDLE_CLASS =
+  "text-slate-400 hover:bg-white/[0.06] hover:text-slate-100";
+const VIEWER_DOCKED_TAB_ACTIVE_CLASS = "bg-white text-slate-950";
+const VIEWER_DOCKED_GROUP_CLASS =
+  "flex flex-col divide-y divide-white/[0.08] [&[hidden]]:hidden";
+
+function ViewerDockedTabs({
+  active,
+  onChange,
+}: {
+  active: ViewerDockedTab;
+  onChange: (tab: ViewerDockedTab) => void;
+}) {
+  return (
+    <div role="tablist" aria-label="Viewer controls" className={VIEWER_DOCKED_TABLIST_CLASS}>
+      {VIEWER_DOCKED_TABS.map((tab) => (
+        <button
+          key={tab.id}
+          type="button"
+          role="tab"
+          id={`viewer-tab-${tab.id}`}
+          aria-selected={active === tab.id}
+          aria-controls={`viewer-panel-${tab.id}`}
+          className={cn(
+            VIEWER_DOCKED_TAB_CLASS,
+            active === tab.id
+              ? VIEWER_DOCKED_TAB_ACTIVE_CLASS
+              : VIEWER_DOCKED_TAB_IDLE_CLASS,
+          )}
+          onClick={() => onChange(tab.id)}
+        >
+          {tab.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// Inactive tabs stay mounted (just hidden) so their controls keep their state.
+function ViewerOptionsGroup({
+  id,
+  active,
+  children,
+}: {
+  id: ViewerDockedTab;
+  active: ViewerDockedTab;
+  children: ReactNode;
+}) {
+  return (
+    <section
+      role="tabpanel"
+      id={`viewer-panel-${id}`}
+      aria-labelledby={`viewer-tab-${id}`}
+      hidden={active !== id}
+      className={VIEWER_DOCKED_GROUP_CLASS}
+    >
+      {children}
+    </section>
+  );
+}
+
 function ViewerOptionsStack({
+  variant = "floating",
   timeOfDay,
   onTimeOfDayChange,
   wallColor,
   onWallColorChange,
   showArtworkExtension,
 }: {
+  variant?: "floating" | "docked";
   timeOfDay: TimeOfDay;
   onTimeOfDayChange: (value: TimeOfDay) => void;
   wallColor: string;
   onWallColorChange: (value: string) => void;
   showArtworkExtension: boolean;
 }) {
+  const [dockedTab, setDockedTab] = useState<ViewerDockedTab>(
+    VIEWER_DOCKED_DEFAULT_TAB,
+  );
+  const designAndSize = (
+    <ViewerControlSurface ariaLabel="Design and size">
+      <div className="flex flex-row items-center gap-3 px-4 py-3">
+        <div className="design-card flex items-center">
+          <DesignCard compact bare />
+        </div>
+        <div className="size-card flex items-center">
+          <SizeCard compact bare />
+        </div>
+      </div>
+    </ViewerControlSurface>
+  );
+  const patternControls = (
+    <div className="pattern-controls">
+      <PatternControls showArtworkExtension={showArtworkExtension} />
+    </div>
+  );
+
+  if (variant === "docked") {
+    return (
+      <div className="flex select-none flex-col pb-2">
+        <ViewerDockedTabs active={dockedTab} onChange={setDockedTab} />
+        <ViewerOptionsGroup id="artwork" active={dockedTab}>
+          {designAndSize}
+          <SquareSizeControls compact />
+          {patternControls}
+        </ViewerOptionsGroup>
+        <ViewerOptionsGroup id="room" active={dockedTab}>
+          <LightingControls value={timeOfDay} onChange={onTimeOfDayChange} />
+          <WallColorControls value={wallColor} onChange={onWallColorChange} />
+          <ViewControls />
+        </ViewerOptionsGroup>
+        <ViewerOptionsGroup id="layout" active={dockedTab}>
+          <PanelLayoutControls />
+          <PaletteVersionSwitcher />
+        </ViewerOptionsGroup>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-3 select-none">
       <ViewControls />
@@ -1110,20 +1242,9 @@ function ViewerOptionsStack({
         <LightingControls value={timeOfDay} onChange={onTimeOfDayChange} />
       </motion.div>
       <WallColorControls value={wallColor} onChange={onWallColorChange} />
-      <ViewerControlSurface ariaLabel="Design and size">
-        <div className="flex flex-row items-center gap-3 px-4 py-3">
-          <div className="design-card flex items-center">
-            <DesignCard compact bare />
-          </div>
-          <div className="size-card flex items-center">
-            <SizeCard compact bare />
-          </div>
-        </div>
-      </ViewerControlSurface>
+      {designAndSize}
       <SquareSizeControls compact />
-      <div className="pattern-controls">
-        <PatternControls showArtworkExtension={showArtworkExtension} />
-      </div>
+      {patternControls}
     </div>
   );
 }
