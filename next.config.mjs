@@ -28,6 +28,17 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  // The Blender job routes build paths from process.cwd(), so tracing pulls the
+  // whole project into their functions. They only run on the studio Mac
+  // (hosted, they answer 503), so keep the project's assets out of them.
+  outputFileTracingExcludes: {
+    "/api/blender-render/**": [
+      "./public/**/*",
+      "./output/**/*",
+      "./scripts/**/*",
+      "./docs/**/*",
+    ],
+  },
   // The old viewer (viewer.everwoodus.com) served shared designs at
   // /?shareId=ID. The design now lives at /shared/ID (the gallery room),
   // so any legacy /?shareId=ID that reaches THIS app is forwarded to it.

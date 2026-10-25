@@ -5,6 +5,7 @@ import { createRequire, registerHooks } from "node:module";
 import { dirname, extname, resolve as resolvePath } from "node:path";
 import test from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { DEFAULT_APP_ORIGIN } from "../../lib/appPathConfig.mjs";
 
 const TEST_FILE = fileURLToPath(import.meta.url);
 const PROJECT_ROOT = resolvePath(dirname(TEST_FILE), "..", "..", "..");
@@ -44,7 +45,9 @@ if (!process.env[CHILD_MODE_ENV]) {
         ...process.env,
         [CHILD_MODE_ENV]: mode,
         NODE_ENV: "test",
-        MONGODB_URI: "",
+        // The database module is mocked below; a set URI keeps the routes off
+        // their no-Mongo local development stores so the mock is exercised.
+        MONGODB_URI: "mongodb://backend-links.test/everwood",
         NEXT_PUBLIC_APP_BASE_PATH: mode === "custom" ? CUSTOM_BASE_PATH : "",
         NEXT_PUBLIC_APP_URL: mode === "custom" ? CUSTOM_PUBLIC_URL : "",
         NEXT_PUBLIC_FACEBOOK_REDIRECT_URI: "",
@@ -221,7 +224,9 @@ if (!process.env[CHILD_MODE_ENV]) {
     const response = await shareDesign(jsonRequest("/api/shared-designs", { designData: { selectedDesign: "squares" } }));
     assert.equal(response.status, HTTP_OK);
     const payload = await response.json();
-    assert.equal(payload.shareUrl, `${shareOrigin}${prefix}/shared/${payload.shareId}`);
+    // Stored shares always link to the canonical public app, never the request origin.
+    const canonicalShareOrigin = mode === "custom" ? canonicalOrigin : DEFAULT_APP_ORIGIN;
+    assert.equal(payload.shareUrl, `${canonicalShareOrigin}${prefix}/shared/${payload.shareId}`);
   });
 
   test("shared set creation, lookup, and listing preserve the independent gallery links", async () => {

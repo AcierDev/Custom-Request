@@ -28,6 +28,11 @@ const dataUrl = (blob: Blob) => new Promise<string>((resolve, reject) => {
 export async function renderArtworkInBlender(snapshot: ArtSnapshot, room: BlenderRoomSettings, request: PhotoCaptureRequest): Promise<Blob> {
   const { signal, onProgress } = request;
   onProgress({ fraction: C.startProgress, label: "Preparing your design" });
+  // Ask first: where Blender is absent (the hosted site) nothing is built or uploaded.
+  const availability = await fetch(appPath(C.endpoint), { signal, cache: "no-store" })
+    .then((reply) => (reply.ok ? reply.json() as Promise<{ available?: boolean }> : null))
+    .catch((error) => { if (signal.aborted) throw error; return null; });
+  if (!availability?.available) throw new BlenderUnavailableError("Blender rendering is not available.");
   const { buildBlenderPackage } = await import("../../../lib/blender/blenderPackage.ts");
   const packet = buildBlenderPackage(snapshot, room);
   let response: Response;
@@ -39,7 +44,7 @@ export async function renderArtworkInBlender(snapshot: ArtSnapshot, room: Blende
     throw new BlenderUnavailableError("The Blender renderer could not be reached.");
   }
   if (response.status === 503 || response.status === 404) throw new BlenderUnavailableError("Blender rendering is not available.");
-  const started = await response.json() as BlenderJobState & { error?: string };
+  const started = await response.json().catch(() => ({})) as BlenderJobState & { error?: string };
   if (!response.ok) throw new Error(started.error ?? "The render could not start.");
   const jobUrl = appPath(`${C.endpoint}/${started.id}`);
   const cancel = () => { void fetch(jobUrl, { method: "DELETE", keepalive: true }); };

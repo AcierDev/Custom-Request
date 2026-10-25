@@ -5,6 +5,11 @@ import { BLENDER_PACKAGE_CONFIG as P } from "@/lib/blender/blenderPackage";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+/** Lets the client skip building and uploading a design where Blender is not installed. */
+export function GET() {
+  return NextResponse.json({ available: blenderRenderAvailable() }, { headers: { "Cache-Control": "no-store" } });
+}
+
 /** Starts an art-only Blender render of the posted design on this Mac.
  * 503 means Blender is not installed here, so the client renders in-browser. */
 export async function POST(request: Request) {
