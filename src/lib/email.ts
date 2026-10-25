@@ -1,4 +1,7 @@
 import { SendMailClient } from "zeptomail";
+import { appUrl } from "./appPaths.ts";
+
+const DEFAULT_EMAIL_LINK_ORIGIN = "https://everwood.com";
 
 type EmailTemplate = "magic-link" | "welcome" | "order-confirmation";
 
@@ -269,9 +272,7 @@ function getWelcomeTemplate(name: string): string {
             <li>Order high-quality products with your designs</li>
           </ul>
           <div style="text-align: center;">
-            <a href="${
-              process.env.NEXT_PUBLIC_APP_URL || "https://everwood.com"
-            }/order" class="button">Start Creating</a>
+            <a href="${appUrl("/order", DEFAULT_EMAIL_LINK_ORIGIN)}" class="button">Start Creating</a>
           </div>
         </div>
         <div class="footer">
@@ -426,9 +427,7 @@ function getOrderConfirmationTemplate(
             </table>
           </div>
           <div style="text-align: center;">
-            <a href="${
-              process.env.NEXT_PUBLIC_APP_URL || "https://everwood.com"
-            }/orders/${orderNumber}" class="button">View Order Details</a>
+            <a href="${appUrl(`/orders/${encodeURIComponent(orderNumber)}`, DEFAULT_EMAIL_LINK_ORIGIN)}" class="button">View Order Details</a>
           </div>
         </div>
         <div class="footer">

@@ -187,7 +187,7 @@ test("mobile image action saves only from the confirmation", () => {
   assert.equal(saveCount, 1);
 });
 
-test("mobile confirmation explains the four-angle device save", () => {
+test("mobile confirmation explains the realistic device render", () => {
   const tree = SharedImageSaveAction({
     isMobile: true,
     isSaving: false,
@@ -197,7 +197,7 @@ test("mobile confirmation explains the four-angle device save", () => {
   const copy = flattenText(tree).replace(/\s+/g, " ").trim();
 
   assert.match(copy, /Save artwork image\?/);
-  assert.match(copy, /one image showing the artwork from four angles/i);
+  assert.match(copy, /one detailed render of your artwork in a realistic room/i);
   assert.match(copy, /saves it to your device/i);
   assert.match(copy, /Not now/);
   assert.match(copy, /Save image/);

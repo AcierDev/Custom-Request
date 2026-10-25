@@ -1,4 +1,5 @@
 import { isMobileViewport } from "./mobileViewport.ts";
+import { stripAppBasePath } from "./appPaths.ts";
 
 export const MAIN_VIEWER_PATH = "/viewer";
 
@@ -21,7 +22,10 @@ export function resolveHydratedRoomView({
     return currentShowRoom;
   }
 
-  if (pathname === MAIN_VIEWER_PATH && isMobileViewport(viewportWidth)) {
+  if (
+    stripAppBasePath(pathname) === MAIN_VIEWER_PATH &&
+    isMobileViewport(viewportWidth)
+  ) {
     return false;
   }
 

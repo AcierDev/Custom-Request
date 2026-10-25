@@ -15,6 +15,7 @@
 import { USDZExporter } from "three/examples/jsm/exporters/USDZExporter.js";
 import { getArtSnapshot } from "./artSnapshot";
 import { buildExportScene } from "./buildExportScene";
+import { appPath } from "../appPaths.ts";
 
 const GRAIN_ATLAS_URL = "/textures/grain-atlas.png";
 // USDZExporter re-encodes textures to PNG and caps them at maxTextureSize; 2048
@@ -27,7 +28,7 @@ function loadImage(url: string): Promise<HTMLImageElement> {
     img.crossOrigin = "anonymous"; // same-origin asset; keeps the canvas untainted
     img.onload = () => resolve(img);
     img.onerror = () => reject(new Error(`AR export: failed to load ${url}`));
-    img.src = url;
+    img.src = appPath(url);
   });
 }
 
@@ -64,7 +65,7 @@ export async function prepareUsdz(): Promise<string> {
   });
 
   const id = makeId();
-  const url = `/api/ar-usdz/${id}.usdz`;
+  const url = appPath(`/api/ar-usdz/${id}.usdz`);
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/octet-stream" },
@@ -87,7 +88,7 @@ export function launchAR(usdzUrl: string, canonicalWebPageURL?: string): void {
       "canonicalWebPageURL=" + encodeURIComponent(canonicalWebPageURL)
     );
   }
-  const href = `${usdzUrl}#${fragments.join("&")}`;
+  const href = `${appPath(usdzUrl)}#${fragments.join("&")}`;
 
   const anchor = document.createElement("a");
   anchor.setAttribute("rel", "ar");

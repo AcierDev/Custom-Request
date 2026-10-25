@@ -2,6 +2,7 @@ import type { ArtSnapshot } from "../ar/artSnapshot.ts";
 import { buildStepModelPlan } from "../step/stepModel.ts";
 import { GRAIN_ATLAS } from "../../components/preview/woodStyles.ts";
 import { FUSION_PACKAGE_CONFIG } from "./fusionPackageConfig.ts";
+import { appPath } from "../appPaths.ts";
 import type {
   FusionTextureAsset,
   FusionTextureBuildResult,
@@ -170,7 +171,7 @@ const defaultLoadImage = (url: string): Promise<HTMLImageElement> =>
     image.onload = () => resolve(image);
     image.onerror = () =>
       reject(new Error(`Unable to load Fusion texture source: ${url}`));
-    image.src = url;
+    image.src = appPath(url);
   });
 
 const defaultCreateCanvas = (

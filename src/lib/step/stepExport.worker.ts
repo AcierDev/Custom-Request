@@ -1,6 +1,7 @@
 import { buildStepModelPlan } from "./stepModel.ts";
 import { exportStepModel } from "./openCascadeExporter.ts";
 import { STEP_EXPORT_CONFIG } from "./stepConfig.ts";
+import { appPath } from "../appPaths.ts";
 import { createStepExportMetadata } from "./stepMetadata.ts";
 import type { OpenCascadeInstance } from "replicad-opencascadejs/src/replicad_with_exceptions";
 import type {
@@ -37,13 +38,13 @@ workerScope.addEventListener("message", async ({ data }) => {
   try {
     const runtimeModule = (await import(
       /* webpackIgnore: true */
-      STEP_EXPORT_CONFIG.runtimeModulePublicUrl
+      appPath(STEP_EXPORT_CONFIG.runtimeModulePublicUrl)
     )) as OpenCascadeRuntimeModule;
     const initializeOpenCascade = runtimeModule.default;
     const openCascade = await initializeOpenCascade({
       locateFile: (path) =>
         path.endsWith(WASM_FILE_EXTENSION)
-          ? STEP_EXPORT_CONFIG.wasmPublicUrl
+          ? appPath(STEP_EXPORT_CONFIG.wasmPublicUrl)
           : path,
     });
     const plan = buildStepModelPlan(data.snapshot);

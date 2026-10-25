@@ -14,13 +14,15 @@ import {
 } from "react";
 import { useCustomStore } from "@/store/customStore";
 import { getNormalizedWedgeCorners } from "@/lib/wedgeGeometry";
-import { GRAIN_ATLAS, SIDE_GRAIN } from "./woodStyles";
+import { appPath } from "@/lib/appPaths";
+import { SIDE_GRAIN, WEB_GRAIN } from "./woodStyles";
 import {
   ART_MATERIAL_CONFIG,
   applyArtGrainShader,
   bakeArtEnvironment,
   createArtMaterial,
 } from "./artMaterial";
+import { commitInstancedSquareBuffers } from "./instancedSquareBuffers";
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ 🧱 INSTANCED SQUARES                                                  ║
@@ -445,11 +447,11 @@ function InstancedSquaresComponent({
   }, [gl, invalidate, metallic]);
   const envMap = environmentTarget?.texture ?? null;
 
-  // The squares' grain is a 4×4 atlas of 14 distinct grain images; each
-  // square samples ONE cell (its grainIndex), exactly like production.
+  // The squares' grain is a 4×4 relief atlas of 14 painted end-grain cells;
+  // each square samples ONE cell (its grainIndex).
   const [grainAtlas, sideGrain] = useTexture([
-    GRAIN_ATLAS.texture,
-    SIDE_GRAIN.texture,
+    appPath(WEB_GRAIN.texture),
+    appPath(SIDE_GRAIN.texture),
   ]);
 
   // Shared, instanced-attribute geometry. Rebuilt only when the instance
@@ -468,9 +470,9 @@ function InstancedSquaresComponent({
   // one (and its GPU buffers) so resizes don't leak.
   useEffect(() => () => geometry.dispose(), [geometry]);
 
-  // One material for every square. Each square samples its own grain-atlas
-  // cell (by aGrainIndex) and blends it over the flat color at GRAIN_ATLAS
-  // .opacity — mirroring production's `diffuse *= mix(white, grain, 0.4)`.
+  // One material for every square. Each square samples its own relief-atlas
+  // cell (by aGrainIndex): a faint color modulation (WEB_GRAIN.opacity) plus
+  // the same cell as raised bump relief (GRAIN_RELIEF).
   const material = useMemo(() => {
     const tex = grainAtlas as THREE.Texture | undefined;
     const sideTex = sideGrain as THREE.Texture | undefined;
@@ -700,15 +702,15 @@ function InstancedSquaresComponent({
     }
 
     mesh.count = instances.length;
-    mesh.instanceMatrix.needsUpdate = true;
-    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-    grainIndexAttr.needsUpdate = true;
-    mesh.computeBoundingSphere();
     if (pickMesh) {
       pickMesh.count = instances.length;
-      pickMesh.instanceMatrix.needsUpdate = true;
-      pickMesh.computeBoundingSphere();
     }
+    commitInstancedSquareBuffers({
+      mesh,
+      pickMesh,
+      grainIndexAttribute: grainIndexAttr,
+      invalidate,
+    });
     // `material` is intentionally a dependency: it lives in the <instancedMesh>
     // args, so toggling wood grain / metallic / wood style recreates the mesh
     // with a zeroed instance buffer. Re-running here repopulates the new mesh.
@@ -720,6 +722,7 @@ function InstancedSquaresComponent({
     bloomOnResize,
     driftAmount,
     getDriftFactor,
+    invalidate,
   ]);
 
   // One per-frame matrix writer for both the size-change bloom and the

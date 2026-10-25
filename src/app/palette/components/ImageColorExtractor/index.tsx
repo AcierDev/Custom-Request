@@ -28,6 +28,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { toast } from "@/lib/toast";
+import { appPath } from "@/lib/appPaths";
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ 🎨 DOMINANT COLOR EXTRACTION                                          ║
@@ -100,7 +101,7 @@ const extractDominantColors = (url: string): Promise<string[]> =>
       }
     };
     img.onerror = () => reject(new Error("Failed to load image"));
-    img.src = url;
+    img.src = appPath(url);
   });
 
 export function ImageColorExtractor() {

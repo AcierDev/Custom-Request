@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { LoaderCircle, Sparkles, Square, Undo2 } from "lucide-react";
 import { nanoid } from "nanoid";
 import { toast } from "@/lib/toast";
+import { appPath } from "@/lib/appPaths";
 import {
   Conversation,
   ConversationContent,
@@ -613,7 +614,7 @@ export function AiPatternPrompt() {
     );
 
     try {
-      const response = await fetch(AI_PALETTE_CONFIG.apiPath, {
+      const response = await fetch(appPath(AI_PALETTE_CONFIG.apiPath), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestBody),

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { appUrl } from "@/lib/appPaths";
 
 // Google OAuth configuration
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
@@ -13,7 +14,7 @@ export async function GET(request: NextRequest) {
 
     if (!code) {
       return NextResponse.redirect(
-        new URL("/sign-in?error=no_code", request.url)
+        appUrl("/sign-in?error=no_code", request.nextUrl.origin)
       );
     }
 
@@ -27,7 +28,8 @@ export async function GET(request: NextRequest) {
         code,
         client_id: GOOGLE_CLIENT_ID,
         client_secret: GOOGLE_CLIENT_SECRET,
-        redirect_uri: REDIRECT_URI,
+        redirect_uri: REDIRECT_URI ||
+          appUrl("/api/auth/google/callback", request.nextUrl.origin),
         grant_type: "authorization_code",
       }),
     });
@@ -36,7 +38,7 @@ export async function GET(request: NextRequest) {
       const error = await tokenResponse.text();
       console.error("Token exchange error:", error);
       return NextResponse.redirect(
-        new URL("/sign-in?error=token_exchange", request.url)
+        appUrl("/sign-in?error=token_exchange", request.nextUrl.origin)
       );
     }
 
@@ -56,7 +58,7 @@ export async function GET(request: NextRequest) {
       const error = await userInfoResponse.text();
       console.error("User info error:", error);
       return NextResponse.redirect(
-        new URL("/sign-in?error=user_info", request.url)
+        appUrl("/sign-in?error=user_info", request.nextUrl.origin)
       );
     }
 
@@ -80,12 +82,12 @@ export async function GET(request: NextRequest) {
 
     // Redirect to a handler page that will store the user in localStorage
     return NextResponse.redirect(
-      new URL(`/auth/google-handler?token=${tempToken}`, request.url)
+      appUrl(`/auth/google-handler?token=${tempToken}`, request.nextUrl.origin)
     );
   } catch (error) {
     console.error("Google callback error:", error);
     return NextResponse.redirect(
-      new URL("/sign-in?error=server_error", request.url)
+      appUrl("/sign-in?error=server_error", request.nextUrl.origin)
     );
   }
 }

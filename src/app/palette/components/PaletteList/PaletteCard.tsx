@@ -38,6 +38,7 @@ import { PaletteCardProps } from "./types";
 import { PalettePreview } from "./PalettePreview";
 import { toast } from "@/lib/toast";
 import { useCustomStore } from "@/store/customStore";
+import { appUrl } from "@/lib/appPaths";
 
 export const PaletteCard = ({
   palette,
@@ -201,8 +202,7 @@ export const PaletteCard = ({
 
   // Generate sharing links
   const getShareUrl = () => {
-    const baseUrl = window.location.origin;
-    return `${baseUrl}/palette?id=${palette.id}`;
+    return appUrl(`/palette?id=${palette.id}`, window.location.origin);
   };
 
   const handleCopyShareLink = () => {

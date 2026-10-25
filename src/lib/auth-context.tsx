@@ -9,6 +9,7 @@ import {
   Suspense,
 } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { appPath, appUrl, stripAppBasePath } from "@/lib/appPaths";
 
 type User = {
   id: string;
@@ -34,16 +35,18 @@ type AuthContextType = {
 // Google OAuth configuration
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
 const GOOGLE_REDIRECT_URI =
-  typeof window !== "undefined"
-    ? `${window.location.origin}/api/auth/google/callback`
-    : "";
+  process.env.NEXT_PUBLIC_GOOGLE_REDIRECT_URI ||
+  (typeof window !== "undefined"
+    ? appUrl("/api/auth/google/callback", window.location.origin)
+    : "");
 
 // Facebook OAuth configuration
 const FACEBOOK_CLIENT_ID = process.env.NEXT_PUBLIC_FACEBOOK_CLIENT_ID || "";
 const FACEBOOK_REDIRECT_URI =
-  typeof window !== "undefined"
-    ? `${window.location.origin}/api/auth/facebook/callback`
-    : "";
+  process.env.NEXT_PUBLIC_FACEBOOK_REDIRECT_URI ||
+  (typeof window !== "undefined"
+    ? appUrl("/api/auth/facebook/callback", window.location.origin)
+    : "");
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -212,11 +215,11 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
         if (redirectUrl) {
           console.log("Redirecting to saved URL:", redirectUrl);
           localStorage.removeItem("everwood_redirect_after_signin");
-          window.location.href = redirectUrl;
+          window.location.href = appPath(redirectUrl);
         } else if (onboardingStatus === "true") {
           // If onboarding is completed, redirect to welcome page
           console.log("Onboarding completed, redirecting to welcome page");
-          window.location.href = "/welcome";
+          window.location.href = appPath("/welcome");
         }
         // Clear redirect flag after redirect is done
         sessionStorage.removeItem("google_redirect_in_progress");
@@ -239,7 +242,7 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
 
     if (redirectUrl) {
       localStorage.removeItem("everwood_redirect_after_signin");
-      router.push(redirectUrl);
+      router.push(stripAppBasePath(redirectUrl));
     } else if (onboardingCompleted !== "true") {
       // If onboarding is not completed, we'll handle it in the sign-in component
       // This function is called from there, so no navigation needed
@@ -249,7 +252,7 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
       console.log("Guest user will be directed to welcome page");
       // Only navigate if not on sign-in page, let sign-in page handle it
       if (pathname !== "/sign-in") {
-        window.location.href = "/welcome";
+        window.location.href = appPath("/welcome");
       }
     }
   };
@@ -331,7 +334,7 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
         console.log("Google auth - Redirecting directly to welcome page");
         // Small delay to ensure state is updated
         setTimeout(() => {
-          window.location.href = "/welcome";
+          window.location.href = appPath("/welcome");
         }, 300);
       }
       // Else let the sign-in component handle showing onboarding
@@ -388,7 +391,7 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
 
           try {
             // Call our email authentication API to send a magic link
-            const response = await fetch("/api/auth/email", {
+            const response = await fetch(appPath("/api/auth/email"), {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
@@ -451,7 +454,7 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
     if (!user) return false;
 
     try {
-      const response = await fetch("/api/user-data", {
+      const response = await fetch(appPath("/api/user-data"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -483,7 +486,7 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
 
     try {
       // console.log("Fetching user data for user:", user.id);
-      const response = await fetch(`/api/user-data?userId=${user.id}`);
+      const response = await fetch(appPath(`/api/user-data?userId=${user.id}`));
 
       if (!response.ok) {
         if (response.status === 404) {

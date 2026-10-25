@@ -13,6 +13,7 @@ import {
 } from "@/lib/backboardColor";
 import { WEDGE_GEOMETRY_CONFIG } from "@/lib/wedgeGeometry";
 import type { PanelRemainderMode } from "@/lib/panelLayout";
+import { appPath } from "@/lib/appPaths";
 
 interface MultiPanelPlywoodBaseProps {
   squareSize: number;
@@ -44,7 +45,7 @@ export function MultiPanelPlywoodBase({
   squareGapInches,
   backboardColor = null,
 }: MultiPanelPlywoodBaseProps) {
-  const texture = useTexture("/textures/plywood.jpg");
+  const texture = useTexture(appPath("/textures/plywood.jpg"));
   const showBackboardTexture = shouldUseBackboardTexture(
     backboardColor,
     showWoodGrain,

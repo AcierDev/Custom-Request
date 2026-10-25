@@ -17,6 +17,8 @@ export interface ColorSwatchProps {
   color: string;
   name?: string;
   index: number;
+  /** Paint strips keep details readable in a horizontally scrolling row. */
+  layout?: "strip" | "card";
   isSelected: boolean;
   /** True while this swatch is waiting for the batched delete to commit. */
   isPendingRemoval?: boolean;
@@ -25,14 +27,19 @@ export interface ColorSwatchProps {
   showBlendHint?: boolean;
   /** True when this color is a blend between two others (not primary). */
   mixed?: boolean;
-  /** "Convert to paint" closeness (0–100%). Shown under the name. */
+  /** Legacy 0–100 score for palettes saved before ΔE display metadata. */
   paintMatch?: number;
+  /** Actual perceptual ΔE2000 distance to the matched paint. */
+  paintMatchDeltaE?: number;
   /** "Convert to paint" original swatch hex (pre-grounding). Rendered as a
    *  small chip next to the paint so the match can be eyeballed. */
   paintSourceHex?: string;
+  /** Full identity of the color before cross-pool paint translation. */
+  paintSourceName?: string;
   /** Closest other-brand option when the default Lowe's match is poor. */
   paintBackup?: string;
   paintBackupMatch?: number;
+  paintBackupDeltaE?: number;
   paintLowesWarning?: boolean;
   /** "Convert to paint" mix recipe (parts of 2–3 paints) that lands
    *  closer than the single nearest can. Shown as a "Mix" pill. */
@@ -63,6 +70,7 @@ export interface AddColorButtonProps {
   /** Bulk-add (e.g. from pasted paint codes). Falls back to onColorAdd. */
   onColorsAdd?: (colors: { hex: string; name: string }[]) => void;
   isEmpty?: boolean;
+  compact?: boolean;
 }
 
 // Blending Guide component props

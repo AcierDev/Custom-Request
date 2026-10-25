@@ -12,6 +12,7 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { appPath } from "@/lib/appPaths";
 
 type AdminColor = {
   id?: string;
@@ -263,7 +264,7 @@ export default function AdminPalettesPage() {
       setError(null);
 
       try {
-        const response = await fetch("/api/admin/palettes", {
+        const response = await fetch(appPath("/api/admin/palettes"), {
           headers: {
             "x-user-email": userEmail,
           },
@@ -351,7 +352,7 @@ export default function AdminPalettesPage() {
             users.
           </p>
           <Button asChild className="mt-6">
-            <a href="/sign-in">Sign in</a>
+            <a href={appPath("/sign-in")}>Sign in</a>
           </Button>
         </div>
       </main>

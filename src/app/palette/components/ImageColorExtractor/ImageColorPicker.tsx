@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { Crosshair, Scan, ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import { appPath } from "@/lib/appPaths";
 
 const MIN_ZOOM_LEVEL = 0.5;
 const MAX_ZOOM_LEVEL = 5;
@@ -609,7 +610,7 @@ export function ImageColorPicker({
           >
             <img
               ref={imageRef}
-              src={imageUrl || "/placeholder.svg"}
+              src={appPath(imageUrl || "/placeholder.svg")}
               alt="Color picker"
               className="absolute inset-0 w-full h-full object-contain"
               style={{

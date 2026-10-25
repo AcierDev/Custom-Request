@@ -92,7 +92,7 @@ const CONTEXT_MENU_WIDTH_PX = 160;
 const CONTEXT_MENU_HEIGHT_PX = 40;
 const CONTEXT_MENU_VIEWPORT_GAP_PX = 8;
 const CONTEXT_MENU_ANCHOR_DIVISOR = 2;
-const DEFAULT_PATTERN_EDITOR_COLLAPSED = false;
+const DEFAULT_PATTERN_EDITOR_COLLAPSED = true;
 const EDITOR_SECTION_CLASS =
   "rounded-2xl border border-white/[0.07] bg-black/15 p-3 shadow-inner shadow-black/15";
 const EDITOR_SECTION_LABEL_CLASS =
@@ -120,6 +120,9 @@ interface ColorContextMenuState {
 
 export function PatternEditor({ className }: PatternEditorProps) {
   const selectedDesign = useCustomStore((s) => s.selectedDesign);
+  const selectDrawnPatternForCustomEditing = useCustomStore(
+    (s) => s.selectDrawnPatternForCustomEditing,
+  );
   const customPalette = useCustomStore((s) => s.customPalette);
   const removeCustomColor = useCustomStore((s) => s.removeCustomColor);
   const patternOverride = useCustomStore((s) => s.patternOverride);
@@ -310,6 +313,7 @@ export function PatternEditor({ className }: PatternEditorProps) {
     }
 
     setIsReplaceMode(true);
+    selectDrawnPatternForCustomEditing();
     setReplaceSourceIndex(null);
     setPinnedColorInfo(null);
     setIsPatternEditorActive(false);
@@ -318,6 +322,7 @@ export function PatternEditor({ className }: PatternEditorProps) {
   }, [
     cancelReplaceMode,
     isReplaceMode,
+    selectDrawnPatternForCustomEditing,
     setIsPatternEditorActive,
     setIsPatternColorReplaceActive,
     setPatternEditingMode,
@@ -388,6 +393,7 @@ export function PatternEditor({ className }: PatternEditorProps) {
         return;
       }
 
+      selectDrawnPatternForCustomEditing();
       setIsPatternEditorActive(true);
       setPatternEditingMode({
         tool: "color",
@@ -401,6 +407,7 @@ export function PatternEditor({ className }: PatternEditorProps) {
       renderedPatternColorIndexes,
       replaceRenderedPatternColors,
       replaceSourceIndex,
+      selectDrawnPatternForCustomEditing,
       setPatternEditingMode,
       setIsPatternEditorActive,
     ],
@@ -433,17 +440,24 @@ export function PatternEditor({ className }: PatternEditorProps) {
   const handleDirectionSelect = useCallback(
     (direction: SquareDirection) => {
       cancelReplaceMode();
+      selectDrawnPatternForCustomEditing();
       setIsPatternEditorActive(true);
       setPatternEditingMode({
         tool: "direction",
         selectedDirection: direction,
       });
     },
-    [cancelReplaceMode, setPatternEditingMode, setIsPatternEditorActive],
+    [
+      cancelReplaceMode,
+      selectDrawnPatternForCustomEditing,
+      setPatternEditingMode,
+      setIsPatternEditorActive,
+    ],
   );
 
   const handleEraserToggle = useCallback(() => {
     cancelReplaceMode();
+    selectDrawnPatternForCustomEditing();
     setIsPatternEditorActive(true);
     setPatternEditingMode(
       patternEditingMode.tool === "eraser"
@@ -453,12 +467,14 @@ export function PatternEditor({ className }: PatternEditorProps) {
   }, [
     cancelReplaceMode,
     patternEditingMode,
+    selectDrawnPatternForCustomEditing,
     setPatternEditingMode,
     setIsPatternEditorActive,
   ]);
 
   const handleHideToggle = useCallback(() => {
     cancelReplaceMode();
+    selectDrawnPatternForCustomEditing();
     setIsPatternEditorActive(true);
     setPatternEditingMode(
       patternEditingMode.tool === "hide" ? { tool: "none" } : { tool: "hide" },
@@ -466,6 +482,7 @@ export function PatternEditor({ className }: PatternEditorProps) {
   }, [
     cancelReplaceMode,
     patternEditingMode,
+    selectDrawnPatternForCustomEditing,
     setPatternEditingMode,
     setIsPatternEditorActive,
   ]);
@@ -526,6 +543,7 @@ export function PatternEditor({ className }: PatternEditorProps) {
                       setIsPatternEditorActive(false);
                       setPatternEditingMode({ tool: "none" });
                     } else {
+                      selectDrawnPatternForCustomEditing();
                       setIsPatternEditorActive(true);
                     }
                   }}

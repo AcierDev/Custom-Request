@@ -77,3 +77,6 @@ logs
 /public/wasm/replicad_with_exceptions.js
  
 mongo-backup
+
+# Website Blender render jobs (temporary, auto-expire)
+/output/blender-render/web-jobs/

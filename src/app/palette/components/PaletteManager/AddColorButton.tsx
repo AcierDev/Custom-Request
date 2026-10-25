@@ -23,6 +23,7 @@ import {
 } from "@/lib/paint";
 import { AddColorButtonProps } from "./types";
 import { PaintColorSearch } from "./PaintColorSearch";
+import { appPath } from "@/lib/appPaths";
 
 // Search spans the same current paint catalogs as the viewer. The Suggestions
 // tab further narrows these to verified, code-bearing brands.
@@ -120,6 +121,7 @@ export function AddColorButton({
   onColorAdd,
   onColorsAdd,
   isEmpty = false,
+  compact = false,
 }: AddColorButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [color, setColor] = useState("#6d28d9"); // Default to a nice purple
@@ -141,7 +143,7 @@ export function AddColorButton({
       try {
         const datasets = await Promise.all(
           ADD_COLOR_PAINT_SOURCES.map((url) =>
-            fetch(url).then((r) => (r.ok ? r.json() : []))
+            fetch(appPath(url)).then((r) => (r.ok ? r.json() : []))
           )
         );
         if (cancelled) return;
@@ -291,7 +293,9 @@ export function AddColorButton({
         className={cn(
           // Mobile: a short full-width touch bar; sm+: the original tall
           // slim column beside the paint strip.
-          isEmpty
+          compact
+            ? "h-16 min-w-0 flex-1"
+            : isEmpty
             ? "h-40 w-full sm:h-80"
             : "h-16 min-w-0 flex-1 sm:h-80 sm:w-20 sm:flex-none"
         )}
@@ -310,7 +314,7 @@ export function AddColorButton({
         }}
         className={cn(
           "group relative h-full w-full flex items-center justify-center gap-2 cursor-pointer overflow-hidden",
-          isEmpty ? "flex-col" : "flex-row sm:flex-col",
+          isEmpty ? "flex-col" : compact ? "flex-row" : "flex-row sm:flex-col",
           "text-slate-400 hover:text-blue-300 border-2 border-dashed border-white/15 hover:border-blue-400/70",
           "bg-white/5 hover:bg-blue-500/5 transition-colors duration-300",
           "rounded-lg"
@@ -335,7 +339,7 @@ export function AddColorButton({
           <span className="text-sm font-medium">Add your first color</span>
         )}
         {!isEmpty && (
-          <span className="text-xs font-medium tracking-wide opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300">
+          <span className={cn("text-xs font-medium tracking-wide transition-opacity duration-300", !compact && "sm:opacity-0 sm:group-hover:opacity-100")}>
             Add color
           </span>
         )}

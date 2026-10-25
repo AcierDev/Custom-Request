@@ -65,7 +65,8 @@ import { DEFAULT_LAMP_ON } from "./lampInteraction";
 const ROOM_REF_WIDTH = 40 * 0.5;
 const ROOM_REF_HEIGHT = 16 * 0.5;
 
-const CAMERA_FOV = 40;
+// Vertical FOV of a 50 mm lens on full frame (24 mm sensor height): 2·atan(12/50).
+const CAMERA_FOV = 27;
 const CAMERA_ZOOM = 1;
 const ART_SCENE_UNITS_PER_SQUARE = 0.5;
 // One finger orbits, two fingers pinch-zoom (dolly). Pan is disabled
@@ -628,6 +629,9 @@ export function GalleryArtScene({
 
         {onCaptureReady && (
           <FourAngleImageCapture
+            wallColor={currentWallColor}
+            timeOfDay={timeOfDay}
+            lampOn={lampOn}
             artWidthSquares={
               installedArtWidth / ART_SCENE_UNITS_PER_SQUARE
             }
@@ -665,7 +669,6 @@ export function GalleryArtScene({
         artCenter={artCenter}
         artWidth={installedArtWidth}
         pivotRatioRef={orbitPivotRatio}
-        showHint={!isMobile}
       />
       <SmoothWheelZoom
         minimumDistanceEpsilon={ROOM_COLLISION_MIN_OFFSET}

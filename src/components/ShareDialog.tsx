@@ -14,13 +14,12 @@ import { Button } from "@/components/ui/button";
 import { Copy, Check, Loader2, LinkIcon, ExternalLink } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { motion } from "framer-motion";
+import { appUrl } from "@/lib/appPaths";
 
 interface ShareDialogProps {
   isOpen: boolean;
   onClose: () => void;
 }
-
-const PROD_BUILDER_ORIGIN = "https://custom.everwood.shop";
 
 export function ShareDialog({ isOpen, onClose }: ShareDialogProps) {
   const createSharedDesign = useCustomStore(
@@ -53,7 +52,7 @@ export function ShareDialog({ isOpen, onClose }: ShareDialogProps) {
 
       if (result.success && result.shareId) {
         setBuilderLink(
-          result.shareUrl || `${PROD_BUILDER_ORIGIN}/shared/${result.shareId}`
+          result.shareUrl || appUrl(`/shared/${result.shareId}`)
         );
       } else {
         toast.error(result.error || "Failed to create shared design");

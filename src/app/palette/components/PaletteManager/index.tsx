@@ -61,6 +61,7 @@ import { toast } from "@/lib/toast";
 
 // Import sub-components
 import { ColorSwatch } from "./ColorSwatch";
+import { PaletteOverview } from "./PaletteOverview";
 import { SortableColorSwatch } from "./SortableColorSwatch";
 import { AddColorButton } from "./AddColorButton";
 import { BlendingGuide } from "./BlendingGuide";
@@ -145,6 +146,10 @@ const FIRST_SELECTED_INDEX = 0;
 const SECOND_SELECTED_INDEX = 1;
 const MISSING_COLOR_INDEX = -1;
 const DEFAULT_MIX_SCOPE: MixScope = "pair";
+const PAINT_MATCH_ROW_CLASS =
+  "grid grid-flow-col auto-cols-[minmax(8.5rem,1fr)] gap-1.5 overflow-x-auto pb-2";
+const PALETTE_STRIP_CLASS =
+  "flex flex-col gap-1.5 sm:flex-row sm:min-w-0 sm:basis-0 sm:gap-1";
 const FULL_HEX_COLOR_PATTERN = /^#[0-9A-Fa-f]{6}$/;
 
 export function PaletteManager() {
@@ -167,6 +172,13 @@ export function PaletteManager() {
     pieceSize,
     setPieceSize,
   } = useCustomStore();
+
+  const usePaintCards = customPalette.some(
+    (color) =>
+      typeof color.paintMatchDeltaE === "number" ||
+      typeof color.paintMatch === "number" ||
+      Boolean(color.paintMixRecipe || color.handMix),
+  );
 
   const [mixMode, setMixMode] = useState(false);
   const [mixScope, setMixScope] = useState<MixScope>(DEFAULT_MIX_SCOPE);
@@ -627,7 +639,8 @@ export function PaletteManager() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className={cn("space-y-5", customPalette.length > 0 && "pb-[calc(6rem+env(safe-area-inset-bottom))]")}>
+      <PaletteOverview colors={customPalette} />
       {/* Color Palette Display */}
       <div className="space-y-3">
         <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:p-4">
@@ -988,15 +1001,15 @@ export function PaletteManager() {
             items={customPalette.map((c) => c.id)}
             strategy={rectSortingStrategy}
           >
-            {/* Mobile: full-width color bands stacked vertically (one per
-                row) so each is a comfortable tap target and its label reads
-                left-to-right. Desktop (sm+): the original side-by-side
-                paint-strip row. */}
-            <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-stretch list-none p-0 m-0 sm:-mx-3 sm:w-[calc(100%_+_1.5rem)]">
+            {/* Paint matches stay in artwork order in a single scrollable row. */}
+            <div className={cn(
+              "flex w-full flex-col gap-3 list-none p-0 m-0",
+              !usePaintCards && "sm:flex-row sm:items-stretch sm:-mx-3 sm:w-[calc(100%_+_1.5rem)]",
+            )}>
               {customPalette.length > 0 && (
                 <div
-                  className="flex flex-col gap-1.5 sm:flex sm:flex-row sm:min-w-0 sm:basis-0 sm:gap-1"
-                  style={{ flexGrow: customPalette.length }}
+                  className={usePaintCards ? PAINT_MATCH_ROW_CLASS : PALETTE_STRIP_CLASS}
+                  style={usePaintCards ? undefined : { flexGrow: customPalette.length }}
                 >
                   <AnimatePresence>
                     {customPalette.map((color, index) => (
@@ -1007,15 +1020,19 @@ export function PaletteManager() {
                         name={color.name}
                         mixed={!!color.mix}
                         paintMatch={color.paintMatch}
+                        paintMatchDeltaE={color.paintMatchDeltaE}
                         paintSourceHex={color.paintSourceHex}
+                        paintSourceName={color.paintSourceName}
                         paintBackup={color.paintBackup}
                         paintBackupMatch={color.paintBackupMatch}
+                        paintBackupDeltaE={color.paintBackupDeltaE}
                         paintLowesWarning={color.paintLowesWarning}
                         paintMixRecipe={color.paintMixRecipe}
                         paintTotals={paintTotals}
                         paintAmount={paintAmount ?? undefined}
                         handMix={color.handMix}
                         index={index}
+                        layout={usePaintCards ? "card" : "strip"}
                         isPendingRemoval={pendingDeleteIdSet.has(color.id)}
                         isSelected={
                           (mixMode &&
@@ -1061,11 +1078,12 @@ export function PaletteManager() {
               {/* Mobile: Add + Mix share a full-width row of comfortable
                   touch targets. Desktop (sm:contents): they rejoin the
                   strip row as the original slim side columns. */}
-              <div className="flex w-full items-stretch gap-2 sm:contents">
+              <div className={cn("flex w-full items-stretch gap-2", !usePaintCards && "sm:contents")}>
                 <AddColorButton
                   onColorAdd={handleAddColor}
                   onColorsAdd={handleAddNamedColors}
                   isEmpty={customPalette.length === 0}
+                  compact={usePaintCards}
                 />
 
                 {/* Mix toggle - color selection for blending is only
@@ -1077,8 +1095,8 @@ export function PaletteManager() {
                     aria-pressed={mixMode}
                     onClick={toggleMixMode}
                     className={cn(
-                      "h-16 min-w-0 flex-1 sm:h-80 sm:w-20 sm:flex-none rounded-lg",
-                      "flex flex-row sm:flex-col items-center justify-center gap-2",
+                      "h-16 min-w-0 flex-1 rounded-lg flex items-center justify-center gap-2",
+                      !usePaintCards && "sm:h-80 sm:w-20 sm:flex-none sm:flex-col",
                       "cursor-pointer transition-colors duration-300 border-2",
                       mixMode
                         ? "bg-blue-600 hover:bg-blue-500 border-blue-400/60 text-white"

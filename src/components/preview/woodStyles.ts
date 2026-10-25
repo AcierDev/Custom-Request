@@ -51,9 +51,23 @@ export const GRAIN_ATLAS = {
   brightness: 0.9,
 } as const;
 
+// The viewer's square faces show painted end grain the way the photographed
+// pieces do: flat paint with broad, curved latewood rings that read through
+// soft raised relief rather than as dark lines. The relief atlas is generated
+// from the same ring model as the Blender renders
+// (scripts/blender/make_web_grain_atlas.py); it keeps GRAIN_ATLAS's 4×4 layout
+// so each square's grainIndex still picks one of the 14 cells. Exports
+// (Fusion textures) keep GRAIN_ATLAS.
+export const WEB_GRAIN = {
+  /** 4×4 relief atlas; white = raised latewood ring. */
+  texture: "/textures/grain-relief-atlas.png",
+  /** Faint color modulation so paint stays flat; rings come from the relief. */
+  opacity: 0.08,
+} as const;
+
 export const GRAIN_RELIEF = {
-  /** Negative inverts the pale earlywood bands into shallow recesses. */
-  bumpScale: -0.16,
+  /** Positive raises the white latewood rings of WEB_GRAIN into soft ridges. */
+  bumpScale: 0.08,
 } as const;
 
 export const SIDE_GRAIN = {

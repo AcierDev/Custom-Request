@@ -57,6 +57,7 @@ import {
   normalizeSquareGapInches,
 } from "@/lib/squareGap";
 import { WEDGE_GEOMETRY_CONFIG } from "@/lib/wedgeGeometry";
+import { COASTAL_DREAM_PHOTO_DIRECTIONS } from "./coastalDreamDirections";
 
 // Shown when Custom is selected with no palette colors and no drawn
 // pattern: every square renders this single dark blue.
@@ -610,6 +611,16 @@ function GeometricPatternComponent({
   // Build a flat list of per-square instance descriptors. One pass; the
   // GPU work (transform/colour/grain) is carried as instance attributes
   // by <InstancedSquares /> rather than as ~2500 React meshes.
+  // The standard Coastal Dream layout shows the real piece's tile directions.
+  const usePhotoDirections =
+    selectedDesign === ItemDesigns.Coastal &&
+    !hasDrawnPattern &&
+    !isReversed &&
+    !isRotated &&
+    orientation === "horizontal" &&
+    currentGridWidth === COASTAL_DREAM_PHOTO_DIRECTIONS.width &&
+    currentGridHeight === COASTAL_DREAM_PHOTO_DIRECTIONS.height;
+
   const {
     instances,
     effectivePatternColorIndexes,
@@ -639,9 +650,8 @@ function GeometricPatternComponent({
         let colorIndex: number | undefined;
 
         if (hasDrawnPattern && drawnPatternGrid && drawnPatternGridSize) {
-          // Y-axis is flipped: drawn pattern's bottom row is preview's top row.
-          // Rendering loop for y goes from 0 (top of preview) to currentGridHeight - 1 (bottom of preview).
-          // drawnPatternGridSize.height is the actual height of the stored grid.
+          // Stored rows run top-to-bottom, while render-space y=0 is the
+          // bottom row. Flip render y into the stored row coordinate.
           const accessY = drawnPatternGridSize.height - 1 - y;
 
           if (
@@ -704,6 +714,12 @@ function GeometricPatternComponent({
           isHorizontal,
           rotationSeedsRef.current!,
         );
+        if (
+          usePhotoDirections &&
+          COASTAL_DREAM_PHOTO_DIRECTIONS.flippedSquares.has(patternKey)
+        ) {
+          rotation += Math.PI;
+        }
         const directionOverride = patternDirectionOverride[patternKey];
         if (directionOverride !== undefined) {
           rotation = getSquareDirectionRotation(
@@ -800,6 +816,7 @@ function GeometricPatternComponent({
     patternRotationZ,
     currentGridWidth,
     currentGridHeight,
+    usePhotoDirections,
   ]);
 
   useEffect(() => {

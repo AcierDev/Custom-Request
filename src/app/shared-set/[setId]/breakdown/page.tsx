@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ExternalLink, Loader2, Palette } from "lucide-react";
+import { appPath } from "@/lib/appPaths";
 type ColorBreakdownDesign = {
   index: number;
   label: string | null;
@@ -56,7 +57,9 @@ export default function SetColorBreakdownPage() {
         setLoading(true);
         setError(null);
         const res = await fetch(
-          `/api/shared-design-sets?id=${encodeURIComponent(setId)}&breakdown=colors`
+          appPath(
+            `/api/shared-design-sets?id=${encodeURIComponent(setId)}&breakdown=colors`,
+          ),
         );
         const json = await res.json();
         if (cancelled) return;
@@ -137,7 +140,7 @@ export default function SetColorBreakdownPage() {
               </Link>
             </Button>
             <a
-              href={setUrl}
+              href={appPath(setUrl)}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 text-sm text-primary hover:underline"

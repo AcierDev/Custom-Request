@@ -1,6 +1,9 @@
 import { createHash, randomBytes } from "crypto";
 import { v4 as uuidv4 } from "uuid";
 import { getMongoDb } from "./mongodb";
+import { appUrl } from "./appPaths.ts";
+
+const DEFAULT_MAGIC_LINK_ORIGIN = "http://localhost:3000";
 
 // Token expiration time in milliseconds (15 minutes)
 const TOKEN_EXPIRATION = 15 * 60 * 1000;
@@ -242,10 +245,10 @@ export function hashToken(token: string): string {
  * Generates the magic link URL for email authentication
  */
 export function generateMagicLink(token: string, email: string): string {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  const url = `${baseUrl}/api/auth/email/callback?token=${encodeURIComponent(
-    token
-  )}&email=${encodeURIComponent(email)}`;
+  const url = appUrl(
+    `/api/auth/email/callback?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}`,
+    DEFAULT_MAGIC_LINK_ORIGIN,
+  );
 
   logDebug("info", "Magic link generated", {
     token: { value: token },

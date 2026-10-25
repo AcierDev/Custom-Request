@@ -92,8 +92,8 @@ export function SharedImageSaveAction({
             Save artwork image?
           </AlertDialogTitle>
           <AlertDialogDescription className="text-slate-300">
-            This creates one image showing the artwork from four angles and
-            saves it to your device.
+            This creates one detailed render of your artwork in a realistic
+            room and saves it to your device.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter className="grid grid-cols-2 gap-2 sm:space-x-0">

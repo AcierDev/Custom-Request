@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   decompressJsonFromUrl,
   extractStateFromShortUrl,
+  generateShareableUrl,
   generateShortShareableUrl,
 } from "./urlUtils.ts";
 
@@ -17,6 +18,18 @@ const LONG_PANEL_REMAINDER_MODE_KEY = "panelRemainderMode";
 const SELECTED_WALL_COLOR = "#5f6f80";
 const SHORT_WALL_COLOR_KEY = "wc";
 const LONG_WALL_COLOR_KEY = "wallColor";
+const TEST_BASE_PATH = process.env.NEXT_PUBLIC_APP_BASE_PATH || "";
+
+test("generates compressed share links beneath the configured app path", () => {
+  const state = { squareGapInches: SELECTED_SQUARE_GAP_INCHES };
+  const longUrl = new URL(generateShareableUrl(state), TEST_ORIGIN);
+  const shortUrl = new URL(generateShortShareableUrl(state), TEST_ORIGIN);
+
+  assert.equal(longUrl.pathname, `${TEST_BASE_PATH}/order`);
+  assert.equal(shortUrl.pathname, `${TEST_BASE_PATH}/order`);
+  assert.ok(longUrl.searchParams.get("share"));
+  assert.ok(shortUrl.searchParams.get(SHORT_STATE_PARAM));
+});
 
 test("round-trips square spacing through the compact share URL", () => {
   const generatedUrl = generateShortShareableUrl({

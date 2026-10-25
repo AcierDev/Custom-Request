@@ -21,6 +21,7 @@ import {
   type ArtSnapshot,
 } from "./artSnapshot";
 import { buildExportScene } from "./buildExportScene";
+import { appPath } from "../appPaths.ts";
 
 const GRAIN_ATLAS_URL = "/textures/grain-atlas.png";
 
@@ -70,7 +71,7 @@ function loadImage(url: string): Promise<HTMLImageElement> {
     img.crossOrigin = "anonymous";
     img.onload = () => resolve(img);
     img.onerror = () => reject(new Error(`AR: failed to load ${url}`));
-    img.src = url;
+    img.src = appPath(url);
   });
 }
 

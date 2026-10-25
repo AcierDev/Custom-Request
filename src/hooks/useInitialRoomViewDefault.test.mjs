@@ -4,6 +4,7 @@ import test from "node:test";
 const MOBILE_VIEWPORT_WIDTH_PX = 390;
 const MOBILE_BREAKPOINT_PX = 1024;
 const DESKTOP_VIEWPORT_WIDTH_PX = 1440;
+const TEST_BASE_PATH = process.env.NEXT_PUBLIC_APP_BASE_PATH || "";
 
 let applyInitialRoomViewDefault;
 let resolveHydratedRoomView;
@@ -102,6 +103,21 @@ test("preserves a later user Room View choice during rehydration", () => {
       hasUserSelectedRoomView: true,
       viewportWidth: MOBILE_VIEWPORT_WIDTH_PX,
       pathname: "/viewer",
+    }),
+    false,
+  );
+});
+
+test("keeps mobile Room View off for a viewer hosted beneath a base path", () => {
+  assertHelperLoaded();
+
+  assert.equal(
+    resolveHydratedRoomView({
+      persistedShowRoom: true,
+      currentShowRoom: true,
+      hasUserSelectedRoomView: false,
+      viewportWidth: MOBILE_VIEWPORT_WIDTH_PX,
+      pathname: `${TEST_BASE_PATH}/viewer`,
     }),
     false,
   );

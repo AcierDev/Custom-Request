@@ -1,3 +1,5 @@
+import { stripAppBasePath } from "./appPaths.ts";
+
 const SHARED_ROUTE_PREFIX = "/shared";
 
 export const DATA_SYNC_ROUTE_SCOPE = {
@@ -11,6 +13,6 @@ export type DataSyncRouteScope =
 export const getDataSyncRouteScope = (
   pathname: string | null,
 ): DataSyncRouteScope =>
-  pathname?.startsWith(SHARED_ROUTE_PREFIX)
+  pathname !== null && stripAppBasePath(pathname).startsWith(SHARED_ROUTE_PREFIX)
     ? DATA_SYNC_ROUTE_SCOPE.shared
     : DATA_SYNC_ROUTE_SCOPE.app;

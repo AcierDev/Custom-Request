@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, Check, Loader2, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { appPath } from "@/lib/appPaths";
 import {
   BRAND_OPTIONS,
   LOWES_MATCHES,
@@ -46,7 +47,7 @@ function loadAllPaints(): Promise<PaintColor[]> {
   if (!paintsPromise) {
     paintsPromise = Promise.all(
       PAINT_SOURCES.map((u) =>
-        fetch(u).then((r) => {
+        fetch(appPath(u)).then((r) => {
           if (!r.ok) throw new Error(`paint fetch ${r.status}`);
           return r.json() as Promise<PaintColor[]>;
         })

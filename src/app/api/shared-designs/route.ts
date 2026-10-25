@@ -5,18 +5,12 @@ import {
   localSharedDesignStore,
 } from "@/lib/localSharedDesignStore";
 import { nanoid } from "nanoid";
+import { appUrl } from "@/lib/appPaths";
 
 // Collection name for shared designs
 const SHARED_DESIGNS_COLLECTION = "sharedDesigns";
-const DEFAULT_PRODUCTION_SHARE_ORIGIN = "https://custom.everwood.shop";
 const USE_LOCAL_SHARED_DESIGN_STORE =
   process.env.NODE_ENV !== "production" && !process.env.MONGODB_URI;
-
-const getShareOrigin = (request: NextRequest): string =>
-  process.env.NEXT_PUBLIC_APP_URL ||
-  (USE_LOCAL_SHARED_DESIGN_STORE
-    ? request.nextUrl.origin
-    : DEFAULT_PRODUCTION_SHARE_ORIGIN);
 
 export async function POST(request: NextRequest) {
   try {
@@ -75,7 +69,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       shareId,
-      shareUrl: `${getShareOrigin(request)}/shared/${shareId}`,
+      shareUrl: appUrl(
+        `/shared/${shareId}`,
+        USE_LOCAL_SHARED_DESIGN_STORE ? request.nextUrl.origin : undefined,
+      ),
     });
   } catch (error) {
     console.error("Error creating shared design:", error);

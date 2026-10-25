@@ -1,0 +1,11 @@
+Everwood photograph room assets
+
+Glam Velvet Sofa: © 2021 Wayfair, LLC. Eric Chadwick.
+Creative Commons Attribution 4.0 International: https://creativecommons.org/licenses/by/4.0/
+Source: https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/GlamVelvetSofa/glTF-Binary/GlamVelvetSofa.glb
+Adaptation: Champagne variant; embedded lights excluded; uniformly scaled and placed in room.
+
+Photographed props, floor/plaster maps and captured daylight: Poly Haven, CC0 1.0.
+https://polyhaven.com/license
+Additional individual book covers, bindings and matted landscape print: Everwood, CC0 1.0.
+See manifest.json for individual asset sources and hashes.

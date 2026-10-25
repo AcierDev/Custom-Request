@@ -1,5 +1,6 @@
 import LZString from "lz-string";
 import { PANEL_REMAINDER_MODES } from "./panelLayout.ts";
+import { appUrl } from "./appPaths.ts";
 
 const {
   compressToEncodedURIComponent,
@@ -60,8 +61,10 @@ export const decompressJsonFromUrl = (compressedString: string): string => {
 export const generateShareableUrl = (stateData: object): string => {
   const jsonString = JSON.stringify(stateData);
   const compressed = compressJsonForUrl(jsonString);
-  const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
-  return `${baseUrl}/order?share=${compressed}`;
+  return appUrl(
+    `/order?share=${compressed}`,
+    typeof window !== "undefined" ? window.location.origin : undefined,
+  );
 };
 
 /**
@@ -239,8 +242,10 @@ export const generateShortShareableUrl = (stateData: any): string => {
 
   const jsonString = JSON.stringify(minimalState);
   const compressed = compressJsonForUrl(jsonString);
-  const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
-  return `${baseUrl}/order?s=${compressed}`;
+  return appUrl(
+    `/order?s=${compressed}`,
+    typeof window !== "undefined" ? window.location.origin : undefined,
+  );
 };
 
 /**

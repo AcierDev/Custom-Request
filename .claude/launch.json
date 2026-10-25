@@ -1,0 +1,16 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "custom-request-dev",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["next", "dev", "-p", "3000"],
+      "port": 3000
+    },
+    {
+      "name": "custom-request-dev-running",
+      "url": "http://localhost:3000",
+      "port": 3000
+    }
+  ]
+}

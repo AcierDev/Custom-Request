@@ -27,12 +27,13 @@ const EXPECTED_LEGACY_FINISH = {
   metalness: 0.05,
   roughness: 0.8,
 };
-const EXPECTED_GRAIN_OPACITY = 0.4;
+const EXPECTED_GRAIN_OPACITY = 0.08;
+const EXPECTED_SIDE_GRAIN_OPACITY = 0.4;
 const EXPECTED_GRAIN_CELL_SAMPLE = 0.94;
 const EXPECTED_SIDE_GRAIN_REPEAT = [0.2, 0.2];
 const VISIBLE_GRAIN_BUMP_SCALE_RANGE = {
-  min: -0.25,
-  max: -0.15,
+  min: 0.02,
+  max: 0.3,
 };
 const EXPECTED_ENVIRONMENT_BLUR = 0.04;
 const VERTEX_UV_CHUNK = "#include <uv_vertex>";
@@ -72,7 +73,7 @@ test("default artwork uses the legacy tone-mapped wood finish", () => {
   environmentMap.dispose();
 });
 
-test("default grained wood uses the atlas as visible inverted relief", () => {
+test("default grained wood uses the atlas as visible raised relief", () => {
   const texture = new THREE.Texture();
   const material = createArtMaterial({
     ...BASE_OPTIONS,
@@ -152,6 +153,10 @@ test("legacy grain shader combines full-size front and side grain", () => {
     shader.uniforms.uCellSample.value,
     EXPECTED_GRAIN_CELL_SAMPLE,
   );
+  assert.equal(
+    shader.uniforms.uSideGrainOpacity.value,
+    EXPECTED_SIDE_GRAIN_OPACITY,
+  );
   assert.equal(shader.uniforms.uSideGrainMap.value, sideTexture);
   assert.deepEqual(
     shader.uniforms.uSideGrainRepeat.value.toArray(),
@@ -171,7 +176,7 @@ test("legacy grain shader combines full-size front and side grain", () => {
   assert.match(shader.fragmentShader, /sideGrainTexel/);
   assert.match(
     shader.fragmentShader,
-    /mix\(\s*sideGrainTexel,\s*frontGrainTexel,\s*vGrainMask\s*\)/,
+    /mix\(\s*mix\([^;]*sideGrainTexel,\s*uSideGrainOpacity\s*\),\s*mix\([^;]*frontGrainTexel,\s*uGrainOpacity\s*\),\s*vGrainMask\s*\)/,
   );
   assert.match(shader.fragmentShader, /#include <roughnessmap_fragment>/);
   assert.doesNotMatch(shader.fragmentShader, /uBrightness/);

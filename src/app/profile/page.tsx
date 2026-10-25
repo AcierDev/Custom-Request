@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useAuth } from "@/lib/auth-context";
+import { appPath } from "@/lib/appPaths";
 import { useCustomStore } from "@/store/customStore";
 import {
   User,
@@ -315,7 +316,7 @@ export default function ProfilePage() {
               >
                 <Avatar className="h-16 w-16 shrink-0 ring-2 ring-primary/20 ring-offset-2 ring-offset-background transition-shadow duration-300 hover:ring-primary/30 sm:h-20 sm:w-20">
                   <AvatarImage
-                    src={user.image || ""}
+                    src={appPath(user.image || "")}
                     alt={user.name || user.email}
                   />
                   <AvatarFallback className="text-2xl bg-primary/10 text-primary font-semibold">

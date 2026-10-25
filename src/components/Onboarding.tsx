@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
+import { appPath } from "@/lib/appPaths";
 import {
   ChevronRight,
   X,
@@ -371,7 +372,7 @@ export function Onboarding() {
     setTimeout(() => {
       console.log("Redirecting to welcome page directly");
       // Use direct navigation for most reliable redirection
-      window.location.href = "/welcome";
+      window.location.href = appPath("/welcome");
     }, 300);
   };
 
@@ -393,7 +394,7 @@ export function Onboarding() {
     setTimeout(() => {
       console.log("Redirecting to welcome page directly");
       // Use direct navigation for most reliable redirection
-      window.location.href = "/welcome";
+      window.location.href = appPath("/welcome");
     }, 300);
   };
 

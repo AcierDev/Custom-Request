@@ -10,6 +10,14 @@ import { Toaster } from "sonner";
 import { AuthProvider } from "@/lib/auth-context";
 import { AuthContextProvider } from "@/components/AuthContextProvider";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { APP_BASE_PATH, appPath } from "@/lib/appPaths";
+
+const CUSTOM_SPEED_INSIGHTS_PROPS = APP_BASE_PATH
+  ? {
+      scriptSrc: appPath("/_vercel/speed-insights/script.js"),
+      endpoint: appPath("/_vercel/speed-insights/vitals"),
+    }
+  : {};
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -31,7 +39,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   if (pathname?.startsWith("/shared")) {
     return (
       <div className="h-dvh w-full overflow-hidden bg-gray-900 text-gray-100">
-        <SpeedInsights />
+        <SpeedInsights {...CUSTOM_SPEED_INSIGHTS_PROPS} />
         {children}
       </div>
     );
@@ -41,7 +49,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   // collapsed-width rail.
   return (
     <div className="flex h-dvh overflow-hidden bg-gray-900 text-gray-100">
-      <SpeedInsights />
+      <SpeedInsights {...CUSTOM_SPEED_INSIGHTS_PROPS} />
       <MobileWarning />
       <Navbar />
       <div className="flex-1 overflow-auto no-scrollbar border-t border-sky-400/40">

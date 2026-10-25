@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { appUrl } from "@/lib/appPaths";
 
 // Facebook OAuth configuration
 const FACEBOOK_CLIENT_ID = process.env.NEXT_PUBLIC_FACEBOOK_CLIENT_ID || "";
 const FACEBOOK_CLIENT_SECRET = process.env.FACEBOOK_CLIENT_SECRET || "";
 const FACEBOOK_REDIRECT_URI =
-  process.env.NEXT_PUBLIC_FACEBOOK_REDIRECT_URI ||
-  "http://localhost:3000/api/auth/facebook/callback";
+  process.env.NEXT_PUBLIC_FACEBOOK_REDIRECT_URI || "";
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,13 +17,13 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error("Facebook auth error:", error);
       return NextResponse.redirect(
-        new URL("/sign-in?error=facebook_auth_error", request.url)
+        appUrl("/sign-in?error=facebook_auth_error", request.nextUrl.origin)
       );
     }
 
     if (!code) {
       return NextResponse.redirect(
-        new URL("/sign-in?error=no_code", request.url)
+        appUrl("/sign-in?error=no_code", request.nextUrl.origin)
       );
     }
 
@@ -35,7 +35,11 @@ export async function GET(request: NextRequest) {
     );
     tokenUrl.searchParams.set("client_id", FACEBOOK_CLIENT_ID);
     tokenUrl.searchParams.set("client_secret", FACEBOOK_CLIENT_SECRET);
-    tokenUrl.searchParams.set("redirect_uri", FACEBOOK_REDIRECT_URI);
+    tokenUrl.searchParams.set(
+      "redirect_uri",
+      FACEBOOK_REDIRECT_URI ||
+        appUrl("/api/auth/facebook/callback", request.nextUrl.origin),
+    );
     tokenUrl.searchParams.set("code", code);
 
     const tokenResponse = await fetch(tokenUrl, {
@@ -47,7 +51,7 @@ export async function GET(request: NextRequest) {
       const error = await tokenResponse.text();
       console.error("Token exchange error:", error);
       return NextResponse.redirect(
-        new URL("/sign-in?error=token_exchange", request.url)
+        appUrl("/sign-in?error=token_exchange", request.nextUrl.origin)
       );
     }
 
@@ -65,7 +69,7 @@ export async function GET(request: NextRequest) {
       const error = await userInfoResponse.text();
       console.error("User info error:", error);
       return NextResponse.redirect(
-        new URL("/sign-in?error=user_info", request.url)
+        appUrl("/sign-in?error=user_info", request.nextUrl.origin)
       );
     }
 
@@ -85,12 +89,12 @@ export async function GET(request: NextRequest) {
 
     // Redirect to a handler page that will store the user in localStorage
     return NextResponse.redirect(
-      new URL(`/auth/facebook-handler?token=${tempToken}`, request.url)
+      appUrl(`/auth/facebook-handler?token=${tempToken}`, request.nextUrl.origin)
     );
   } catch (error) {
     console.error("Facebook callback error:", error);
     return NextResponse.redirect(
-      new URL("/sign-in?error=server_error", request.url)
+      appUrl("/sign-in?error=server_error", request.nextUrl.origin)
     );
   }
 }

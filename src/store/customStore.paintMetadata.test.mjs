@@ -78,14 +78,18 @@ const MIXED_ID = "mixed";
 const MIX_POSITION = 0.5;
 const POOR_MATCH_PERCENT = 97;
 const BETTER_MATCH_PERCENT = 100;
+const POOR_MATCH_DELTA_E = 3;
+const BETTER_MATCH_DELTA_E = 0;
 
 const groundedMetadata = {
   name: PAINT_NAME,
   paintMatch: POOR_MATCH_PERCENT,
+  paintMatchDeltaE: POOR_MATCH_DELTA_E,
   paintSourceHex: ORIGINAL_HEX,
   paintSourceName: ORIGINAL_NAME,
   paintBackup: "Behr — Fuchsia Kiss",
   paintBackupMatch: BETTER_MATCH_PERCENT,
+  paintBackupDeltaE: BETTER_MATCH_DELTA_E,
   paintLowesWarning: true,
   paintMixRecipe: {
     components: [],
@@ -114,7 +118,9 @@ test("a direct hex edit restores the pre-paint name and clears paint metadata", 
   assert.equal(color.hex, EDITED_HEX);
   assert.equal(color.name, ORIGINAL_NAME);
   assert.equal(color.paintMatch, undefined);
+  assert.equal(color.paintMatchDeltaE, undefined);
   assert.equal(color.paintBackup, undefined);
+  assert.equal(color.paintBackupDeltaE, undefined);
   assert.equal(color.paintLowesWarning, undefined);
   assert.equal(color.paintMixRecipe, undefined);
 });
@@ -146,7 +152,9 @@ test("reblending restores a descendant's name and clears stale paint metadata", 
     .customPalette.find(({ id }) => id === MIXED_ID);
   assert.equal(mixed?.name, ORIGINAL_NAME);
   assert.equal(mixed?.paintMatch, undefined);
+  assert.equal(mixed?.paintMatchDeltaE, undefined);
   assert.equal(mixed?.paintBackup, undefined);
+  assert.equal(mixed?.paintBackupDeltaE, undefined);
   assert.equal(mixed?.paintLowesWarning, undefined);
   assert.equal(mixed?.paintMixRecipe, undefined);
   assert.deepEqual(mixed?.mix, {

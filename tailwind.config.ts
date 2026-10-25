@@ -8,6 +8,8 @@ const config: Config = {
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/lib/**/*.{js,ts,jsx,tsx,mdx}",
     "./node_modules/streamdown/dist/*.js",
+    // iCloud conflict copies are not app sources and may be offloaded.
+    "!./src/**/* [0-9]*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
     extend: {

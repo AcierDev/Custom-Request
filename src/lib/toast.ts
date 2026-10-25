@@ -1,4 +1,5 @@
 import { toast as sonnerToast } from "sonner";
+import { stripAppBasePath } from "./appPaths.ts";
 
 export const PALETTE_ROUTE_PATH = "/palette";
 const PALETTE_ROUTE_PREFIX = `${PALETTE_ROUTE_PATH}/`;
@@ -6,9 +7,13 @@ const SUPPRESSED_SUCCESS_TOAST_ID = "palette-success-toast-suppressed";
 
 export const shouldSuppressSuccessToast = (
   pathname: string | null | undefined,
-): boolean =>
-  pathname === PALETTE_ROUTE_PATH ||
-  pathname?.startsWith(PALETTE_ROUTE_PREFIX) === true;
+): boolean => {
+  const routePath = pathname == null ? pathname : stripAppBasePath(pathname);
+  return (
+    routePath === PALETTE_ROUTE_PATH ||
+    routePath?.startsWith(PALETTE_ROUTE_PREFIX) === true
+  );
+};
 
 const getCurrentPathname = (): string | undefined =>
   typeof window === "undefined" ? undefined : window.location.pathname;

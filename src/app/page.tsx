@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { appPath } from "@/lib/appPaths";
 
 export default function Home() {
   const { user, isLoading } = useAuth();
@@ -53,7 +54,7 @@ export default function Home() {
           // Clear any existing welcome_initial_render flag
           sessionStorage.removeItem("welcome_initial_render");
           console.log("Using window.location.replace for cleaner navigation");
-          window.location.replace("/welcome");
+          window.location.replace(appPath("/welcome"));
         } else {
           // User has not completed onboarding, send to sign-in
           console.log("Redirecting to sign-in for onboarding");

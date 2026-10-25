@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCollection } from "@/lib/mongodb";
 import { nanoid } from "nanoid";
+import {
+  USE_LOCAL_SHARED_STORES,
+  localSharedDesignSetStore,
+} from "@/lib/localSharedDesignSetStore";
 
 // Collection name for shared design sets
 const SHARED_DESIGN_SETS_COLLECTION = "sharedDesignSets";
 const VIEWER_BASE_URL = "http://viewer.everwoodus.com";
+const SHARED_DESIGN_SET_ID_LENGTH = 12;
 
 type SharedDesignSetItem = {
   designData: Record<string, unknown>;
@@ -41,9 +46,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (USE_LOCAL_SHARED_STORES) {
+      const localSet = localSharedDesignSetStore.create({
+        designs: normalizedDesigns.map((d) => ({
+          designData: d.designData,
+          label: d.label ?? null,
+        })),
+        userId,
+        email,
+      });
+      return NextResponse.json({
+        setId: localSet.setId,
+        setUrl: `${VIEWER_BASE_URL}/?setId=${localSet.setId}`,
+      });
+    }
+
     const collection = await getCollection(SHARED_DESIGN_SETS_COLLECTION);
 
-    const setId = nanoid(12);
+    const setId = nanoid(SHARED_DESIGN_SET_ID_LENGTH);
     const sharedDesignSet = {
       setId,
       designs: normalizedDesigns,
@@ -96,7 +116,10 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const setId = searchParams.get("id");
 
-    const collection = await getCollection(SHARED_DESIGN_SETS_COLLECTION);
+    // Local dev without Mongo: serve sets from the in-memory store.
+    const collection = USE_LOCAL_SHARED_STORES
+      ? null
+      : await getCollection(SHARED_DESIGN_SETS_COLLECTION);
 
     // List last 10 shared sets when no id is provided
     if (!setId) {
@@ -104,6 +127,15 @@ export async function GET(request: NextRequest) {
         Math.max(1, parseInt(searchParams.get("limit") ?? "10", 10)),
         50
       );
+      if (!collection) {
+        const items = localSharedDesignSetStore.list(limit).map((s) => ({
+          setId: s.setId,
+          link: `${VIEWER_BASE_URL}/?setId=${s.setId}`,
+          createdAt: s.createdAt,
+          accessCount: s.accessCount,
+        }));
+        return NextResponse.json({ sets: items, count: items.length });
+      }
       const cursor = collection
         .find(
           {},
@@ -129,7 +161,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch single set by id
-    const sharedSet = await collection.findOne({ setId });
+    const sharedSet = collection
+      ? await collection.findOne({ setId })
+      : localSharedDesignSetStore.get(setId);
 
     if (!sharedSet) {
       return NextResponse.json(
@@ -140,7 +174,8 @@ export async function GET(request: NextRequest) {
 
     const wantBreakdown = searchParams.get("breakdown") === "colors";
 
-    if (!wantBreakdown) {
+    // Local sets don't track access; only Mongo records count views.
+    if (!wantBreakdown && collection) {
       await collection.updateOne(
         { setId },
         {

@@ -4,8 +4,9 @@ import test from "node:test";
 import { toast as sonnerToast } from "sonner";
 import { toast } from "./toast.ts";
 
-const PALETTE_PATH = "/palette";
-const VIEWER_PATH = "/viewer";
+const TEST_BASE_PATH = process.env.NEXT_PUBLIC_APP_BASE_PATH || "";
+const PALETTE_PATH = `${TEST_BASE_PATH}/palette`;
+const VIEWER_PATH = `${TEST_BASE_PATH}/viewer`;
 const PALETTE_SUCCESS_MESSAGE = "palette success must stay hidden";
 const PALETTE_ERROR_MESSAGE = "palette error must stay visible";
 const VIEWER_SUCCESS_MESSAGE = "viewer success must stay visible";

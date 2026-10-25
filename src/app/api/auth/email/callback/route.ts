@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateToken, invalidateToken } from "@/lib/token";
 import { sendEmail } from "@/lib/email";
+import { appUrl } from "@/lib/appPaths";
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,7 +12,7 @@ export async function GET(request: NextRequest) {
 
     if (!token || !email) {
       return NextResponse.redirect(
-        new URL("/sign-in?error=no_token", request.url)
+        appUrl("/sign-in?error=no_token", request.nextUrl.origin)
       );
     }
 
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest) {
 
     if (!tokenData) {
       return NextResponse.redirect(
-        new URL("/sign-in?error=invalid_token", request.url)
+        appUrl("/sign-in?error=invalid_token", request.nextUrl.origin)
       );
     }
 
@@ -53,17 +54,17 @@ export async function GET(request: NextRequest) {
 
     // Redirect to a special page that will handle setting up the user session
     return NextResponse.redirect(
-      new URL(
+      appUrl(
         `/auth/email/complete?user=${encodeURIComponent(
           JSON.stringify(userObject)
         )}`,
-        request.url
+        request.nextUrl.origin
       )
     );
   } catch (error) {
     console.error("Email verification error:", error);
     return NextResponse.redirect(
-      new URL("/sign-in?error=processing", request.url)
+      appUrl("/sign-in?error=processing", request.nextUrl.origin)
     );
   }
 }

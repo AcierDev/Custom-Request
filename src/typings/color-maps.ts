@@ -1,4 +1,5 @@
 import { ItemDesigns } from "./types";
+import { appPath } from "../lib/appPaths.ts";
 
 export const COASTAL_COLORS: Record<number, { hex: string; name: string }> = {
   1: { hex: "#B0744A", name: "Santa Fe" },
@@ -252,20 +253,20 @@ export const DESIGN_COLORS: Record<
 };
 
 export const DESIGN_IMAGES: Record<ItemDesigns, string> = {
-  [ItemDesigns.Custom]: "/images/designs/custom.png",
-  [ItemDesigns.Abyss]: "/images/designs/abyss.webp",
-  [ItemDesigns.Aloe]: "/images/designs/aloe.webp",
-  [ItemDesigns.Amber]: "/images/designs/amber.webp",
-  [ItemDesigns.Autumn]: "/images/designs/autumn.webp",
-  [ItemDesigns.Coastal]: "/images/designs/coastal.webp",
-  [ItemDesigns.Elemental]: "/images/designs/elemental.webp",
-  [ItemDesigns.Forest]: "/images/designs/forest.webp",
-  [ItemDesigns.Oceanic_Harmony]: "/images/designs/ft5.webp",
-  [ItemDesigns.Mirage]: "/images/designs/mirage.webp",
-  [ItemDesigns.Sapphire]: "/images/designs/sapphire.webp",
-   [ItemDesigns.Amethyst]: "/images/designs/amethyst.webp",
-  [ItemDesigns.Spectrum]: "/images/designs/spectrum.webp",
-  [ItemDesigns.Tidal]: "/images/designs/tidal.webp",
-  [ItemDesigns.Timberline]: "/images/designs/timberline.webp",
-  [ItemDesigns.Winter]: "/images/designs/winter.webp",
+  [ItemDesigns.Custom]: appPath("/images/designs/custom.png"),
+  [ItemDesigns.Abyss]: appPath("/images/designs/abyss.webp"),
+  [ItemDesigns.Aloe]: appPath("/images/designs/aloe.webp"),
+  [ItemDesigns.Amber]: appPath("/images/designs/amber.webp"),
+  [ItemDesigns.Autumn]: appPath("/images/designs/autumn.webp"),
+  [ItemDesigns.Coastal]: appPath("/images/designs/coastal.webp"),
+  [ItemDesigns.Elemental]: appPath("/images/designs/elemental.webp"),
+  [ItemDesigns.Forest]: appPath("/images/designs/forest.webp"),
+  [ItemDesigns.Oceanic_Harmony]: appPath("/images/designs/ft5.webp"),
+  [ItemDesigns.Mirage]: appPath("/images/designs/mirage.webp"),
+  [ItemDesigns.Sapphire]: appPath("/images/designs/sapphire.webp"),
+  [ItemDesigns.Amethyst]: appPath("/images/designs/amethyst.webp"),
+  [ItemDesigns.Spectrum]: appPath("/images/designs/spectrum.webp"),
+  [ItemDesigns.Tidal]: appPath("/images/designs/tidal.webp"),
+  [ItemDesigns.Timberline]: appPath("/images/designs/timberline.webp"),
+  [ItemDesigns.Winter]: appPath("/images/designs/winter.webp"),
 };

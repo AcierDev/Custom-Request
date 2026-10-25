@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { appPath } from "@/lib/appPaths";
 import {
   Facebook,
   Mail,
@@ -114,7 +115,7 @@ function SignInContent() {
       sessionStorage.setItem("redirect_in_progress", "true");
 
       // Force navigation to welcome page
-      window.location.href = "/welcome";
+      window.location.href = appPath("/welcome");
     }
   }, [user]);
 
@@ -171,7 +172,7 @@ function SignInContent() {
       } else {
         // Always redirect to welcome page
         console.log("Redirecting guest user to welcome page");
-        window.location.href = "/welcome";
+        window.location.href = appPath("/welcome");
       }
     } catch (error) {
       console.error("Error continuing as guest:", error);

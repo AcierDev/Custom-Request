@@ -11,6 +11,7 @@ import {
   LogIn,
 } from "lucide-react";
 import Link from "next/link";
+import { appPath } from "@/lib/appPaths";
 import { usePathname, useRouter } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
@@ -246,7 +247,7 @@ export function Navbar() {
                     >
                       <Avatar className="h-8 w-8 ring-1 ring-white/15">
                         <AvatarImage
-                          src={user.image || ""}
+                          src={appPath(user.image || "")}
                           alt={user.name || user.email}
                         />
                         <AvatarFallback className="text-xs bg-blue-900/40 text-blue-200">
@@ -378,7 +379,7 @@ export function Navbar() {
                   >
                     <Avatar className="h-8 w-8 ring-1 ring-white/15">
                       <AvatarImage
-                        src={user.image || ""}
+                        src={appPath(user.image || "")}
                         alt={user.name || user.email}
                       />
                       <AvatarFallback className="text-xs bg-blue-900/40 text-blue-200">

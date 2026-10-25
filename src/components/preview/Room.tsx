@@ -84,7 +84,7 @@ function useDelayedNight(isNight: boolean) {
 // Distance from the art origin to the back wall (scene units). Scale is
 // 6 inches per unit; the plywood back face sits at z = -0.07. A 0.25in
 // gap is 0.25/6 ≈ 0.0417 units, so WALL_OFFSET = 0.07 + 0.0417.
-const WALL_OFFSET = 0.1117;
+export const WALL_OFFSET = 0.1117;
 
 // Room footprint. Walls/ceiling/floor are oversized relative to the
 // constrained camera orbit so their far edges never enter frame — it

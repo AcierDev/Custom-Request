@@ -1,9 +1,14 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createAppPaths } from "./src/lib/appPathConfig.mjs";
 
 const DEFAULT_DIST_DIR = ".next";
 const PROJECT_ROOT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const configuredDistDir = process.env.CUSTOM_REQUEST_NEXT_DIST_DIR;
+const { basePath } = createAppPaths({
+  basePath: process.env.NEXT_PUBLIC_APP_BASE_PATH,
+  publicUrl: process.env.NEXT_PUBLIC_APP_URL,
+});
 const distDir = configuredDistDir
   ? path.relative(
       PROJECT_ROOT_DIR,
@@ -14,6 +19,10 @@ const distDir = configuredDistDir
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   distDir,
+  // Native image library: load it from node_modules at runtime instead of bundling it.
+  serverExternalPackages: ["sharp"],
+  // Opt-in at build time; absent env keeps the current root deployment intact.
+  basePath,
   // Next 16 removed the `eslint` config key; ESLint no longer runs during
   // `next build` (use `next lint` separately), so it's simply omitted.
   typescript: {

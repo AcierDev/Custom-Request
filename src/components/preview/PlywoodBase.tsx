@@ -22,6 +22,7 @@ import {
 } from "@/lib/backboardGeometry";
 import { WEDGE_GEOMETRY_CONFIG } from "@/lib/wedgeGeometry";
 import { PANEL_LAYOUT_CONFIG } from "@/lib/panelLayout";
+import { appPath } from "@/lib/appPaths";
 
 interface PlywoodBaseProps {
   width: number;
@@ -47,8 +48,8 @@ const SECTION_INDEX_OFFSET = 1;
 // Component to handle the hanger model - memoized to prevent unnecessary rerenders
 const HangerModel = memo(
   ({ position }: { position: [number, number, number] }) => {
-    const fbx = useFBX("/models/hanger.fbx");
-    const aluminumTexture = useLoader(TextureLoader, "/textures/aluminum.jpg");
+    const fbx = useFBX(appPath("/models/hanger.fbx"));
+    const aluminumTexture = useLoader(TextureLoader, appPath("/textures/aluminum.jpg"));
     const [model, setModel] = useState<THREE.Group | null>(null);
 
     useEffect(() => {
@@ -191,7 +192,7 @@ export function PlywoodBase({
   // Load unconditionally — hooks must run on every render (a conditional
   // useLoader breaks the rules of hooks and crashes when the wood-grain
   // toggle flips). Each panel still applies it only when showWoodGrain.
-  const texture = useLoader(TextureLoader, "/textures/plywood.jpg");
+  const texture = useLoader(TextureLoader, appPath("/textures/plywood.jpg"));
   const showBackboardTexture = shouldUseBackboardTexture(
     backboardColor,
     showWoodGrain,

@@ -4,6 +4,7 @@ import {
   GRAIN_RELIEF,
   METALLIC_PAINT,
   SIDE_GRAIN,
+  WEB_GRAIN,
   WOOD_STYLE,
 } from "./woodStyles.ts";
 
@@ -64,11 +65,12 @@ export function applyArtGrainShader(
 ): void {
   const useSideGrain = !metallic && sideTexture !== null;
   shader.uniforms.uGrid = { value: GRAIN_ATLAS.grid };
-  shader.uniforms.uGrainOpacity = { value: GRAIN_ATLAS.opacity };
+  shader.uniforms.uGrainOpacity = { value: WEB_GRAIN.opacity };
   shader.uniforms.uCellSample = {
     value: GRAIN_ATLAS.cellInset / GRAIN_ATLAS.zoom,
   };
   if (useSideGrain) {
+    shader.uniforms.uSideGrainOpacity = { value: GRAIN_ATLAS.opacity };
     shader.uniforms.uSideGrainMap = { value: sideTexture };
     shader.uniforms.uSideGrainRepeat = {
       value: new THREE.Vector2(...SIDE_GRAIN.repeat),
@@ -112,7 +114,7 @@ export function applyArtGrainShader(
     );
 
   const fragmentDeclarations = useSideGrain
-    ? "uniform sampler2D uSideGrainMap;\nvarying vec2 vSideGrainUv;\n"
+    ? "uniform sampler2D uSideGrainMap;\nuniform float uSideGrainOpacity;\nvarying vec2 vSideGrainUv;\n"
     : metallic
       ? "uniform float uBrightness;\n"
       : "";
@@ -120,12 +122,11 @@ export function applyArtGrainShader(
     ? `#ifdef USE_MAP
              vec4 frontGrainTexel = texture2D( map, vGrainUv );
              vec4 sideGrainTexel = texture2D( uSideGrainMap, vSideGrainUv );
-             vec4 grainTexel = mix(
-               sideGrainTexel,
-               frontGrainTexel,
+             diffuseColor *= mix(
+               mix( vec4( 1.0 ), sideGrainTexel, uSideGrainOpacity ),
+               mix( vec4( 1.0 ), frontGrainTexel, uGrainOpacity ),
                vGrainMask
              );
-             diffuseColor *= mix( vec4( 1.0 ), grainTexel, uGrainOpacity );
            #endif`
     : `#ifdef USE_MAP
              vec4 frontGrainTexel = texture2D( map, vGrainUv );
