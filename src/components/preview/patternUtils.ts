@@ -694,6 +694,24 @@ export function shuffleArray(array: number[], seed: number = 12345): number[] {
   return result;
 }
 
+/** Seed offset between neighbouring lines so each line gets its own permutation. */
+const LINE_SHUFFLE_SEED_BASE = 12345;
+const LINE_SHUFFLE_SEED_STEP = 1000.37;
+
+/**
+ * Evenly mix the values of one row/column with a true permutation
+ * (result[i] = values[perm[i]]) that is seeded per line, so neighbouring
+ * transition lines are mixed differently.
+ */
+export function shuffleLine(values: number[], lineIndex: number): number[] {
+  const indices = values.map((_, i) => i);
+  const perm = shuffleArray(
+    indices,
+    LINE_SHUFFLE_SEED_BASE + lineIndex * LINE_SHUFFLE_SEED_STEP,
+  );
+  return perm.map((source) => values[source]);
+}
+
 /**
  * Generate a color map for the pattern
  */
@@ -827,11 +845,6 @@ export function generateColorMap(
 
       for (const x of columnOrder) {
         // Fill this column with the next available colors
-        const columnPositions = Array.from(
-          { length: adjustedModelHeight },
-          (_, i) => i,
-        );
-
         for (let y = 0; y < adjustedModelHeight; y++) {
           if (colorIndex < sequentialColors.length) {
             colorMap[x][y] = sequentialColors[colorIndex++];
@@ -853,16 +866,10 @@ export function generateColorMap(
           }
 
           if (transitionY !== -1) {
-            // Randomize ALL positions in the column
-            const shuffledPositions = shuffleArray([...columnPositions]);
-
-            // Reassign the colors to the shuffled positions
-            for (let i = 0; i < columnPositions.length; i++) {
-              const originalY = columnPositions[i];
-              const newY = shuffledPositions[i];
-              const tempColor = colorMap[x][originalY];
-              colorMap[x][originalY] = colorMap[x][newY];
-              colorMap[x][newY] = tempColor;
+            // Randomize ALL positions in the column (true permutation, per-column seed)
+            const mixedColumn = shuffleLine(colorMap[x].slice(0, adjustedModelHeight), x);
+            for (let y = 0; y < adjustedModelHeight; y++) {
+              colorMap[x][y] = mixedColumn[y];
             }
           }
         }
@@ -878,11 +885,6 @@ export function generateColorMap(
 
       for (const y of rowOrder) {
         // Fill this row with the next available colors
-        const rowPositions = Array.from(
-          { length: adjustedModelWidth },
-          (_, i) => i,
-        );
-
         for (let x = 0; x < adjustedModelWidth; x++) {
           if (colorIndex < sequentialColors.length) {
             colorMap[x][y] = sequentialColors[colorIndex++];
@@ -904,16 +906,13 @@ export function generateColorMap(
           }
 
           if (transitionX !== -1) {
-            // Randomize ALL positions in the row
-            const shuffledPositions = shuffleArray([...rowPositions]);
-
-            // Reassign the colors to the shuffled positions
-            for (let i = 0; i < rowPositions.length; i++) {
-              const originalX = rowPositions[i];
-              const newX = shuffledPositions[i];
-              const tempColor = colorMap[originalX][y];
-              colorMap[originalX][y] = colorMap[newX][y];
-              colorMap[newX][y] = tempColor;
+            // Randomize ALL positions in the row (true permutation, per-row seed)
+            const mixedRow = shuffleLine(
+              Array.from({ length: adjustedModelWidth }, (_, x) => colorMap[x][y]),
+              y,
+            );
+            for (let x = 0; x < adjustedModelWidth; x++) {
+              colorMap[x][y] = mixedRow[x];
             }
           }
         }

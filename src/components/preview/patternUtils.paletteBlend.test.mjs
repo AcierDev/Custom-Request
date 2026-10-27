@@ -918,3 +918,62 @@ test("full palette blend never moves a color more than one progression line", ()
     }
   }
 });
+
+const CENTER_FADE_WIDTH = 40;
+const CENTER_FADE_HEIGHT = 12;
+const CENTER_FADE_COLOR_COUNT = 7;
+const CENTER_FADE_MIN_MIXED_CELLS = 8;
+// Std dev of a uniform position fraction is ~0.29; allow 3 sigma for n cells.
+const CENTER_FADE_UNIFORM_STDDEV = 0.2887;
+const CENTER_FADE_SIGMA_LIMIT = 3;
+
+test("center-fade mixes transition lines evenly across the line", () => {
+  const colors = Array.from({ length: CENTER_FADE_COLOR_COUNT }, (_, i) => [
+    `c${i}`,
+    { hex: "#000000" },
+  ]);
+  for (const orientation of ATTACHMENT_TEST_ORIENTATIONS) {
+    for (const isRotated of PALETTE_DIRECTIONS) {
+      const map = generateColorMap(
+        CENTER_FADE_WIDTH,
+        CENTER_FADE_HEIGHT,
+        colors,
+        orientation,
+        "center-fade",
+        false,
+        isRotated,
+        "custom",
+        CENTER_FADE_COLOR_COUNT,
+      );
+      const effective = isRotated
+        ? orientation === "horizontal" ? "vertical" : "horizontal"
+        : orientation;
+      const horizontal = effective === "horizontal";
+      const lineCount = horizontal ? CENTER_FADE_WIDTH : CENTER_FADE_HEIGHT;
+      const lineLength = horizontal ? CENTER_FADE_HEIGHT : CENTER_FADE_WIDTH;
+      const read = (line, pos) => (horizontal ? map[line][pos] : map[pos][line]);
+      let checked = 0;
+      for (let line = 0; line < lineCount; line++) {
+        const counts = new Map();
+        for (let pos = 0; pos < lineLength; pos++) {
+          const color = read(line, pos);
+          const entry = counts.get(color) ?? { n: 0, sum: 0 };
+          entry.n++;
+          entry.sum += pos;
+          counts.set(color, entry);
+        }
+        for (const { n, sum } of counts.values()) {
+          if (counts.size < 2 || n < CENTER_FADE_MIN_MIXED_CELLS) continue;
+          checked++;
+          const meanFraction = sum / n / (lineLength - 1);
+          assert.ok(
+            Math.abs(meanFraction - 0.5) <=
+              (CENTER_FADE_SIGMA_LIMIT * CENTER_FADE_UNIFORM_STDDEV) / Math.sqrt(n),
+            `${orientation}/${isRotated} line ${line}: mean ${meanFraction.toFixed(2)}`,
+          );
+        }
+      }
+      assert.ok(checked > 0, "expected mixed transition lines to check");
+    }
+  }
+});
