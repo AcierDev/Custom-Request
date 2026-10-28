@@ -44,6 +44,19 @@ const MIN_ALIGNED_SWAP_COUNT = 1;
 const ALIGNED_SWAP_DIVISOR = 2;
 const MIN_PRESERVED_INTERIOR_COLOR_SQUARE_COUNT = 1;
 const NO_SOLID_COLOR = null;
+/** Target squares per run when a split line's colors are spread across its width. */
+const SPREAD_RUN_LENGTH = 3;
+const SPREAD_MIN_RUN_LENGTH = 2;
+/** Lines whose minority colors total fewer squares than this keep their blended layout. */
+const SPREAD_MIN_MINORITY_COUNT = 2 * SPREAD_RUN_LENGTH;
+const SPREAD_PHASE_ODD = 0.25;
+const SPREAD_PHASE_EVEN = 0.75;
+/** Fraction of a run's slot its position may wander, so spacing is not rhythmic. */
+const SPREAD_JITTER_FRACTION = 0.7;
+const SPREAD_HASH_MULTIPLIER = 12.9898;
+const SPREAD_HASH_LINE_WEIGHT = 78.233;
+const SPREAD_HASH_COLOR_WEIGHT = 37.719;
+const SPREAD_HASH_SCALE = 43758.5453;
 
 const positionKey = ({ x, y }: GridPosition): string => `${x}-${y}`;
 
@@ -168,6 +181,72 @@ function reinforceOuterProgressionLines(
         orientation,
       );
       colorMap[position.x][position.y] = outerColors[edgeOffset];
+    }
+  }
+}
+
+/**
+ * A line the serpentine fill splits between colors puts each color in one
+ * chunk, so the later color always bunches toward one end. Rebuild such a line
+ * as short runs of every color spaced evenly across its length, keeping each
+ * color's square count and giving each color a run of at least two squares
+ * where its count allows.
+ */
+function spreadSplitLines(
+  colorMap: number[][],
+  hardMap: number[][],
+  width: number,
+  height: number,
+  lineCount: number,
+  lineLength: number,
+  orientation: PalettePatternOrientation,
+): void {
+  for (let line = FIRST_GRID_INDEX; line < lineCount; line += GRID_STEP) {
+    const positions = Array.from({ length: lineLength }, (_, cross) =>
+      getPhysicalGridPosition(line, cross, orientation),
+    );
+    const hardFirst = hardMap[positions[FIRST_GRID_INDEX].x][positions[FIRST_GRID_INDEX].y];
+    if (positions.every(({ x, y }) => hardMap[x][y] === hardFirst)) continue;
+    const before = positions.map(({ x, y }) => colorMap[x][y]);
+    const counts = new Map<number, number>();
+    for (const { x, y } of positions) {
+      counts.set(colorMap[x][y], (counts.get(colorMap[x][y]) ?? FIRST_GRID_INDEX) + GRID_STEP);
+    }
+    if (counts.size <= GRID_STEP) continue;
+    if (lineLength - Math.max(...counts.values()) < SPREAD_MIN_MINORITY_COUNT) continue;
+
+    const phase = line % INTERIOR_BOUNDARY_DEGREE === FIRST_GRID_INDEX
+      ? SPREAD_PHASE_EVEN
+      : SPREAD_PHASE_ODD;
+    const runs: { color: number; length: number; order: number }[] = [];
+    for (const [color, count] of counts) {
+      const runCount = Math.max(
+        GRID_STEP,
+        Math.min(Math.round(count / SPREAD_RUN_LENGTH), Math.floor(count / SPREAD_MIN_RUN_LENGTH)),
+      );
+      for (let run = FIRST_GRID_INDEX; run < runCount; run += GRID_STEP) {
+        const start = Math.floor((run * count) / runCount);
+        const end = Math.floor(((run + GRID_STEP) * count) / runCount);
+        const hash = Math.sin(
+          run * SPREAD_HASH_MULTIPLIER + line * SPREAD_HASH_LINE_WEIGHT + color * SPREAD_HASH_COLOR_WEIGHT,
+        ) * SPREAD_HASH_SCALE;
+        const jitter = (hash - Math.floor(hash) - DISTRIBUTION_CENTER_OFFSET) * SPREAD_JITTER_FRACTION;
+        runs.push({ color, length: end - start, order: (run + phase + jitter) / runCount });
+      }
+    }
+    runs.sort((a, b) => a.order - b.order || a.color - b.color);
+
+    let cross = FIRST_GRID_INDEX;
+    for (const { color, length } of runs) {
+      for (let i = FIRST_GRID_INDEX; i < length; i += GRID_STEP, cross += GRID_STEP) {
+        const { x, y } = positions[cross];
+        colorMap[x][y] = color;
+      }
+    }
+    if (!everySquareTouchesSameColor(colorMap, width, height)) {
+      positions.forEach(({ x, y }, cross) => {
+        colorMap[x][y] = before[cross];
+      });
     }
   }
 }
@@ -1058,6 +1137,8 @@ export function generatePalettePatternMap({
       reservedPositions,
     );
   }
+
+  spreadSplitLines(colorMap, hardMap, width, height, lineCount, lineLength, orientation);
 
   return colorMap;
 }

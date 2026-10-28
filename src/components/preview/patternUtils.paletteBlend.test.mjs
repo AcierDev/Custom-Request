@@ -977,3 +977,49 @@ test("center-fade mixes transition lines evenly across the line", () => {
     }
   }
 });
+
+const SPREAD_FADE_WIDTH = 40;
+const SPREAD_FADE_HEIGHT = 12;
+const SPREAD_FADE_SYMMETRIC_COLORS = [0, 1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1, 0];
+const SPREAD_FADE_MIN_COLOR_CELLS = 30;
+const SPREAD_FADE_CENTER_TOLERANCE = 0.12;
+
+test("palette fade keeps split-line colors centered instead of bunched to one side", () => {
+  const colors = SPREAD_FADE_SYMMETRIC_COLORS.map((_, index) => [
+    `c${index}`,
+    { hex: "#000000" },
+  ]);
+  const middleColors = new Set([3, 4, 5, 6, 7, 8, 9]);
+  for (const isRotated of PALETTE_DIRECTIONS) {
+    const map = generateColorMap(
+      SPREAD_FADE_WIDTH,
+      SPREAD_FADE_HEIGHT,
+      colors,
+      "horizontal",
+      PALETTE_PATTERN,
+      false,
+      isRotated,
+      CUSTOM_DESIGN_ID,
+      colors.length,
+    );
+    // Unrotated, the colors progress across x, so only the rotated fill splits rows.
+    if (!isRotated) continue;
+    const sums = new Map();
+    for (let x = 0; x < SPREAD_FADE_WIDTH; x++) {
+      for (let y = 0; y < SPREAD_FADE_HEIGHT; y++) {
+        const entry = sums.get(map[x][y]) ?? { n: 0, sum: 0 };
+        entry.n++;
+        entry.sum += x;
+        sums.set(map[x][y], entry);
+      }
+    }
+    for (const [color, { n, sum }] of sums) {
+      if (!middleColors.has(color) || n < SPREAD_FADE_MIN_COLOR_CELLS) continue;
+      const meanFraction = sum / n / (SPREAD_FADE_WIDTH - 1);
+      assert.ok(
+        Math.abs(meanFraction - 0.5) <= SPREAD_FADE_CENTER_TOLERANCE,
+        `color ${color} mean x ${meanFraction.toFixed(2)}`,
+      );
+    }
+  }
+});
