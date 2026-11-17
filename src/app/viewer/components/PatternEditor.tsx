@@ -647,6 +647,7 @@ export function PatternEditor({ className }: PatternEditorProps) {
                       colorInfo.name || `Color ${index + HUMAN_INDEX_OFFSET}`;
                     const colorNumber = index + HUMAN_INDEX_OFFSET;
                     const numberedColorLabel = `${colorNumber} · ${colorLabel}`;
+                    const hexColorLabel = `${numberedColorLabel} · ${colorInfo.hex.toUpperCase()}`;
                     const canDeleteColor =
                       selectedDesign === ItemDesigns.Custom;
                     const isContextMenuOpen =
@@ -693,7 +694,7 @@ export function PatternEditor({ className }: PatternEditorProps) {
                             bounds.bottom,
                           );
                         }}
-                        title={numberedColorLabel}
+                        title={hexColorLabel}
                         aria-haspopup={canDeleteColor ? "menu" : undefined}
                         aria-controls={
                           isContextMenuOpen ? COLOR_CONTEXT_MENU_ID : undefined
@@ -714,7 +715,7 @@ export function PatternEditor({ className }: PatternEditorProps) {
                           role="tooltip"
                           className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded bg-slate-950 px-2 py-1 text-[0.68rem] font-medium text-slate-100 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
                         >
-                          {numberedColorLabel}
+                          {hexColorLabel}
                         </span>
                         <span
                           aria-hidden="true"

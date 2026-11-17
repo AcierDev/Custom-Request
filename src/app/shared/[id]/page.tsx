@@ -53,6 +53,11 @@ import {
   copyPaletteHex,
   createPaletteCopyHandlers,
 } from "./paletteClipboard";
+import { CAPTURE_TRANSPARENT } from "@/lib/captureMode";
+import { useCaptureOptions, useCaptureReady } from "@/hooks/useCaptureMode";
+import { fetchPreviewDesign } from "@/lib/previewImport";
+import { readSpecParam } from "@/lib/previewSpecParam";
+
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ 🔗 CONSTANTS                                                          ║
@@ -111,7 +116,11 @@ export default function SharedDesignPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ErrorKind | null>(null);
   const [copied, setCopied] = useState(false);
-  const [showUI, setShowUI] = useState(true);
+  // ?capture=1 (see lib/captureMode.ts): no chrome, art framed tightly, so a
+  // plain screenshot is a finished preview. Read once on mount.
+  const captureOptions = useCaptureOptions();
+  const [showUIPreference, setShowUI] = useState(true);
+  const showUI = showUIPreference && !captureOptions.enabled;
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sheetTab, setSheetTab] = useState<SharedMobilePanel>("about");
   const [placardOpen, setPlacardOpen] = useState(true);
@@ -172,6 +181,33 @@ export default function SharedDesignPage() {
     async (controller: AbortController, isActive: () => boolean) => {
       setLoading(true);
       setError(null);
+
+      // Preview spec (?spec=...): compiled server side, nothing stored. Lets
+      // /shared/preview?spec=... show a design that has no share link yet.
+      const previewSpec = readSpecParam(window.location.search);
+      if (previewSpec) {
+        try {
+          const { designData } = await fetchPreviewDesign(previewSpec, controller.signal);
+          if (!isActive()) return;
+          const shareable = designData as unknown as ShareableState;
+          if (loadFromDatabaseData(shareable)) {
+            setWallColor(shareable.wallColor ?? DEFAULT_WALL_COLOR);
+            setSharedDesign({
+              shareId,
+              designData: shareable,
+              createdAt: new Date().toISOString(),
+              accessCount: 0,
+            });
+          } else {
+            setError("notfound");
+          }
+        } catch {
+          if (isActive()) setError("notfound");
+        } finally {
+          if (isActive()) setLoading(false);
+        }
+        return;
+      }
 
       // Inline preview (?d=...): the design is packed into the URL, so render
       // it with no database round-trip. This is how the shared viewer is
@@ -268,6 +304,10 @@ export default function SharedDesignPage() {
     if (!isMobile || !showUI) setSheetOpen(false);
   }, [isMobile, showUI]);
 
+  // Tell a screenshotting script the art is framed and has painted (see
+  // lib/captureMode.ts); the fallback flags it anyway so a script never hangs.
+  const handleCaptureFramed = useCaptureReady(captureOptions.enabled, loading || error !== null);
+
   const handleCopyLink = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
@@ -292,21 +332,34 @@ export default function SharedDesignPage() {
     ? {}
     : { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 } };
 
+  const capturing = captureOptions.enabled;
+  const pageBackground =
+    capturing && captureOptions.background
+      ? captureOptions.background === CAPTURE_TRANSPARENT
+        ? "transparent"
+        : captureOptions.background
+      : undefined;
+
   return (
-    <div className="relative h-dvh w-full overflow-hidden select-none bg-[#b8b2a4]">
+    <div
+      className="relative h-dvh w-full overflow-hidden select-none bg-[#b8b2a4]"
+      style={pageBackground ? { backgroundColor: pageBackground } : undefined}
+    >
       {/* The gallery scene — the art hung in the furnished room. */}
       <div className="fixed inset-0 z-0">
         <GalleryArtScene
           timeOfDay={timeOfDay}
           lampOn={lampOn}
           onLampToggle={handleLampToggle}
-          wallColor={wallColor}
-          showRoom={showRoom}
+          wallColor={capturing && captureOptions.wallColor ? captureOptions.wallColor : wallColor}
+          showRoom={capturing ? captureOptions.showRoom : showRoom}
           showColorInfo={false}
-          autoOrbit={!reducedMotion}
+          autoOrbit={!reducedMotion && !capturing}
           isMobile={isMobile}
           className="w-full h-full"
           onCaptureReady={setCaptureFourAngleImage}
+          tightFit={capturing}
+          onCaptureFramed={handleCaptureFramed}
         />
       </div>
 
@@ -412,6 +465,7 @@ export default function SharedDesignPage() {
       </AnimatePresence>
 
       {/* ── Image export + Hide-UI toggle ───────────────────────────── */}
+      {!capturing && (
       <div
         className={cn(
           SHARED_ACTIONS_CLASS,
@@ -446,6 +500,7 @@ export default function SharedDesignPage() {
           )}
         </Button>
       </div>
+      )}
 
       {/* ── Mobile Details / Edit panel sheet ───────────────────────── */}
       <AnimatePresence>

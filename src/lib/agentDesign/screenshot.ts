@@ -30,13 +30,18 @@ export interface ScreenshotOptions {
   widthPx: number;
   room: boolean;
   gaps: boolean;
+  /** Margin around the art when room=0, as a fraction of the longer art side. */
+  marginRatio: number;
 }
+
+/** `margin` query param: whole percent of the longer art side, 0 = art fills the image edge to edge. */
+export const SCREENSHOT_MARGIN_PERCENT = { min: 0, max: 20 } as const;
 
 const BOOLEAN_FLAGS: Record<string, boolean> = { "0": false, "1": true };
 
 /** Parse query params strictly; returns an error message on bad input. */
 export function parseScreenshotOptions(params: URLSearchParams): ScreenshotOptions | { error: string; field: string } {
-  const allowed = new Set(["width", "room", "gaps"]);
+  const allowed = new Set(["width", "room", "gaps", "margin"]);
   for (const key of params.keys()) {
     if (!allowed.has(key)) return { field: key, error: `unknown query param; allowed: ${[...allowed].join(", ")}` };
   }
@@ -57,7 +62,16 @@ export function parseScreenshotOptions(params: URLSearchParams): ScreenshotOptio
   if (room === null) return { field: "room", error: "must be 0 or 1" };
   const gaps = flag("gaps", true);
   if (gaps === null) return { field: "gaps", error: "must be 0 or 1" };
-  return { widthPx, room, gaps };
+  let marginRatio: number = SCREENSHOT_CONFIG.noRoomMarginRatio;
+  const rawMargin = params.get("margin");
+  if (rawMargin !== null) {
+    const percent = Number(rawMargin);
+    if (!/^\d+$/.test(rawMargin) || percent < SCREENSHOT_MARGIN_PERCENT.min || percent > SCREENSHOT_MARGIN_PERCENT.max) {
+      return { field: "margin", error: `must be an integer ${SCREENSHOT_MARGIN_PERCENT.min}-${SCREENSHOT_MARGIN_PERCENT.max} (percent)` };
+    }
+    marginRatio = percent / 100;
+  }
+  return { widthPx, room, gaps, marginRatio };
 }
 
 const fmt = (n: number): string => String(Number(n.toFixed(SCREENSHOT_CONFIG.pixelDecimals)));
@@ -91,7 +105,7 @@ export function buildScreenshotSvg(
     worldW = artW + 2 * artX;
     worldH = artY + artH + artH * C.roomArtToFloorRatio + artH * C.roomFloorRatio;
   } else {
-    const margin = Math.max(artW, artH) * C.noRoomMarginRatio;
+    const margin = Math.max(artW, artH) * options.marginRatio;
     artX = margin;
     artY = margin;
     worldW = artW + 2 * margin;

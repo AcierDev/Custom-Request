@@ -44,6 +44,7 @@ import {
 import { markPaletteOpened } from "@/lib/paletteRecency";
 import { resolveHydratedRoomView } from "@/lib/roomViewDefault";
 import { appPath } from "@/lib/appPaths";
+import { isSandboxMode } from "@/lib/sandboxMode";
 
 const DEFAULT_DEBOUNCE_DELAY_MS = 1_000;
 const STORE_PERSISTENCE_DEBOUNCE_MS = 2_000;
@@ -3617,6 +3618,9 @@ export const useCustomStore = create<CustomStore>()(
     syncWithDatabase: (autoSave = true): (() => void) | void => {
       if (typeof window === "undefined") return;
 
+      // Sandbox previews (?sandbox / ?capture / ?spec) never read or write saved data.
+      if (isSandboxMode()) return;
+
       const authContext = (window as any).__authContext;
       const isAuthenticated = authContext?.user !== null;
       const isGuest = authContext?.isGuest === true;
@@ -3721,6 +3725,7 @@ export const useCustomStore = create<CustomStore>()(
       }
     },
     saveToLocalStorage: (): boolean => {
+      if (isSandboxMode()) return true;
       try {
         const currentVersion = get().dataSyncVersion;
         const newVersion = currentVersion + 1;
@@ -3778,6 +3783,7 @@ export const useCustomStore = create<CustomStore>()(
       }
     },
     saveToDatabase: async (): Promise<boolean> => {
+      if (isSandboxMode()) return true;
       if (typeof window !== "undefined") {
         const authContext = (window as any).__authContext;
         const isAuthenticated = authContext?.user !== null;

@@ -99,8 +99,10 @@ Patterns (`mode`):
   `top-to-bottom`, `bottom-to-top`. It never changes the canvas shape.
   (`center-fade` uses `axis` because it is symmetric.)
 
-The viewer fields `orientation` / `isReversed` / `colorPattern` written into
-each design are informational; the explicit `drawnPatternGrid` is authoritative.
+The viewer fields `isReversed` / `colorPattern` written into each design are
+informational; the explicit `drawnPatternGrid` is authoritative. `orientation`
+is always `"horizontal"` because the viewer rotates the whole art 90° for
+`"vertical"`, which would turn landscape pieces into portrait ones.
 
 ## What gets created
 
@@ -171,6 +173,11 @@ Errors: `400 {"error": "<field>: <message>", "field": "<field>"}`.
 | `width` | `1600` | integer 200-4000 (px); height follows the layout aspect |
 | `room` | `0` | `1` = wall-color background with proportional margins, baseboard and floor line; `0` = transparent background |
 | `gaps` | `1` | `0` = draw panels and squares touching (color study) |
+| `margin` | `4` | whole percent of the longer art side around the art when `room=0`, 0-20; `0` = art fills the image edge to edge |
+
+Key-free previews, stacked before/after PNGs and price quotes live under
+`/api/preview/*` (they also accept an `agentDesignId` with the key). See
+`docs/preview-tools.md`.
 
 Straight-on, no perspective, every square at true relative scale with subtle
 deterministic shading. `room=1` without a spec `wallColor` uses a neutral wall

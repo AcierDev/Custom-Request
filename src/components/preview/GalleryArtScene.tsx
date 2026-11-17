@@ -40,6 +40,8 @@ import {
 } from "@/lib/panelLayout";
 import { getSquareGapExpansionSceneUnits } from "@/lib/squareGap";
 import { DEFAULT_LAMP_ON } from "./lampInteraction";
+import { captureInitialDistance } from "@/lib/captureMode";
+import { CaptureFraming, type ArtBounds } from "./CaptureFrame";
 
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ 🖼️ GALLERY ART SCENE — read-only gallery render of a fixed piece      ║
@@ -432,6 +434,10 @@ interface GalleryArtSceneProps {
   isMobile?: boolean;
   /** Registers the scene's four-angle image exporter when it is ready. */
   onCaptureReady?: (capture: CaptureFourAngleImage | null) => void;
+  /** Start with the camera pulled in so the art fills the frame (clean capture). */
+  tightFit?: boolean;
+  /** Clean capture only: called once the art is framed and has finished animating in. */
+  onCaptureFramed?: () => void;
 }
 
 /**
@@ -454,6 +460,8 @@ export function GalleryArtScene({
   className,
   isMobile = false,
   onCaptureReady,
+  tightFit = false,
+  onCaptureFramed,
 }: GalleryArtSceneProps) {
   const dimensions = useCustomStore((s) => s.dimensions);
   const style = useCustomStore((s) => s.style);
@@ -514,6 +522,22 @@ export function GalleryArtScene({
       )
     );
   }, [installedArtWidth, maxCamDistance]);
+  // Clean-capture framing: the art alone fills the viewport (tightFit only
+  // moves the starting camera; the orbit limits are unchanged).
+  const initialCameraDistance = useMemo(() => {
+    if (!tightFit) return fitMaxDistance;
+    const aspect =
+      typeof window !== "undefined" && window.innerHeight > 0
+        ? window.innerWidth / window.innerHeight
+        : 1.6;
+    return captureInitialDistance({
+      fitMaxDistance,
+      artWidth: installedArtWidth,
+      artHeight: installedArtHeight,
+      fovDeg: CAMERA_FOV,
+      aspect,
+    });
+  }, [tightFit, fitMaxDistance, installedArtWidth, installedArtHeight]);
   const camBounds = useMemo(() => roomBounds(sceneW, sceneH), [sceneW, sceneH]);
   const windowPos = useMemo(
     () => rightWindowWorldPos(ROOM_REF_WIDTH, ROOM_REF_HEIGHT),
@@ -546,6 +570,16 @@ export function GalleryArtScene({
   // The orbit target/camera start centered on the art, fully zoomed out.
   const initialCameraTarget = useRef<[number, number, number]>(artCenter);
   const orbitPivotRatio = useRef(0);
+  const captureFallbackBounds = useMemo<ArtBounds>(
+    () => ({
+      centerX: displayArtCenterX,
+      centerY: ART_CENTER_Y,
+      width: installedArtWidth,
+      height: installedArtHeight,
+      frontZ: ART_CENTER_Z,
+    }),
+    [displayArtCenterX, installedArtWidth, installedArtHeight]
+  );
 
   return (
     <Canvas
@@ -557,7 +591,7 @@ export function GalleryArtScene({
         position: [
           initialCameraTarget.current[0],
           initialCameraTarget.current[1],
-          fitMaxDistance,
+          initialCameraDistance,
         ],
         fov: CAMERA_FOV,
         zoom: CAMERA_ZOOM,
@@ -673,11 +707,15 @@ export function GalleryArtScene({
       <SmoothWheelZoom
         minimumDistanceEpsilon={ROOM_COLLISION_MIN_OFFSET}
       />
-      <ArtCameraFollow
-        target={artCenter}
-        artWidth={installedArtWidth}
-        pivotRatioRef={orbitPivotRatio}
-      />
+      {/* Clean capture frames the measured art itself (CaptureFraming below);
+          the follow easing would pull the camera back to the group origin. */}
+      {!tightFit && (
+        <ArtCameraFollow
+          target={artCenter}
+          artWidth={installedArtWidth}
+          pivotRatioRef={orbitPivotRatio}
+        />
+      )}
       {/* With the room hidden the art is free-floating, so skip collision —
           otherwise the invisible walls cap how far back you can circle. */}
       {showRoom && (
@@ -690,6 +728,12 @@ export function GalleryArtScene({
       )}
       <PreInteractionOrbit enabled={autoOrbit} />
       <ResizeInvalidator width={dimensions.width} height={dimensions.height} />
+      <CaptureFraming
+        enabled={tightFit}
+        groupX={displayArtCenterX}
+        fallback={captureFallbackBounds}
+        onFramed={onCaptureFramed}
+      />
     </Canvas>
   );
 }

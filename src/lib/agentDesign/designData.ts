@@ -21,21 +21,28 @@ export const AGENT_FIXED_DESIGN_FIELDS = {
 
 type SiteFlow = { colorPattern: "fade" | "gradient" | "center-fade"; orientation: "horizontal" | "vertical"; isReversed: boolean };
 
+/**
+ * The viewer rotates the WHOLE art 90 degrees when `orientation` is "vertical"
+ * (even with an explicit drawnPatternGrid), turning a landscape piece into a
+ * portrait one. The grid already carries the true layout, so orientation is
+ * always "horizontal" here; colorPattern / isReversed stay informational.
+ */
+const VIEWER_ORIENTATION = "horizontal" as const;
+
 /** Informational site fields describing the pattern (grid is authoritative). */
 function siteFlowFor(pattern: FillPattern | null): SiteFlow {
-  if (!pattern) return { colorPattern: "fade", orientation: "horizontal", isReversed: false };
+  if (!pattern) return { colorPattern: "fade", orientation: VIEWER_ORIENTATION, isReversed: false };
   if (pattern.mode === "center-fade") {
-    return { colorPattern: "center-fade", orientation: pattern.axis, isReversed: pattern.edges === "last" };
+    return { colorPattern: "center-fade", orientation: VIEWER_ORIENTATION, isReversed: pattern.edges === "last" };
   }
   if (pattern.mode === "palette" || pattern.mode === "gradient" || pattern.mode === "solid-blocks") {
-    const horizontal = pattern.flow === "left-to-right" || pattern.flow === "right-to-left";
     return {
       colorPattern: pattern.mode === "gradient" ? "gradient" : "fade",
-      orientation: horizontal ? "horizontal" : "vertical",
+      orientation: VIEWER_ORIENTATION,
       isReversed: pattern.flow === "right-to-left" || pattern.flow === "top-to-bottom",
     };
   }
-  return { colorPattern: "fade", orientation: "horizontal", isReversed: false };
+  return { colorPattern: "fade", orientation: VIEWER_ORIENTATION, isReversed: false };
 }
 
 const usedColors = (grids: ColorGrid[], colors: ResolvedColor[]): ResolvedColor[] => {

@@ -208,3 +208,11 @@ html.dark .text-gray-800 { color: rgb(229 231 235); }
 .custom-pulse {
   animation: custom-pulse 0.5s ease-in-out infinite;
 }
+
+/* Clean capture (?capture=1): the art stage covers every page overlay (viewer UI, nav). */
+html[data-capture="1"] [data-art-stage] {
+  z-index: 2147483000 !important;
+}
+html[data-capture="1"] body {
+  overflow: hidden;
+}

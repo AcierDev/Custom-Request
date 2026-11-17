@@ -19,6 +19,7 @@
     "test:step-geometry": "node --no-warnings --test src/lib/wedgeGeometry.test.mjs src/lib/backboardGeometry.test.mjs",
     "test:step": "npm run test:step-geometry && node --no-warnings --test src/lib/ar/artSnapshot.test.mjs src/lib/step/stepMetadata.test.mjs src/lib/step/stepModel.test.mjs src/lib/step/openCascadeExporter.test.mjs src/lib/step/exportStep.test.mjs",
     "test:room-photo": "node --no-warnings --test src/lib/roomPhoto/wallPose.test.mjs src/lib/roomPhoto/floodSelect.test.mjs",
+    "test:preview-tools": "node --no-warnings --test src/lib/previewTools.test.mjs src/lib/agentDesign/previewSpec.test.mjs",
     "test:agent-design": "node --no-warnings --test src/lib/agentDesign/agentDesign.test.mjs",
     "test:fusion": "node --no-warnings --test src/lib/fusion/*.test.mjs",
     "prepare:step-wasm": "node scripts/prepare-step-wasm.mjs",

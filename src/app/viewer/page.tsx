@@ -11,7 +11,11 @@ import {
 } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { useCustomStore } from "@/store/customStore";
+import { useCustomStore, type ShareableState } from "@/store/customStore";
+import { CaptureFraming, type ArtBounds } from "@/components/preview/CaptureFrame";
+import { CAPTURE_DEFAULT_BACKGROUND, CAPTURE_TRANSPARENT, captureInitialDistance } from "@/lib/captureMode";
+import { useCaptureOptions, useCaptureReady, useSandboxMode } from "@/hooks/useCaptureMode";
+import { usePreviewSpecImport } from "@/hooks/usePreviewSpecImport";
 import { Button } from "@/components/ui/button";
 import {
   ArrowLeft,
@@ -416,10 +420,36 @@ export default function DesignPage() {
 
   useInitialRoomViewDefault(setInitialShowRoom);
 
+  // Preview tools (docs/preview-tools.md): ?sandbox=1 (saved data untouched),
+  // ?spec= (load a design), ?capture=1 (art only, camera fitted tight).
+  const capture = useCaptureOptions();
+  const sandbox = useSandboxMode();
+  const loadFromDatabaseData = useCustomStore((s) => s.loadFromDatabaseData);
+  const setShowRoomSetting = useCustomStore((s) => s.setShowRoom);
+  const applyPreviewDesign = useCallback(
+    (designData: Record<string, unknown>) => {
+      const loaded = loadFromDatabaseData(designData as unknown as ShareableState);
+      if (loaded && typeof designData.wallColor === "string") setWallColor(designData.wallColor);
+      return loaded;
+    },
+    [loadFromDatabaseData, setWallColor],
+  );
+  const previewImport = usePreviewSpecImport(applyPreviewDesign);
+  const handleCaptureFramed = useCaptureReady(
+    capture.enabled,
+    previewImport.status === "loading" || previewImport.status === "error",
+  );
+  useEffect(() => {
+    if (!capture.enabled) return;
+    if (showUIControls) setShowUIControls(false);
+    if (showRoom !== capture.showRoom) setShowRoomSetting(capture.showRoom);
+  }, [capture.enabled, capture.showRoom, showUIControls, showRoom, setShowUIControls, setShowRoomSetting]);
+
   // Custom with no palette colors and no drawn pattern no longer
   // redirects away — GeometricPattern renders every square a single
   // dark blue so the viewer is never empty.
-  const currentWallColor = wallColor || WALL_COLOR;
+  const currentWallColor =
+    capture.enabled && capture.wallColor ? capture.wallColor : wallColor || WALL_COLOR;
   const activePanelCount = showSplitPanel
     ? panelCount
     : PANEL_LAYOUT_CONFIG.singleCount;
@@ -627,6 +657,28 @@ export default function DesignPage() {
     () => [displayArtCenterX, ART_CENTER_Y, ART_CENTER_Z],
     [displayArtCenterX]
   );
+  const captureFallbackBounds = useMemo<ArtBounds>(
+    () => ({
+      centerX: displayArtCenterX,
+      centerY: ART_CENTER_Y,
+      width: installedArtWidth,
+      height: installedArtHeight,
+      frontZ: ART_CENTER_Z,
+    }),
+    [displayArtCenterX, installedArtWidth, installedArtHeight]
+  );
+  const initialCameraDistance = capture.enabled
+    ? captureInitialDistance({
+        fitMaxDistance,
+        artWidth: installedArtWidth,
+        artHeight: installedArtHeight,
+        fovDeg: CAMERA_FOV,
+        aspect:
+          typeof window !== "undefined" && window.innerHeight > 0
+            ? window.innerWidth / window.innerHeight
+            : 1.6,
+      })
+    : fitMaxDistance;
   const initialCameraTarget = useRef<[number, number, number]>(artCenter);
   const orbitPivotRatio = useRef(0);
 
@@ -773,13 +825,32 @@ export default function DesignPage() {
         </div>
       )}
 
+      {previewImport.status === "error" && (
+        <div role="alert" className="fixed left-1/2 top-4 z-[70] -translate-x-1/2 rounded-lg border border-red-400/40 bg-red-950/80 px-4 py-2 text-sm text-red-100">
+          {previewImport.message}
+        </div>
+      )}
+
       {/* Main canvas — a true full-viewport fixed layer painted BEHIND
           the nav (z below the sidebar's z-30) and behind this page's
           offset content. The app layout pushes page content right by
           `lg:ml-36` and sits on a solid bg, so an in-flow canvas never
           reaches under the sidebar; making it fixed/inset-0 lets the
           room render edge-to-edge so the glass nav can blur it. */}
-      <div className="fixed inset-0 z-0 canvas-container">
+      <div
+        className="fixed inset-0 z-0 canvas-container"
+        data-art-stage
+        style={
+          capture.enabled
+            ? {
+                background:
+                  capture.background === CAPTURE_TRANSPARENT
+                    ? "transparent"
+                    : capture.background ?? CAPTURE_DEFAULT_BACKGROUND,
+              }
+            : undefined
+        }
+      >
         <Canvas
           shadows
           frameloop="demand"
@@ -791,7 +862,7 @@ export default function DesignPage() {
             position: [
               initialCameraTarget.current[0],
               initialCameraTarget.current[1],
-              fitMaxDistance,
+              initialCameraDistance,
             ],
             fov: CAMERA_FOV,
             zoom: CAMERA_ZOOM,
@@ -935,10 +1006,20 @@ export default function DesignPage() {
           <SmoothWheelZoom
             minimumDistanceEpsilon={ROOM_COLLISION_MIN_OFFSET}
           />
-          <ArtCameraFollow
-            target={artCenter}
-            artWidth={installedArtWidth}
-            pivotRatioRef={orbitPivotRatio}
+          {/* Clean capture frames the measured art itself (CaptureFraming); the
+              follow easing would pull the camera back to the group origin. */}
+          {!capture.enabled && (
+            <ArtCameraFollow
+              target={artCenter}
+              artWidth={installedArtWidth}
+              pivotRatioRef={orbitPivotRatio}
+            />
+          )}
+          <CaptureFraming
+            enabled={capture.enabled}
+            groupX={displayArtCenterX}
+            fallback={captureFallbackBounds}
+            onFramed={handleCaptureFramed}
           />
           {/* Collision keeps the camera inside the room walls. With the room
               hidden the art is free-floating, so skip it — otherwise the
@@ -1080,7 +1161,7 @@ export default function DesignPage() {
       <PhotoRenderProgress progress={renderProgress} onCancel={cancelRender} onDownload={downloadImage} />
 
       {/* Design tutorial */}
-      {showUIControls && !isMobile && <DesignTutorial />}
+      {showUIControls && !isMobile && !sandbox && <DesignTutorial />}
 
       {/* Empty palette warning */}
       <EmptyPaletteWarning />
