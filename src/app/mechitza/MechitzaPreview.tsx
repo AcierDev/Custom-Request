@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { launchAR } from "@/lib/ar/quickLook";
 import { isIOSARCapable } from "@/lib/ar/isIOS";
+import { getSceneViewerIntent, SCENE_VIEWER_FALLBACK_HASH } from "@/lib/ar/sceneViewer";
 import type { startWebXRARSession, WebXRARController } from "@/lib/ar/webxrSession";
 import { appPath } from "@/lib/appPaths";
 import {
@@ -44,7 +45,7 @@ const ModelPreview = dynamic(() => import("./ModelPreview"), {
   loading: () => <p className={styles.modelStatus} role="status">Loading 3D preview…</p>,
 });
 
-type ARMode = "checking" | "quicklook" | "webxr" | "unavailable";
+type ARMode = "checking" | "quicklook" | "webxr" | "scene-viewer" | "unavailable";
 
 type CustomFilm = { name: string; image: Blob; revision: number; source?: File; crop?: FilmCrop };
 
@@ -242,6 +243,7 @@ export function MechitzaPreview({
   const [placed, setPlaced] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
   const [arError, setArError] = useState(false);
+  const [sceneViewerFallback, setSceneViewerFallback] = useState(false);
   const overlay = useRef<HTMLDivElement>(null);
   const modelSurface = useRef<HTMLDivElement>(null);
   const startWebXR = useRef<typeof startWebXRARSession | null>(null);
@@ -249,13 +251,16 @@ export function MechitzaPreview({
   const mounted = useRef(false);
   const hasPhoto = !customFilm && film.id === MECHITZA_DEFAULT_FILM.id && art.id === MECHITZA_DEFAULT_ART_COLOR.id;
   const showModel = modelRequested || !hasPhoto;
-  const canUseAR = mode === "quicklook" || mode === "webxr";
+  const canUseAR = mode === "quicklook" || mode === "webxr" || mode === "scene-viewer";
   const assets = getMechitzaAssets(model.id, finish.id, film.id, art.id, people);
   const modelUrl = customFilm ? `${assets.glb}&upload=${customFilm.revision}` : assets.glb;
   const deviceModel = mode === "quicklook" ? assets.usdz : assets.glb;
   const arKey = customFilm && canUseAR ? `${deviceModel}&upload=${customFilm.revision}&attempt=${arAttempt}` : undefined;
   const customAR = preparedAR?.key === arKey ? preparedAR : undefined;
   const preparingAR = Boolean(arKey && !customAR && failedARKey !== arKey);
+  const sceneViewerIntent = mode === "scene-viewer" && (!customFilm || customAR)
+    ? getSceneViewerIntent(appPath(customAR?.url ?? assets.glb), window.location.href)
+    : null;
 
   useEffect(() => {
     if (!arKey || !customFilm) return;
@@ -281,24 +286,30 @@ export function MechitzaPreview({
   useEffect(() => {
     let active = true;
     mounted.current = true;
-    if (isIOSARCapable()) {
+    const androidAR = /Android/i.test(navigator.userAgent) && window.location.protocol === "https:";
+    const fallbackMode = androidAR ? "scene-viewer" : "unavailable";
+    const reportFallback = () => setSceneViewerFallback(window.location.hash === SCENE_VIEWER_FALLBACK_HASH);
+    reportFallback();
+    window.addEventListener("hashchange", reportFallback);
+    if (!androidAR && isIOSARCapable()) {
       setMode("quicklook");
     } else if (!navigator.xr) {
-      setMode("unavailable");
+      setMode(fallbackMode);
     } else {
       void import("@/lib/ar/webxrSession").then(async (webxr) => {
         const supported = await webxr.isWebXRARSupported();
         if (!active) return;
         if (supported) startWebXR.current = webxr.startWebXRARSession;
-        setMode(supported ? "webxr" : "unavailable");
+        setMode(supported ? "webxr" : fallbackMode);
       }).catch(() => {
-        if (active) setMode("unavailable");
+        if (active) setMode(fallbackMode);
       });
     }
 
     return () => {
       active = false;
       mounted.current = false;
+      window.removeEventListener("hashchange", reportFallback);
       controller.current?.end();
     };
   }, []);
@@ -339,6 +350,7 @@ export function MechitzaPreview({
     }).catch(() => {
       if (mounted.current) {
         setSessionActive(false);
+        if (/Android/i.test(navigator.userAgent) && window.location.protocol === "https:") setMode("scene-viewer");
         setArError(true);
       }
     });
@@ -492,7 +504,27 @@ export function MechitzaPreview({
 
       <div className={styles.actions}>
         <div className={styles.actionButtons}>
-          {canUseAR && (
+          {sceneViewerIntent ? (
+            <a
+              className={styles.primaryButton}
+              href={sceneViewerIntent}
+              onClick={(event) => {
+                setArError(false);
+                if (window.location.hash === SCENE_VIEWER_FALLBACK_HASH) {
+                  const url = new URL(window.location.href);
+                  url.hash = "";
+                  window.history.replaceState(window.history.state, "", url);
+                  setSceneViewerFallback(false);
+                }
+                if (customAR && customAR.expiresAt - Date.now() < 15_000) {
+                  event.preventDefault();
+                  setArAttempt((attempt) => attempt + 1);
+                }
+              }}
+            >
+              <ScanLine size={19} aria-hidden /> Place in your room
+            </a>
+          ) : canUseAR && (
             <button className={styles.primaryButton} type="button" onClick={openAR} disabled={sessionActive || preparingAR}>
               <ScanLine size={19} aria-hidden />
               {preparingAR ? "Preparing AR…" : sessionActive ? "Opening AR…" : "Place in your room"}
@@ -526,7 +558,14 @@ export function MechitzaPreview({
             <Layers3 size={18} aria-hidden /> {exploded ? "Reassemble" : "Exploded view"}
           </button>
         </div>
-        {arError && <p className={styles.arNote} role="alert">AR couldn’t start. Try again or use the 3D preview.</p>}
+        {sceneViewerFallback && (
+          <p className={styles.arNote} role="alert">Android AR couldn’t open. Try Chrome with Google Play Services for AR, or use the 3D preview.</p>
+        )}
+        {arError && !sceneViewerFallback && (
+          <p className={styles.arNote} role="alert">
+            {mode === "scene-viewer" ? "Browser AR couldn’t start. Tap Place in your room to try Android AR." : "AR couldn’t start. Try again or use the 3D preview."}
+          </p>
+        )}
         {arKey && failedARKey === arKey && (
           <p className={styles.arNote} role="alert">The custom glass couldn’t be prepared for AR. Tap Place in your room to retry.</p>
         )}
