@@ -39,6 +39,7 @@ type ARMode = "checking" | "quicklook" | "webxr" | "unavailable";
 const ART_PALETTE_GROUPS = ["Light neutrals", "Earth tones", "Deep shades"] as const;
 
 type PreviewSelection = {
+  people: boolean;
   model: MechitzaModel;
   finish: MechitzaFinish;
   film: MechitzaFilm;
@@ -86,19 +87,22 @@ export function MechitzaPreview({
   initialModel,
   initialFilm,
   initialArt,
+  initialPeople,
 }: {
   initialFinish: MechitzaFinish;
   initialModel: MechitzaModel;
   initialFilm: MechitzaFilm;
   initialArt: MechitzaArtColor;
+  initialPeople: boolean;
 }) {
   const [selection, setSelection] = useState<PreviewSelection>({
     model: initialModel,
     finish: initialFinish,
     film: initialFilm,
     art: initialArt,
+    people: initialPeople,
   });
-  const { model, finish, film, art } = selection;
+  const { model, finish, film, art, people } = selection;
   const [modelRequested, setModelRequested] = useState(false);
   const [view, setView] = useState<{ side: ModelSide; revision: number }>({
     side: initialFilm.id !== MECHITZA_DEFAULT_FILM.id && initialArt.id === MECHITZA_DEFAULT_ART_COLOR.id
@@ -119,7 +123,7 @@ export function MechitzaPreview({
   const hasPhoto = film.id === MECHITZA_DEFAULT_FILM.id && art.id === MECHITZA_DEFAULT_ART_COLOR.id;
   const showModel = modelRequested || !hasPhoto;
   const canUseAR = mode === "quicklook" || mode === "webxr";
-  const assets = getMechitzaAssets(model.id, finish.id, film.id, art.id);
+  const assets = getMechitzaAssets(model.id, finish.id, film.id, art.id, people);
 
   useEffect(() => {
     let active = true;
@@ -212,6 +216,7 @@ export function MechitzaPreview({
       ["arrangement", next.model.id, MECHITZA_MODELS[0].id],
       ["film", next.film.id, MECHITZA_DEFAULT_FILM.id],
       ["art", next.art.id, MECHITZA_DEFAULT_ART_COLOR.id],
+      ["people", next.people ? "1" : "0", "1"],
     ];
     for (const [key, value, defaultValue] of params) {
       if (value === defaultValue) url.searchParams.delete(key);
@@ -232,7 +237,7 @@ export function MechitzaPreview({
           {showModel ? (
             <ModelPreview
               url={assets.glb}
-              arrangement={model.id}
+              arrangement={people ? model.id : `${model.id}-divider`}
               view={view}
               hasPhoto={hasPhoto}
               onSideChange={setObservedSide}
@@ -250,12 +255,30 @@ export function MechitzaPreview({
           )}
         </div>
         <figcaption className={styles.caption}>
-          <span>{finish.label} <span aria-hidden="true">·</span> {model.label}</span>
-          {showModel && (
-            <span className={styles.sideControls} role="group" aria-label="View a side">
-              <button type="button" aria-pressed={observedSide === "glass"} onClick={() => viewSide("glass")}>Glass side</button>
-              <button type="button" aria-pressed={observedSide === "artwork"} onClick={() => viewSide("artwork")}>Artwork side</button>
-            </span>
+          <dl className={styles.dimensions}>
+            <div><dt>Width</dt><dd>{model.width}</dd></div>
+            <div><dt>Depth</dt><dd>23 in</dd></div>
+            <div><dt>Height</dt><dd>75⅜ in</dd></div>
+          </dl>
+          {(showModel || canUseAR) && (
+            <div className={styles.previewControls}>
+              {showModel && (
+                <div className={styles.sideControls} role="group" aria-label="View a side">
+                  <button type="button" aria-pressed={observedSide === "glass"} onClick={() => viewSide("glass")}>Glass side</button>
+                  <button type="button" aria-pressed={observedSide === "artwork"} onClick={() => viewSide("artwork")}>Artwork side</button>
+                </div>
+              )}
+              <button
+                className={styles.peopleToggle}
+                type="button"
+                role="switch"
+                aria-checked={people}
+                onClick={() => selectPreview({ people: !people })}
+              >
+                {showModel ? "People" : "People in AR"}
+                <span className={styles.switchTrack} aria-hidden="true" />
+              </button>
+            </div>
           )}
         </figcaption>
       </figure>
@@ -281,11 +304,28 @@ export function MechitzaPreview({
           </div>
         )}
         {arError && <p className={styles.arNote} role="alert">AR couldn’t start. Try again or use the 3D preview.</p>}
-        {mode === "unavailable" && <p className={styles.arNote}>For full-scale AR, open this page on an iPhone, iPad, or compatible Android phone.</p>}
-        {canUseAR && !arError && <p className={styles.arNote}>Places the selected arrangement on your floor at full size.</p>}
+        {mode === "unavailable" && <p className={styles.arNote}>Open on your phone for full-scale AR.</p>}
       </div>
 
       <div className={styles.configuration}>
+        <fieldset className={styles.options}>
+          <legend>Arrangement</legend>
+          <div className={styles.choiceGrid}>
+            {MECHITZA_MODELS.map((choice) => (
+              <label className={styles.choice} key={choice.id}>
+                <input
+                  type="radio"
+                  name="arrangement"
+                  checked={model.id === choice.id}
+                  onChange={() => selectPreview({ model: choice })}
+                />
+                <span>
+                  <strong>{choice.label}</strong>
+                </span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
         <Tabs.Root
           activationMode="manual"
           defaultValue={
@@ -351,32 +391,6 @@ export function MechitzaPreview({
             </div>
           </Tabs.Content>
         </Tabs.Root>
-
-        <fieldset className={styles.options}>
-          <legend>Arrangement</legend>
-          <div className={styles.choiceGrid}>
-            {MECHITZA_MODELS.map((choice) => (
-              <label className={styles.choice} key={choice.id}>
-                <input
-                  type="radio"
-                  name="arrangement"
-                  checked={model.id === choice.id}
-                  onChange={() => selectPreview({ model: choice })}
-                />
-                <span>
-                  <strong>{choice.label}</strong>
-                  <small>{choice.width} wide</small>
-                </span>
-              </label>
-            ))}
-          </div>
-        </fieldset>
-
-        <dl className={styles.dimensions}>
-          <div><dt>Width</dt><dd>{model.width}</dd></div>
-          <div><dt>Depth</dt><dd>23 in</dd></div>
-          <div><dt>Height</dt><dd>75⅜ in</dd></div>
-        </dl>
       </div>
 
       {mode === "webxr" && createPortal(

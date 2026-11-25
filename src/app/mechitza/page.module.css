@@ -24,7 +24,7 @@
 
 .headerInner {
   display: flex;
-  min-height: 4.5rem;
+  min-height: 3.75rem;
   align-items: center;
 }
 
@@ -43,7 +43,7 @@
 }
 
 .main {
-  padding-block: clamp(2.65rem, 7vh, 6rem);
+  padding-block: clamp(1.75rem, 4.4vh, 4rem);
 }
 
 .feature {
@@ -54,7 +54,7 @@
     "visual configuration" 1fr
     / minmax(0, 1.62fr) minmax(20rem, 1fr);
   column-gap: clamp(2rem, 4.6vw, 5.25rem);
-  row-gap: 1.45rem;
+  row-gap: 1rem;
 }
 
 .intro {
@@ -95,7 +95,7 @@
   align-content: start;
   gap: 1rem;
   min-width: 0;
-  padding-top: 1.2rem;
+  padding-top: 0.95rem;
   border-top: 1px solid var(--line);
 }
 
@@ -119,10 +119,10 @@
 .finishChoice {
   position: relative;
   display: grid;
-  min-height: 4.15rem;
+  min-height: 3.65rem;
   place-items: center;
   align-content: start;
-  gap: 0.36rem;
+  gap: 0.3rem;
   padding: 0.45rem 0.12rem;
   border: 1px solid var(--line);
   border-radius: 0.5rem;
@@ -178,8 +178,8 @@
   display: flex;
   align-items: center;
   gap: 0.63rem;
-  min-height: 3.6rem;
-  padding: 0.66rem 0.75rem;
+  min-height: 2.75rem;
+  padding: 0.44rem 0.65rem;
   border: 1px solid var(--line);
   border-radius: 0.55rem;
   cursor: pointer;
@@ -201,40 +201,28 @@
 }
 
 .choice strong,
-.choice small {
-  display: block;
-}
-
-.choice strong {
-  font-size: 0.87rem;
-  font-weight: 650;
-}
-
-.choice small {
-  margin-top: 0.12rem;
-  color: var(--muted);
-  font-size: 0.72rem;
-}
-
 .dimensions {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.75rem;
-  padding: 0.75rem 0.9rem;
-  border-radius: 0.5rem;
-  background: var(--linen);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.dimensions div {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
 }
 
 .dimensions dt {
+  font-size: 0.69rem;
   color: var(--muted);
-  font-size: 0.72rem;
 }
 
 .dimensions dd {
-  margin-top: 0.19rem;
-  font-size: 0.93rem;
+  color: var(--ink);
   font-weight: 650;
-  font-variant-numeric: tabular-nums;
 }
 
 .actions {
@@ -340,9 +328,10 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  gap: 0.25rem 0.75rem;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
   min-height: 1.9rem;
-  padding: 0.75rem 0.1rem 0;
+  padding: 0.55rem 0.1rem 0;
   color: var(--muted);
   font-size: 0.75rem;
   line-height: 1.4;
@@ -426,6 +415,14 @@
 
   .configuration {
     padding-top: 0.94rem;
+  }
+
+  .caption {
+    gap: 0.5rem;
+  }
+
+  .sideControls button {
+    min-height: 2.75rem;
   }
 
   .actionButtons {
@@ -532,8 +529,8 @@
 }
 
 .sideControls button {
-  min-height: 2rem;
-  padding: 0.2rem 0.48rem;
+  min-height: 2.35rem;
+  padding: 0.25rem 0.6rem;
   border: 1px solid var(--line);
   border-radius: 0.35rem;
 }
@@ -571,4 +568,42 @@
   color: #51473c;
   background: #fffaf3;
   font-size: 0.73rem;
+}
+
+.previewControls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.7rem;
+}
+
+.peopleToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2.75rem;
+  color: var(--ink);
+}
+
+.switchTrack {
+  display: inline-flex;
+  align-items: center;
+  width: 1.75rem;
+  height: 1rem;
+  padding: 2px;
+  border-radius: 1rem;
+  background: #b5a99d;
+}
+
+.switchTrack::before {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  background: #fffaf5;
+  content: "";
+}
+
+.peopleToggle[aria-checked="true"] .switchTrack {
+  justify-content: flex-end;
+  background: var(--accent);
 }

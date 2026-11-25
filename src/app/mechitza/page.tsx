@@ -17,9 +17,9 @@ export const metadata: Metadata = {
 export default async function MechitzaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ finish?: string; arrangement?: string; film?: string; art?: string }>;
+  searchParams: Promise<{ finish?: string; arrangement?: string; film?: string; art?: string; people?: string }>;
 }) {
-  const { finish, arrangement, film, art } = await searchParams;
+  const { finish, arrangement, film, art, people } = await searchParams;
   const initialFinish = MECHITZA_FINISHES.find(({ id }) => id === finish) ?? MECHITZA_DEFAULT_FINISH;
   const initialModel = MECHITZA_MODELS.find(({ id }) => id === arrangement) ?? MECHITZA_MODELS[0];
   const initialFilm = MECHITZA_FILMS.find(({ id }) => id === film) ?? MECHITZA_DEFAULT_FILM;
@@ -40,6 +40,7 @@ export default async function MechitzaPage({
           initialModel={initialModel}
           initialFilm={initialFilm}
           initialArt={initialArt}
+          initialPeople={people !== "0"}
         />
       </main>
     </div>

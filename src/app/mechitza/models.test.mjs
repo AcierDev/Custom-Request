@@ -76,7 +76,16 @@ test("glass and artwork selections resolve to the same custom model in 3D and AR
 
   const custom = getMechitzaAssets("three", "walnut", "olive-trellis", "taupe");
   const file = "/api/mechitza-model/v10-linen-marquetry-walnut-three";
-  assert.equal(custom.glb, `${file}.glb?film=olive-trellis&art=taupe&v=5`);
-  assert.equal(custom.usdz, `${file}.usdz?film=olive-trellis&art=taupe&v=5`);
+  assert.equal(custom.glb, `${file}.glb?film=olive-trellis&art=taupe&v=7`);
+  assert.equal(custom.usdz, `${file}.usdz?film=olive-trellis&art=taupe&v=7`);
   assert.equal(custom.poster, base.poster);
+});
+
+test("hiding people uses matching divider-only assets in 3D and AR", async () => {
+  const { getMechitzaAssets } = await import("./models.ts");
+  const visible = getMechitzaAssets("one", "walnut", "linen-arches", "ivory");
+  const hidden = getMechitzaAssets("one", "walnut", "linen-arches", "ivory", false);
+  assert.equal(hidden.poster, visible.poster);
+  assert.equal(hidden.glb, `${visible.glb}&people=0`);
+  assert.equal(hidden.usdz, `${visible.usdz}&people=0`);
 });

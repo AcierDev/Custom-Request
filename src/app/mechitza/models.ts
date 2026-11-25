@@ -65,9 +65,11 @@ export function getMechitzaAssets(
   finish: MechitzaFinish["id"],
   film: MechitzaFilm["id"] = MECHITZA_DEFAULT_FILM.id,
   art: MechitzaArtColor["id"] = MECHITZA_DEFAULT_ART_COLOR.id,
+  people = true,
 ) {
   const { poster } = getMechitzaBaseAssets(model, finish);
   const path = `/api/mechitza-model/${getMechitzaAssetName(model, finish)}`;
-  const query = new URLSearchParams({ film, art, v: "5" });
+  const query = new URLSearchParams({ film, art, v: "7" });
+  if (!people) query.set("people", "0");
   return { poster, glb: `${path}.glb?${query}`, usdz: `${path}.usdz?${query}` };
 }

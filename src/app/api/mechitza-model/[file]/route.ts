@@ -67,6 +67,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ file: st
   if (!format) return new Response("Unknown Mechitza model", { status: 404 });
 
   const query = new URL(req.url).searchParams;
+  const withPeople = query.get("people") !== "0";
   const film = MECHITZA_FILMS.find((option) => option.id === (query.get("film") ?? MECHITZA_DEFAULT_FILM.id));
   const artwork = MECHITZA_ART_COLORS.find((option) => option.id === (query.get("art") ?? MECHITZA_DEFAULT_ART_COLOR.id));
   if (!film || !artwork) return new Response("Unknown Mechitza finish option", { status: 400 });
@@ -80,17 +81,21 @@ export async function GET(req: Request, { params }: { params: Promise<{ file: st
       format !== "usdz" || artwork.id === MECHITZA_DEFAULT_ART_COLOR.id
         ? null
         : readFile(path.join(PUBLIC_DIR, "mechitza-figures", "art-colors", `${artwork.id}.jpg`)),
-      readFile(path.join(PUBLIC_DIR, "mechitza-figures", `mechitza-women.${format}`)),
-      format === "usdz" ? readFile(path.join(PUBLIC_DIR, "mechitza-figures", "preview.usdc")) : null,
+      withPeople ? readFile(path.join(PUBLIC_DIR, "mechitza-figures", `mechitza-women.${format}`)) : null,
+      withPeople && format === "usdz"
+        ? readFile(path.join(PUBLIC_DIR, "mechitza-figures", "preview.usdc"))
+        : null,
     ]);
     if (texture && texture.length > MAX_FILM_BYTES) throw new Error("Mechitza film texture exceeds size limit");
 
-    const bytes = previewLayer
-      ? customizeUsdz(source, texture, artImage, { previewLayer, figurePackage: figureModel })
-      : mergeFiguresGlb(
-        customizeGlb(source, texture, artwork.id === MECHITZA_DEFAULT_ART_COLOR.id ? null : artwork.swatch),
-        figureModel,
-      );
+    let bytes: Buffer;
+    if (format === "usdz") {
+      const figures = previewLayer && figureModel ? { previewLayer, figurePackage: figureModel } : undefined;
+      bytes = customizeUsdz(source, texture, artImage, figures);
+    } else {
+      bytes = customizeGlb(source, texture, artwork.id === MECHITZA_DEFAULT_ART_COLOR.id ? null : artwork.swatch);
+      if (figureModel) bytes = mergeFiguresGlb(bytes, figureModel);
+    }
     if (bytes.length > MAX_MODEL_BYTES) throw new Error("Generated Mechitza model exceeds size limit");
     return buildModelResponse(bytes, format);
   } catch (error) {
