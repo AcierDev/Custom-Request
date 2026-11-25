@@ -10,6 +10,7 @@
 
 # Mechitza website model releases
 
+- After verifying Mechitza website changes, publish them to production and check the result at `mechitza.everwoodus.com` unless the user requests a local-only change.
 - Use the current verified Fusion revision from the Mechitza Manual for website model exports. Record the source revision and archive SHA-256 in `src/app/mechitza/modelRelease.ts`.
 - Publish the matching geometry and dimensions together for web 3D and AR. Check the exported geometry at full scale before replacing the live model. Use the release identifier in the asset URLs so returning visitors fetch the current files.
 

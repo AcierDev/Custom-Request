@@ -62,25 +62,6 @@
   padding-top: 0.18rem;
 }
 
-.finish {
-  display: flex;
-  align-items: center;
-  gap: 0.58rem;
-  margin-bottom: 0.68rem;
-  color: var(--accent);
-  font-size: 0.7rem;
-  font-weight: 680;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-}
-
-.finish::before {
-  width: 1.35rem;
-  height: 1px;
-  background: #9b7860;
-  content: "";
-}
-
 .intro h1 {
   font-family: Georgia, "Times New Roman", serif;
   font-size: clamp(3rem, 4.7vw, 5.5rem);

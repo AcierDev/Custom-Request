@@ -379,7 +379,7 @@ export default function ModelPreview({
   filmImage,
   surface,
   exploded,
-  onSideChange,
+  onOrbit,
 }: {
   url: string;
   arrangement: string;
@@ -388,20 +388,32 @@ export default function ModelPreview({
   filmImage?: Blob;
   surface: RefObject<HTMLDivElement | null>;
   exploded: boolean;
-  onSideChange: (side: ModelSide | null) => void;
+  onOrbit: () => void;
 }) {
   const assetUrl = appPath(url);
   const { model, failed, onDisplay } = useResolvedModel(assetUrl, arrangement, filmImage);
   const loading = !failed && model?.url !== assetUrl;
   const controls = useRef<OrbitControlsImpl>(null);
   const [initialCamera] = useState(() => ({ position: [2.3, 1.7, -7] as [number, number, number] }));
-  const reportSide = useCallback(() => {
-    if (!controls.current) return;
-    const { target, object } = controls.current;
-    const z = object.position.z - target.z;
-    const x = object.position.x - target.x;
-    onSideChange(Math.abs(z) < Math.abs(x) * 0.2 ? null : z < 0 ? "glass" : "artwork");
-  }, [onSideChange]);
+  const orbitStart = useRef<{ azimuth: number; polar: number } | null>(null);
+
+  function startOrbit() {
+    const active = controls.current;
+    if (!active) return;
+    orbitStart.current = { azimuth: active.getAzimuthalAngle(), polar: active.getPolarAngle() };
+  }
+
+  function reportOrbit() {
+    const start = orbitStart.current;
+    const active = controls.current;
+    if (!start || !active) return;
+    const azimuth = active.getAzimuthalAngle() - start.azimuth;
+    const polar = active.getPolarAngle() - start.polar;
+    // Zoom and programmatic camera moves should not count as a manual orbit.
+    if (Math.abs(azimuth) < 1e-4 && Math.abs(polar) < 1e-4) return;
+    orbitStart.current = null;
+    onOrbit();
+  }
 
   return (
     <ModelErrorBoundary url={url} hasPhoto={hasPhoto}>
@@ -423,7 +435,9 @@ export default function ModelPreview({
           makeDefault
           enablePan={false}
           enableDamping={false}
-          onChange={reportSide}
+          onStart={startOrbit}
+          onChange={reportOrbit}
+          onEnd={() => { orbitStart.current = null; }}
         />
         <FramedModel model={model} requestedUrl={assetUrl} view={view} exploded={exploded} onDisplay={onDisplay} />
       </Canvas>

@@ -236,7 +236,7 @@ export function MechitzaPreview({
       : "artwork",
     revision: 0,
   });
-  const [observedSide, setObservedSide] = useState<ModelSide | null>(null);
+  const [highlightedSide, setHighlightedSide] = useState<ModelSide | null>(null);
   const [mode, setMode] = useState<ARMode>("checking");
   const [sessionActive, setSessionActive] = useState(false);
   const [placed, setPlaced] = useState(false);
@@ -344,7 +344,8 @@ export function MechitzaPreview({
     });
   }
 
-  function viewSide(side: ModelSide) {
+  function viewSide(side: ModelSide, highlight = false) {
+    setHighlightedSide(highlight ? side : null);
     setView((previous) => ({ side, revision: previous.revision + 1 }));
   }
 
@@ -431,7 +432,6 @@ export function MechitzaPreview({
   return (
     <section className={styles.feature} aria-labelledby="mechitza-title">
       <div className={styles.intro}>
-        <p className={styles.finish}>{customFilm ? "Custom glass design" : film.label}</p>
         <h1 id="mechitza-title">Mechitza V10</h1>
       </div>
 
@@ -446,7 +446,7 @@ export function MechitzaPreview({
               view={view}
               hasPhoto={hasPhoto}
               exploded={exploded}
-              onSideChange={setObservedSide}
+              onOrbit={() => setHighlightedSide(null)}
             />
           ) : (
             <Image
@@ -470,8 +470,8 @@ export function MechitzaPreview({
             <div className={styles.previewControls}>
               {showModel && (
                 <div className={styles.sideControls} role="group" aria-label="View a side">
-                  <button type="button" aria-pressed={observedSide === "glass"} onClick={() => viewSide("glass")}>Men’s side</button>
-                  <button type="button" aria-pressed={observedSide === "artwork"} onClick={() => viewSide("artwork")}>Women’s side</button>
+                  <button type="button" aria-pressed={highlightedSide === "glass"} onClick={() => viewSide("glass", true)}>Men’s side</button>
+                  <button type="button" aria-pressed={highlightedSide === "artwork"} onClick={() => viewSide("artwork", true)}>Women’s side</button>
                 </div>
               )}
               <button
@@ -505,7 +505,10 @@ export function MechitzaPreview({
               aria-pressed={showModel}
               onClick={() => {
                 setModelRequested(!showModel);
-                if (showModel) setExploded(false);
+                if (showModel) {
+                  setExploded(false);
+                  setHighlightedSide(null);
+                }
               }}
             >
               <Box size={18} aria-hidden /> {showModel ? "Back to photos" : "View in 3D"}
