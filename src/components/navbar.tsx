@@ -8,7 +8,6 @@ import {
   User,
   Save,
   PencilRuler,
-  PanelsTopLeft,
   LogIn,
 } from "lucide-react";
 import Link from "next/link";
@@ -69,12 +68,6 @@ const mainNavItems: NavItem[] = [
     label: "Viewer",
     railLabel: "Viewer",
     hotkey: "1",
-  },
-  {
-    href: "/mechitza",
-    icon: PanelsTopLeft,
-    label: "Mechitza",
-    railLabel: "Mechitza",
   },
 ];
 

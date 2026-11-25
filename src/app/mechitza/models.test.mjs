@@ -14,10 +14,10 @@ test("the Mechitza arrangements keep their true widths", async () => {
 });
 
 test("every wood finish selects matching photo, desktop, Android and iPhone assets", async () => {
-  const { MECHITZA_MODELS, MECHITZA_FINISHES, MECHITZA_DEFAULT_FINISH, getMechitzaAssets } = await import("./models.ts");
+  const { MECHITZA_MODELS, MECHITZA_FINISHES, MECHITZA_DEFAULT_FINISH, getMechitzaBaseAssets } = await import("./models.ts");
   assert.deepEqual(
     MECHITZA_FINISHES.map(({ id }) => id),
-    ["bleached-maple", "white-ash", "natural", "honey-oak", "cognac", "chestnut", "smoked-oak", "walnut", "espresso", "ebony"],
+    ["saltwashed-oak", "bleached-maple", "white-ash", "wheat", "natural", "honey-oak", "hazelnut", "cognac", "chestnut", "smoked-oak", "mocha", "walnut", "carbon-oak", "espresso", "ebony"],
   );
 
   assert.equal(MECHITZA_DEFAULT_FINISH.id, "natural");
@@ -27,23 +27,23 @@ test("every wood finish selects matching photo, desktop, Android and iPhone asse
     for (const { id: model } of MECHITZA_MODELS) {
       const suffix = finish === "natural" ? model : `${finish}-${model}`;
       const stem = `/mechitza-assets/v10-linen-marquetry-${suffix}`;
-      const assets = getMechitzaAssets(model, finish);
+      const assets = getMechitzaBaseAssets(model, finish);
       assert.deepEqual(assets, {
         poster: `${stem}.webp?v=2`,
-        glb: `${stem}.glb?v=2`,
-        usdz: `${stem}.usdz?v=2`,
+        glb: `${stem}.glb?v=3`,
+        usdz: `${stem}.usdz?v=3`,
       });
       paths.add(assets.usdz);
     }
   }
-  assert.equal(paths.size, 20);
+  assert.equal(paths.size, 30);
 });
 
 test("each 3D model preserves opaque printed film and a translucent reverse", async () => {
-  const { MECHITZA_MODELS, MECHITZA_FINISHES, getMechitzaAssets } = await import("./models.ts");
+  const { MECHITZA_MODELS, MECHITZA_FINISHES, getMechitzaBaseAssets } = await import("./models.ts");
   for (const { id: finish } of MECHITZA_FINISHES) {
     for (const { id: model } of MECHITZA_MODELS) {
-      const { glb } = getMechitzaAssets(model, finish);
+      const { glb } = getMechitzaBaseAssets(model, finish);
       const path = glb.split("?")[0];
       const bytes = await readFile(new URL(`../../../public${path}`, import.meta.url));
       assert.equal(bytes.toString("ascii", 0, 4), "glTF", path);
@@ -60,4 +60,23 @@ test("each 3D model preserves opaque printed film and a translucent reverse", as
       assert.ok(Math.abs(reverse.pbrMetallicRoughness.baseColorFactor[3] - 0.6) < 0.00001, path);
     }
   }
+});
+
+test("glass and artwork selections resolve to the same custom model in 3D and AR", async () => {
+  const { getMechitzaAssets } = await import("./models.ts");
+  const { MECHITZA_FILMS, MECHITZA_ART_COLORS, MECHITZA_ART_GROUPS } = await import("./options.ts");
+  assert.equal(MECHITZA_FILMS.length, 15);
+  assert.equal(MECHITZA_ART_COLORS.length, 15);
+  assert.deepEqual(
+    MECHITZA_ART_GROUPS.map((group) => MECHITZA_ART_COLORS.filter((color) => color.group === group).length),
+    [5, 5, 5],
+  );
+  const base = getMechitzaAssets("three", "walnut");
+  assert.deepEqual(getMechitzaAssets("three", "walnut", "linen-marquetry", "navy"), base);
+
+  const custom = getMechitzaAssets("three", "walnut", "olive-trellis", "taupe");
+  const file = "/api/mechitza-model/v10-linen-marquetry-walnut-three";
+  assert.equal(custom.glb, `${file}.glb?film=olive-trellis&art=taupe&v=5`);
+  assert.equal(custom.usdz, `${file}.usdz?film=olive-trellis&art=taupe&v=5`);
+  assert.equal(custom.poster, base.poster);
 });

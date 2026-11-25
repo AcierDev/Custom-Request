@@ -1,7 +1,7 @@
 "use client";
 
 import localFont from "next/font/local";
-import { usePathname } from "next/navigation";
+import { usePathname, useSelectedLayoutSegment } from "next/navigation";
 import "./globals.css";
 import { Navbar } from "@/components/navbar";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -32,8 +32,9 @@ const geistMono = localFont({
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const segment = useSelectedLayoutSegment();
 
-  if (pathname === "/mechitza") {
+  if (segment === "mechitza") {
     return (
       <>
         <SpeedInsights {...CUSTOM_SPEED_INSIGHTS_PROPS} />

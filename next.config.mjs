@@ -3,6 +3,10 @@ import { fileURLToPath } from "node:url";
 import { createAppPaths } from "./src/lib/appPathConfig.mjs";
 
 const DEFAULT_DIST_DIR = ".next";
+const mechitzaHost = { type: "host", value: "mechitza\\.everwoodus\\.com" };
+const customHost = { type: "host", value: "custom\\.everwood\\.shop" };
+const mechitzaOrigin = "https://mechitza.everwoodus.com";
+const mechitzaResources = ["/mechitza-assets", "/mechitza-films", "/mechitza-figures", "/api/mechitza-model"];
 const PROJECT_ROOT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const configuredDistDir = process.env.CUSTOM_REQUEST_NEXT_DIST_DIR;
 const { basePath } = createAppPaths({
@@ -28,10 +32,28 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  outputFileTracingIncludes: {
+    "/api/mechitza-model/*": [
+      "./public/mechitza-assets/*.glb",
+      "./public/mechitza-assets/*.usdz",
+      "./public/mechitza-films/*.jpg",
+      "./public/mechitza-figures/**/*",
+    ],
+  },
   // The Blender job routes build paths from process.cwd(), so tracing pulls the
   // whole project into their functions. They only run on the studio Mac
   // (hosted, they answer 503), so keep the project's assets out of them.
   outputFileTracingExcludes: {
+    "/api/mechitza-model/*": [
+      "./public/textures/**/*",
+      "./public/wasm/**/*",
+      "./public/photo-room/**/*",
+      "./public/paints/**/*",
+      "./public/images/**/*",
+      "./public/room-photo/**/*",
+      "./public/models/**/*",
+      "./public/mechitza-assets/*.webp",
+    ],
     "/api/blender-render/**": [
       "./public/**/*",
       "./output/**/*",
@@ -45,6 +67,11 @@ const nextConfig = {
       headers: [{ key: "Content-Type", value: "model/vnd.usdz+zip" }],
     }];
   },
+  async rewrites() {
+    return {
+      beforeFiles: [{ source: "/", has: [mechitzaHost], destination: "/mechitza" }],
+    };
+  },
   // The old viewer (viewer.everwoodus.com) served shared designs at
   // /?shareId=ID. The design now lives at /shared/ID (the gallery room),
   // so any legacy /?shareId=ID that reaches THIS app is forwarded to it.
@@ -53,8 +80,33 @@ const nextConfig = {
   async redirects() {
     return [
       {
+        source: "/mechitza",
+        has: [customHost],
+        destination: mechitzaOrigin,
+        permanent: true,
+      },
+      ...mechitzaResources.map((path) => ({
+        source: `${path}/:file*`,
+        has: [customHost],
+        destination: `${mechitzaOrigin}${path}/:file*`,
+        permanent: true,
+      })),
+      {
+        source: "/mechitza",
+        has: [mechitzaHost],
+        destination: "/",
+        permanent: true,
+      },
+      {
+        source: "/:appPath((?!(?:_next|_vercel|mechitza-assets|mechitza-films|mechitza-figures|api/mechitza-model)(?:/|$)|(?:favicon\\.ico|icon\\.svg)$).+)",
+        has: [mechitzaHost],
+        destination: "https://custom.everwood.shop/:appPath",
+        permanent: false,
+      },
+      {
         source: "/",
         has: [{ type: "query", key: "shareId", value: "(?<sid>[^&]+)" }],
+        missing: [mechitzaHost],
         destination: "/shared/:sid",
         permanent: true,
       },
