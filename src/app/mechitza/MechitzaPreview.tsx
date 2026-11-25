@@ -10,6 +10,7 @@ import { isIOSARCapable } from "@/lib/ar/isIOS";
 import type { startWebXRARSession, WebXRARController } from "@/lib/ar/webxrSession";
 import { appPath } from "@/lib/appPaths";
 import {
+  MECHITZA_DEFAULT_FINISH,
   MECHITZA_FINISHES,
   MECHITZA_MODELS,
   getMechitzaAssets,
@@ -112,7 +113,7 @@ export function MechitzaPreview({
     setFinish(wood);
 
     const url = new URL(window.location.href);
-    if (wood.id === "natural") url.searchParams.delete("finish");
+    if (wood.id === MECHITZA_DEFAULT_FINISH.id) url.searchParams.delete("finish");
     else url.searchParams.set("finish", wood.id);
     if (choice.id === "one") url.searchParams.delete("arrangement");
     else url.searchParams.set("arrangement", choice.id);
@@ -128,6 +129,7 @@ export function MechitzaPreview({
           <p className={styles.description}>
             A freestanding divider with navy Everwood relief, a wood frame, and patterned upper glass.
           </p>
+          <p className={styles.privacyNote}>Privacy is simulated. Actual visibility depends on room lighting.</p>
         </div>
 
         <fieldset className={styles.options}>

@@ -34,7 +34,7 @@ export default function ModelPreview({ url }: { url: string }) {
         dpr={[1, 1.6]}
         frameloop="demand"
         orthographic
-        camera={{ position: [2.3, 1.7, 7] }}
+        camera={{ position: [2.3, 1.7, -7] }}
         fallback={<p className={styles.modelStatus}>This browser can’t display the 3D preview.</p>}
       >
         <color attach="background" args={["#e8dfd3"]} />

@@ -90,6 +90,13 @@
   line-height: 1.55;
 }
 
+.privacyNote {
+  margin-top: 0.75rem;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.42;
+}
+
 .options {
   min-width: 0;
 }

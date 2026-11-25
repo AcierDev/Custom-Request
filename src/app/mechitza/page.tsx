@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { MechitzaPreview } from "./MechitzaPreview";
-import { MECHITZA_FINISHES, MECHITZA_MODELS } from "./models";
+import { MECHITZA_DEFAULT_FINISH, MECHITZA_FINISHES, MECHITZA_MODELS } from "./models";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -16,7 +16,7 @@ export default async function MechitzaPage({
   searchParams: Promise<{ finish?: string; arrangement?: string }>;
 }) {
   const { finish, arrangement } = await searchParams;
-  const initialFinish = MECHITZA_FINISHES.find(({ id }) => id === finish) ?? MECHITZA_FINISHES[0];
+  const initialFinish = MECHITZA_FINISHES.find(({ id }) => id === finish) ?? MECHITZA_DEFAULT_FINISH;
   const initialModel = MECHITZA_MODELS.find(({ id }) => id === arrangement) ?? MECHITZA_MODELS[0];
 
   return (
