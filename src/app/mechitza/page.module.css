@@ -363,6 +363,13 @@
   pointer-events: auto;
 }
 
+.xrControls .xrPlace {
+  border-color: #fffaf4;
+  background: #fffaf4;
+  color: #30221b;
+  font-weight: 700;
+}
+
 @media (max-width: 820px) {
   .headerInner,
   .main {

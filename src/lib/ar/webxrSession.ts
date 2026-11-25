@@ -44,6 +44,8 @@ const KEY_DIRECTION: [number, number, number] = [0.4, 1, 0.6];
 export interface WebXRARController {
   /** End the session (also fires onEnd via the session 'end' event). */
   end: () => void;
+  /** Place at the current hit-test marker, if a surface is available. */
+  place: () => void;
   /** Un-place the piece and show the reticle again so it can be re-placed. */
   reset: () => void;
   /** Rotate a placed floor model about its vertical axis without resizing it. */
@@ -59,6 +61,8 @@ export interface StartWebXROptions {
   onEnd: () => void;
   /** Fired whenever the piece becomes placed / un-placed. */
   onPlacedChange?: (placed: boolean) => void;
+  /** Fired when the floor placement marker appears or disappears. */
+  onSurfaceChange?: (available: boolean) => void;
 }
 
 /** True only where an immersive-ar session can actually start (Android Chrome). */
@@ -151,6 +155,12 @@ export async function startWebXRARSession(
   const setPlaced = (value: boolean) => {
     placed = value;
     opts.onPlacedChange?.(value);
+  };
+
+  const setReticleVisible = (visible: boolean) => {
+    if (!reticle || reticle.visible === visible) return;
+    reticle.visible = visible;
+    if (floorModelUrl) opts.onSurfaceChange?.(visible);
   };
 
   let cleanedUp = false;
@@ -288,7 +298,7 @@ export async function startWebXRARSession(
     const camPos = new THREE.Vector3();
 
     onSelect = () => {
-      if (!reticleMesh.visible || !artGroup || (floorModelUrl && placed)) return;
+      if (disposed || !reticleMesh.visible || !artGroup || (floorModelUrl && placed)) return;
       reticleMesh.matrix.decompose(tmpPos, tmpQuat, tmpScale);
       artGroup.position.copy(tmpPos);
       // Keep the model upright and initially face the viewer (yaw only).
@@ -297,6 +307,7 @@ export async function startWebXRARSession(
       artGroup.quaternion.setFromEuler(new THREE.Euler(0, yaw, 0));
       artGroup.visible = true;
       setPlaced(true);
+      if (floorModelUrl) setReticleVisible(false);
     };
     session.addEventListener("select", onSelect);
 
@@ -309,14 +320,10 @@ export async function startWebXRARSession(
             ? findUpwardHorizontalHit(results, refSpace)
             : results[0]?.getPose(refSpace)
           : null;
-        if (pose) {
-          reticleMesh.visible = true;
-          reticleMesh.matrix.fromArray(pose.transform.matrix);
-        } else {
-          reticleMesh.visible = false;
-        }
-      } else if (reticleMesh.visible) {
-        reticleMesh.visible = false;
+        if (pose) reticleMesh.matrix.fromArray(pose.transform.matrix);
+        setReticleVisible(Boolean(pose));
+      } else {
+        setReticleVisible(false);
       }
       r.render(scene, camera);
     });
@@ -331,6 +338,7 @@ export async function startWebXRARSession(
 
   return {
     end: () => void session.end().catch(() => {}),
+    place: () => onSelect?.(),
     reset: () => {
       if (artGroup) artGroup.visible = false;
       setPlaced(false);
