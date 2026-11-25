@@ -3,7 +3,7 @@
 import * as Tabs from "@radix-ui/react-tabs";
 import dynamic from "next/dynamic";
 import Image from "next/image";
-import { Box, ChevronDown, ImagePlus, Layers3, RotateCcw, RotateCw, ScanLine, X } from "lucide-react";
+import { Box, ChevronDown, ImagePlus, Layers3, Palette, PanelsTopLeft, RotateCcw, RotateCw, ScanLine, TreeDeciduous, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { launchAR } from "@/lib/ar/quickLook";
@@ -587,16 +587,19 @@ export function MechitzaPreview({
                 />
                 <span>
                   <strong>{choice.label}</strong>
+                  <span className={styles.arrangementWidth}>{choice.width} wide</span>
                 </span>
               </label>
             ))}
           </div>
         </fieldset>
         <Tabs.Root
+          className={styles.materialOptions}
           activationMode="manual"
           value={materialTab}
           onValueChange={onMaterialTabChange}
         >
+          <h2 className={styles.materialHeading}>Materials</h2>
           <p id="mechitza-material-note" className={styles.materialNote}>
             Sample options. Other finishes, glass designs, and artwork colors are available by request.
           </p>
@@ -605,9 +608,18 @@ export function MechitzaPreview({
             aria-label="Mechitza materials"
             aria-describedby="mechitza-material-note"
           >
-            <Tabs.Trigger className={styles.customizationTab} value="wood">Wood finish</Tabs.Trigger>
-            <Tabs.Trigger className={styles.customizationTab} value="film">Glass design</Tabs.Trigger>
-            <Tabs.Trigger className={styles.customizationTab} value="art">Artwork color</Tabs.Trigger>
+            <Tabs.Trigger className={styles.customizationTab} value="wood" aria-label="Wood finish">
+              <span className={styles.materialTabLabel}><TreeDeciduous size={15} aria-hidden /> Wood finish</span>
+              <span className={styles.materialTabSelection}>{finish.label}</span>
+            </Tabs.Trigger>
+            <Tabs.Trigger className={styles.customizationTab} value="film" aria-label="Glass design">
+              <span className={styles.materialTabLabel}><PanelsTopLeft size={15} aria-hidden /> Glass design</span>
+              <span className={styles.materialTabSelection}>{customFilm ? "Custom image" : film.label}</span>
+            </Tabs.Trigger>
+            <Tabs.Trigger className={styles.customizationTab} value="art" aria-label="Artwork color">
+              <span className={styles.materialTabLabel}><Palette size={15} aria-hidden /> Artwork color</span>
+              <span className={styles.materialTabSelection}>{art.group === "Custom" ? art.swatch.toUpperCase() : art.label}</span>
+            </Tabs.Trigger>
           </Tabs.List>
           <Tabs.Content className={styles.customizationPanel} value="wood">
             <ColorOptions
