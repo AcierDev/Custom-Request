@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { appPath } from "@/lib/appPaths";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -12,6 +13,7 @@ import {
   ImageOff,
   X,
   Info,
+  PanelsTopLeft,
 } from "lucide-react";
 import {
   useCustomStore,
@@ -798,6 +800,13 @@ function CtaBar({
             isPhoneLandscape && PHONE_LANDSCAPE_AR_CLASS,
           )}
         />
+        <Link
+          href="/mechitza"
+          className="glass-surface flex min-h-9 items-center justify-center gap-1.5 rounded-full px-2.5 text-xs font-medium text-slate-200 hover:bg-white/10"
+        >
+          <PanelsTopLeft className="size-4 shrink-0" aria-hidden />
+          Mechitza
+        </Link>
         <SharedMobilePanelActions
           layout={isPhoneLandscape ? "rail" : "row"}
           onOpen={onPanel}
@@ -808,6 +817,16 @@ function CtaBar({
 
   return (
     <div className="flex items-center rounded-full glass-surface px-2 py-1.5 shadow-xl">
+      <Button
+        asChild
+        variant="ghost"
+        className="h-9 gap-1.5 rounded-full px-3 text-xs font-medium text-slate-300 hover:bg-white/10 hover:text-white"
+      >
+        <Link href="/mechitza">
+          <PanelsTopLeft className="size-4 shrink-0" aria-hidden />
+          Mechitza
+        </Link>
+      </Button>
       <Button
         type="button"
         variant="ghost"

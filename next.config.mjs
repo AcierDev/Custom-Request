@@ -39,6 +39,12 @@ const nextConfig = {
       "./docs/**/*",
     ],
   },
+  async headers() {
+    return [{
+      source: "/mechitza-assets/:model(.*\\.usdz)",
+      headers: [{ key: "Content-Type", value: "model/vnd.usdz+zip" }],
+    }];
+  },
   // The old viewer (viewer.everwoodus.com) served shared designs at
   // /?shareId=ID. The design now lives at /shared/ID (the gallery room),
   // so any legacy /?shareId=ID that reaches THIS app is forwarded to it.

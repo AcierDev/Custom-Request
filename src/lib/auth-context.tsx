@@ -113,6 +113,7 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
       !isGuest &&
       pathname !== "/" &&
       pathname !== "/sign-in" &&
+      pathname !== "/mechitza" &&
       !pathname.includes("/_") &&
       !pathname.includes("/auth/") &&
       // Check for any routes that should be accessible to all users

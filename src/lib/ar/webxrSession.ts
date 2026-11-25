@@ -13,6 +13,7 @@
 // art snapshot via buildExportScene) → the DOM overlay drives reset/size/design.
 // Changing size/design mutates the store, GeometricPattern (still mounted on the
 // page behind the overlay) republishes the snapshot, and we rebuild the mesh.
+// Floor models load a meter-scaled GLB and use only upward-facing surface hits.
 
 import * as THREE from "three";
 import {
@@ -22,6 +23,7 @@ import {
 } from "./artSnapshot";
 import { buildExportScene } from "./buildExportScene";
 import { appPath } from "../appPaths.ts";
+import { findUpwardHorizontalHit } from "./floorPlacement";
 
 const GRAIN_ATLAS_URL = "/textures/grain-atlas.png";
 
@@ -44,11 +46,15 @@ export interface WebXRARController {
   end: () => void;
   /** Un-place the piece and show the reticle again so it can be re-placed. */
   reset: () => void;
+  /** Rotate a placed floor model about its vertical axis without resizing it. */
+  rotate: (radians: number) => void;
 }
 
 export interface StartWebXROptions {
   /** Element used as the WebXR dom-overlay root (must already be in the DOM). */
   overlayRoot: HTMLElement;
+  /** Resolved GLB URL for a Y-up, floor-origin model in meters. */
+  floorModelUrl?: string;
   /** Fired when the session ends (user exit, system dismiss, or error cleanup). */
   onEnd: () => void;
   /** Fired whenever the piece becomes placed / un-placed. */
@@ -76,24 +82,37 @@ function loadImage(url: string): Promise<HTMLImageElement> {
 }
 
 /**
- * Recursively free a group's geometries, materials and textures. The grain
- * atlas is shared as `map` across every per-color material, so textures are
- * collected and disposed exactly once (disposing N times is wasteful + noisy).
+ * Recursively free a group's geometries, materials and textures, including
+ * textures or buffers shared by multiple meshes or material slots.
  */
 function disposeGroup(group: THREE.Object3D): void {
+  const geometries = new Set<THREE.BufferGeometry>();
+  const materials = new Set<THREE.Material>();
   const textures = new Set<THREE.Texture>();
   group.traverse((obj) => {
     const mesh = obj as THREE.Mesh;
-    mesh.geometry?.dispose();
+    if (mesh.geometry) geometries.add(mesh.geometry);
     const mat = mesh.material;
     const mats = Array.isArray(mat) ? mat : mat ? [mat] : [];
-    for (const m of mats) {
-      const map = (m as THREE.MeshStandardMaterial).map;
-      if (map) textures.add(map);
-      m.dispose();
-    }
+    for (const material of mats) materials.add(material);
   });
-  textures.forEach((t) => t.dispose());
+  for (const material of materials) {
+    for (const value of Object.values(material)) {
+      if (value instanceof THREE.Texture) textures.add(value);
+    }
+    material.dispose();
+  }
+  geometries.forEach((geometry) => geometry.dispose());
+
+  const images = new Set<ImageBitmap>();
+  for (const texture of textures) {
+    const image = texture.source.data;
+    if (typeof ImageBitmap !== "undefined" && image instanceof ImageBitmap) {
+      images.add(image);
+    }
+    texture.dispose();
+  }
+  images.forEach((image) => image.close());
 }
 
 /**
@@ -109,6 +128,7 @@ export async function startWebXRARSession(
   }
 
   // ── requestSession FIRST (no await before it) to preserve the user gesture ──
+  const { floorModelUrl } = opts;
   const session = await navigator.xr.requestSession("immersive-ar", {
     requiredFeatures: ["hit-test", "dom-overlay"],
     domOverlay: { root: opts.overlayRoot },
@@ -222,8 +242,27 @@ export async function startWebXRARSession(
       scene.add(next);
     };
 
-    await rebuildArt();
-    unsubscribe = subscribeArtSnapshot(() => void rebuildArt());
+    if (floorModelUrl) {
+      const { GLTFLoader } = await import(
+        "three/examples/jsm/loaders/GLTFLoader.js"
+      );
+      if (disposed) throw new Error("AR session ended while loading.");
+      const { scene: model } = await new GLTFLoader().loadAsync(floorModelUrl);
+      if (disposed) {
+        disposeGroup(model);
+        throw new Error("AR session ended while loading.");
+      }
+      // Put placement transforms on a wrapper so the GLB's authored transform
+      // and meter scale are carried through unchanged.
+      const placement = new THREE.Group();
+      placement.visible = false;
+      placement.add(model);
+      artGroup = placement;
+      scene.add(placement);
+    } else {
+      await rebuildArt();
+      unsubscribe = subscribeArtSnapshot(() => void rebuildArt());
+    }
 
     r.xr.setReferenceSpaceType("local");
     await r.xr.setSession(session);
@@ -249,11 +288,10 @@ export async function startWebXRARSession(
     const camPos = new THREE.Vector3();
 
     onSelect = () => {
-      if (!reticleMesh.visible || !artGroup) return;
+      if (!reticleMesh.visible || !artGroup || (floorModelUrl && placed)) return;
       reticleMesh.matrix.decompose(tmpPos, tmpQuat, tmpScale);
       artGroup.position.copy(tmpPos);
-      // Hang it upright and facing the viewer (yaw only) — robust regardless of
-      // whether the hit was a wall or the floor.
+      // Keep the model upright and initially face the viewer (yaw only).
       r.xr.getCamera().getWorldPosition(camPos);
       const yaw = Math.atan2(camPos.x - tmpPos.x, camPos.z - tmpPos.z);
       artGroup.quaternion.setFromEuler(new THREE.Euler(0, yaw, 0));
@@ -266,8 +304,11 @@ export async function startWebXRARSession(
       if (frame && hitTestSource && !placed) {
         const refSpace = r.xr.getReferenceSpace();
         const results = frame.getHitTestResults(hitTestSource);
-        const pose =
-          results.length > 0 && refSpace ? results[0].getPose(refSpace) : null;
+        const pose = refSpace
+          ? floorModelUrl
+            ? findUpwardHorizontalHit(results, refSpace)
+            : results[0]?.getPose(refSpace)
+          : null;
         if (pose) {
           reticleMesh.visible = true;
           reticleMesh.matrix.fromArray(pose.transform.matrix);
@@ -293,6 +334,9 @@ export async function startWebXRARSession(
     reset: () => {
       if (artGroup) artGroup.visible = false;
       setPlaced(false);
+    },
+    rotate: (radians) => {
+      if (floorModelUrl && placed && artGroup) artGroup.rotation.y += radians;
     },
   };
 }

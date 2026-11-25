@@ -33,6 +33,15 @@ const geistMono = localFont({
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
+  if (pathname === "/mechitza") {
+    return (
+      <>
+        <SpeedInsights {...CUSTOM_SPEED_INSIGHTS_PROPS} />
+        {children}
+      </>
+    );
+  }
+
   // Public shared-design / set links are a standalone, full-bleed gallery
   // experience for recipients who often have no account — no app navbar,
   // no sidebar offset, no desktop-only mobile warning.

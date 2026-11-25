@@ -8,6 +8,7 @@ import {
   User,
   Save,
   PencilRuler,
+  PanelsTopLeft,
   LogIn,
 } from "lucide-react";
 import Link from "next/link";
@@ -68,6 +69,12 @@ const mainNavItems: NavItem[] = [
     label: "Viewer",
     railLabel: "Viewer",
     hotkey: "1",
+  },
+  {
+    href: "/mechitza",
+    icon: PanelsTopLeft,
+    label: "Mechitza",
+    railLabel: "Mechitza",
   },
 ];
 
@@ -143,7 +150,7 @@ export function Navbar() {
         className={cn(
           "group relative flex w-full items-center rounded-lg border text-sm font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-400",
           isCollapsed
-            ? "min-h-[var(--desktop-nav-rail-item-min-height)] flex-col justify-center gap-1 px-1.5 py-2"
+            ? "min-h-[var(--desktop-nav-rail-item-min-height)] flex-col justify-center gap-1 px-0.5 py-2"
             : "border-transparent px-3 py-3",
           outlined && !isCollapsed && "border-white/10 bg-white/[0.03]",
           isActive
