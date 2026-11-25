@@ -727,3 +727,53 @@
   font-variant-numeric: tabular-nums;
   font-weight: 700;
 }
+
+.ballastNote {
+  padding: 0.25rem 0.15rem 0;
+  color: var(--muted);
+  font-size: 0.73rem;
+}
+
+.filmUpload,
+.selectionFiles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.55rem;
+  margin-top: 0.7rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--line);
+}
+
+.filmUpload .secondaryButton,
+.selectionFileActions .secondaryButton {
+  min-height: 2.6rem;
+  padding: 0.35rem 0.65rem;
+}
+
+.filmUploadDetail,
+.filmUpload .colorError,
+.selectionFiles .colorError {
+  width: 100%;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: 0.73rem;
+}
+
+.filmUpload .colorError,
+.selectionFiles .colorError {
+  color: #8f312d;
+}
+
+.removeFilm {
+  min-height: 2.6rem;
+  color: var(--muted);
+  font-size: 0.77rem;
+  text-decoration: underline;
+}
+
+.selectionFileActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}

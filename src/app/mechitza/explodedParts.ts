@@ -3,6 +3,9 @@ export const EXPLODED_PART_LABELS = [
   "Tempered glass",
   "Patterned film",
   "Relief artwork",
-  "Protective glass",
+  "Protective tempered glass",
   "Casters",
+  "Ballast weights",
 ] as const;
+
+export const BALLAST_DESCRIPTION = "Weights in the base help keep the divider stable.";

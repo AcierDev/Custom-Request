@@ -13,16 +13,5 @@
   font-variant-numeric: tabular-nums;
   line-height: 1;
   pointer-events: none;
-  animation: callout-reveal 260ms ease-out 410ms both;
-}
-
-@keyframes callout-reveal {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .callout {
-    animation: none;
-  }
+  opacity: 0;
 }

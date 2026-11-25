@@ -3,7 +3,7 @@
 import * as Tabs from "@radix-ui/react-tabs";
 import dynamic from "next/dynamic";
 import Image from "next/image";
-import { Box, ChevronDown, Layers3, RotateCcw, RotateCw, ScanLine, X } from "lucide-react";
+import { Box, ChevronDown, ImagePlus, Layers3, RotateCcw, RotateCw, ScanLine, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { launchAR } from "@/lib/ar/quickLook";
@@ -31,8 +31,11 @@ import {
   type MechitzaArtColor,
   type MechitzaFilm,
 } from "./options";
-import { EXPLODED_PART_LABELS } from "./explodedParts";
+import { BALLAST_DESCRIPTION, EXPLODED_PART_LABELS } from "./explodedParts";
 import type { ModelSide } from "./ModelPreview";
+import type { FilmCrop } from "./customFilm";
+import { FilmCropDialog } from "./FilmCropDialog";
+import { SelectionFiles, type SelectionFileState } from "./SelectionFiles";
 import styles from "./page.module.css";
 
 const ModelPreview = dynamic(() => import("./ModelPreview"), {
@@ -42,7 +45,10 @@ const ModelPreview = dynamic(() => import("./ModelPreview"), {
 
 type ARMode = "checking" | "quicklook" | "webxr" | "unavailable";
 
+type CustomFilm = { name: string; image: Blob; revision: number; source?: File; crop?: FilmCrop };
+
 type PreviewSelection = {
+  customFilm?: CustomFilm;
   people: boolean;
   model: MechitzaModel;
   finish: MechitzaFinish;
@@ -208,7 +214,19 @@ export function MechitzaPreview({
     art: initialArt,
     people: initialPeople,
   });
-  const { model, finish, film, art, people } = selection;
+  const currentSelection = useRef(selection);
+  const { model, finish, film, art, people, customFilm } = selection;
+  const [filmToCrop, setFilmToCrop] = useState<File | null>(null);
+  const [loadedSelection, setLoadedSelection] = useState(0);
+  const filmInput = useRef<HTMLInputElement>(null);
+  const uploadRevision = useRef(0);
+  const [materialTab, setMaterialTab] = useState(
+    initialArt.id !== MECHITZA_DEFAULT_ART_COLOR.id ? "art" :
+      initialFilm.id !== MECHITZA_DEFAULT_FILM.id ? "film" : "wood",
+  );
+  const [preparedAR, setPreparedAR] = useState<{ key: string; url: string; expiresAt: number }>();
+  const [failedARKey, setFailedARKey] = useState<string>();
+  const [arAttempt, setArAttempt] = useState(0);
   const [modelRequested, setModelRequested] = useState(false);
   const [exploded, setExploded] = useState(false);
   const [view, setView] = useState<{ side: ModelSide; revision: number }>({
@@ -227,10 +245,36 @@ export function MechitzaPreview({
   const startWebXR = useRef<typeof startWebXRARSession | null>(null);
   const controller = useRef<WebXRARController | null>(null);
   const mounted = useRef(false);
-  const hasPhoto = film.id === MECHITZA_DEFAULT_FILM.id && art.id === MECHITZA_DEFAULT_ART_COLOR.id;
+  const hasPhoto = !customFilm && film.id === MECHITZA_DEFAULT_FILM.id && art.id === MECHITZA_DEFAULT_ART_COLOR.id;
   const showModel = modelRequested || !hasPhoto;
   const canUseAR = mode === "quicklook" || mode === "webxr";
   const assets = getMechitzaAssets(model.id, finish.id, film.id, art.id, people);
+  const modelUrl = customFilm ? `${assets.glb}&upload=${customFilm.revision}` : assets.glb;
+  const deviceModel = mode === "quicklook" ? assets.usdz : assets.glb;
+  const arKey = customFilm && canUseAR ? `${deviceModel}&upload=${customFilm.revision}&attempt=${arAttempt}` : undefined;
+  const customAR = preparedAR?.key === arKey ? preparedAR : undefined;
+  const preparingAR = Boolean(arKey && !customAR && failedARKey !== arKey);
+
+  useEffect(() => {
+    if (!arKey || !customFilm) return;
+    const request = new AbortController();
+    fetch(appPath(`${deviceModel}&prepare=1`), {
+      method: "POST",
+      headers: { "Content-Type": "image/jpeg" },
+      body: customFilm.image,
+      signal: request.signal,
+    }).then(async (response) => {
+      if (!response.ok) throw new Error("Custom AR model preparation failed");
+      const { url, expiresAt } = await response.json();
+      if (typeof url !== "string" || !url.startsWith(appPath("/api/mechitza-model/")) || !Number.isFinite(Date.parse(expiresAt))) {
+        throw new Error("Invalid AR model response");
+      }
+      if (!request.signal.aborted) setPreparedAR({ key: arKey, url, expiresAt: Date.parse(expiresAt) });
+    }).catch(() => {
+      if (!request.signal.aborted) setFailedARKey(arKey);
+    });
+    return () => request.abort();
+  }, [arKey, customFilm, deviceModel]);
 
   useEffect(() => {
     let active = true;
@@ -259,8 +303,13 @@ export function MechitzaPreview({
 
   function openAR() {
     setArError(false);
+    if (customFilm && (!customAR || customAR.expiresAt - Date.now() < 15_000)) {
+      setArAttempt((attempt) => attempt + 1);
+      return;
+    }
+
     if (mode === "quicklook") {
-      launchAR(assets.usdz, window.location.href);
+      launchAR(customAR?.url ?? assets.usdz, window.location.href);
       return;
     }
 
@@ -268,7 +317,7 @@ export function MechitzaPreview({
     setSessionActive(true);
     setPlaced(false);
     void startWebXR.current({
-      floorModelUrl: appPath(assets.glb),
+      floorModelUrl: appPath(customAR?.url ?? assets.glb),
       overlayRoot: overlay.current,
       onPlacedChange: setPlaced,
       onEnd: () => {
@@ -298,6 +347,7 @@ export function MechitzaPreview({
   }
 
   function onMaterialTabChange(tab: string) {
+    setMaterialTab(tab);
     if (tab === "art") {
       setModelRequested(true);
       viewSide("artwork");
@@ -307,14 +357,16 @@ export function MechitzaPreview({
   }
 
   function selectPreview(changes: Partial<PreviewSelection>) {
-    const next = { ...selection, ...changes };
+    const next = { ...currentSelection.current, ...changes };
+    if (changes.film && !("customFilm" in changes)) {
+      next.customFilm = undefined;
+      setFilmToCrop(null);
+    }
+    currentSelection.current = next;
     setSelection(next);
-    if (changes.art) {
+    if (changes.film || "customFilm" in changes || changes.art) {
       setModelRequested(true);
-      viewSide("artwork");
-    } else if (changes.film) {
-      setModelRequested(true);
-      viewSide("glass");
+      viewSide(changes.film || "customFilm" in changes ? "glass" : "artwork");
     }
 
     const url = new URL(window.location.href);
@@ -332,10 +384,35 @@ export function MechitzaPreview({
     window.history.replaceState(null, "", url);
   }
 
+  function applyFilmCrop(image: Blob, crop: FilmCrop) {
+    if (!filmToCrop) return;
+    const revision = ++uploadRevision.current;
+    selectPreview({ customFilm: { name: filmToCrop.name, source: filmToCrop, image, revision, crop } });
+    setFilmToCrop(null);
+  }
+
+  function loadSelection(saved: SelectionFileState) {
+    const revision = ++uploadRevision.current;
+    setLoadedSelection(revision);
+    setFilmToCrop(null);
+    const hasCustomGlass = Boolean(saved.customFilm);
+    setMaterialTab(hasCustomGlass ? "film" : "wood");
+    selectPreview({
+      ...saved,
+      customFilm: saved.customFilm ? { ...saved.customFilm, revision } : undefined,
+    });
+    if (!hasCustomGlass && saved.art.id !== MECHITZA_DEFAULT_ART_COLOR.id) {
+      setMaterialTab("art");
+      viewSide("artwork");
+    } else if (!hasCustomGlass && saved.film.id !== MECHITZA_DEFAULT_FILM.id) {
+      setMaterialTab("film");
+    }
+  }
+
   return (
     <section className={styles.feature} aria-labelledby="mechitza-title">
       <div className={styles.intro}>
-        <p className={styles.finish}>{film.label}</p>
+        <p className={styles.finish}>{customFilm ? "Custom glass design" : film.label}</p>
         <h1 id="mechitza-title">Mechitza V10</h1>
       </div>
 
@@ -343,7 +420,8 @@ export function MechitzaPreview({
         <div className={styles.visual}>
           {showModel ? (
             <ModelPreview
-              url={assets.glb}
+              url={modelUrl}
+              filmImage={customFilm?.image}
               arrangement={people ? model.id : `${model.id}-divider`}
               view={view}
               hasPhoto={hasPhoto}
@@ -363,11 +441,14 @@ export function MechitzaPreview({
           )}
         </div>
         {exploded && (
-          <ol className={styles.explodedLegend} aria-label="Exploded view components">
-            {EXPLODED_PART_LABELS.map((label, index) => (
-              <li key={label}><span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>{label}</li>
-            ))}
-          </ol>
+          <div>
+            <ol className={styles.explodedLegend} aria-label="Exploded view components">
+              {EXPLODED_PART_LABELS.map((label, index) => (
+                <li key={label}><span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>{label}</li>
+              ))}
+            </ol>
+            <p className={styles.ballastNote}>{BALLAST_DESCRIPTION}</p>
+          </div>
         )}
         <figcaption className={styles.caption}>
           <dl className={styles.dimensions}>
@@ -401,8 +482,9 @@ export function MechitzaPreview({
       <div className={styles.actions}>
         <div className={styles.actionButtons}>
           {canUseAR && (
-            <button className={styles.primaryButton} type="button" onClick={openAR} disabled={sessionActive}>
-              <ScanLine size={19} aria-hidden /> {sessionActive ? "Opening AR…" : "Place in your room"}
+            <button className={styles.primaryButton} type="button" onClick={openAR} disabled={sessionActive || preparingAR}>
+              <ScanLine size={19} aria-hidden />
+              {preparingAR ? "Preparing AR…" : sessionActive ? "Opening AR…" : "Place in your room"}
             </button>
           )}
           {hasPhoto && (
@@ -432,6 +514,9 @@ export function MechitzaPreview({
           </button>
         </div>
         {arError && <p className={styles.arNote} role="alert">AR couldn’t start. Try again or use the 3D preview.</p>}
+        {arKey && failedARKey === arKey && (
+          <p className={styles.arNote} role="alert">The custom glass couldn’t be prepared for AR. Tap Place in your room to retry.</p>
+        )}
         {mode === "unavailable" && <p className={styles.arNote}>Open on your phone for full-scale AR.</p>}
       </div>
 
@@ -456,10 +541,7 @@ export function MechitzaPreview({
         </fieldset>
         <Tabs.Root
           activationMode="manual"
-          defaultValue={
-            initialArt.id !== MECHITZA_DEFAULT_ART_COLOR.id ? "art" :
-            initialFilm.id !== MECHITZA_DEFAULT_FILM.id ? "film" : "wood"
-          }
+          value={materialTab}
           onValueChange={onMaterialTabChange}
         >
           <p id="mechitza-material-note" className={styles.materialNote}>
@@ -484,6 +566,7 @@ export function MechitzaPreview({
             />
           </Tabs.Content>
           <Tabs.Content className={styles.customizationPanel} value="film">
+            <p className={styles.materialNote}>The women’s side has a see-through charcoal backing.</p>
             <fieldset className={styles.options}>
               <legend className="sr-only">Glass design</legend>
               <div className={styles.finishGrid}>
@@ -492,7 +575,7 @@ export function MechitzaPreview({
                     <input
                       type="radio"
                       name="glass-design"
-                      checked={film.id === design.id}
+                      checked={!customFilm && film.id === design.id}
                       onChange={() => selectPreview({ film: design })}
                     />
                     <Image
@@ -509,6 +592,29 @@ export function MechitzaPreview({
                 ))}
               </div>
             </fieldset>
+            <div className={styles.filmUpload}>
+              <input
+                ref={filmInput}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif"
+                hidden
+                onChange={(event) => {
+                  const file = event.currentTarget.files?.[0];
+                  event.currentTarget.value = "";
+                  if (file) setFilmToCrop(file);
+                }}
+              />
+              <button type="button" className={styles.secondaryButton} onClick={() => filmInput.current?.click()}>
+                <ImagePlus size={17} aria-hidden /> {customFilm ? "Replace image" : "Upload your image"}
+              </button>
+              {customFilm?.source && (
+                <button type="button" className={styles.removeFilm} onClick={() => setFilmToCrop(customFilm.source ?? null)}>Adjust crop</button>
+              )}
+              {customFilm && (
+                <button type="button" className={styles.removeFilm} onClick={() => selectPreview({ film })}>Remove image</button>
+              )}
+              <p className={styles.filmUploadDetail}>{customFilm?.name ?? "The image is cropped to fit the glass."}</p>
+            </div>
           </Tabs.Content>
           <Tabs.Content className={styles.customizationPanel} value="art">
             <div className={styles.paletteGroups}>
@@ -524,11 +630,20 @@ export function MechitzaPreview({
                 />
               ))}
             </div>
-            <CustomArtworkColor art={art} onApply={(color) => selectPreview({ art: color })} />
+            <CustomArtworkColor key={loadedSelection} art={art} onApply={(color) => selectPreview({ art: color })} />
           </Tabs.Content>
         </Tabs.Root>
+        <SelectionFiles selection={selection} onLoad={loadSelection} />
       </div>
 
+      {filmToCrop && (
+        <FilmCropDialog
+          file={filmToCrop}
+          initialCrop={filmToCrop === customFilm?.source ? customFilm.crop : undefined}
+          onApply={applyFilmCrop}
+          onCancel={() => setFilmToCrop(null)}
+        />
+      )}
       {mode === "webxr" && createPortal(
         <div ref={overlay} className={styles.xrOverlay}>
           {sessionActive && (

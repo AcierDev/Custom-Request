@@ -1,7 +1,7 @@
 "use client";
 
 import { Html, OrbitControls } from "@react-three/drei";
-import { Canvas, useThree } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import {
   Component,
   useCallback,
@@ -11,7 +11,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Box3, Texture, Vector3, type Mesh, type Object3D, type OrthographicCamera } from "three";
+import { Box3, MathUtils, Spherical, Texture, Vector3, type Mesh, type Object3D, type OrthographicCamera } from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { appPath } from "@/lib/appPaths";
@@ -60,7 +60,7 @@ function disposeModel(scene: Object3D) {
   for (const bitmap of bitmaps) bitmap.close();
 }
 
-function useResolvedModel(url: string, arrangement: string) {
+function useResolvedModel(url: string, arrangement: string, filmImage?: Blob) {
   const [model, setModel] = useState<ResolvedModel | null>(null);
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const latestUrl = useRef(url);
@@ -75,7 +75,10 @@ function useResolvedModel(url: string, arrangement: string) {
 
     async function load() {
       try {
-        const response = await fetch(url, { signal: request.signal });
+        const response = await fetch(url, {
+          signal: request.signal,
+          ...(filmImage && { method: "POST", headers: { "Content-Type": "image/jpeg" }, body: filmImage }),
+        });
         if (!response.ok) throw new Error(`Model request failed: ${response.status}`);
         const data = await response.arrayBuffer();
         if (request.signal.aborted || url !== latestUrl.current) return;
@@ -93,7 +96,7 @@ function useResolvedModel(url: string, arrangement: string) {
 
     void load();
     return () => request.abort();
-  }, [arrangement, url]);
+  }, [arrangement, filmImage, url]);
 
   useEffect(() => {
     if (model) return () => disposeModel(model.scene);
@@ -128,6 +131,16 @@ function fittedZoom(camera: OrthographicCamera, bounds: Box3) {
   return Math.min(zoomX, zoomY) / 1.22;
 }
 
+type CameraPose = { orbit: Spherical; target: Vector3; zoom: number };
+
+function getCameraPose(camera: OrthographicCamera, controls: OrbitControlsImpl): CameraPose {
+  const target = controls.target.clone();
+  const orbit = new Spherical().setFromVector3(camera.position.clone().sub(target));
+  return { orbit, target, zoom: camera.zoom };
+}
+
+const ASSEMBLY_CAMERA_SECONDS = 0.95;
+
 function FramedModel({
   model,
   requestedUrl,
@@ -145,6 +158,38 @@ function FramedModel({
   const invalidate = useThree((state) => state.invalidate);
   const frame = useRef<{ arrangement: string; width: number; height: number; zoom: number; exploded: boolean } | null>(null);
   const appliedSide = useRef<number | null>(null);
+  const transition = useRef<{ from: CameraPose; to: CameraPose; elapsed: number } | null>(null);
+  const animatedOrbit = useRef(new Spherical());
+
+  useEffect(() => {
+    if (!controls) return;
+    const cancelTransition = () => { transition.current = null; };
+    controls.addEventListener("start", cancelTransition);
+    return () => controls.removeEventListener("start", cancelTransition);
+  }, [controls]);
+
+  useFrame((_, delta) => {
+    const motion = transition.current;
+    if (!controls || !motion) return;
+
+    motion.elapsed += Math.min(delta, 1 / 24);
+    const progress = Math.min(motion.elapsed / ASSEMBLY_CAMERA_SECONDS, 1);
+    const eased = MathUtils.smootherstep(progress, 0, 1);
+    const { from, to } = motion;
+    animatedOrbit.current.set(
+      MathUtils.lerp(from.orbit.radius, to.orbit.radius, eased),
+      MathUtils.lerp(from.orbit.phi, to.orbit.phi, eased),
+      MathUtils.lerp(from.orbit.theta, to.orbit.theta, eased),
+    );
+    controls.target.lerpVectors(from.target, to.target, eased);
+    camera.position.setFromSpherical(animatedOrbit.current).add(controls.target);
+    camera.zoom = MathUtils.lerp(motion.from.zoom, motion.to.zoom, eased);
+    camera.updateProjectionMatrix();
+    controls.update();
+
+    if (progress < 1) invalidate();
+    else transition.current = null;
+  });
 
   useLayoutEffect(() => {
     if (!model || !controls || !width || !height) return;
@@ -152,10 +197,14 @@ function FramedModel({
     const arrangementChanged = previous?.arrangement !== model.arrangement;
     const viewportChanged = previous?.width !== width || previous?.height !== height;
     const modeChanged = previous?.exploded !== exploded;
-    const shouldFrame = arrangementChanged || viewportChanged || modeChanged;
     const shouldTurn = modeChanged || (model.url === requestedUrl && appliedSide.current !== view.revision);
+    const shouldFrame = arrangementChanged || viewportChanged || modeChanged || (exploded && shouldTurn);
 
     if (!shouldFrame && !shouldTurn) return;
+    transition.current = null;
+    const animateMode = previous && modeChanged && !arrangementChanged && !viewportChanged
+      && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const from = animateMode ? getCameraPose(camera, controls) : null;
     const offset = camera.position.clone().sub(controls.target);
     if (shouldTurn) {
       positionForSide(offset, view.side, exploded);
@@ -175,7 +224,8 @@ function FramedModel({
       camera.lookAt(controls.target);
       camera.updateMatrixWorld();
       const baseZoom = fittedZoom(camera, bounds);
-      const relativeZoom = arrangementChanged || modeChanged || !previous ? 1 : camera.zoom / previous.zoom;
+      const resetZoom = arrangementChanged || modeChanged || (exploded && shouldTurn);
+      const relativeZoom = resetZoom || !previous ? 1 : camera.zoom / previous.zoom;
       controls.minZoom = baseZoom * 0.7;
       controls.maxZoom = baseZoom * 4;
       camera.zoom = Math.min(controls.maxZoom, Math.max(controls.minZoom, baseZoom * relativeZoom));
@@ -185,6 +235,17 @@ function FramedModel({
       frame.current = { arrangement: model.arrangement, width, height, zoom: baseZoom, exploded };
     } else {
       camera.position.copy(controls.target).add(offset);
+    }
+
+    if (from) {
+      const to = getCameraPose(camera, controls);
+      const angle = to.orbit.theta - from.orbit.theta;
+      to.orbit.theta = from.orbit.theta + MathUtils.euclideanModulo(angle + Math.PI, 2 * Math.PI) - Math.PI;
+      transition.current = { from, to, elapsed: 0 };
+      camera.position.setFromSpherical(from.orbit).add(from.target);
+      controls.target.copy(from.target);
+      camera.zoom = from.zoom;
+      camera.updateProjectionMatrix();
     }
 
     controls.update();
@@ -238,6 +299,7 @@ export default function ModelPreview({
   arrangement,
   view,
   hasPhoto,
+  filmImage,
   exploded,
   onSideChange,
 }: {
@@ -245,11 +307,12 @@ export default function ModelPreview({
   arrangement: string;
   view: ViewRequest;
   hasPhoto: boolean;
+  filmImage?: Blob;
   exploded: boolean;
   onSideChange: (side: ModelSide | null) => void;
 }) {
   const assetUrl = appPath(url);
-  const { model, failed } = useResolvedModel(assetUrl, arrangement);
+  const { model, failed } = useResolvedModel(assetUrl, arrangement, filmImage);
   const loading = !failed && model?.url !== assetUrl;
   const controls = useRef<OrbitControlsImpl>(null);
   const [initialCamera] = useState(() => ({ position: [2.3, 1.7, -7] as [number, number, number] }));

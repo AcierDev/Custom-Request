@@ -57,7 +57,7 @@ function getMechitzaAssetName(model: MechitzaModel["id"], finish: MechitzaFinish
 
 export function getMechitzaBaseAssets(model: MechitzaModel["id"], finish: MechitzaFinish["id"]) {
   const base = `/mechitza-assets/${getMechitzaAssetName(model, finish)}`;
-  return { poster: `${base}.webp?v=2`, glb: `${base}.glb?v=4`, usdz: `${base}.usdz?v=4` };
+  return { poster: `${base}.webp?v=2`, glb: `${base}.glb?v=5`, usdz: `${base}.usdz?v=5` };
 }
 
 export function getMechitzaAssets(
@@ -69,7 +69,7 @@ export function getMechitzaAssets(
 ) {
   const { poster } = getMechitzaBaseAssets(model, finish);
   const path = `/api/mechitza-model/${getMechitzaAssetName(model, finish)}`;
-  const query = new URLSearchParams({ film, art, v: "8" });
+  const query = new URLSearchParams({ film, art, v: "9" });
   if (!people) query.set("people", "0");
   return { poster, glb: `${path}.glb?${query}`, usdz: `${path}.usdz?${query}` };
 }

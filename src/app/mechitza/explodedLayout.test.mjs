@@ -63,3 +63,26 @@ test("offsets stay in the world layer direction under a rotated asset root", () 
   const displaced = glass.getWorldPosition(new Vector3()).sub(initial);
   assert.ok(displaced.z < 0 && Math.abs(displaced.x) < 1e-8 && displaced.y > 0);
 });
+
+test("staggering keeps the film and cover ahead of the layers they peel away from", async () => {
+  const { partExplosionProgress } = await import("./explodedLayout.ts");
+  for (const progress of [0, 0.1, 0.2, 0.45, 0.75, 1]) {
+    assert.ok(partExplosionProgress("film", progress) >= partExplosionProgress("glass", progress));
+    assert.ok(partExplosionProgress("cover", progress) >= partExplosionProgress("art", progress));
+  }
+  assert.equal(partExplosionProgress("casters", 0.2), 0);
+  assert.equal(partExplosionProgress("casters", 1), 1);
+});
+
+test("the exploded charcoal guide targets only the original reverse film mesh", async () => {
+  const { MeshStandardMaterial } = await import("three");
+  const { isFilmReverse } = await import("./explodedLayout.ts");
+  const printed = new MeshStandardMaterial();
+  printed.name = "Linen Marquetry printed face";
+  const reverse = new MeshStandardMaterial({ transparent: true, opacity: 0.34 });
+  reverse.name = "Linen Marquetry charcoal reverse";
+  assert.equal(isFilmReverse(new Mesh(new BoxGeometry(), printed)), false);
+  assert.equal(isFilmReverse(new Mesh(new BoxGeometry(), reverse)), true);
+  assert.equal(isFilmReverse(new Mesh(new BoxGeometry(), [printed, reverse])), false);
+  assert.equal(reverse.opacity, 0.34);
+});

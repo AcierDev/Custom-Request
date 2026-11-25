@@ -30,8 +30,8 @@ test("every wood finish selects matching photo, desktop, Android and iPhone asse
       const assets = getMechitzaBaseAssets(model, finish);
       assert.deepEqual(assets, {
         poster: `${stem}.webp?v=2`,
-        glb: `${stem}.glb?v=4`,
-        usdz: `${stem}.usdz?v=4`,
+        glb: `${stem}.glb?v=5`,
+        usdz: `${stem}.usdz?v=5`,
       });
       paths.add(assets.usdz);
     }
@@ -39,7 +39,7 @@ test("every wood finish selects matching photo, desktop, Android and iPhone asse
   assert.equal(paths.size, 30);
 });
 
-test("each 3D model preserves opaque printed film and a clear reverse", async () => {
+test("each 3D model preserves opaque printed film and a see-through charcoal reverse", async () => {
   const { MECHITZA_MODELS, MECHITZA_FINISHES, getMechitzaBaseAssets } = await import("./models.ts");
   for (const { id: finish } of MECHITZA_FINISHES) {
     for (const { id: model } of MECHITZA_MODELS) {
@@ -57,7 +57,7 @@ test("each 3D model preserves opaque printed film and a clear reverse", async ()
       assert.equal(printed.alphaMode ?? "OPAQUE", "OPAQUE", path);
       assert.equal(printed.pbrMetallicRoughness.baseColorFactor?.[3] ?? 1, 1, path);
       assert.equal(reverse.alphaMode, "BLEND", path);
-      assert.equal(reverse.pbrMetallicRoughness.baseColorFactor[3], 0, path);
+      assert.equal(reverse.pbrMetallicRoughness.baseColorFactor[3], 0.34, path);
     }
   }
 });
@@ -76,8 +76,8 @@ test("glass and artwork selections resolve to the same custom model in 3D and AR
 
   const custom = getMechitzaAssets("three", "walnut", "olive-trellis", "taupe");
   const file = "/api/mechitza-model/v10-linen-marquetry-walnut-three";
-  assert.equal(custom.glb, `${file}.glb?film=olive-trellis&art=taupe&v=8`);
-  assert.equal(custom.usdz, `${file}.usdz?film=olive-trellis&art=taupe&v=8`);
+  assert.equal(custom.glb, `${file}.glb?film=olive-trellis&art=taupe&v=9`);
+  assert.equal(custom.usdz, `${file}.usdz?film=olive-trellis&art=taupe&v=9`);
   assert.equal(custom.poster, base.poster);
 });
 
