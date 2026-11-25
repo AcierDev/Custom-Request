@@ -260,7 +260,8 @@
   background: #614633;
 }
 
-.secondaryButton:hover {
+.secondaryButton:hover,
+.secondaryButton[aria-pressed="true"] {
   background: #eee4d7;
 }
 
@@ -425,22 +426,9 @@
     min-height: 2.75rem;
   }
 
-  .actionButtons {
-    flex-wrap: nowrap;
-  }
-
-  .actionButtons > :first-child {
-    flex: 1;
-  }
-}
-
-@media (max-width: 360px) {
-  .actionButtons {
-    flex-wrap: wrap;
-  }
-
-  .actionButtons > :first-child {
-    flex-basis: 100%;
+  .actionButtons > button {
+    flex: 1 1 auto;
+    padding-inline: 0.7rem;
   }
 }
 
@@ -470,6 +458,13 @@
 
 .canvas {
   touch-action: pan-y !important;
+}
+
+.materialNote {
+  margin-bottom: 0.55rem;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.4;
 }
 
 .customizationTabs {
@@ -606,4 +601,129 @@
 .peopleToggle[aria-checked="true"] .switchTrack {
   justify-content: flex-end;
   background: var(--accent);
+}
+
+.customColor {
+  margin-top: 0.65rem;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 0.45rem;
+  background: #fdfaf5;
+}
+
+.customColorToggle {
+  display: flex;
+  width: 100%;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.45rem 0.65rem;
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 650;
+  text-align: left;
+}
+
+.customColorToggle .swatch {
+  width: 1.15rem;
+  height: 1.15rem;
+  border: 1px solid var(--line);
+  background: linear-gradient(135deg, #e0c1a9, #ad9f86 48%, #535e69);
+}
+
+.customColorToggle svg {
+  margin-left: auto;
+}
+
+.customColorToggle[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+.customColorValue {
+  color: var(--muted);
+  font-family: monospace;
+  font-weight: 400;
+}
+
+.customColorForm:not([hidden]) {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 0.85fr) minmax(0, 1.15fr) auto;
+  align-items: end;
+  gap: 0.35rem;
+  padding: 0.25rem 0.5rem 0.6rem;
+}
+
+.customColorForm label {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.71rem;
+}
+
+.customColorForm input,
+.applyColor {
+  width: 100%;
+  min-width: 0;
+  height: 2.125rem;
+  border: 1px solid var(--line);
+  border-radius: 0.3rem;
+  background: #fff;
+  color: var(--ink);
+}
+
+.customColorForm label input {
+  padding: 0 0.3rem;
+  font-size: 0.8rem;
+  user-select: text;
+}
+
+.customColorPicker {
+  cursor: pointer;
+  padding: 0.16rem;
+}
+
+.applyColor {
+  padding: 0 0.4rem;
+  border-color: var(--accent);
+  background: var(--selection);
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+
+.applyColor:disabled {
+  border-color: var(--line);
+  background: transparent;
+  color: var(--muted);
+}
+
+.colorError {
+  grid-column: 1 / -1;
+  color: #8f312d;
+  font-size: 0.75rem;
+}
+
+.explodedLegend {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: 0.35rem 0.55rem;
+  margin: 0;
+  padding: 0.6rem 0.15rem 0.15rem;
+  list-style: none;
+}
+
+.explodedLegend li {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--ink);
+  font-size: 0.75rem;
+  font-weight: 550;
+}
+
+.explodedLegend li span {
+  color: var(--accent);
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
 }

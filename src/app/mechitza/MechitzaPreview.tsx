@@ -3,7 +3,7 @@
 import * as Tabs from "@radix-ui/react-tabs";
 import dynamic from "next/dynamic";
 import Image from "next/image";
-import { Box, RotateCcw, RotateCw, ScanLine, X } from "lucide-react";
+import { Box, ChevronDown, Layers3, RotateCcw, RotateCw, ScanLine, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { launchAR } from "@/lib/ar/quickLook";
@@ -19,13 +19,19 @@ import {
   type MechitzaModel,
 } from "./models";
 import {
+  artworkHexToRgb,
+  artworkRgbToHex,
+  findMechitzaArtColor,
   MECHITZA_ART_COLORS,
+  MECHITZA_ART_GROUPS,
   MECHITZA_DEFAULT_ART_COLOR,
   MECHITZA_DEFAULT_FILM,
   MECHITZA_FILMS,
+  normalizeArtworkHex,
   type MechitzaArtColor,
   type MechitzaFilm,
 } from "./options";
+import { EXPLODED_PART_LABELS } from "./explodedParts";
 import type { ModelSide } from "./ModelPreview";
 import styles from "./page.module.css";
 
@@ -35,8 +41,6 @@ const ModelPreview = dynamic(() => import("./ModelPreview"), {
 });
 
 type ARMode = "checking" | "quicklook" | "webxr" | "unavailable";
-
-const ART_PALETTE_GROUPS = ["Light neutrals", "Earth tones", "Deep shades"] as const;
 
 type PreviewSelection = {
   people: boolean;
@@ -82,6 +86,108 @@ function ColorOptions<T extends { id: string; label: string; swatch: string }>({
   );
 }
 
+function CustomArtworkColor({
+  art,
+  onApply,
+}: {
+  art: MechitzaArtColor;
+  onApply: (color: MechitzaArtColor) => void;
+}) {
+  const startingColor = art.swatch.toLowerCase();
+  const [open, setOpen] = useState(art.group === "Custom");
+  const [hex, setHex] = useState(startingColor);
+  const [rgb, setRgb] = useState(() => artworkHexToRgb(startingColor));
+  const [lastEdited, setLastEdited] = useState<"hex" | "rgb">("hex");
+  const [showError, setShowError] = useState(false);
+  const value = lastEdited === "hex" ? normalizeArtworkHex(hex) : artworkRgbToHex(rgb);
+  const committed = art.group === "Custom" && value === art.swatch;
+
+  function editHex(next: string) {
+    setLastEdited("hex");
+    setHex(next);
+    setShowError(false);
+    const clean = normalizeArtworkHex(next);
+    if (clean) setRgb(artworkHexToRgb(clean));
+  }
+
+  function editRgb(next: string) {
+    setLastEdited("rgb");
+    setRgb(next);
+    setShowError(false);
+    const clean = artworkRgbToHex(next);
+    if (clean) setHex(clean);
+  }
+
+  return (
+    <div className={styles.customColor}>
+      <button
+        type="button"
+        className={styles.customColorToggle}
+        aria-controls="mechitza-custom-color"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+      >
+        <span className={styles.swatch} style={{ background: art.group === "Custom" ? art.swatch : undefined }} aria-hidden />
+        <span>Custom color</span>
+        {art.group === "Custom" && <span className={styles.customColorValue}>{art.swatch.toUpperCase()}</span>}
+        <ChevronDown size={16} aria-hidden />
+      </button>
+      <form
+        id="mechitza-custom-color"
+        className={styles.customColorForm}
+        hidden={!open}
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (!value) {
+            setShowError(true);
+            return;
+          }
+          const color = findMechitzaArtColor(`custom-${value.slice(1)}`);
+          if (color && !committed) onApply(color);
+        }}
+      >
+        <input
+          className={styles.customColorPicker}
+          type="color"
+          aria-label="Pick an artwork color"
+          value={value ?? normalizeArtworkHex(hex) ?? startingColor}
+          onChange={(event) => editHex(event.target.value)}
+        />
+        <label>
+          HEX
+          <input
+            type="text"
+            placeholder="#22406B"
+            autoComplete="off"
+            spellCheck={false}
+            aria-invalid={showError && lastEdited === "hex"}
+            value={hex}
+            onChange={(event) => editHex(event.target.value)}
+          />
+        </label>
+        <label>
+          RGB
+          <input
+            type="text"
+            placeholder="34, 64, 107"
+            autoComplete="off"
+            spellCheck={false}
+            aria-invalid={showError && lastEdited === "rgb"}
+            value={rgb}
+            onChange={(event) => editRgb(event.target.value)}
+          />
+        </label>
+        <button type="submit" className={styles.applyColor} disabled={committed}>{committed ? "Applied" : "Apply"}</button>
+        {showError && (
+          <p role="alert" className={styles.colorError}>
+            {lastEdited === "hex" ? "Enter a HEX color such as #22406B." : "Enter three RGB values from 0 to 255."}
+          </p>
+        )}
+      </form>
+    </div>
+  );
+}
+
 export function MechitzaPreview({
   initialFinish,
   initialModel,
@@ -104,6 +210,7 @@ export function MechitzaPreview({
   });
   const { model, finish, film, art, people } = selection;
   const [modelRequested, setModelRequested] = useState(false);
+  const [exploded, setExploded] = useState(false);
   const [view, setView] = useState<{ side: ModelSide; revision: number }>({
     side: initialFilm.id !== MECHITZA_DEFAULT_FILM.id && initialArt.id === MECHITZA_DEFAULT_ART_COLOR.id
       ? "glass"
@@ -240,6 +347,7 @@ export function MechitzaPreview({
               arrangement={people ? model.id : `${model.id}-divider`}
               view={view}
               hasPhoto={hasPhoto}
+              exploded={exploded}
               onSideChange={setObservedSide}
             />
           ) : (
@@ -254,6 +362,13 @@ export function MechitzaPreview({
             />
           )}
         </div>
+        {exploded && (
+          <ol className={styles.explodedLegend} aria-label="Exploded view components">
+            {EXPLODED_PART_LABELS.map((label, index) => (
+              <li key={label}><span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>{label}</li>
+            ))}
+          </ol>
+        )}
         <figcaption className={styles.caption}>
           <dl className={styles.dimensions}>
             <div><dt>Width</dt><dd>{model.width}</dd></div>
@@ -284,25 +399,38 @@ export function MechitzaPreview({
       </figure>
 
       <div className={styles.actions}>
-        {(canUseAR || hasPhoto) && (
-          <div className={styles.actionButtons}>
-            {canUseAR && (
-              <button className={styles.primaryButton} type="button" onClick={openAR} disabled={sessionActive}>
-                <ScanLine size={19} aria-hidden /> {sessionActive ? "Opening AR…" : "Place in your room"}
-              </button>
-            )}
-            {hasPhoto && (
-              <button
-                className={canUseAR ? styles.secondaryButton : styles.primaryButton}
-                type="button"
-                aria-pressed={showModel}
-                onClick={() => setModelRequested((active) => !active)}
-              >
-                <Box size={18} aria-hidden /> {showModel ? "Back to photos" : "View in 3D"}
-              </button>
-            )}
-          </div>
-        )}
+        <div className={styles.actionButtons}>
+          {canUseAR && (
+            <button className={styles.primaryButton} type="button" onClick={openAR} disabled={sessionActive}>
+              <ScanLine size={19} aria-hidden /> {sessionActive ? "Opening AR…" : "Place in your room"}
+            </button>
+          )}
+          {hasPhoto && (
+            <button
+              className={canUseAR ? styles.secondaryButton : styles.primaryButton}
+              type="button"
+              aria-pressed={showModel}
+              onClick={() => {
+                setModelRequested(!showModel);
+                if (showModel) setExploded(false);
+              }}
+            >
+              <Box size={18} aria-hidden /> {showModel ? "Back to photos" : "View in 3D"}
+            </button>
+          )}
+          <button
+            className={styles.secondaryButton}
+            type="button"
+            aria-pressed={exploded}
+            onClick={() => {
+              setModelRequested(true);
+              if (observedSide) viewSide(observedSide);
+              setExploded(!exploded);
+            }}
+          >
+            <Layers3 size={18} aria-hidden /> {exploded ? "Reassemble" : "Exploded view"}
+          </button>
+        </div>
         {arError && <p className={styles.arNote} role="alert">AR couldn’t start. Try again or use the 3D preview.</p>}
         {mode === "unavailable" && <p className={styles.arNote}>Open on your phone for full-scale AR.</p>}
       </div>
@@ -334,7 +462,14 @@ export function MechitzaPreview({
           }
           onValueChange={onMaterialTabChange}
         >
-          <Tabs.List className={styles.customizationTabs} aria-label="Mechitza materials">
+          <p id="mechitza-material-note" className={styles.materialNote}>
+            Sample options. Other finishes, glass designs, and artwork colors are available by request.
+          </p>
+          <Tabs.List
+            className={styles.customizationTabs}
+            aria-label="Mechitza materials"
+            aria-describedby="mechitza-material-note"
+          >
             <Tabs.Trigger className={styles.customizationTab} value="wood">Wood finish</Tabs.Trigger>
             <Tabs.Trigger className={styles.customizationTab} value="film">Glass design</Tabs.Trigger>
             <Tabs.Trigger className={styles.customizationTab} value="art">Artwork color</Tabs.Trigger>
@@ -377,7 +512,7 @@ export function MechitzaPreview({
           </Tabs.Content>
           <Tabs.Content className={styles.customizationPanel} value="art">
             <div className={styles.paletteGroups}>
-              {ART_PALETTE_GROUPS.map((group) => (
+              {MECHITZA_ART_GROUPS.map((group) => (
                 <ColorOptions
                   key={group}
                   label={group}
@@ -389,6 +524,7 @@ export function MechitzaPreview({
                 />
               ))}
             </div>
+            <CustomArtworkColor art={art} onApply={(color) => selectPreview({ art: color })} />
           </Tabs.Content>
         </Tabs.Root>
       </div>

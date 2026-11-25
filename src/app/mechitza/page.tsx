@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { MechitzaPreview } from "./MechitzaPreview";
 import { MECHITZA_DEFAULT_FINISH, MECHITZA_FINISHES, MECHITZA_MODELS } from "./models";
 import {
-  MECHITZA_ART_COLORS,
+  findMechitzaArtColor,
   MECHITZA_DEFAULT_ART_COLOR,
   MECHITZA_DEFAULT_FILM,
   MECHITZA_FILMS,
@@ -23,7 +23,7 @@ export default async function MechitzaPage({
   const initialFinish = MECHITZA_FINISHES.find(({ id }) => id === finish) ?? MECHITZA_DEFAULT_FINISH;
   const initialModel = MECHITZA_MODELS.find(({ id }) => id === arrangement) ?? MECHITZA_MODELS[0];
   const initialFilm = MECHITZA_FILMS.find(({ id }) => id === film) ?? MECHITZA_DEFAULT_FILM;
-  const initialArt = MECHITZA_ART_COLORS.find(({ id }) => id === art) ?? MECHITZA_DEFAULT_ART_COLOR;
+  const initialArt = findMechitzaArtColor(art) ?? MECHITZA_DEFAULT_ART_COLOR;
 
   return (
     <div className={styles.page}>

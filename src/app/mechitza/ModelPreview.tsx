@@ -1,6 +1,6 @@
 "use client";
 
-import { OrbitControls } from "@react-three/drei";
+import { Html, OrbitControls } from "@react-three/drei";
 import { Canvas, useThree } from "@react-three/fiber";
 import {
   Component,
@@ -15,6 +15,9 @@ import { Box3, Texture, Vector3, type Mesh, type Object3D, type OrthographicCame
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { appPath } from "@/lib/appPaths";
+import { ExplodedModel, getExplodedBounds } from "./ExplodedModel";
+import { prepareHeightLabels, type HeightLabel } from "./heightLabels";
+import labelStyles from "./heightLabels.module.css";
 import styles from "./page.module.css";
 
 export type ModelSide = "glass" | "artwork";
@@ -28,6 +31,7 @@ type ResolvedModel = {
   url: string;
   arrangement: string;
   scene: Object3D;
+  heightLabels: HeightLabel[];
 };
 
 function disposeModel(scene: Object3D) {
@@ -81,7 +85,7 @@ function useResolvedModel(url: string, arrangement: string) {
           disposeModel(scene);
           return;
         }
-        setModel({ url, arrangement, scene });
+        setModel({ url, arrangement, scene, heightLabels: prepareHeightLabels(scene) });
       } catch {
         if (!request.signal.aborted && url === latestUrl.current) setFailedUrl(url);
       }
@@ -98,9 +102,10 @@ function useResolvedModel(url: string, arrangement: string) {
   return { model, failed: failedUrl === url };
 }
 
-function positionForSide(offset: Vector3, side: ModelSide) {
+function positionForSide(offset: Vector3, side: ModelSide, exploded: boolean) {
   const radius = Math.hypot(offset.x, offset.z) || 1;
-  const angle = 0.23;
+  const angle = exploded ? 0.68 : 0.23;
+  if (exploded) offset.y = Math.tan(0.32) * radius;
   offset.x = Math.sin(angle) * radius;
   offset.z = Math.cos(angle) * radius * (side === "glass" ? -1 : 1);
 }
@@ -127,16 +132,18 @@ function FramedModel({
   model,
   requestedUrl,
   view,
+  exploded,
 }: {
   model: ResolvedModel | null;
   requestedUrl: string;
   view: ViewRequest;
+  exploded: boolean;
 }) {
   const camera = useThree((state) => state.camera) as OrthographicCamera;
   const controls = useThree((state) => state.controls) as OrbitControlsImpl | null;
   const { width, height } = useThree((state) => state.size);
   const invalidate = useThree((state) => state.invalidate);
-  const frame = useRef<{ arrangement: string; width: number; height: number; zoom: number } | null>(null);
+  const frame = useRef<{ arrangement: string; width: number; height: number; zoom: number; exploded: boolean } | null>(null);
   const appliedSide = useRef<number | null>(null);
 
   useLayoutEffect(() => {
@@ -144,18 +151,22 @@ function FramedModel({
     const previous = frame.current;
     const arrangementChanged = previous?.arrangement !== model.arrangement;
     const viewportChanged = previous?.width !== width || previous?.height !== height;
-    const shouldFrame = arrangementChanged || viewportChanged;
-    const shouldTurn = model.url === requestedUrl && appliedSide.current !== view.revision;
+    const modeChanged = previous?.exploded !== exploded;
+    const shouldFrame = arrangementChanged || viewportChanged || modeChanged;
+    const shouldTurn = modeChanged || (model.url === requestedUrl && appliedSide.current !== view.revision);
 
     if (!shouldFrame && !shouldTurn) return;
     const offset = camera.position.clone().sub(controls.target);
     if (shouldTurn) {
-      positionForSide(offset, view.side);
-      appliedSide.current = view.revision;
+      positionForSide(offset, view.side, exploded);
+      if (model.url === requestedUrl) appliedSide.current = view.revision;
     }
 
     if (shouldFrame) {
-      const bounds = new Box3().setFromObject(model.scene);
+      const bounds = new Box3();
+      for (const object of model.scene.children) {
+        if (object.visible) bounds.expandByObject(object);
+      }
       if (bounds.isEmpty()) return;
       const span = bounds.getSize(new Vector3()).length();
       controls.target.copy(bounds.getCenter(new Vector3()));
@@ -164,23 +175,39 @@ function FramedModel({
       camera.lookAt(controls.target);
       camera.updateMatrixWorld();
       const baseZoom = fittedZoom(camera, bounds);
-      const relativeZoom = arrangementChanged ? 1 : camera.zoom / previous.zoom;
+      const relativeZoom = arrangementChanged || modeChanged || !previous ? 1 : camera.zoom / previous.zoom;
       controls.minZoom = baseZoom * 0.7;
       controls.maxZoom = baseZoom * 4;
       camera.zoom = Math.min(controls.maxZoom, Math.max(controls.minZoom, baseZoom * relativeZoom));
       camera.near = 0.01;
       camera.far = Math.max(100, span * 12);
       camera.updateProjectionMatrix();
-      frame.current = { arrangement: model.arrangement, width, height, zoom: baseZoom };
+      frame.current = { arrangement: model.arrangement, width, height, zoom: baseZoom, exploded };
     } else {
       camera.position.copy(controls.target).add(offset);
     }
 
     controls.update();
     invalidate();
-  }, [camera, controls, height, invalidate, model, requestedUrl, view, width]);
+  }, [camera, controls, exploded, height, invalidate, model, requestedUrl, view, width]);
 
-  return model && controls && width > 0 && height > 0 ? <primitive object={model.scene} /> : null;
+  if (!model || !controls || width <= 0 || height <= 0) return null;
+
+  return (
+    <>
+      <ExplodedModel scene={model.scene} exploded={exploded} />
+      {model.heightLabels.map(({ name, position, text }) => (
+        <Html
+          key={name}
+          position={position}
+          wrapperClass={labelStyles.anchor}
+          zIndexRange={[5, 4]}
+        >
+          <span className={labelStyles.label}>{text}</span>
+        </Html>
+      ))}
+    </>
+  );
 }
 
 type PreviewErrorProps = { children: ReactNode; url: string; hasPhoto: boolean };
@@ -211,12 +238,14 @@ export default function ModelPreview({
   arrangement,
   view,
   hasPhoto,
+  exploded,
   onSideChange,
 }: {
   url: string;
   arrangement: string;
   view: ViewRequest;
   hasPhoto: boolean;
+  exploded: boolean;
   onSideChange: (side: ModelSide | null) => void;
 }) {
   const assetUrl = appPath(url);
@@ -247,7 +276,7 @@ export default function ModelPreview({
         <directionalLight position={[-3, 5, -3]} intensity={2.2} />
         <directionalLight position={[3, 2, 4]} intensity={1.5} />
         <OrbitControls ref={controls} makeDefault enablePan={false} enableDamping={false} onChange={reportSide} />
-        <FramedModel model={model} requestedUrl={assetUrl} view={view} />
+        <FramedModel model={model} requestedUrl={assetUrl} view={view} exploded={exploded} />
       </Canvas>
       {loading && (
         <p className={model ? styles.modelUpdating : styles.modelStatus} role="status">

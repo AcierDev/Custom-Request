@@ -6,12 +6,13 @@ import {
   MECHITZA_MODELS,
 } from "@/app/mechitza/models";
 import {
-  MECHITZA_ART_COLORS,
+  findMechitzaArtColor,
   MECHITZA_DEFAULT_ART_COLOR,
   MECHITZA_DEFAULT_FILM,
   MECHITZA_FILMS,
 } from "@/app/mechitza/options";
 import { customizeGlb, customizeUsdz, mergeFiguresGlb } from "@/lib/mechitza/variantModel";
+import { encodeSolidJpeg } from "@/lib/mechitza/solidJpeg";
 
 export const runtime = "nodejs";
 
@@ -36,9 +37,9 @@ const modelFiles = new Map(
   })),
 );
 
-function buildModelResponse(bytes: Buffer, format: keyof typeof MIME_TYPES) {
+function buildModelResponse(bytes: Buffer, format: keyof typeof MIME_TYPES, customArt: boolean) {
   const headers = {
-    "Cache-Control": CACHE_CONTROL,
+    "Cache-Control": customArt ? "private, max-age=300" : CACHE_CONTROL,
     "Content-Type": MIME_TYPES[format],
   };
   if (bytes.length <= STREAM_THRESHOLD_BYTES) {
@@ -69,9 +70,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ file: st
   const query = new URL(req.url).searchParams;
   const withPeople = query.get("people") !== "0";
   const film = MECHITZA_FILMS.find((option) => option.id === (query.get("film") ?? MECHITZA_DEFAULT_FILM.id));
-  const artwork = MECHITZA_ART_COLORS.find((option) => option.id === (query.get("art") ?? MECHITZA_DEFAULT_ART_COLOR.id));
+  const artwork = findMechitzaArtColor(query.get("art") ?? MECHITZA_DEFAULT_ART_COLOR.id);
   if (!film || !artwork) return new Response("Unknown Mechitza finish option", { status: 400 });
 
+  const customArt = artwork.group === "Custom";
   try {
     const [source, texture, artImage, figureModel, previewLayer] = await Promise.all([
       readFile(path.join(PUBLIC_DIR, "mechitza-assets", file)),
@@ -80,7 +82,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ file: st
         : readFile(path.join(PUBLIC_DIR, "mechitza-films", `${film.id}.jpg`)),
       format !== "usdz" || artwork.id === MECHITZA_DEFAULT_ART_COLOR.id
         ? null
-        : readFile(path.join(PUBLIC_DIR, "mechitza-figures", "art-colors", `${artwork.id}.jpg`)),
+        : customArt
+          ? encodeSolidJpeg(artwork.swatch)
+          : readFile(path.join(PUBLIC_DIR, "mechitza-figures", "art-colors", `${artwork.id}.jpg`)),
       withPeople ? readFile(path.join(PUBLIC_DIR, "mechitza-figures", `mechitza-women.${format}`)) : null,
       withPeople && format === "usdz"
         ? readFile(path.join(PUBLIC_DIR, "mechitza-figures", "preview.usdc"))
@@ -97,7 +101,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ file: st
       if (figureModel) bytes = mergeFiguresGlb(bytes, figureModel);
     }
     if (bytes.length > MAX_MODEL_BYTES) throw new Error("Generated Mechitza model exceeds size limit");
-    return buildModelResponse(bytes, format);
+    return buildModelResponse(bytes, format, customArt);
   } catch (error) {
     console.error("Unable to generate Mechitza model", error);
     return new Response("Mechitza model unavailable", { status: 500 });

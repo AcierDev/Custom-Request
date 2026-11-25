@@ -30,8 +30,8 @@ test("every wood finish selects matching photo, desktop, Android and iPhone asse
       const assets = getMechitzaBaseAssets(model, finish);
       assert.deepEqual(assets, {
         poster: `${stem}.webp?v=2`,
-        glb: `${stem}.glb?v=3`,
-        usdz: `${stem}.usdz?v=3`,
+        glb: `${stem}.glb?v=4`,
+        usdz: `${stem}.usdz?v=4`,
       });
       paths.add(assets.usdz);
     }
@@ -39,7 +39,7 @@ test("every wood finish selects matching photo, desktop, Android and iPhone asse
   assert.equal(paths.size, 30);
 });
 
-test("each 3D model preserves opaque printed film and a translucent reverse", async () => {
+test("each 3D model preserves opaque printed film and a clear reverse", async () => {
   const { MECHITZA_MODELS, MECHITZA_FINISHES, getMechitzaBaseAssets } = await import("./models.ts");
   for (const { id: finish } of MECHITZA_FINISHES) {
     for (const { id: model } of MECHITZA_MODELS) {
@@ -57,7 +57,7 @@ test("each 3D model preserves opaque printed film and a translucent reverse", as
       assert.equal(printed.alphaMode ?? "OPAQUE", "OPAQUE", path);
       assert.equal(printed.pbrMetallicRoughness.baseColorFactor?.[3] ?? 1, 1, path);
       assert.equal(reverse.alphaMode, "BLEND", path);
-      assert.ok(Math.abs(reverse.pbrMetallicRoughness.baseColorFactor[3] - 0.6) < 0.00001, path);
+      assert.equal(reverse.pbrMetallicRoughness.baseColorFactor[3], 0, path);
     }
   }
 });
@@ -76,8 +76,8 @@ test("glass and artwork selections resolve to the same custom model in 3D and AR
 
   const custom = getMechitzaAssets("three", "walnut", "olive-trellis", "taupe");
   const file = "/api/mechitza-model/v10-linen-marquetry-walnut-three";
-  assert.equal(custom.glb, `${file}.glb?film=olive-trellis&art=taupe&v=7`);
-  assert.equal(custom.usdz, `${file}.usdz?film=olive-trellis&art=taupe&v=7`);
+  assert.equal(custom.glb, `${file}.glb?film=olive-trellis&art=taupe&v=8`);
+  assert.equal(custom.usdz, `${file}.usdz?film=olive-trellis&art=taupe&v=8`);
   assert.equal(custom.poster, base.poster);
 });
 
@@ -88,4 +88,23 @@ test("hiding people uses matching divider-only assets in 3D and AR", async () =>
   assert.equal(hidden.poster, visible.poster);
   assert.equal(hidden.glb, `${visible.glb}&people=0`);
   assert.equal(hidden.usdz, `${visible.usdz}&people=0`);
+});
+
+test("custom artwork colors normalize input and resolve consistently in 3D and AR", async () => {
+  const { artworkHexToRgb, artworkRgbToHex, findMechitzaArtColor, normalizeArtworkHex } = await import("./options.ts");
+  const { getMechitzaAssets } = await import("./models.ts");
+  assert.equal(normalizeArtworkHex(" #AbC "), "#aabbcc");
+  assert.equal(normalizeArtworkHex("123456"), "#123456");
+  assert.equal(normalizeArtworkHex("#1234"), undefined);
+  assert.equal(artworkRgbToHex("rgb(58, 146, 255)"), "#3a92ff");
+  assert.equal(artworkRgbToHex(" 0 17 255 "), "#0011ff");
+  assert.equal(artworkRgbToHex("256, 17, 255"), undefined);
+  assert.equal(artworkRgbToHex("0,,255"), undefined);
+  assert.equal(artworkHexToRgb("#3a92ff"), "58, 146, 255");
+  assert.equal(findMechitzaArtColor("custom-3a92ff")?.swatch, "#3a92ff");
+  assert.equal(findMechitzaArtColor("custom-3a92ffff"), undefined);
+  const assets = getMechitzaAssets("one", "natural", "linen-marquetry", "custom-3a92ff");
+  for (const asset of [assets.glb, assets.usdz]) {
+    assert.equal(new URL(asset, "https://example.com").searchParams.get("art"), "custom-3a92ff");
+  }
 });

@@ -46,4 +46,36 @@ export const MECHITZA_ART_COLORS = [
 export const MECHITZA_DEFAULT_FILM = MECHITZA_FILMS[0];
 
 export type MechitzaFilm = (typeof MECHITZA_FILMS)[number];
-export type MechitzaArtColor = (typeof MECHITZA_ART_COLORS)[number];
+type CustomArtColor = {
+  id: `custom-${string}`;
+  label: "Custom color";
+  swatch: `#${string}`;
+  group: "Custom";
+};
+
+export type MechitzaArtColor = (typeof MECHITZA_ART_COLORS)[number] | CustomArtColor;
+
+export function findMechitzaArtColor(id: unknown): MechitzaArtColor | undefined {
+  if (typeof id === "string" && /^custom-[0-9a-f]{6}$/.test(id)) {
+    return { id: `custom-${id.slice(7)}`, label: "Custom color", swatch: `#${id.slice(7)}`, group: "Custom" };
+  }
+
+  return MECHITZA_ART_COLORS.find((color) => color.id === id);
+}
+
+export function normalizeArtworkHex(value: string): string | undefined {
+  const hex = value.trim().replace(/^#/, "").toLowerCase();
+  if (/^[0-9a-f]{6}$/.test(hex)) return `#${hex}`;
+  if (/^[0-9a-f]{3}$/.test(hex)) return `#${[...hex].map((digit) => digit.repeat(2)).join("")}`;
+}
+
+export function artworkRgbToHex(value: string): string | undefined {
+  const rgb = value.trim().replace(/^rgb\s*\((.*)\)$/i, "$1").trim();
+  const channels = rgb.includes(",") ? rgb.split(/\s*,\s*/) : rgb.split(/\s+/);
+  if (channels.length !== 3 || channels.some((channel) => !/^\d{1,3}$/.test(channel) || Number(channel) > 255)) return;
+  return `#${channels.map((channel) => Number(channel).toString(16).padStart(2, "0")).join("")}`;
+}
+
+export function artworkHexToRgb(hex: string): string {
+  return [1, 3, 5].map((offset) => parseInt(hex.slice(offset, offset + 2), 16)).join(", ");
+}
