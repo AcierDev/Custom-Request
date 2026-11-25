@@ -1,7 +1,8 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import {
-  getMechitzaBaseAssets,
+  getMechitzaAssetName,
+  MECHITZA_DEFAULT_FINISH,
   MECHITZA_FINISHES,
   MECHITZA_MODELS,
 } from "@/app/mechitza/models";
@@ -30,24 +31,27 @@ const CACHE_CONTROL = "public, max-age=3600, s-maxage=86400, stale-while-revalid
 const NO_STORE = { "Cache-Control": "private, no-store" };
 
 const modelFiles = new Map(
-  MECHITZA_MODELS.flatMap((model) => MECHITZA_FINISHES.flatMap((finish) => {
-    const assets = getMechitzaBaseAssets(model.id, finish.id);
-    return (["glb", "usdz"] as const).map((format) => {
-      const filename = path.basename(assets[format].split("?")[0]);
-      return [filename, format] as const;
-    });
-  })),
+  MECHITZA_MODELS.flatMap((model) => MECHITZA_FINISHES.flatMap((finish) => (
+    (["glb", "usdz"] as const).map((format) => [
+      `${getMechitzaAssetName(model.id, finish.id)}.${format}` as string,
+      {
+        format,
+        finish: finish.id,
+        sourceFile: `${getMechitzaAssetName(model.id, MECHITZA_DEFAULT_FINISH.id)}.${format}`,
+      },
+    ] as const)
+  ))),
 );
 
 function prepareOptions(file: string, query: URLSearchParams) {
-  const format = modelFiles.get(file);
-  if (!format) return new Response("Unknown Mechitza model", { status: 404 });
+  const model = modelFiles.get(file);
+  if (!model) return new Response("Unknown Mechitza model", { status: 404 });
 
   const film = MECHITZA_FILMS.find((option) => option.id === (query.get("film") ?? MECHITZA_DEFAULT_FILM.id));
   const artwork = findMechitzaArtColor(query.get("art") ?? MECHITZA_DEFAULT_ART_COLOR.id);
   if (!film || !artwork) return new Response("Unknown Mechitza finish option", { status: 400 });
 
-  return { file, format, film, artwork, withPeople: query.get("people") !== "0" };
+  return { file, ...model, film, artwork, withPeople: query.get("people") !== "0" };
 }
 
 type ModelOptions = Exclude<ReturnType<typeof prepareOptions>, Response>;
@@ -78,11 +82,11 @@ function buildModelResponse(bytes: Buffer, file: string, format: keyof typeof MI
   return new Response(body, { headers });
 }
 
-async function renderModel({ file, format, film, artwork, withPeople }: ModelOptions, uploadedFilm: Buffer | null) {
+async function renderModel({ file, sourceFile, format, finish, film, artwork, withPeople }: ModelOptions, uploadedFilm: Buffer | null) {
   const customArt = artwork.group === "Custom";
   try {
-    const [source, texture, artImage, figureModel, previewLayer] = await Promise.all([
-      readFile(path.join(PUBLIC_DIR, "mechitza-assets", file)),
+    const [source, texture, artImage, figureModel, previewLayer, woodTexture] = await Promise.all([
+      readFile(path.join(PUBLIC_DIR, "mechitza-assets", sourceFile)),
       uploadedFilm ?? (film.id === MECHITZA_DEFAULT_FILM.id
         ? null
         : readFile(path.join(PUBLIC_DIR, "mechitza-films", `${film.id}.jpg`))),
@@ -95,15 +99,18 @@ async function renderModel({ file, format, film, artwork, withPeople }: ModelOpt
       withPeople && format === "usdz"
         ? readFile(path.join(PUBLIC_DIR, "mechitza-figures", "preview.usdc"))
         : null,
+      finish === MECHITZA_DEFAULT_FINISH.id
+        ? null
+        : readFile(path.join(PUBLIC_DIR, "mechitza-wood", `${finish}.jpg`)),
     ]);
     if (texture && texture.length > MAX_FILM_BYTES) throw new Error("Mechitza film texture exceeds size limit");
 
     let bytes: Buffer;
     if (format === "usdz") {
       const figures = previewLayer && figureModel ? { previewLayer, figurePackage: figureModel } : undefined;
-      bytes = customizeUsdz(source, texture, artImage, figures);
+      bytes = customizeUsdz(source, texture, artImage, figures, woodTexture);
     } else {
-      bytes = customizeGlb(source, texture, artwork.id === MECHITZA_DEFAULT_ART_COLOR.id ? null : artwork.swatch);
+      bytes = customizeGlb(source, texture, artwork.id === MECHITZA_DEFAULT_ART_COLOR.id ? null : artwork.swatch, woodTexture);
       if (figureModel) bytes = mergeFiguresGlb(bytes, figureModel);
     }
     if (bytes.length > MAX_MODEL_BYTES) throw new Error("Generated Mechitza model exceeds size limit");

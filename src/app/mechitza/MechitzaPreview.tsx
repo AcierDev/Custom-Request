@@ -31,6 +31,7 @@ import {
   type MechitzaArtColor,
   type MechitzaFilm,
 } from "./options";
+import { MECHITZA_MODEL_RELEASE } from "./modelRelease";
 import { BALLAST_DESCRIPTION, EXPLODED_PART_LABELS } from "./explodedParts";
 import type { ModelSide } from "./ModelPreview";
 import type { FilmCrop } from "./customFilm";
@@ -434,7 +435,7 @@ export function MechitzaPreview({
         <h1 id="mechitza-title">Mechitza V10</h1>
       </div>
 
-      <figure className={styles.visualGroup} aria-label={showModel ? "Interactive model of the selected arrangement" : "Mechitza with Linen Marquetry glass"}>
+      <figure className={styles.visualGroup} data-model-release={MECHITZA_MODEL_RELEASE.id} aria-label={showModel ? "Interactive model of the selected arrangement" : "Mechitza with Linen Marquetry glass"}>
         <div ref={modelSurface} className={styles.visual} data-interactive={showModel || undefined}>
           {showModel ? (
             <ModelPreview
@@ -462,7 +463,7 @@ export function MechitzaPreview({
         <figcaption className={styles.caption}>
           <dl className={styles.dimensions}>
             <div><dt>Width</dt><dd>{model.width}</dd></div>
-            <div><dt>Depth</dt><dd>23 in</dd></div>
+            <div><dt>Depth</dt><dd>{MECHITZA_MODEL_RELEASE.depthInches} in</dd></div>
             <div><dt>Height</dt><dd>75⅜ in</dd></div>
           </dl>
           {(showModel || canUseAR) && (
@@ -516,7 +517,6 @@ export function MechitzaPreview({
             aria-pressed={exploded}
             onClick={() => {
               setModelRequested(true);
-              if (observedSide) viewSide(observedSide);
               setExploded(!exploded);
             }}
           >

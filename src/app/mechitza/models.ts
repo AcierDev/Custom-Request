@@ -1,3 +1,4 @@
+import { MECHITZA_MODEL_RELEASE } from "./modelRelease.ts";
 import {
   MECHITZA_DEFAULT_ART_COLOR,
   MECHITZA_DEFAULT_FILM,
@@ -5,20 +6,25 @@ import {
   type MechitzaFilm,
 } from "./options.ts";
 
+function arrangementWidth(count: number) {
+  const widthInches = MECHITZA_MODEL_RELEASE.unitWidthInches * count;
+  const feet = Math.floor(widthInches / 12);
+  const inches = widthInches % 12;
+  return { widthInches, width: inches ? `${feet} ft ${inches} in` : `${feet} ft` };
+}
+
 export const MECHITZA_MODELS = [
   {
     id: "one",
     label: "One unit",
     count: 1,
-    widthInches: 66,
-    width: "5 ft 6 in",
+    ...arrangementWidth(1),
   },
   {
     id: "three",
     label: "Three units",
     count: 3,
-    widthInches: 198,
-    width: "16 ft 6 in",
+    ...arrangementWidth(3),
   },
 ] as const;
 
@@ -50,14 +56,16 @@ export const MECHITZA_FINISHES = [
 
 export type MechitzaFinish = (typeof MECHITZA_FINISHES)[number];
 
-function getMechitzaAssetName(model: MechitzaModel["id"], finish: MechitzaFinish["id"]) {
+export function getMechitzaAssetName(model: MechitzaModel["id"], finish: MechitzaFinish["id"]) {
   const variant = finish === MECHITZA_DEFAULT_FINISH.id ? model : `${finish}-${model}`;
   return `v10-linen-marquetry-${variant}`;
 }
 
 export function getMechitzaBaseAssets(model: MechitzaModel["id"], finish: MechitzaFinish["id"]) {
-  const base = `/mechitza-assets/${getMechitzaAssetName(model, finish)}`;
-  return { poster: `${base}.webp?v=2`, glb: `${base}.glb?v=5`, usdz: `${base}.usdz?v=5` };
+  const version = MECHITZA_MODEL_RELEASE.id;
+  const geometry = `/mechitza-assets/${getMechitzaAssetName(model, MECHITZA_DEFAULT_FINISH.id)}`;
+  const poster = `/mechitza-assets/${getMechitzaAssetName(model, finish)}`;
+  return { poster: `${poster}.webp?v=${version}`, glb: `${geometry}.glb?v=${version}`, usdz: `${geometry}.usdz?v=${version}` };
 }
 
 export function getMechitzaAssets(
@@ -69,7 +77,7 @@ export function getMechitzaAssets(
 ) {
   const { poster } = getMechitzaBaseAssets(model, finish);
   const path = `/api/mechitza-model/${getMechitzaAssetName(model, finish)}`;
-  const query = new URLSearchParams({ film, art, v: "9" });
+  const query = new URLSearchParams({ film, art, v: MECHITZA_MODEL_RELEASE.id });
   if (!people) query.set("people", "0");
   return { poster, glb: `${path}.glb?${query}`, usdz: `${path}.usdz?${query}` };
 }

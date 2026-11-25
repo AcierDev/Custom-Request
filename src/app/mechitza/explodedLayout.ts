@@ -50,8 +50,11 @@ const PART_TIMING: Record<AssemblyKind, readonly [start: number, finish: number]
   ballast: [0.30, 1],
 };
 
+type AssemblyUnit = "left" | "center" | "right";
+
 type AssemblyPart = {
   kind: AssemblyKind;
+  unit: AssemblyUnit;
   node: Object3D;
   origin: Vector3;
   offset: Vector3;
@@ -81,14 +84,16 @@ function normalizedName(name: string) {
   return name.toLowerCase().replaceAll("_", " ").replace(/\s+/g, " ").trim();
 }
 
-export function identifyAssemblyPart(name: string): AssemblyKind | undefined {
+export function identifyAssemblyPart(name: string, tag?: unknown): AssemblyKind | undefined {
+  if (typeof tag === "string" && Object.hasOwn(PART_OFFSETS, tag)) return tag as AssemblyKind;
   const partName = normalizedName(name).replace(/^(left|right) /, "");
   if (partName.startsWith("15 ") && partName.includes("gasket")) return "gasket";
   return Object.hasOwn(PART_NAMES, partName) ? PART_NAMES[partName] : undefined;
 }
 
 export function isFilmReverse(mesh: Mesh): boolean {
-  return !Array.isArray(mesh.material) && mesh.material.name === "Linen Marquetry charcoal reverse";
+  return mesh.userData.mechitzaFilmFace === "reverse"
+    || (!Array.isArray(mesh.material) && mesh.material.name === "Linen Marquetry charcoal reverse");
 }
 
 export function getExplosionPlan(scene: Object3D): ExplosionPlan {
@@ -104,13 +109,17 @@ export function getExplosionPlan(scene: Object3D): ExplosionPlan {
 
   scene.traverse((object) => {
     if (!(object as Mesh).isMesh) return;
-    const kind = identifyAssemblyPart(object.name);
+    const kind = identifyAssemblyPart(object.name, object.userData.mechitzaPart);
     if (!kind) return;
 
     const framePiece = normalizedName(object.name);
+    const tag = object.userData.mechitzaUnit;
+    const unit: AssemblyUnit = tag === "left" || tag === "center" || tag === "right"
+      ? tag
+      : framePiece.startsWith("left ") ? "left" : framePiece.startsWith("right ") ? "right" : "center";
     const worldOffset = new Vector3(...PART_OFFSETS[kind]);
-    if (framePiece.startsWith("left ")) worldOffset.x -= 0.18;
-    if (framePiece.startsWith("right ")) worldOffset.x += 0.18;
+    if (unit === "left") worldOffset.x -= 0.18;
+    if (unit === "right") worldOffset.x += 0.18;
 
     const origin = object.position.clone();
     const offset = worldOffset.clone();
@@ -121,18 +130,21 @@ export function getExplosionPlan(scene: Object3D): ExplosionPlan {
 
     const bounds = new Box3().setFromObject(object);
     explodedBounds.union(bounds.clone().translate(worldOffset));
-    parts.push({ kind, node: object, origin, offset, worldOffset, bounds });
+    parts.push({ kind, unit, node: object, origin, offset, worldOffset, bounds });
   });
 
   const callouts: ExplosionCallout[] = [];
   for (const [index, component] of EXPLODED_COMPONENTS.entries()) {
-    const part = parts
-      .filter((candidate) => candidate.kind === component.part)
-      .sort((left, right) => left.bounds.min.x - right.bounds.min.x)[0];
+    const matching = parts.filter((candidate) => candidate.kind === component.part);
+    const part = matching.find((candidate) => candidate.unit === "left") ?? matching[0];
     if (!part) continue;
 
-    const size = part.bounds.getSize(new Vector3());
-    const anchor = part.bounds.min.clone().add(size.multiply(new Vector3(...component.anchor)));
+    const bounds = new Box3();
+    for (const candidate of matching) {
+      if (candidate.unit === part.unit) bounds.union(candidate.bounds);
+    }
+    const size = bounds.getSize(new Vector3());
+    const anchor = bounds.min.clone().add(size.multiply(new Vector3(...component.anchor)));
     const tip = anchor.clone().add(part.worldOffset).add(new Vector3(...component.leader));
     explodedBounds.expandByPoint(tip);
     callouts.push({

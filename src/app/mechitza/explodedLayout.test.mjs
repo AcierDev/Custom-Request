@@ -17,7 +17,7 @@ for (const arrangement of ["one", "three"]) {
     const { nodes } = JSON.parse(bytes.toString("utf8", 20, 20 + jsonLength));
     const parts = nodes.filter((node) => node.mesh !== undefined);
     for (const node of parts) {
-      assert.ok(identifyAssemblyPart(node.name.replaceAll(" ", "_")), node.name);
+      assert.ok(identifyAssemblyPart(node.name, node.extras?.mechitzaPart), node.name);
     }
   });
 }
@@ -85,4 +85,19 @@ test("the exploded charcoal guide targets only the original reverse film mesh", 
   assert.equal(isFilmReverse(new Mesh(new BoxGeometry(), reverse)), true);
   assert.equal(isFilmReverse(new Mesh(new BoxGeometry(), [printed, reverse])), false);
   assert.equal(reverse.opacity, 0.34);
+});
+
+
+test("exported part and unit tags keep a detailed CAD assembly moving together", () => {
+  const scene = new Group();
+  const glass = new Mesh(new BoxGeometry(0.5, 0.5, 0.01), new MeshBasicMaterial());
+  glass.name = "Upper tempered panel";
+  glass.userData.mechitzaPart = "glass";
+  glass.userData.mechitzaUnit = "right";
+  scene.add(glass);
+  const plan = getExplosionPlan(scene);
+  assert.equal(plan.parts.length, 1);
+  assert.equal(plan.callouts[0].label, "Tempered glass");
+  applyExplosion(plan, 1);
+  assert.ok(glass.position.x > 0 && glass.position.z < 0);
 });

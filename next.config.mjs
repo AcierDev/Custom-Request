@@ -34,8 +34,11 @@ const nextConfig = {
   },
   outputFileTracingIncludes: {
     "/api/mechitza-model/*": [
-      "./public/mechitza-assets/*.glb",
-      "./public/mechitza-assets/*.usdz",
+      "./public/mechitza-assets/v10-linen-marquetry-one.glb",
+      "./public/mechitza-assets/v10-linen-marquetry-one.usdz",
+      "./public/mechitza-assets/v10-linen-marquetry-three.glb",
+      "./public/mechitza-assets/v10-linen-marquetry-three.usdz",
+      "./public/mechitza-wood/*.jpg",
       "./public/mechitza-films/*.jpg",
       "./public/mechitza-figures/**/*",
     ],
@@ -53,6 +56,8 @@ const nextConfig = {
       "./public/room-photo/**/*",
       "./public/models/**/*",
       "./public/mechitza-assets/*.webp",
+      "./public/mechitza-assets/v10-linen-marquetry-*-*.glb",
+      "./public/mechitza-assets/v10-linen-marquetry-*-*.usdz",
     ],
     "/api/blender-render/**": [
       "./public/**/*",

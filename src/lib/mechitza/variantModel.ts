@@ -5,6 +5,8 @@ const GLB_JSON_CHUNK = 0x4e4f534a;
 const GLB_BINARY_CHUNK = 0x004e4942;
 const PRINTED_MATERIAL = "Linen Marquetry printed face";
 const ARTWOOD_MATERIAL = "Navy Everwood relief";
+const WOOD_MATERIAL = "Warm natural poplar";
+const USDZ_WOOD = "textures/poplar_grain.jpg";
 const USDZ_FILM = "textures/linen_marquetry.jpg";
 const USDZ_ART = "textures/artwork_color.jpg";
 const USDZ_ALIGNMENT_FIELD = 0x1986;
@@ -87,22 +89,38 @@ function toLinear(channel: number): number {
   return srgb <= 0.04045 ? srgb / 12.92 : ((srgb + 0.055) / 1.055) ** 2.4;
 }
 
-export function customizeGlb(source: Buffer, film: Buffer | null, artSwatch: string | null): Buffer {
-  if (!film && !artSwatch) return source;
+export function customizeGlb(
+  source: Buffer,
+  film: Buffer | null,
+  artSwatch: string | null,
+  wood: Buffer | null = null,
+): Buffer {
+  if (!film && !artSwatch && !wood) return source;
   const { model, binary } = decodeGlb(source);
-  if (film) {
-    const material = model.materials.find((item) => item.name === PRINTED_MATERIAL);
+  const blocks = [binary];
+  let length = binary.length;
+  const textures = [[PRINTED_MATERIAL, film], [WOOD_MATERIAL, wood]] as const;
+  for (const [materialName, jpeg] of textures) {
+    if (!jpeg) continue;
+    const material = model.materials.find((item) => item.name === materialName);
     const texture = material?.pbrMetallicRoughness?.baseColorTexture;
-    const image = texture && model.images[model.textures[texture.index].source];
-    if (!image) throw new Error("Printed film material is missing");
-    // Append the image without moving any geometry or changing existing UVs.
+    const image = texture && model.images[model.textures[texture.index]?.source];
+    if (!image) throw new Error(`Missing Mechitza texture for ${materialName}`);
+
+    // Append replacements without moving geometry or changing UVs.
+    const padding = (4 - length % 4) % 4;
+    if (padding) blocks.push(Buffer.alloc(padding));
+    length += padding;
     image.bufferView = model.bufferViews.push({
       buffer: 0,
-      byteOffset: binary.length,
-      byteLength: film.length,
+      byteOffset: length,
+      byteLength: jpeg.length,
     }) - 1;
-    model.buffers[0].byteLength = binary.length + film.length;
+    blocks.push(jpeg);
+    length += jpeg.length;
   }
+  model.buffers[0].byteLength = length;
+
   if (artSwatch) {
     const material = model.materials.find((item) => item.name === ARTWOOD_MATERIAL);
     const pbr = material?.pbrMetallicRoughness;
@@ -111,7 +129,7 @@ export function customizeGlb(source: Buffer, film: Buffer | null, artSwatch: str
     pbr.baseColorFactor = [...rgb.map(toLinear), pbr.baseColorFactor?.[3] ?? 1];
   }
 
-  return film ? encodeGlb(model, binary, film) : encodeGlb(model, binary);
+  return encodeGlb(model, ...blocks);
 }
 
 export function mergeFiguresGlb(panel: Buffer, people: Buffer): Buffer {
@@ -182,13 +200,23 @@ interface UsdzFigures {
   figurePackage: Buffer;
 }
 
-export function customizeUsdz(source: Buffer, film: Buffer | null, art: Buffer | null, figures?: UsdzFigures): Buffer {
-  if (!film && !art && !figures) return source;
+export function customizeUsdz(
+  source: Buffer,
+  film: Buffer | null,
+  art: Buffer | null,
+  figures?: UsdzFigures,
+  wood: Buffer | null = null,
+): Buffer {
+  if (!film && !art && !figures && !wood) return source;
   const contents = unzipSync(source);
   if (!contents[USDZ_FILM] || !contents[USDZ_ART]) throw new Error("USDZ texture is missing");
 
   if (film) contents[USDZ_FILM] = film;
   if (art) contents[USDZ_ART] = art;
+  if (wood) {
+    if (!contents[USDZ_WOOD]) throw new Error("USDZ wood texture is missing");
+    contents[USDZ_WOOD] = wood;
+  }
 
   let members = Object.entries(contents);
   if (figures) {

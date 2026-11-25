@@ -102,3 +102,33 @@ test("USDZ keeps the original panel textures and adds the referenced figure pack
     assert.deepEqual(combined[`figures/${name}`], bytes);
   }
 });
+
+test("shared Natural GLB recolors wood alongside the printed film without changing geometry", async () => {
+  const { customizeGlb } = await import("./variantModel.ts");
+  const original = asset("glb");
+  const film = Buffer.from("film bytes");
+  const wood = Buffer.from("another wood sample");
+  const { doc, binary } = decodeGlb(customizeGlb(original, film, "#123456", wood));
+  for (const [name, expected] of [["Warm natural poplar", wood], ["Linen Marquetry printed face", film]]) {
+    const material = doc.materials.find((item) => item.name === name);
+    const texture = doc.textures[material.pbrMetallicRoughness.baseColorTexture.index];
+    const view = doc.bufferViews[doc.images[texture.source].bufferView];
+    assert.equal(view.byteOffset % 4, 0);
+    assert.deepEqual(binary.subarray(view.byteOffset, view.byteOffset + view.byteLength), expected);
+  }
+  assert.deepEqual(doc.meshes, decodeGlb(original).doc.meshes);
+  assert.deepEqual(doc.nodes, decodeGlb(original).doc.nodes);
+});
+
+test("shared Natural USDZ swaps the wood finish while preserving other package entries", async () => {
+  const { customizeUsdz } = await import("./variantModel.ts");
+  const original = asset("usdz");
+  const wood = Buffer.from("finish test texture");
+  const output = unzipSync(customizeUsdz(original, null, null, undefined, wood));
+  const before = unzipSync(original);
+  assert.deepEqual(Object.keys(output), Object.keys(before));
+  for (const [file, bytes] of Object.entries(output)) {
+    const expected = file === "textures/poplar_grain.jpg" ? wood : before[file];
+    assert.deepEqual(Buffer.from(bytes), Buffer.from(expected));
+  }
+});

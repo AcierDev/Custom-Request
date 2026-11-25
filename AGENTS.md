@@ -8,6 +8,11 @@
 - It is acceptable to make a reasonable choice that may need adjustment later; the user will ask for a fix if necessary.
 - Ask only when the answer would materially change the result and cannot be inferred safely, or when the action is important, destructive, irreversible, security-sensitive, costly, or affects external systems or other people.
 
+# Mechitza website model releases
+
+- Use the current verified Fusion revision from the Mechitza Manual for website model exports. Record the source revision and archive SHA-256 in `src/app/mechitza/modelRelease.ts`.
+- Publish the matching geometry and dimensions together for web 3D and AR. Check the exported geometry at full scale before replacing the live model. Use the release identifier in the asset URLs so returning visitors fetch the current files.
+
 # Everwood customer support continuity
 
 - Before Etsy/customer-support, custom-order, shipping, repair, or Tuesday intake work, read `/Users/akivaweil/Everwood Photo Studio/Workflows/Everwood SOP Manual.md` (the old `output/customer-support/EVERWOOD_SUPPORT_PLAYBOOK.md` now points there) and consult the relevant section before drafting or acting. Reuse already-read context during the task unless it changes.

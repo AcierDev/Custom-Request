@@ -210,7 +210,7 @@ function FramedModel({
   }, [camera, controls]);
 
   useFrame((_, delta) => {
-    const elapsed = Math.min(delta, 1 / 24);
+    const elapsed = Math.min(delta, 1 / 15);
     const target = exploded ? 1 : 0;
     const position = assemblyProgress.current;
     const step = elapsed / ASSEMBLY_SECONDS;
@@ -255,14 +255,15 @@ function FramedModel({
     const arrangementChanged = previous?.arrangement !== model.arrangement;
     const viewportChanged = previous?.width !== width || previous?.height !== height;
     const modeChanged = previous?.exploded !== exploded;
-    const shouldTurn = modeChanged || (model.url === requestedUrl && appliedSide.current !== view.revision);
+    const sideRequested = model.url === requestedUrl && appliedSide.current !== view.revision;
+    const shouldTurn = modeChanged || sideRequested;
     const shouldFrame = arrangementChanged || viewportChanged || modeChanged || (exploded && shouldTurn);
 
     if (!shouldFrame && !shouldTurn) return;
     const interrupted = transition.current;
     transition.current = null;
     const animateCamera = previous && !arrangementChanged && !viewportChanged
-      && (modeChanged || (exploded && shouldTurn));
+      && (modeChanged || shouldTurn);
     const from = animateCamera ? getCameraPose(camera, controls) : null;
     const targetMinZoom = interrupted?.minZoom ?? controls.minZoom;
     const targetMaxZoom = interrupted?.maxZoom ?? controls.maxZoom;
@@ -271,7 +272,10 @@ function FramedModel({
       if (modeChanged && exploded && previous) {
         assembledElevation.current = Math.atan2(offset.y, Math.hypot(offset.x, offset.z));
       }
-      positionForSide(offset, view.side, exploded);
+      const side = modeChanged && !sideRequested && !interrupted && Math.abs(offset.z) >= Math.abs(offset.x) * 0.2
+        ? offset.z < 0 ? "glass" : "artwork"
+        : view.side;
+      positionForSide(offset, side, exploded);
       if (modeChanged && !exploded && assembledElevation.current !== null) {
         offset.y = Math.tan(assembledElevation.current) * Math.hypot(offset.x, offset.z);
         assembledElevation.current = null;
@@ -403,7 +407,7 @@ export default function ModelPreview({
     <ModelErrorBoundary url={url} hasPhoto={hasPhoto}>
       <Canvas
         className={styles.canvas}
-        dpr={[1, 1.6]}
+        dpr={[1, 1.4]}
         frameloop="demand"
         orthographic
         camera={initialCamera}
