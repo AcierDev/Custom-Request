@@ -10,8 +10,9 @@ import {
   useRef,
   useState,
   type ReactNode,
+  type RefObject,
 } from "react";
-import { Box3, MathUtils, Spherical, Texture, Vector3, type Mesh, type Object3D, type OrthographicCamera } from "three";
+import { MathUtils, Spherical, Texture, Vector3, type Box3, type Mesh, type Object3D, type OrthographicCamera } from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { appPath } from "@/lib/appPaths";
@@ -64,6 +65,7 @@ function useResolvedModel(url: string, arrangement: string, filmImage?: Blob) {
   const [model, setModel] = useState<ResolvedModel | null>(null);
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const latestUrl = useRef(url);
+  const scenes = useRef(new Set<Object3D>());
 
   useLayoutEffect(() => {
     latestUrl.current = url;
@@ -88,6 +90,7 @@ function useResolvedModel(url: string, arrangement: string, filmImage?: Blob) {
           disposeModel(scene);
           return;
         }
+        scenes.current.add(scene);
         setModel({ url, arrangement, scene, heightLabels: prepareHeightLabels(scene) });
       } catch {
         if (!request.signal.aborted && url === latestUrl.current) setFailedUrl(url);
@@ -99,10 +102,26 @@ function useResolvedModel(url: string, arrangement: string, filmImage?: Blob) {
   }, [arrangement, filmImage, url]);
 
   useEffect(() => {
-    if (model) return () => disposeModel(model.scene);
-  }, [model]);
+    const loaded = scenes.current;
+    return () => {
+      for (const scene of loaded) disposeModel(scene);
+      loaded.clear();
+    };
+  }, []);
 
-  return { model, failed: failedUrl === url };
+  const onDisplay = useCallback((scene: Object3D) => {
+    const loaded = scenes.current;
+    if (!loaded.has(scene)) return;
+    // The canvas owns a separate React root. Retire the outgoing model only
+    // after its replacement has committed inside that root.
+    for (const older of loaded) {
+      if (older === scene) break;
+      loaded.delete(older);
+      disposeModel(older);
+    }
+  }, []);
+
+  return { model, failed: failedUrl === url, onDisplay };
 }
 
 function positionForSide(offset: Vector3, side: ModelSide, exploded: boolean) {
@@ -139,18 +158,28 @@ function getCameraPose(camera: OrthographicCamera, controls: OrbitControlsImpl):
   return { orbit, target, zoom: camera.zoom };
 }
 
-const ASSEMBLY_CAMERA_SECONDS = 0.95;
+const ASSEMBLY_SECONDS = 1.15;
+type CameraTransition = {
+  from: CameraPose;
+  to: CameraPose;
+  elapsed: number;
+  duration: number;
+  minZoom: number;
+  maxZoom: number;
+};
 
 function FramedModel({
   model,
   requestedUrl,
   view,
   exploded,
+  onDisplay,
 }: {
   model: ResolvedModel | null;
   requestedUrl: string;
   view: ViewRequest;
   exploded: boolean;
+  onDisplay: (scene: Object3D) => void;
 }) {
   const camera = useThree((state) => state.camera) as OrthographicCamera;
   const controls = useThree((state) => state.controls) as OrbitControlsImpl | null;
@@ -158,22 +187,42 @@ function FramedModel({
   const invalidate = useThree((state) => state.invalidate);
   const frame = useRef<{ arrangement: string; width: number; height: number; zoom: number; exploded: boolean } | null>(null);
   const appliedSide = useRef<number | null>(null);
-  const transition = useRef<{ from: CameraPose; to: CameraPose; elapsed: number } | null>(null);
+  const transition = useRef<CameraTransition | null>(null);
   const animatedOrbit = useRef(new Spherical());
+  const assemblyProgress = useRef(0);
+  const assembledElevation = useRef<number | null>(null);
+
+  useLayoutEffect(() => {
+    if (model && controls && width > 0 && height > 0) onDisplay(model.scene);
+  }, [controls, height, model, onDisplay, width]);
 
   useEffect(() => {
     if (!controls) return;
-    const cancelTransition = () => { transition.current = null; };
+    const cancelTransition = () => {
+      const motion = transition.current;
+      if (!motion) return;
+      controls.minZoom = Math.min(motion.minZoom, camera.zoom);
+      controls.maxZoom = Math.max(motion.maxZoom, camera.zoom);
+      transition.current = null;
+    };
     controls.addEventListener("start", cancelTransition);
     return () => controls.removeEventListener("start", cancelTransition);
-  }, [controls]);
+  }, [camera, controls]);
 
   useFrame((_, delta) => {
+    const elapsed = Math.min(delta, 1 / 24);
+    const target = exploded ? 1 : 0;
+    const position = assemblyProgress.current;
+    const step = elapsed / ASSEMBLY_SECONDS;
+    const next = position < target ? Math.min(target, position + step) : Math.max(target, position - step);
+    assemblyProgress.current = next;
+    if (next !== position) invalidate();
+
     const motion = transition.current;
     if (!controls || !motion) return;
 
-    motion.elapsed += Math.min(delta, 1 / 24);
-    const progress = Math.min(motion.elapsed / ASSEMBLY_CAMERA_SECONDS, 1);
+    motion.elapsed += elapsed;
+    const progress = Math.min(motion.elapsed / motion.duration, 1);
     const eased = MathUtils.smootherstep(progress, 0, 1);
     const { from, to } = motion;
     animatedOrbit.current.set(
@@ -183,13 +232,22 @@ function FramedModel({
     );
     controls.target.lerpVectors(from.target, to.target, eased);
     camera.position.setFromSpherical(animatedOrbit.current).add(controls.target);
-    camera.zoom = MathUtils.lerp(motion.from.zoom, motion.to.zoom, eased);
+    // Give the widest parts space before they move, and keep it while they return.
+    const zoomProgress = to.zoom >= from.zoom
+      ? MathUtils.smootherstep(progress, 0.26, 1)
+      : MathUtils.smootherstep(progress, 0, 0.63);
+    camera.zoom = MathUtils.lerp(from.zoom, to.zoom, zoomProgress);
     camera.updateProjectionMatrix();
     controls.update();
 
-    if (progress < 1) invalidate();
-    else transition.current = null;
-  });
+    if (progress < 1) {
+      invalidate();
+    } else {
+      controls.minZoom = motion.minZoom;
+      controls.maxZoom = motion.maxZoom;
+      transition.current = null;
+    }
+  }, -0.8);
 
   useLayoutEffect(() => {
     if (!model || !controls || !width || !height) return;
@@ -201,21 +259,28 @@ function FramedModel({
     const shouldFrame = arrangementChanged || viewportChanged || modeChanged || (exploded && shouldTurn);
 
     if (!shouldFrame && !shouldTurn) return;
+    const interrupted = transition.current;
     transition.current = null;
-    const animateMode = previous && modeChanged && !arrangementChanged && !viewportChanged
-      && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const from = animateMode ? getCameraPose(camera, controls) : null;
+    const animateCamera = previous && !arrangementChanged && !viewportChanged
+      && (modeChanged || (exploded && shouldTurn));
+    const from = animateCamera ? getCameraPose(camera, controls) : null;
+    const targetMinZoom = interrupted?.minZoom ?? controls.minZoom;
+    const targetMaxZoom = interrupted?.maxZoom ?? controls.maxZoom;
     const offset = camera.position.clone().sub(controls.target);
     if (shouldTurn) {
+      if (modeChanged && exploded && previous) {
+        assembledElevation.current = Math.atan2(offset.y, Math.hypot(offset.x, offset.z));
+      }
       positionForSide(offset, view.side, exploded);
+      if (modeChanged && !exploded && assembledElevation.current !== null) {
+        offset.y = Math.tan(assembledElevation.current) * Math.hypot(offset.x, offset.z);
+        assembledElevation.current = null;
+      }
       if (model.url === requestedUrl) appliedSide.current = view.revision;
     }
 
     if (shouldFrame) {
-      const bounds = new Box3();
-      for (const object of model.scene.children) {
-        if (object.visible) bounds.expandByObject(object);
-      }
+      const bounds = getExplodedBounds(model.scene, exploded);
       if (bounds.isEmpty()) return;
       const span = bounds.getSize(new Vector3()).length();
       controls.target.copy(bounds.getCenter(new Vector3()));
@@ -234,6 +299,8 @@ function FramedModel({
       camera.updateProjectionMatrix();
       frame.current = { arrangement: model.arrangement, width, height, zoom: baseZoom, exploded };
     } else {
+      controls.minZoom = targetMinZoom;
+      controls.maxZoom = targetMaxZoom;
       camera.position.copy(controls.target).add(offset);
     }
 
@@ -241,7 +308,13 @@ function FramedModel({
       const to = getCameraPose(camera, controls);
       const angle = to.orbit.theta - from.orbit.theta;
       to.orbit.theta = from.orbit.theta + MathUtils.euclideanModulo(angle + Math.PI, 2 * Math.PI) - Math.PI;
-      transition.current = { from, to, elapsed: 0 };
+      const minZoom = controls.minZoom;
+      const maxZoom = controls.maxZoom;
+      const remaining = Math.abs((exploded ? 1 : 0) - assemblyProgress.current);
+      const duration = modeChanged ? Math.max(0.25, ASSEMBLY_SECONDS * remaining) : 0.48;
+      transition.current = { from, to, elapsed: 0, duration, minZoom, maxZoom };
+      controls.minZoom = Math.min(minZoom, from.zoom);
+      controls.maxZoom = Math.max(maxZoom, from.zoom);
       camera.position.setFromSpherical(from.orbit).add(from.target);
       controls.target.copy(from.target);
       camera.zoom = from.zoom;
@@ -256,7 +329,7 @@ function FramedModel({
 
   return (
     <>
-      <ExplodedModel scene={model.scene} exploded={exploded} />
+      <ExplodedModel scene={model.scene} exploded={exploded} progress={assemblyProgress} />
       {model.heightLabels.map(({ name, position, text }) => (
         <Html
           key={name}
@@ -300,6 +373,7 @@ export default function ModelPreview({
   view,
   hasPhoto,
   filmImage,
+  surface,
   exploded,
   onSideChange,
 }: {
@@ -308,11 +382,12 @@ export default function ModelPreview({
   view: ViewRequest;
   hasPhoto: boolean;
   filmImage?: Blob;
+  surface: RefObject<HTMLDivElement | null>;
   exploded: boolean;
   onSideChange: (side: ModelSide | null) => void;
 }) {
   const assetUrl = appPath(url);
-  const { model, failed } = useResolvedModel(assetUrl, arrangement, filmImage);
+  const { model, failed, onDisplay } = useResolvedModel(assetUrl, arrangement, filmImage);
   const loading = !failed && model?.url !== assetUrl;
   const controls = useRef<OrbitControlsImpl>(null);
   const [initialCamera] = useState(() => ({ position: [2.3, 1.7, -7] as [number, number, number] }));
@@ -338,8 +413,15 @@ export default function ModelPreview({
         <hemisphereLight args={["#fff5e5", "#bfb4a8", 1.75]} />
         <directionalLight position={[-3, 5, -3]} intensity={2.2} />
         <directionalLight position={[3, 2, 4]} intensity={1.5} />
-        <OrbitControls ref={controls} makeDefault enablePan={false} enableDamping={false} onChange={reportSide} />
-        <FramedModel model={model} requestedUrl={assetUrl} view={view} exploded={exploded} />
+        <OrbitControls
+          ref={controls}
+          domElement={surface.current ?? undefined}
+          makeDefault
+          enablePan={false}
+          enableDamping={false}
+          onChange={reportSide}
+        />
+        <FramedModel model={model} requestedUrl={assetUrl} view={view} exploded={exploded} onDisplay={onDisplay} />
       </Canvas>
       {loading && (
         <p className={model ? styles.modelUpdating : styles.modelStatus} role="status">

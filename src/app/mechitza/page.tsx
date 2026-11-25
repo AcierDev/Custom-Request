@@ -40,7 +40,7 @@ export default async function MechitzaPage({
           initialModel={initialModel}
           initialFilm={initialFilm}
           initialArt={initialArt}
-          initialPeople={people !== "0"}
+          initialPeople={people === "1"}
         />
       </main>
     </div>

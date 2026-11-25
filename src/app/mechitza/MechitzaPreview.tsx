@@ -227,7 +227,7 @@ export function MechitzaPreview({
   const [preparedAR, setPreparedAR] = useState<{ key: string; url: string; expiresAt: number }>();
   const [failedARKey, setFailedARKey] = useState<string>();
   const [arAttempt, setArAttempt] = useState(0);
-  const [modelRequested, setModelRequested] = useState(false);
+  const [modelRequested, setModelRequested] = useState(true);
   const [exploded, setExploded] = useState(false);
   const [view, setView] = useState<{ side: ModelSide; revision: number }>({
     side: initialFilm.id !== MECHITZA_DEFAULT_FILM.id && initialArt.id === MECHITZA_DEFAULT_ART_COLOR.id
@@ -242,6 +242,7 @@ export function MechitzaPreview({
   const [sessionReady, setSessionReady] = useState(false);
   const [arError, setArError] = useState(false);
   const overlay = useRef<HTMLDivElement>(null);
+  const modelSurface = useRef<HTMLDivElement>(null);
   const startWebXR = useRef<typeof startWebXRARSession | null>(null);
   const controller = useRef<WebXRARController | null>(null);
   const mounted = useRef(false);
@@ -375,7 +376,7 @@ export function MechitzaPreview({
       ["arrangement", next.model.id, MECHITZA_MODELS[0].id],
       ["film", next.film.id, MECHITZA_DEFAULT_FILM.id],
       ["art", next.art.id, MECHITZA_DEFAULT_ART_COLOR.id],
-      ["people", next.people ? "1" : "0", "1"],
+      ["people", next.people ? "1" : "0", "0"],
     ];
     for (const [key, value, defaultValue] of params) {
       if (value === defaultValue) url.searchParams.delete(key);
@@ -409,6 +410,23 @@ export function MechitzaPreview({
     }
   }
 
+  const explodedLegend = (
+    <div
+      className={styles.legendRegion}
+      data-open={exploded || undefined}
+      aria-hidden={!exploded}
+    >
+      <div>
+        <ol className={styles.explodedLegend} aria-label="Exploded view components">
+          {EXPLODED_PART_LABELS.map((label, index) => (
+            <li key={label}><span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>{label}</li>
+          ))}
+        </ol>
+        <p className={styles.ballastNote}>{BALLAST_DESCRIPTION}</p>
+      </div>
+    </div>
+  );
+
   return (
     <section className={styles.feature} aria-labelledby="mechitza-title">
       <div className={styles.intro}>
@@ -417,11 +435,12 @@ export function MechitzaPreview({
       </div>
 
       <figure className={styles.visualGroup} aria-label={showModel ? "Interactive model of the selected arrangement" : "Mechitza with Linen Marquetry glass"}>
-        <div className={styles.visual}>
+        <div ref={modelSurface} className={styles.visual} data-interactive={showModel || undefined}>
           {showModel ? (
             <ModelPreview
               url={modelUrl}
               filmImage={customFilm?.image}
+              surface={modelSurface}
               arrangement={people ? model.id : `${model.id}-divider`}
               view={view}
               hasPhoto={hasPhoto}
@@ -440,16 +459,6 @@ export function MechitzaPreview({
             />
           )}
         </div>
-        {exploded && (
-          <div>
-            <ol className={styles.explodedLegend} aria-label="Exploded view components">
-              {EXPLODED_PART_LABELS.map((label, index) => (
-                <li key={label}><span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>{label}</li>
-              ))}
-            </ol>
-            <p className={styles.ballastNote}>{BALLAST_DESCRIPTION}</p>
-          </div>
-        )}
         <figcaption className={styles.caption}>
           <dl className={styles.dimensions}>
             <div><dt>Width</dt><dd>{model.width}</dd></div>
@@ -460,8 +469,8 @@ export function MechitzaPreview({
             <div className={styles.previewControls}>
               {showModel && (
                 <div className={styles.sideControls} role="group" aria-label="View a side">
-                  <button type="button" aria-pressed={observedSide === "glass"} onClick={() => viewSide("glass")}>Glass side</button>
-                  <button type="button" aria-pressed={observedSide === "artwork"} onClick={() => viewSide("artwork")}>Artwork side</button>
+                  <button type="button" aria-pressed={observedSide === "glass"} onClick={() => viewSide("glass")}>Men’s side</button>
+                  <button type="button" aria-pressed={observedSide === "artwork"} onClick={() => viewSide("artwork")}>Women’s side</button>
                 </div>
               )}
               <button
@@ -476,6 +485,7 @@ export function MechitzaPreview({
               </button>
             </div>
           )}
+          <div className={styles.desktopLegend}>{explodedLegend}</div>
         </figcaption>
       </figure>
 
@@ -518,6 +528,7 @@ export function MechitzaPreview({
           <p className={styles.arNote} role="alert">The custom glass couldn’t be prepared for AR. Tap Place in your room to retry.</p>
         )}
         {mode === "unavailable" && <p className={styles.arNote}>Open on your phone for full-scale AR.</p>}
+        <div className={styles.mobileLegend}>{explodedLegend}</div>
       </div>
 
       <div className={styles.configuration}>

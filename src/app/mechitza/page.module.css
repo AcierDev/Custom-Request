@@ -330,7 +330,7 @@
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  gap: 0.5rem 0.75rem;
+  column-gap: 0.75rem;
   min-height: 1.9rem;
   padding: 0.55rem 0.1rem 0;
   color: var(--muted);
@@ -401,13 +401,27 @@
   }
 
   .feature {
-    grid-template:
-      "intro"
-      "visual"
-      "actions"
-      "configuration"
-      / minmax(0, 1fr);
-    row-gap: 0.94rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.94rem;
+  }
+
+  .visualGroup {
+    position: sticky;
+    z-index: 3;
+    top: 0;
+    align-self: stretch;
+    padding-block: 0.35rem 0.45rem;
+    background: var(--paper);
+  }
+
+  .visual {
+    width: 100%;
+    max-height: 35svh;
+  }
+
+  .configuration :is(button, input, [role="tab"]) {
+    scroll-margin-top: calc(35svh + 5.5rem);
   }
 
   .intro h1 {
@@ -419,7 +433,7 @@
   }
 
   .caption {
-    gap: 0.5rem;
+    column-gap: 0.5rem;
   }
 
   .sideControls button {
@@ -456,8 +470,13 @@
   -webkit-user-drag: none;
 }
 
-.canvas {
-  touch-action: pan-y !important;
+.visual[data-interactive] {
+  touch-action: none;
+  cursor: grab;
+}
+
+.visual[data-interactive]:active {
+  cursor: grabbing;
 }
 
 .materialNote {
@@ -776,4 +795,73 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.45rem;
+}
+
+
+.legendRegion {
+  display: grid;
+  width: 100%;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 240ms ease, opacity 180ms ease;
+}
+
+.legendRegion[data-open] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.legendRegion > div {
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 820px) {
+  .previewControls {
+    gap: 0.35rem 0.5rem;
+  }
+
+  .peopleToggle {
+    gap: 0.48rem;
+    min-height: 2.75rem;
+    padding-inline: 0.55rem;
+    border: 1px solid var(--line);
+    border-radius: 0.35rem;
+    background: #fdfaf5;
+    font-weight: 650;
+  }
+
+  .peopleToggle[aria-checked="true"] {
+    border-color: var(--accent);
+    background: var(--selection);
+  }
+
+  .switchTrack {
+    width: 2.05rem;
+    height: 1.22rem;
+  }
+
+  .switchTrack::before {
+    width: 0.95rem;
+    height: 0.95rem;
+  }
+}
+
+
+.desktopLegend {
+  width: 100%;
+}
+
+.mobileLegend {
+  display: none;
+}
+
+@media (max-width: 820px) {
+  .desktopLegend {
+    display: none;
+  }
+
+  .mobileLegend {
+    display: block;
+  }
 }

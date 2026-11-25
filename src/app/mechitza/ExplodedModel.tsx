@@ -15,8 +15,6 @@ import styles from "./ExplodedModel.module.css";
 
 export { getExplodedBounds } from "./explodedLayout";
 
-const TRAVEL_SECONDS = 0.98;
-
 function calloutReveal(progress: number) {
   return MathUtils.smoothstep(progress, 0.47, 0.85);
 }
@@ -55,7 +53,15 @@ function FilmReverseEdge({ film, progress }: { film: Mesh; progress: RefObject<n
   );
 }
 
-function GlassHighlight({ pane, progress }: { pane: Mesh; progress: RefObject<number> }) {
+function GlassHighlight({
+  pane,
+  kind,
+  progress,
+}: {
+  pane: Mesh;
+  kind: "glass" | "cover";
+  progress: RefObject<number>;
+}) {
   const edges = useMemo(() => new EdgesGeometry(pane.geometry, 28), [pane.geometry]);
   const group = useRef<Group>(null);
   const edgeMaterial = useRef<LineBasicMaterial>(null);
@@ -65,7 +71,7 @@ function GlassHighlight({ pane, progress }: { pane: Mesh; progress: RefObject<nu
 
   useFrame(() => {
     if (!group.current) return;
-    const amount = MathUtils.smoothstep(progress.current, 0.12, 0.80);
+    const amount = MathUtils.smoothstep(partExplosionProgress(kind, progress.current), 0.1, 0.8);
     placeOverlay(group.current, pane, amount > 0.001);
     if (edgeMaterial.current) edgeMaterial.current.opacity = 0.66 * amount;
     if (tintMaterial.current) tintMaterial.current.opacity = 0.09 * amount;
@@ -92,6 +98,7 @@ function ComponentCallout({
 }) {
   const group = useRef<Group>(null);
   const leader = useRef<Group>(null);
+  const marker = useRef<Group>(null);
   const label = useRef<HTMLSpanElement | null>(null);
   const attachLabel = useCallback((element: HTMLSpanElement | null) => {
     label.current = element;
@@ -110,8 +117,10 @@ function ComponentCallout({
       leader.current.visible = reveal > 0.01;
       leader.current.scale.setScalar(reveal);
     }
+    marker.current?.position.set(...callout.leader).multiplyScalar(reveal);
+    group.current?.updateWorldMatrix(true, true);
     if (label.current) label.current.style.opacity = String(reveal);
-  });
+  }, -0.4);
 
   return (
     <group ref={group} position={callout.anchor}>
@@ -122,11 +131,13 @@ function ComponentCallout({
         </mesh>
         <Line points={points} color="#947450" lineWidth={1} />
       </group>
-      <Html position={[...callout.leader]} center zIndexRange={[2, 1]} style={{ pointerEvents: "none" }}>
-        <span ref={attachLabel} className={styles.callout} aria-hidden="true">
-          {callout.number}
-        </span>
-      </Html>
+      <group ref={marker}>
+        <Html center zIndexRange={[2, 1]} style={{ pointerEvents: "none" }}>
+          <span ref={attachLabel} className={styles.callout} aria-hidden="true">
+            {callout.number}
+          </span>
+        </Html>
+      </group>
     </group>
   );
 }
@@ -134,62 +145,47 @@ function ComponentCallout({
 export function ExplodedModel({
   scene,
   exploded,
+  progress,
   showLabels = true,
 }: {
   scene: Object3D;
   exploded: boolean;
+  progress: RefObject<number>;
   showLabels?: boolean;
 }) {
   const plan = useMemo(() => getExplosionPlan(scene), [scene]);
-  const progress = useRef(0);
+  const appliedProgress = useRef(0);
   const [separating, setSeparating] = useState(exploded);
-  const reducedMotion = useRef(false);
   const invalidate = useThree((state) => state.invalidate);
 
-  useEffect(() => {
-    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const handleChange = () => {
-      reducedMotion.current = query.matches;
-      invalidate();
-    };
-    handleChange();
-    query.addEventListener("change", handleChange);
-    return () => query.removeEventListener("change", handleChange);
-  }, [invalidate]);
-
   useLayoutEffect(() => {
-    applyExplosion(plan, progress.current);
+    const amount = progress.current;
+    applyExplosion(plan, amount);
+    appliedProgress.current = amount;
     invalidate();
     return () => applyExplosion(plan, 0);
-  }, [invalidate, plan]);
+  }, [invalidate, plan, progress]);
 
   useLayoutEffect(() => {
     if (exploded || progress.current === 0) setSeparating(exploded);
     invalidate();
-  }, [exploded, invalidate, showLabels]);
+  }, [exploded, invalidate, progress, showLabels]);
 
-  useFrame((_, delta) => {
-    const target = exploded ? 1 : 0;
-    const current = progress.current;
-    if (current === target) return;
-
-    const step = Math.min(delta, 1 / 24) / TRAVEL_SECONDS;
-    const next = reducedMotion.current
-      ? target
-      : current < target
-        ? Math.min(target, current + step)
-        : Math.max(target, current - step);
-    progress.current = next;
-    applyExplosion(plan, next);
-    if (next !== target) invalidate();
-    else if (next === 0) setSeparating(false);
-  }, -1);
+  useFrame(() => {
+    const amount = progress.current;
+    if (amount === appliedProgress.current) return;
+    appliedProgress.current = amount;
+    applyExplosion(plan, amount);
+    if (amount === 0 && !exploded) setSeparating(false);
+  }, -0.6);
 
   return (
     <>
       <primitive object={scene} />
-      {separating && plan.parts.filter((part) => part.kind === "glass" || part.kind === "cover").map((part) => (
-        <GlassHighlight key={part.node.uuid} pane={part.node as Mesh} progress={progress} />
+      {separating && plan.parts.map(({ kind, node }) => (
+        kind === "glass" || kind === "cover" ? (
+          <GlassHighlight key={node.uuid} pane={node as Mesh} kind={kind} progress={progress} />
+        ) : null
       ))}
       {separating && plan.parts.map(({ kind, node }) => {
         const mesh = node as Mesh;
