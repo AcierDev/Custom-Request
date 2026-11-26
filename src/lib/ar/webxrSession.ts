@@ -32,6 +32,7 @@ const RETICLE_INNER_RADIUS = 0.07;
 const RETICLE_OUTER_RADIUS = 0.09;
 const RETICLE_SEGMENTS = 32;
 const RETICLE_COLOR = 0x818cf8; // indigo-400, matches the app accent
+const FLOOR_STARTUP_TIMEOUT_MS = 15_000;
 
 // Lighting for the matte (Lambertian) art materials. Light estimation would be
 // nicer but adds complexity; a sky/ground hemisphere plus a soft key reads well.
@@ -57,6 +58,8 @@ export interface StartWebXROptions {
   overlayRoot: HTMLElement;
   /** Resolved GLB URL for a Y-up, floor-origin model in meters. */
   floorModelUrl?: string;
+  /** Cancel a pending launch or end a running session. */
+  signal?: AbortSignal;
   /** Fired when the session ends (user exit, system dismiss, or error cleanup). */
   onEnd: () => void;
   /** Fired whenever the piece becomes placed / un-placed. */
@@ -132,7 +135,8 @@ export async function startWebXRARSession(
   }
 
   // ── requestSession FIRST (no await before it) to preserve the user gesture ──
-  const { floorModelUrl } = opts;
+  const { floorModelUrl, signal } = opts;
+  signal?.throwIfAborted();
   const session = await navigator.xr.requestSession("immersive-ar", {
     requiredFeatures: ["hit-test", "dom-overlay"],
     domOverlay: { root: opts.overlayRoot },
@@ -150,6 +154,28 @@ export async function startWebXRARSession(
   let placed = false;
   let rebuildToken = 0;
   let disposed = false;
+  const startup = floorModelUrl ? new AbortController() : null;
+  const startupTimer = startup && setTimeout(
+    () => startup.abort(new Error("AR: the divider did not load in time.")),
+    FLOOR_STARTUP_TIMEOUT_MS,
+  );
+
+  function waitForStartup<T>(pending: Promise<T>): Promise<T> {
+    if (!startup) return pending;
+    const { signal } = startup;
+    return new Promise((resolve, reject) => {
+      const abort = () => reject(signal.reason);
+      if (signal.aborted) abort();
+      else signal.addEventListener("abort", abort, { once: true });
+      pending.then((value) => {
+        signal.removeEventListener("abort", abort);
+        resolve(value);
+      }, (error: unknown) => {
+        signal.removeEventListener("abort", abort);
+        reject(error);
+      });
+    });
+  }
 
   const onBeforeSelect = (e: Event) => e.preventDefault();
   const setPlaced = (value: boolean) => {
@@ -163,11 +189,24 @@ export async function startWebXRARSession(
     if (floorModelUrl) opts.onSurfaceChange?.(visible);
   };
 
+  let ending: Promise<void> | null = null;
+  function endSession(): Promise<void> {
+    return ending ??= session.end().catch(() => {});
+  }
+
+  function cancelSession() {
+    cleanup();
+    void endSession();
+  }
+
   let cleanedUp = false;
   const cleanup = () => {
     if (cleanedUp) return;
     cleanedUp = true;
     disposed = true;
+    if (startupTimer !== null) clearTimeout(startupTimer);
+    startup?.abort();
+    signal?.removeEventListener("abort", cancelSession);
     rebuildToken++; // invalidate any in-flight rebuildArt so it drops on resume
     if (onSelect) session.removeEventListener("select", onSelect);
     opts.overlayRoot.removeEventListener(
@@ -190,13 +229,15 @@ export async function startWebXRARSession(
   session.addEventListener("end", () => {
     cleanup();
     opts.onEnd();
-  });
+  }, { once: true });
+  signal?.addEventListener("abort", cancelSession, { once: true });
 
   try {
+    signal?.throwIfAborted();
     const r = new THREE.WebGLRenderer({
       canvas: document.createElement("canvas"),
       alpha: true,
-      antialias: true,
+      antialias: !floorModelUrl,
     });
     renderer = r;
     r.setPixelRatio(window.devicePixelRatio);
@@ -252,16 +293,23 @@ export async function startWebXRARSession(
       scene.add(next);
     };
 
-    if (floorModelUrl) {
-      const { GLTFLoader } = await import(
-        "three/examples/jsm/loaders/GLTFLoader.js"
-      );
-      if (disposed) throw new Error("AR session ended while loading.");
-      const { scene: model } = await new GLTFLoader().loadAsync(floorModelUrl);
-      if (disposed) {
-        disposeGroup(model);
-        throw new Error("AR session ended while loading.");
-      }
+    if (floorModelUrl && startup) {
+      const [response, { GLTFLoader }] = await waitForStartup(Promise.all([
+        fetch(floorModelUrl, { signal: startup.signal }),
+        import("three/examples/jsm/loaders/GLTFLoader.js"),
+      ]));
+      if (!response.ok) throw new Error(`AR: model request failed (${response.status}).`);
+      const data = await waitForStartup(response.arrayBuffer());
+      startup.signal.throwIfAborted();
+      const base = new URL(".", response.url || new URL(floorModelUrl, window.location.href)).href;
+      const decoding = new GLTFLoader().parseAsync(data, base).then(({ scene }) => {
+        if (startup.signal.aborted) {
+          disposeGroup(scene);
+          startup.signal.throwIfAborted();
+        }
+        return scene;
+      });
+      const model = await waitForStartup(decoding);
       // Put placement transforms on a wrapper so the GLB's authored transform
       // and meter scale are carried through unchanged.
       const placement = new THREE.Group();
@@ -275,7 +323,7 @@ export async function startWebXRARSession(
     }
 
     r.xr.setReferenceSpaceType("local");
-    await r.xr.setSession(session);
+    await waitForStartup(r.xr.setSession(session));
 
     // Taps on our DOM controls must NOT also place the piece. beforexrselect
     // bubbles from the tapped overlay element; cancelling it suppresses the XR
@@ -286,11 +334,15 @@ export async function startWebXRARSession(
       onBeforeSelect as EventListener
     );
 
-    const viewerSpace = await session.requestReferenceSpace("viewer");
-    if (session.requestHitTestSource) {
-      hitTestSource =
-        (await session.requestHitTestSource({ space: viewerSpace })) ?? null;
+    const viewerSpace = await waitForStartup(session.requestReferenceSpace("viewer"));
+    const pendingHitTest = session.requestHitTestSource?.({ space: viewerSpace });
+    if (pendingHitTest) {
+      hitTestSource = await waitForStartup(pendingHitTest.then((source) => {
+        if (disposed) source.cancel();
+        return source;
+      }));
     }
+    if (floorModelUrl && !hitTestSource) throw new Error("AR: floor detection is unavailable.");
 
     const tmpPos = new THREE.Vector3();
     const tmpQuat = new THREE.Quaternion();
@@ -327,17 +379,18 @@ export async function startWebXRARSession(
       }
       r.render(scene, camera);
     });
+    if (startupTimer !== null) clearTimeout(startupTimer);
   } catch (err) {
     // Startup failed after the session opened (e.g. grain atlas 404, hit-test
     // unsupported). End the session so the user is returned to the page rather
     // than trapped in a live AR view with no controls, and free what we built.
     cleanup();
-    await session.end().catch(() => {});
+    await endSession();
     throw err;
   }
 
   return {
-    end: () => void session.end().catch(() => {}),
+    end: () => void endSession(),
     place: () => onSelect?.(),
     reset: () => {
       if (artGroup) artGroup.visible = false;

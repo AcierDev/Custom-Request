@@ -12,11 +12,12 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
-import { MathUtils, Spherical, Texture, Vector3, type Box3, type Mesh, type Object3D, type OrthographicCamera } from "three";
+import { MathUtils, Spherical, Texture, Vector3, type Box3, type Group, type Mesh, type Object3D, type OrthographicCamera } from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { appPath } from "@/lib/appPaths";
 import { ExplodedModel, getExplodedBounds } from "./ExplodedModel";
+import { figureExplosionProgress, REFERENCE_FIGURE_RETRACTION_METERS } from "./explodedLayout";
 import { prepareHeightLabels, type HeightLabel } from "./heightLabels";
 import labelStyles from "./heightLabels.module.css";
 import styles from "./page.module.css";
@@ -190,6 +191,7 @@ function FramedModel({
   const transition = useRef<CameraTransition | null>(null);
   const animatedOrbit = useRef(new Spherical());
   const assemblyProgress = useRef(0);
+  const heightLabelGroup = useRef<Group>(null);
   const assembledElevation = useRef<number | null>(null);
 
   useLayoutEffect(() => {
@@ -216,6 +218,9 @@ function FramedModel({
     const step = elapsed / ASSEMBLY_SECONDS;
     const next = position < target ? Math.min(target, position + step) : Math.max(target, position - step);
     assemblyProgress.current = next;
+    if (heightLabelGroup.current) {
+      heightLabelGroup.current.position.z = REFERENCE_FIGURE_RETRACTION_METERS * figureExplosionProgress(next);
+    }
     if (next !== position) invalidate();
 
     const motion = transition.current;
@@ -334,16 +339,18 @@ function FramedModel({
   return (
     <>
       <ExplodedModel scene={model.scene} exploded={exploded} progress={assemblyProgress} />
-      {model.heightLabels.map(({ name, position, text }) => (
-        <Html
-          key={name}
-          position={position}
-          wrapperClass={labelStyles.anchor}
-          zIndexRange={[5, 4]}
-        >
-          <span className={labelStyles.label}>{text}</span>
-        </Html>
-      ))}
+      <group ref={heightLabelGroup}>
+        {model.heightLabels.map(({ name, position, text }) => (
+          <Html
+            key={name}
+            position={position}
+            wrapperClass={labelStyles.anchor}
+            zIndexRange={[5, 4]}
+          >
+            <span className={labelStyles.label}>{text}</span>
+          </Html>
+        ))}
+      </group>
     </>
   );
 }

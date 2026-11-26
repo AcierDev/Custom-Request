@@ -10,9 +10,9 @@ test("Android Scene Viewer receives a full-scale, customized room AR model and a
   assert.equal(intent.host, "arvr.google.com");
   assert.equal(intent.pathname, "/scene-viewer/1.0");
   assert.equal(intent.searchParams.get("file"), new URL(model, page).href);
-  assert.equal(intent.searchParams.get("mode"), "ar_only");
+  assert.equal(intent.searchParams.get("mode"), "3d_preferred");
   assert.equal(intent.searchParams.get("resizable"), "false");
-  assert.match(intent.hash, /;package=com\.google\.ar\.core;/);
+  assert.match(intent.hash, /;package=com\.google\.android\.googlequicksearchbox;/);
   const fallback = intent.hash.match(/;S\.browser_fallback_url=([^;]+);/);
   assert.equal(decodeURIComponent(fallback?.[1]), page + SCENE_VIEWER_FALLBACK_HASH);
 });

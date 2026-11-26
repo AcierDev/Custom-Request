@@ -15,6 +15,8 @@ export type AssemblyKind = typeof EXPLODED_COMPONENTS[number]["part"] | "gasket"
 type Offset = readonly [x: number, y: number, z: number];
 
 // The lower layers stay in front of the frame and stop short of the reference figures.
+export const REFERENCE_FIGURE_RETRACTION_METERS = 0.6096; // 2 ft
+
 const PART_OFFSETS: Record<AssemblyKind, Offset> = {
   frame: [0, 0, 0],
   glass: [0, 0.22, -0.43],
@@ -52,12 +54,15 @@ const PART_TIMING: Record<AssemblyKind, readonly [start: number, finish: number]
 
 type AssemblyUnit = "left" | "center" | "right";
 
-type AssemblyPart = {
-  kind: AssemblyKind;
-  unit: AssemblyUnit;
+type MovingNode = {
   node: Object3D;
   origin: Vector3;
   offset: Vector3;
+};
+
+type AssemblyPart = MovingNode & {
+  kind: AssemblyKind;
+  unit: AssemblyUnit;
   worldOffset: Vector3;
   bounds: Box3;
 };
@@ -75,6 +80,7 @@ type ExplosionPlan = {
   assembledBounds: Box3;
   explodedBounds: Box3;
   parts: AssemblyPart[];
+  figures: MovingNode[];
   callouts: ExplosionCallout[];
 };
 
@@ -104,10 +110,28 @@ export function getExplosionPlan(scene: Object3D): ExplosionPlan {
   const assembledBounds = new Box3().setFromObject(scene);
   const explodedBounds = assembledBounds.clone();
   const parts: AssemblyPart[] = [];
+  const figures: MovingNode[] = [];
   const inverse = new Matrix4();
   const localAxes = new Matrix3();
 
+  function localOffset(object: Object3D, worldOffset: Vector3) {
+    const offset = worldOffset.clone();
+    if (object.parent) {
+      localAxes.setFromMatrix4(inverse.copy(object.parent.matrixWorld).invert());
+      offset.applyMatrix3(localAxes);
+    }
+    return offset;
+  }
+
   scene.traverse((object) => {
+    const sourceName = object.userData.name ?? object.name;
+    if (/^(Mei|Amara) · women’s side reference$/.test(sourceName)) {
+      const worldOffset = new Vector3(0, 0, REFERENCE_FIGURE_RETRACTION_METERS);
+      const bounds = new Box3().setFromObject(object);
+      explodedBounds.union(bounds.translate(worldOffset));
+      figures.push({ node: object, origin: object.position.clone(), offset: localOffset(object, worldOffset) });
+      return;
+    }
     if (!(object as Mesh).isMesh) return;
     const kind = identifyAssemblyPart(object.name, object.userData.mechitzaPart);
     if (!kind) return;
@@ -122,12 +146,7 @@ export function getExplosionPlan(scene: Object3D): ExplosionPlan {
     if (unit === "right") worldOffset.x += 0.18;
 
     const origin = object.position.clone();
-    const offset = worldOffset.clone();
-    if (object.parent) {
-      localAxes.setFromMatrix4(inverse.copy(object.parent.matrixWorld).invert());
-      offset.applyMatrix3(localAxes);
-    }
-
+    const offset = localOffset(object, worldOffset);
     const bounds = new Box3().setFromObject(object);
     explodedBounds.union(bounds.clone().translate(worldOffset));
     parts.push({ kind, unit, node: object, origin, offset, worldOffset, bounds });
@@ -157,7 +176,7 @@ export function getExplosionPlan(scene: Object3D): ExplosionPlan {
     });
   }
 
-  const plan = { assembledBounds, explodedBounds, parts, callouts };
+  const plan = { assembledBounds, explodedBounds, parts, figures, callouts };
   plans.set(scene, plan);
   return plan;
 }
@@ -172,7 +191,15 @@ export function partExplosionProgress(kind: AssemblyKind, progress: number) {
   return MathUtils.smootherstep(progress, start, finish);
 }
 
+export function figureExplosionProgress(progress: number) {
+  return MathUtils.smootherstep(progress, 0, 0.7);
+}
+
 export function applyExplosion(plan: ExplosionPlan, progress: number) {
+  const figureProgress = figureExplosionProgress(progress);
+  for (const figure of plan.figures) {
+    figure.node.position.copy(figure.origin).addScaledVector(figure.offset, figureProgress);
+  }
   for (const part of plan.parts) {
     part.node.position.copy(part.origin).addScaledVector(part.offset, partExplosionProgress(part.kind, progress));
   }

@@ -14,8 +14,9 @@ export function getSceneViewerIntent(modelPath: string, pageUrl: string): string
   fallback.hash = SCENE_VIEWER_FALLBACK_HASH;
   const query = new URLSearchParams({
     file: model.href,
-    mode: "ar_only",
+    // Let the native viewer load the divider in 3D before starting the camera.
+    mode: "3d_preferred",
     resizable: "false",
   });
-  return `intent://arvr.google.com/scene-viewer/1.0?${query}#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;S.browser_fallback_url=${encodeURIComponent(fallback.href)};end;`;
+  return `intent://arvr.google.com/scene-viewer/1.0?${query}#Intent;scheme=https;package=com.google.android.googlequicksearchbox;action=android.intent.action.VIEW;S.browser_fallback_url=${encodeURIComponent(fallback.href)};end;`;
 }

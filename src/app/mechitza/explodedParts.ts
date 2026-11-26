@@ -8,4 +8,4 @@ export const EXPLODED_PART_LABELS = [
   "Ballast weights",
 ] as const;
 
-export const BALLAST_DESCRIPTION = "Weights in the base help keep the divider stable.";
+export const BALLAST_DESCRIPTION = "Weights in the base help keep the mechitza stable.";
