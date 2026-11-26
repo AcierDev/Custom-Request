@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Box, ChevronDown, ImagePlus, Layers3, Palette, PanelsTopLeft, RotateCcw, RotateCw, ScanLine, TreeDeciduous, X } from "lucide-react";
 import { useEffect, useRef, useState, type MouseEvent, type PointerEvent } from "react";
 import { createPortal } from "react-dom";
+import { createFloorGestures } from "@/lib/ar/floorGestures";
 import { launchAR } from "@/lib/ar/quickLook";
 import { isIOSARCapable } from "@/lib/ar/isIOS";
 import { getSceneViewerIntent, SCENE_VIEWER_FALLBACK_HASH, supportsAndroidSceneViewer } from "@/lib/ar/sceneViewer";
@@ -254,7 +255,13 @@ export function MechitzaPreview({
   const webXR = useRef<typeof import("@/lib/ar/webxrSession") | null>(null);
   const floorPreparation = useRef<FloorPreparation | null>(null);
   const controller = useRef<WebXRARController | null>(null);
-  const dragPointer = useRef<number | null>(null);
+  const floorGestures = useRef<ReturnType<typeof createFloorGestures> | null>(null);
+  const gestures = floorGestures.current ??= createFloorGestures({
+    startDrag: (x, y) => controller.current?.startDrag(x, y),
+    moveDrag: (x, y) => controller.current?.moveDrag(x, y),
+    endDrag: () => controller.current?.endDrag(),
+    rotate: (radians) => controller.current?.rotate(radians),
+  });
   const browserSession = useRef<AbortController | null>(null);
   const nativeLaunchTimer = useRef<number | undefined>(undefined);
   const nativeHiddenAt = useRef<number | null>(null);
@@ -417,7 +424,7 @@ export function MechitzaPreview({
       overlayRoot: overlay.current,
       signal: request.signal,
       onPlacedChange: (isPlaced) => {
-        if (!isPlaced) dragPointer.current = null;
+        if (!isPlaced) gestures.reset();
         setPlaced(isPlaced);
       },
       onSurfaceChange: setFloorReady,
@@ -441,8 +448,8 @@ export function MechitzaPreview({
   function resetBrowserAR(request: AbortController) {
     if (browserSession.current !== request) return;
     browserSession.current = null;
+    gestures.reset();
     controller.current = null;
-    dragPointer.current = null;
     if (mounted.current) {
       setSessionReady(false);
       setSessionActive(false);
@@ -458,29 +465,29 @@ export function MechitzaPreview({
     resetBrowserAR(request);
   }
 
-  function dragCoordinates(event: PointerEvent<HTMLDivElement>): [number, number] {
+  function contactFromPointer(event: PointerEvent<HTMLDivElement>) {
     const bounds = event.currentTarget.getBoundingClientRect();
-    return [
-      ((event.clientX - bounds.left) / bounds.width) * 2 - 1,
-      1 - ((event.clientY - bounds.top) / bounds.height) * 2,
+    const { clientX: x, clientY: y } = event;
+    const drag: [number, number] = [
+      ((x - bounds.left) / bounds.width) * 2 - 1,
+      1 - ((y - bounds.top) / bounds.height) * 2,
     ];
+    return { x, y, drag };
   }
 
-  function startDrag(event: PointerEvent<HTMLDivElement>) {
-    if (!event.isPrimary || event.button !== 0 || dragPointer.current !== null) return;
-    if (!controller.current?.startDrag(...dragCoordinates(event))) return;
-    dragPointer.current = event.pointerId;
-    event.currentTarget.setPointerCapture(event.pointerId);
+  function startGesture(event: PointerEvent<HTMLDivElement>) {
+    if (event.button !== 0 || (!event.isPrimary && event.pointerType !== "touch")) return;
+    if (gestures.down(event.pointerId, contactFromPointer(event))) {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
   }
 
-  function moveDrag(event: PointerEvent<HTMLDivElement>) {
-    if (dragPointer.current === event.pointerId) controller.current?.moveDrag(...dragCoordinates(event));
+  function moveGesture(event: PointerEvent<HTMLDivElement>) {
+    gestures.move(event.pointerId, contactFromPointer(event));
   }
 
-  function stopDrag(event: PointerEvent<HTMLDivElement>) {
-    if (dragPointer.current !== event.pointerId) return;
-    dragPointer.current = null;
-    controller.current?.endDrag();
+  function stopGesture(event: PointerEvent<HTMLDivElement>) {
+    gestures.up(event.pointerId);
   }
 
   function switchToAndroidAR() {
@@ -883,17 +890,17 @@ export function MechitzaPreview({
             <div
               className={styles.xrDrag}
               aria-hidden="true"
-              onPointerDown={startDrag}
-              onPointerMove={moveDrag}
-              onPointerUp={stopDrag}
-              onPointerCancel={stopDrag}
-              onLostPointerCapture={stopDrag}
+              onPointerDown={startGesture}
+              onPointerMove={moveGesture}
+              onPointerUp={stopGesture}
+              onPointerCancel={stopGesture}
+              onLostPointerCapture={stopGesture}
             />
           )}
           {sessionActive && (
             <div className={styles.xrControls}>
               <p role="status">
-                {placed ? "Mechitza placed. Drag to move it."
+                {placed ? "Drag to move. Twist with two fingers to rotate."
                   : !sessionReady ? "Loading the divider…"
                   : floorReady ? "Floor found. Tap Place divider."
                   : "Slowly move your phone over the floor until the placement ring appears."}
