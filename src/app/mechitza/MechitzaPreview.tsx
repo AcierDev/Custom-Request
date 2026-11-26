@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { launchAR } from "@/lib/ar/quickLook";
 import { isIOSARCapable } from "@/lib/ar/isIOS";
-import { getSceneViewerIntent, SCENE_VIEWER_FALLBACK_HASH } from "@/lib/ar/sceneViewer";
+import { getSceneViewerIntent, SCENE_VIEWER_FALLBACK_HASH, supportsAndroidSceneViewer } from "@/lib/ar/sceneViewer";
 import type { startWebXRARSession, WebXRARController } from "@/lib/ar/webxrSession";
 import { appPath } from "@/lib/appPaths";
 import {
@@ -243,7 +243,7 @@ export function MechitzaPreview({
   const [placed, setPlaced] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
   const [floorReady, setFloorReady] = useState(false);
-  const [androidAR, setAndroidAR] = useState(false);
+  const [browserARReady, setBrowserARReady] = useState(false);
   const [usingNativeAR, setUsingNativeAR] = useState(false);
   const [arError, setArError] = useState(false);
   const [sceneViewerFallback, setSceneViewerFallback] = useState(false);
@@ -289,24 +289,28 @@ export function MechitzaPreview({
   useEffect(() => {
     let active = true;
     mounted.current = true;
-    const supportsAndroidAR = /Android/i.test(navigator.userAgent) && window.location.protocol === "https:";
-    const fallbackMode = supportsAndroidAR ? "scene-viewer" : "unavailable";
+    const androidAR = supportsAndroidSceneViewer(navigator.userAgent, window.location.protocol);
     const reportFallback = () => setSceneViewerFallback(window.location.hash === SCENE_VIEWER_FALLBACK_HASH);
     reportFallback();
-    setAndroidAR(supportsAndroidAR);
     window.addEventListener("hashchange", reportFallback);
-    if (!supportsAndroidAR && isIOSARCapable()) {
+
+    if (androidAR) setMode("scene-viewer");
+
+    if (!androidAR && isIOSARCapable()) {
       setMode("quicklook");
     } else if (!navigator.xr) {
-      setMode(fallbackMode);
+      if (!androidAR) setMode("unavailable");
     } else {
       void import("@/lib/ar/webxrSession").then(async (webxr) => {
         const supported = await webxr.isWebXRARSupported();
         if (!active) return;
-        if (supported) startWebXR.current = webxr.startWebXRARSession;
-        setMode(supported ? "webxr" : fallbackMode);
+        if (supported) {
+          startWebXR.current = webxr.startWebXRARSession;
+          setBrowserARReady(true);
+        }
+        if (!androidAR) setMode(supported ? "webxr" : "unavailable");
       }).catch(() => {
-        if (active) setMode(fallbackMode);
+        if (active && !androidAR) setMode("unavailable");
       });
     }
 
@@ -320,6 +324,7 @@ export function MechitzaPreview({
 
   function openAR() {
     setArError(false);
+    setUsingNativeAR(false);
     if (customFilm && (!customAR || customAR.expiresAt - Date.now() < 15_000)) {
       setArAttempt((attempt) => attempt + 1);
       return;
@@ -330,7 +335,7 @@ export function MechitzaPreview({
       return;
     }
 
-    if (mode !== "webxr" || !overlay.current || !startWebXR.current || sessionActive) return;
+    if (!overlay.current || !startWebXR.current || sessionActive) return;
     setSessionActive(true);
     setPlaced(false);
     setFloorReady(false);
@@ -360,7 +365,6 @@ export function MechitzaPreview({
     }).catch(() => {
       if (mounted.current) {
         setSessionActive(false);
-        if (androidAR) setMode("scene-viewer");
         setArError(true);
       }
     });
@@ -368,7 +372,6 @@ export function MechitzaPreview({
 
   function switchToAndroidAR() {
     controller.current?.end();
-    setMode("scene-viewer");
     setUsingNativeAR(true);
   }
 
@@ -575,13 +578,27 @@ export function MechitzaPreview({
             <Layers3 size={18} aria-hidden /> {exploded ? "Reassemble" : "Exploded view"}
           </button>
         </div>
+        {mode === "scene-viewer" && browserARReady && (
+          <button
+            className={styles.arRetry}
+            type="button"
+            onClick={openAR}
+            disabled={sessionActive || preparingAR}
+          >
+            Try browser AR
+          </button>
+        )}
         {sceneViewerFallback && (
-          <p className={styles.arNote} role="alert">Android AR couldn’t open. Try Chrome with Google Play Services for AR, or use the 3D preview.</p>
+          <p className={styles.arNote} role="alert">
+            Android AR couldn’t open. {browserARReady
+              ? "Try browser AR or use the 3D preview."
+              : "Open in Chrome with Google Play Services for AR, or use the 3D preview."}
+          </p>
         )}
         {usingNativeAR && !sceneViewerFallback && (
           <p className={styles.arNote} role="status">Tap Place in your room to open Android AR.</p>
         )}
-        {arError && !sceneViewerFallback && (
+        {arError && (
           <p className={styles.arNote} role="alert">
             {mode === "scene-viewer" ? "Browser AR couldn’t start. Tap Place in your room to try Android AR." : "AR couldn’t start. Try again or use the 3D preview."}
           </p>
@@ -729,17 +746,16 @@ export function MechitzaPreview({
           onCancel={() => setFilmToCrop(null)}
         />
       )}
-      {(mode === "webxr" || sessionActive) && createPortal(
+      {browserARReady && createPortal(
         <div ref={overlay} className={styles.xrOverlay}>
           {sessionActive && (
             <div className={styles.xrControls}>
-              {!placed && (
-                <p role="status">
-                  {!sessionReady ? "Loading the divider…" : floorReady
-                    ? "Floor found. Tap Place divider."
-                    : "Point at a clear patch of floor a few feet away."}
-                </p>
-              )}
+              <p role="status">
+                {placed ? "Divider placed. Lift your phone to see it."
+                  : !sessionReady ? "Loading the divider…"
+                  : floorReady ? "Floor found. Tap Place divider."
+                  : "Point at a clear patch of floor a few feet away."}
+              </p>
               <div>
                 {placed ? (
                   <>
@@ -764,7 +780,7 @@ export function MechitzaPreview({
                   <X size={17} aria-hidden /> Exit AR
                 </button>
               </div>
-              {!placed && sessionReady && androidAR && (
+              {!placed && sessionReady && mode === "scene-viewer" && (
                 <button type="button" onClick={switchToAndroidAR}>Use Android AR</button>
               )}
             </div>

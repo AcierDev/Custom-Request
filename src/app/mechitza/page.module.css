@@ -257,6 +257,18 @@
   outline-offset: 3px;
 }
 
+.arRetry {
+  padding: 0.35rem 0;
+  color: inherit;
+  font-size: 0.83rem;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.arRetry:disabled {
+  opacity: 0.65;
+}
+
 .arNote {
   margin-top: 0.5rem;
   color: var(--muted);

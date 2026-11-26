@@ -2,6 +2,10 @@
 // available when Android cannot handle the native intent.
 export const SCENE_VIEWER_FALLBACK_HASH = "#android-ar-unavailable";
 
+export function supportsAndroidSceneViewer(userAgent: string, protocol: string): boolean {
+  return protocol === "https:" && /Android/i.test(userAgent);
+}
+
 export function getSceneViewerIntent(modelPath: string, pageUrl: string): string | null {
   const fallback = new URL(pageUrl);
   const model = new URL(modelPath, fallback);
