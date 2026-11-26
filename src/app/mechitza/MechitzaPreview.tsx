@@ -4,12 +4,12 @@ import * as Tabs from "@radix-ui/react-tabs";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { Box, ChevronDown, ImagePlus, Layers3, Palette, PanelsTopLeft, RotateCcw, RotateCw, ScanLine, TreeDeciduous, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { createPortal } from "react-dom";
 import { launchAR } from "@/lib/ar/quickLook";
 import { isIOSARCapable } from "@/lib/ar/isIOS";
 import { getSceneViewerIntent, SCENE_VIEWER_FALLBACK_HASH, supportsAndroidSceneViewer } from "@/lib/ar/sceneViewer";
-import type { startWebXRARSession, WebXRARController } from "@/lib/ar/webxrSession";
+import type { PreparedFloorARModel, WebXRARController } from "@/lib/ar/webxrSession";
 import { appPath } from "@/lib/appPaths";
 import {
   MECHITZA_DEFAULT_FINISH,
@@ -46,6 +46,7 @@ const ModelPreview = dynamic(() => import("./ModelPreview"), {
 });
 
 type ARMode = "checking" | "quicklook" | "webxr" | "scene-viewer" | "unavailable";
+type FloorPreparation = { url: string; request: AbortController; model?: PreparedFloorARModel };
 
 type CustomFilm = { name: string; image: Blob; revision: number; source?: File; crop?: FilmCrop };
 
@@ -245,14 +246,18 @@ export function MechitzaPreview({
   const [floorReady, setFloorReady] = useState(false);
   const [browserARReady, setBrowserARReady] = useState(false);
   const [usingNativeAR, setUsingNativeAR] = useState(false);
-  const [arError, setArError] = useState(false);
+  const [arError, setArError] = useState<"model" | "camera" | null>(null);
   const [sceneViewerFallback, setSceneViewerFallback] = useState(false);
+  const [floorLoad, setFloorLoad] = useState<{ url: string; ready: boolean } | null>(null);
   const overlay = useRef<HTMLDivElement>(null);
   const modelSurface = useRef<HTMLDivElement>(null);
-  const startWebXR = useRef<typeof startWebXRARSession | null>(null);
+  const webXR = useRef<typeof import("@/lib/ar/webxrSession") | null>(null);
+  const floorPreparation = useRef<FloorPreparation | null>(null);
   const controller = useRef<WebXRARController | null>(null);
   const browserSession = useRef<AbortController | null>(null);
   const nativeLaunchTimer = useRef<number | undefined>(undefined);
+  const nativeHiddenAt = useRef<number | null>(null);
+  const nativeLaunchPending = useRef(false);
   const mounted = useRef(false);
   const hasPhoto = !customFilm && film.id === MECHITZA_DEFAULT_FILM.id && art.id === MECHITZA_DEFAULT_ART_COLOR.id;
   const showModel = modelRequested || !hasPhoto;
@@ -263,6 +268,8 @@ export function MechitzaPreview({
   const arKey = customFilm && canUseAR ? `${deviceModel}&upload=${customFilm.revision}&attempt=${arAttempt}` : undefined;
   const customAR = preparedAR?.key === arKey ? preparedAR : undefined;
   const preparingAR = Boolean(arKey && !customAR && failedARKey !== arKey);
+  const floorModelUrl = appPath(customAR?.url ?? assets.glb);
+  const activeFloorLoad = floorLoad?.url === floorModelUrl ? floorLoad : null;
   const sceneViewerIntent = mode === "scene-viewer" && (!customFilm || customAR)
     ? getSceneViewerIntent(appPath(customAR?.url ?? assets.glb), window.location.href)
     : null;
@@ -288,6 +295,14 @@ export function MechitzaPreview({
     return () => request.abort();
   }, [arKey, customFilm, deviceModel]);
 
+  useEffect(() => () => {
+    const preparation = floorPreparation.current;
+    if (preparation?.url !== floorModelUrl) return;
+    floorPreparation.current = null;
+    preparation.request.abort();
+    preparation.model?.dispose();
+  }, [floorModelUrl]);
+
   useEffect(() => {
     let active = true;
     mounted.current = true;
@@ -296,28 +311,34 @@ export function MechitzaPreview({
     reportFallback();
     window.addEventListener("hashchange", reportFallback);
     const onVisibilityChange = () => {
-      if (!document.hidden) return;
-      window.clearTimeout(nativeLaunchTimer.current);
+      if (!nativeLaunchPending.current) return;
+      if (document.hidden) {
+        window.clearTimeout(nativeLaunchTimer.current);
+        nativeHiddenAt.current = performance.now();
+      } else if (nativeHiddenAt.current !== null) {
+        if (performance.now() - nativeHiddenAt.current < 1500) setSceneViewerFallback(true);
+        nativeHiddenAt.current = null;
+        nativeLaunchPending.current = false;
+      }
     };
     document.addEventListener("visibilitychange", onVisibilityChange);
 
-    if (androidAR) setMode("scene-viewer");
-
+    const fallbackMode = androidAR ? "scene-viewer" : "unavailable";
     if (!androidAR && isIOSARCapable()) {
       setMode("quicklook");
     } else if (!navigator.xr) {
-      if (!androidAR) setMode("unavailable");
+      setMode(fallbackMode);
     } else {
       void import("@/lib/ar/webxrSession").then(async (webxr) => {
         const supported = await webxr.isWebXRARSupported();
         if (!active) return;
         if (supported) {
-          startWebXR.current = webxr.startWebXRARSession;
+          webXR.current = webxr;
           setBrowserARReady(true);
         }
-        if (!androidAR) setMode(supported ? "webxr" : "unavailable");
+        setMode(androidAR ? "scene-viewer" : supported ? "webxr" : "unavailable");
       }).catch(() => {
-        if (active && !androidAR) setMode("unavailable");
+        if (active) setMode(fallbackMode);
       });
     }
 
@@ -332,11 +353,22 @@ export function MechitzaPreview({
     };
   }, []);
 
+  function cancelFloorPreparation() {
+    const preparation = floorPreparation.current;
+    floorPreparation.current = null;
+    preparation?.request.abort();
+    preparation?.model?.dispose();
+    setFloorLoad(null);
+  }
+
   function openAR() {
     window.clearTimeout(nativeLaunchTimer.current);
-    setArError(false);
+    nativeLaunchPending.current = false;
+    setSceneViewerFallback(false);
+    setArError(null);
     setUsingNativeAR(false);
     if (customFilm && (!customAR || customAR.expiresAt - Date.now() < 15_000)) {
+      cancelFloorPreparation();
       setArAttempt((attempt) => attempt + 1);
       return;
     }
@@ -346,15 +378,41 @@ export function MechitzaPreview({
       return;
     }
 
-    if (!overlay.current || !startWebXR.current || browserSession.current) return;
+    const xr = webXR.current;
+    if (!overlay.current || !xr || browserSession.current) return;
+    if (floorPreparation.current && floorPreparation.current.url !== floorModelUrl) cancelFloorPreparation();
+    const pending = floorPreparation.current;
+    if (!pending?.model) {
+      if (pending) return;
+      const preparation: FloorPreparation = { url: floorModelUrl, request: new AbortController() };
+      floorPreparation.current = preparation;
+      setFloorLoad({ url: preparation.url, ready: false });
+      void xr.prepareFloorARModel(preparation.url, preparation.request.signal).then((model) => {
+        if (!mounted.current || floorPreparation.current !== preparation) {
+          model.dispose();
+          return;
+        }
+        preparation.model = model;
+        setFloorLoad({ url: preparation.url, ready: true });
+      }).catch(() => {
+        if (floorPreparation.current !== preparation) return;
+        floorPreparation.current = null;
+        setFloorLoad(null);
+        setArError("model");
+      });
+      return;
+    }
+
+    floorPreparation.current = null;
+    setFloorLoad(null);
     const request = new AbortController();
     browserSession.current = request;
     setSessionActive(true);
     setSessionReady(false);
     setPlaced(false);
     setFloorReady(false);
-    void startWebXR.current({
-      floorModelUrl: appPath(customAR?.url ?? assets.glb),
+    void xr.startWebXRARSession({
+      floorModel: pending.model,
       overlayRoot: overlay.current,
       signal: request.signal,
       onPlacedChange: setPlaced,
@@ -371,7 +429,7 @@ export function MechitzaPreview({
       resetBrowserAR(request);
       const dismissed = error instanceof DOMException && error.name === "AbortError";
       if (mounted.current && !dismissed && !request.signal.aborted && !browserSession.current) {
-        setArError(true);
+        setArError("camera");
       }
     });
   }
@@ -398,6 +456,30 @@ export function MechitzaPreview({
   function switchToAndroidAR() {
     exitBrowserAR();
     setUsingNativeAR(true);
+  }
+
+  function launchGoogleViewer(event: MouseEvent<HTMLAnchorElement>) {
+    cancelFloorPreparation();
+    setArError(null);
+    setUsingNativeAR(false);
+    setSceneViewerFallback(false);
+    if (window.location.hash === SCENE_VIEWER_FALLBACK_HASH) {
+      const url = new URL(window.location.href);
+      url.hash = "";
+      window.history.replaceState(window.history.state, "", url);
+    }
+    if (customAR && customAR.expiresAt - Date.now() < 15_000) {
+      event.preventDefault();
+      setArAttempt((attempt) => attempt + 1);
+      return;
+    }
+    window.clearTimeout(nativeLaunchTimer.current);
+    nativeHiddenAt.current = null;
+    nativeLaunchPending.current = true;
+    nativeLaunchTimer.current = window.setTimeout(() => {
+      nativeLaunchPending.current = false;
+      if (!document.hidden) setSceneViewerFallback(true);
+    }, 2500);
   }
 
   function viewSide(side: ModelSide, highlight = false) {
@@ -493,7 +575,7 @@ export function MechitzaPreview({
 
       <figure className={styles.visualGroup} data-model-release={MECHITZA_MODEL_RELEASE.id} aria-label={showModel ? "Interactive model of the selected arrangement" : "Mechitza with Linen Marquetry glass"}>
         <div ref={modelSurface} className={styles.visual} data-interactive={showModel || undefined}>
-          {showModel && !sessionActive ? (
+          {showModel && !sessionActive && !activeFloorLoad ? (
             <ModelPreview
               url={modelUrl}
               filmImage={customFilm?.image}
@@ -548,36 +630,26 @@ export function MechitzaPreview({
 
       <div className={styles.actions}>
         <div className={styles.actionButtons}>
-          {sceneViewerIntent ? (
-            <a
-              className={styles.primaryButton}
-              href={sceneViewerIntent}
-              onClick={(event) => {
-                setArError(false);
-                setUsingNativeAR(false);
-                setSceneViewerFallback(false);
-                if (window.location.hash === SCENE_VIEWER_FALLBACK_HASH) {
-                  const url = new URL(window.location.href);
-                  url.hash = "";
-                  window.history.replaceState(window.history.state, "", url);
-                }
-                if (customAR && customAR.expiresAt - Date.now() < 15_000) {
-                  event.preventDefault();
-                  setArAttempt((attempt) => attempt + 1);
-                  return;
-                }
-                window.clearTimeout(nativeLaunchTimer.current);
-                nativeLaunchTimer.current = window.setTimeout(() => {
-                  if (!document.hidden) setSceneViewerFallback(true);
-                }, 2500);
-              }}
-            >
+          {!browserARReady && sceneViewerIntent ? (
+            <a className={styles.primaryButton} href={sceneViewerIntent} onClick={launchGoogleViewer}>
               <ScanLine size={19} aria-hidden /> Place in your room
             </a>
           ) : canUseAR && (
-            <button className={styles.primaryButton} type="button" onClick={openAR} disabled={sessionActive || preparingAR}>
+            <button
+              className={styles.primaryButton}
+              type="button"
+              onClick={openAR}
+              disabled={sessionActive || preparingAR || activeFloorLoad?.ready === false}
+            >
               <ScanLine size={19} aria-hidden />
-              {preparingAR ? "Preparing AR…" : sessionActive ? "Opening AR…" : "Place in your room"}
+              {preparingAR ? "Preparing AR…" : sessionActive ? "Opening camera…"
+                : activeFloorLoad ? activeFloorLoad.ready ? "Start camera" : "Loading mechitza…"
+                  : "Place in your room"}
+            </button>
+          )}
+          {activeFloorLoad && (
+            <button className={styles.secondaryButton} type="button" onClick={cancelFloorPreparation}>
+              Cancel
             </button>
           )}
           {hasPhoto && (
@@ -608,31 +680,28 @@ export function MechitzaPreview({
             <Layers3 size={18} aria-hidden /> {exploded ? "Reassemble" : "Exploded view"}
           </button>
         </div>
-        {mode === "scene-viewer" && browserARReady && (
-          <button
-            className={styles.arRetry}
-            type="button"
-            onClick={openAR}
-            disabled={sessionActive || preparingAR}
-          >
-            Try browser AR
-          </button>
+        {browserARReady && sceneViewerIntent && !sessionActive && (
+          <a className={styles.arRetry} href={sceneViewerIntent} onClick={launchGoogleViewer}>
+            Open Google viewer
+          </a>
         )}
-        {mode === "scene-viewer" && !sessionActive && (
+        {!browserARReady && mode === "scene-viewer" && (
           <p className={styles.arNote}>In the Android viewer, tap View in your space.</p>
         )}
         {sceneViewerFallback && (
           <p className={styles.arNote} role="alert">
-            If the Android viewer didn’t open, open this link in Chrome and update the Google app.
-            {browserARReady ? " You can also try browser AR." : ""}
+            Google’s viewer didn’t stay open. {browserARReady
+              ? "Use Place in your room for browser AR."
+              : "You can still use the 3D preview."}
           </p>
         )}
         {usingNativeAR && !sceneViewerFallback && (
-          <p className={styles.arNote} role="status">Tap Place in your room to open Android AR.</p>
+          <p className={styles.arNote} role="status">Tap Open Google viewer to try Google’s AR app.</p>
         )}
         {arError && (
           <p className={styles.arNote} role="alert">
-            {mode === "scene-viewer" ? "The divider couldn’t load in browser AR. Tap Place in your room to open the Android viewer." : "AR couldn’t start. Try again or use the 3D preview."}
+            {arError === "model" ? "The mechitza couldn’t load for AR." : "The AR camera couldn’t start."}{" "}
+            Try again or use the 3D preview.
           </p>
         )}
         {arKey && failedARKey === arKey && (
@@ -786,7 +855,7 @@ export function MechitzaPreview({
                 {placed ? "Divider placed. Lift your phone to see it."
                   : !sessionReady ? "Loading the divider…"
                   : floorReady ? "Floor found. Tap Place divider."
-                  : "Point at a clear patch of floor a few feet away."}
+                  : "Slowly move your phone over the floor until the placement ring appears."}
               </p>
               <div>
                 {placed ? (
@@ -813,7 +882,7 @@ export function MechitzaPreview({
                 </button>
               </div>
               {!placed && mode === "scene-viewer" && (
-                <button type="button" onClick={switchToAndroidAR}>Use Android AR</button>
+                <button type="button" onClick={switchToAndroidAR}>Use Google viewer</button>
               )}
             </div>
           )}
