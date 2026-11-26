@@ -8,6 +8,7 @@ import {
 } from "@/app/mechitza/models";
 import {
   findMechitzaArtColor,
+  MECHITZA_ASSET_ART_COLOR,
   MECHITZA_DEFAULT_ART_COLOR,
   MECHITZA_DEFAULT_FILM,
   MECHITZA_FILMS,
@@ -90,7 +91,7 @@ async function renderModel({ file, sourceFile, format, finish, film, artwork, wi
       uploadedFilm ?? (film.id === MECHITZA_DEFAULT_FILM.id
         ? null
         : readFile(path.join(PUBLIC_DIR, "mechitza-films", `${film.id}.jpg`))),
-      format !== "usdz" || artwork.id === MECHITZA_DEFAULT_ART_COLOR.id
+      format !== "usdz" || artwork.id === MECHITZA_ASSET_ART_COLOR.id
         ? null
         : customArt
           ? encodeSolidJpeg(artwork.swatch)
@@ -110,7 +111,7 @@ async function renderModel({ file, sourceFile, format, finish, film, artwork, wi
       const figures = previewLayer && figureModel ? { previewLayer, figurePackage: figureModel } : undefined;
       bytes = customizeUsdz(source, texture, artImage, figures, woodTexture);
     } else {
-      bytes = customizeGlb(source, texture, artwork.id === MECHITZA_DEFAULT_ART_COLOR.id ? null : artwork.swatch, woodTexture);
+      bytes = customizeGlb(source, texture, artwork.id === MECHITZA_ASSET_ART_COLOR.id ? null : artwork.swatch, woodTexture);
       if (figureModel) bytes = mergeFiguresGlb(bytes, figureModel);
     }
     if (bytes.length > MAX_MODEL_BYTES) throw new Error("Generated Mechitza model exceeds size limit");

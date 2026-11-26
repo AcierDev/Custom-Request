@@ -69,13 +69,19 @@ test("glass and artwork selections resolve to the same custom model in 3D and AR
   const { getMechitzaAssets } = await import("./models.ts");
   const { MECHITZA_FILMS, MECHITZA_ART_COLORS, MECHITZA_ART_GROUPS } = await import("./options.ts");
   assert.equal(MECHITZA_FILMS.length, 15);
-  assert.equal(MECHITZA_ART_COLORS.length, 15);
+  assert.equal(MECHITZA_ART_COLORS.length, 16);
   assert.deepEqual(
     MECHITZA_ART_GROUPS.map((group) => MECHITZA_ART_COLORS.filter((color) => color.group === group).length),
-    [5, 5, 5],
+    [6, 5, 5],
   );
   const base = getMechitzaAssets("three", "walnut");
-  assert.deepEqual(getMechitzaAssets("three", "walnut", "linen-marquetry", "navy"), base);
+  assert.deepEqual(getMechitzaAssets("three", "walnut", "linen-marquetry", "silver-blue"), base);
+  assert.equal(MECHITZA_ART_COLORS.find(({ id }) => id === "silver-blue")?.swatch, "#8DB5C2");
+  for (const format of ["glb", "usdz"]) {
+    assert.equal(new URL(base[format], "https://example.com").searchParams.get("art"), "silver-blue");
+    const navy = getMechitzaAssets("three", "walnut", "linen-marquetry", "navy");
+    assert.equal(new URL(navy[format], "https://example.com").searchParams.get("art"), "navy");
+  }
 
   const custom = getMechitzaAssets("three", "walnut", "olive-trellis", "taupe");
   const file = "/api/mechitza-model/v10-linen-marquetry-walnut-three";

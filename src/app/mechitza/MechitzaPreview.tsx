@@ -26,6 +26,7 @@ import {
   findMechitzaArtColor,
   MECHITZA_ART_COLORS,
   MECHITZA_ART_GROUPS,
+  MECHITZA_ASSET_ART_COLOR,
   MECHITZA_DEFAULT_ART_COLOR,
   MECHITZA_DEFAULT_FILM,
   MECHITZA_FILMS,
@@ -267,7 +268,7 @@ export function MechitzaPreview({
   const nativeHiddenAt = useRef<number | null>(null);
   const nativeLaunchPending = useRef(false);
   const mounted = useRef(false);
-  const hasPhoto = !customFilm && film.id === MECHITZA_DEFAULT_FILM.id && art.id === MECHITZA_DEFAULT_ART_COLOR.id;
+  const hasPhoto = !customFilm && film.id === MECHITZA_DEFAULT_FILM.id && art.id === MECHITZA_ASSET_ART_COLOR.id;
   const showModel = modelRequested || !hasPhoto;
   const canUseAR = mode === "quicklook" || mode === "webxr" || mode === "scene-viewer";
   const assets = getMechitzaAssets(model.id, finish.id, film.id, art.id, people);

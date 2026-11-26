@@ -16,21 +16,30 @@ export const MECHITZA_FILMS = [
   { id: "sandstone-mosaic", label: "Sandstone Mosaic" },
 ] as const;
 
-export const MECHITZA_ART_GROUPS = ["Light neutrals", "Earth tones", "Deep shades"] as const;
+export const MECHITZA_ART_GROUPS = ["Light shades", "Earth tones", "Deep shades"] as const;
 
-export const MECHITZA_DEFAULT_ART_COLOR = {
+// The packaged models and photographs were rendered with Midnight Navy.
+export const MECHITZA_ASSET_ART_COLOR = {
   id: "navy",
   label: "Midnight Navy",
   swatch: "#22406B",
   group: "Deep shades",
 } as const;
 
+export const MECHITZA_DEFAULT_ART_COLOR = {
+  id: "silver-blue",
+  label: "Silver Blue",
+  swatch: "#8DB5C2",
+  group: "Light shades",
+} as const;
+
 export const MECHITZA_ART_COLORS = [
-  { id: "chalk", label: "Chalk", swatch: "#E4DED1", group: "Light neutrals" },
-  { id: "ivory", label: "Ivory", swatch: "#D7CDBD", group: "Light neutrals" },
-  { id: "sand", label: "Sand", swatch: "#BAA88E", group: "Light neutrals" },
-  { id: "greige", label: "Greige", swatch: "#A59B8D", group: "Light neutrals" },
-  { id: "pewter", label: "Pewter", swatch: "#9A9B94", group: "Light neutrals" },
+  MECHITZA_DEFAULT_ART_COLOR,
+  { id: "chalk", label: "Chalk", swatch: "#E4DED1", group: "Light shades" },
+  { id: "ivory", label: "Ivory", swatch: "#D7CDBD", group: "Light shades" },
+  { id: "sand", label: "Sand", swatch: "#BAA88E", group: "Light shades" },
+  { id: "greige", label: "Greige", swatch: "#A59B8D", group: "Light shades" },
+  { id: "pewter", label: "Pewter", swatch: "#9A9B94", group: "Light shades" },
   { id: "sage", label: "Sage", swatch: "#929984", group: "Earth tones" },
   { id: "fawn", label: "Fawn", swatch: "#AD8E76", group: "Earth tones" },
   { id: "mushroom", label: "Mushroom", swatch: "#918678", group: "Earth tones" },
@@ -40,7 +49,7 @@ export const MECHITZA_ART_COLORS = [
   { id: "slate", label: "Slate", swatch: "#5B6570", group: "Deep shades" },
   { id: "charcoal", label: "Charcoal", swatch: "#484646", group: "Deep shades" },
   { id: "espresso", label: "Espresso", swatch: "#514039", group: "Deep shades" },
-  MECHITZA_DEFAULT_ART_COLOR,
+  MECHITZA_ASSET_ART_COLOR,
 ] as const;
 
 export const MECHITZA_DEFAULT_FILM = MECHITZA_FILMS[0];
