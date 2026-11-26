@@ -4,7 +4,7 @@ import * as Tabs from "@radix-ui/react-tabs";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { Box, ChevronDown, ImagePlus, Layers3, Palette, PanelsTopLeft, RotateCcw, RotateCw, ScanLine, TreeDeciduous, X } from "lucide-react";
-import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type MouseEvent, type PointerEvent } from "react";
 import { createPortal } from "react-dom";
 import { launchAR } from "@/lib/ar/quickLook";
 import { isIOSARCapable } from "@/lib/ar/isIOS";
@@ -254,6 +254,7 @@ export function MechitzaPreview({
   const webXR = useRef<typeof import("@/lib/ar/webxrSession") | null>(null);
   const floorPreparation = useRef<FloorPreparation | null>(null);
   const controller = useRef<WebXRARController | null>(null);
+  const dragPointer = useRef<number | null>(null);
   const browserSession = useRef<AbortController | null>(null);
   const nativeLaunchTimer = useRef<number | undefined>(undefined);
   const nativeHiddenAt = useRef<number | null>(null);
@@ -415,7 +416,10 @@ export function MechitzaPreview({
       floorModel: pending.model,
       overlayRoot: overlay.current,
       signal: request.signal,
-      onPlacedChange: setPlaced,
+      onPlacedChange: (isPlaced) => {
+        if (!isPlaced) dragPointer.current = null;
+        setPlaced(isPlaced);
+      },
       onSurfaceChange: setFloorReady,
       onEnd: () => resetBrowserAR(request),
     }).then((activeController) => {
@@ -438,6 +442,7 @@ export function MechitzaPreview({
     if (browserSession.current !== request) return;
     browserSession.current = null;
     controller.current = null;
+    dragPointer.current = null;
     if (mounted.current) {
       setSessionReady(false);
       setSessionActive(false);
@@ -451,6 +456,31 @@ export function MechitzaPreview({
     if (!request) return;
     request.abort();
     resetBrowserAR(request);
+  }
+
+  function dragCoordinates(event: PointerEvent<HTMLDivElement>): [number, number] {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    return [
+      ((event.clientX - bounds.left) / bounds.width) * 2 - 1,
+      1 - ((event.clientY - bounds.top) / bounds.height) * 2,
+    ];
+  }
+
+  function startDrag(event: PointerEvent<HTMLDivElement>) {
+    if (!event.isPrimary || event.button !== 0 || dragPointer.current !== null) return;
+    if (!controller.current?.startDrag(...dragCoordinates(event))) return;
+    dragPointer.current = event.pointerId;
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function moveDrag(event: PointerEvent<HTMLDivElement>) {
+    if (dragPointer.current === event.pointerId) controller.current?.moveDrag(...dragCoordinates(event));
+  }
+
+  function stopDrag(event: PointerEvent<HTMLDivElement>) {
+    if (dragPointer.current !== event.pointerId) return;
+    dragPointer.current = null;
+    controller.current?.endDrag();
   }
 
   function switchToAndroidAR() {
@@ -849,10 +879,21 @@ export function MechitzaPreview({
       )}
       {browserARReady && createPortal(
         <div ref={overlay} className={styles.xrOverlay}>
+          {sessionActive && placed && (
+            <div
+              className={styles.xrDrag}
+              aria-hidden="true"
+              onPointerDown={startDrag}
+              onPointerMove={moveDrag}
+              onPointerUp={stopDrag}
+              onPointerCancel={stopDrag}
+              onLostPointerCapture={stopDrag}
+            />
+          )}
           {sessionActive && (
             <div className={styles.xrControls}>
               <p role="status">
-                {placed ? "Divider placed. Lift your phone to see it."
+                {placed ? "Mechitza placed. Drag to move it."
                   : !sessionReady ? "Loading the divider…"
                   : floorReady ? "Floor found. Tap Place divider."
                   : "Slowly move your phone over the floor until the placement ring appears."}

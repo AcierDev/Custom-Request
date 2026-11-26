@@ -344,6 +344,13 @@
   color-scheme: dark;
 }
 
+.xrDrag {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+  touch-action: none;
+}
+
 .xrControls {
   position: absolute;
   inset-inline: 0;

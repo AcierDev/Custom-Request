@@ -23,7 +23,8 @@ import {
 } from "./artSnapshot";
 import { buildExportScene } from "./buildExportScene";
 import { appPath } from "../appPaths.ts";
-import { findUpwardHorizontalHit } from "./floorPlacement";
+import { createFloorHitTracker } from "./floorPlacement";
+import { createFloorDrag } from "./floorDrag";
 
 const GRAIN_ATLAS_URL = "/textures/grain-atlas.png";
 
@@ -33,6 +34,8 @@ const RETICLE_OUTER_RADIUS = 0.09;
 const RETICLE_SEGMENTS = 32;
 const RETICLE_COLOR = 0x818cf8; // indigo-400, matches the app accent
 const FLOOR_TIMEOUT_MS = 15_000;
+const FLOOR_AR_RENDER_DENSITY = 2;
+const FLOOR_AR_MIN_FRAMEBUFFER_SCALE = 0.65;
 
 // Lighting for the matte (Lambertian) art materials. Light estimation would be
 // nicer but adds complexity; a sky/ground hemisphere plus a soft key reads well.
@@ -51,6 +54,10 @@ export interface WebXRARController {
   reset: () => void;
   /** Rotate a placed floor model about its vertical axis without resizing it. */
   rotate: (radians: number) => void;
+  /** Move a placed floor model from normalized device coordinates. */
+  startDrag: (x: number, y: number) => boolean;
+  moveDrag: (x: number, y: number) => void;
+  endDrag: () => void;
 }
 
 export interface PreparedFloorARModel {
@@ -261,6 +268,8 @@ export async function startWebXRARSession(
   let placed = false;
   let rebuildToken = 0;
   let disposed = false;
+  const floorHits = floorModel ? createFloorHitTracker() : null;
+  const floorDrag = floorModel ? createFloorDrag() : null;
   const startup = floorModel ? new AbortController() : null;
   const startupTimer = startup && setTimeout(
     () => startup.abort(new Error("AR: the camera setup did not finish in time.")),
@@ -311,6 +320,7 @@ export async function startWebXRARSession(
     hitTestSource?.cancel?.();
     renderer?.setAnimationLoop(null);
     disposePendingFloor();
+    floorDrag?.end();
     if (artGroup) disposeGroup(artGroup);
     if (reticle) {
       reticle.geometry.dispose();
@@ -338,6 +348,13 @@ export async function startWebXRARSession(
     r.setPixelRatio(window.devicePixelRatio);
     r.outputColorSpace = THREE.SRGBColorSpace;
     r.xr.enabled = true;
+    if (floorModel) {
+      r.xr.setFramebufferScaleFactor(THREE.MathUtils.clamp(
+        FLOOR_AR_RENDER_DENSITY / window.devicePixelRatio,
+        FLOOR_AR_MIN_FRAMEBUFFER_SCALE,
+        1,
+      ));
+    }
 
     const scene = new THREE.Scene();
     // XR drives the camera each frame; this instance is just the handle three needs.
@@ -431,6 +448,10 @@ export async function startWebXRARSession(
 
     onSelect = () => {
       if (disposed || !reticleMesh.visible || !artGroup || (floorModel && placed)) return;
+      if (floorHits && !floorHits.current(performance.now())) {
+        setReticleVisible(false);
+        return;
+      }
       reticleMesh.matrix.decompose(tmpPos, tmpQuat, tmpScale);
       artGroup.position.copy(tmpPos);
       // Keep the model upright and initially face the viewer (yaw only).
@@ -439,19 +460,20 @@ export async function startWebXRARSession(
       artGroup.quaternion.setFromEuler(new THREE.Euler(0, yaw, 0));
       artGroup.visible = true;
       setPlaced(true);
-      if (floorModel) setReticleVisible(false);
+      if (floorHits) {
+        floorHits.reset();
+        setReticleVisible(false);
+      }
     };
     session.addEventListener("select", onSelect);
 
     r.setAnimationLoop((_time, frame?: XRFrame) => {
-      if (frame && hitTestSource && !placed) {
-        const refSpace = r.xr.getReferenceSpace();
-        const results = frame.getHitTestResults(hitTestSource);
-        const pose = refSpace
-          ? floorModel
-            ? findUpwardHorizontalHit(results, refSpace)
-            : results[0]?.getPose(refSpace)
-          : null;
+      if (!placed) {
+        const refSpace = frame && hitTestSource ? r.xr.getReferenceSpace() : null;
+        const results = frame && hitTestSource ? frame.getHitTestResults(hitTestSource) : [];
+        const pose = floorHits
+          ? floorHits.update(results, refSpace, performance.now())
+          : refSpace ? results[0]?.getPose(refSpace) : null;
         if (pose) reticleMesh.matrix.fromArray(pose.transform.matrix);
         setReticleVisible(Boolean(pose));
       } else {
@@ -473,11 +495,25 @@ export async function startWebXRARSession(
     end: () => void endSession(),
     place: () => onSelect?.(),
     reset: () => {
+      floorDrag?.end();
       if (artGroup) artGroup.visible = false;
+      if (floorHits) {
+        floorHits.reset();
+        setReticleVisible(false);
+      }
       setPlaced(false);
     },
     rotate: (radians) => {
       if (floorModel && placed && artGroup) artGroup.rotation.y += radians;
     },
+    startDrag: (x, y) => {
+      const view = renderer?.xr.getCamera().cameras[0];
+      return Boolean(placed && artGroup && view && floorDrag?.begin(view, x, y, artGroup.position));
+    },
+    moveDrag: (x, y) => {
+      const view = renderer?.xr.getCamera().cameras[0];
+      if (placed && artGroup && view) floorDrag?.move(view, x, y, artGroup.position);
+    },
+    endDrag: () => floorDrag?.end(),
   };
 }
